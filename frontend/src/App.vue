@@ -6,11 +6,11 @@
         <div class="main-header">
           <div class="user-menu">
             <template v-if="isLoggedIn">
-              <button class="user-menu-btn" @click="toggleMenu">
+              <button class="user-menu-btn" @click="toggleMenu" @mousedown.stop>
                 <User :size="18" class="user-icon" /> {{ user?.username }}
               </button>
               <transition name="fade">
-                <div v-if="showMenu" class="dropdown-menu">
+                <div v-if="showMenu" class="dropdown-menu" @mousedown.stop>
                   <button class="dropdown-item" @click="openProfile">
                     <UserCircle :size="16" class="dropdown-item-icon" />设置
                   </button>
@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useUserStore } from './stores/userStore';
 import { useRouter } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
@@ -82,6 +82,27 @@ function showLogin() {
 function showRegister() {
   emitter.emit('show-auth', 'register');
 }
+
+function handleClickOutside(event) {
+  const menu = document.querySelector('.dropdown-menu');
+  const btn = document.querySelector('.user-menu-btn');
+  if (
+    showMenu.value &&
+    menu &&
+    !menu.contains(event.target) &&
+    btn &&
+    !btn.contains(event.target)
+  ) {
+    closeMenu();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', handleClickOutside);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleClickOutside);
+});
 </script>
 
 <style>
