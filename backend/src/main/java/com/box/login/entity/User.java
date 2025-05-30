@@ -1,17 +1,25 @@
-package com.box.main.entity;
+package com.box.login.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import java.time.LocalDateTime;
 
 @Data
-public class User {
-    @TableId(type = IdType.AUTO)
+@EqualsAndHashCode(callSuper = true)
+@TableName("user")
+public class User extends BaseEntity {
+    @TableId
     private Long id;
     private String username;
     private String password;
+    private String nickname;
     private String email;
-    private java.time.LocalDateTime lastLoginTime;
+    private String phone;
+    @TableField("last_login_time")
+    private LocalDateTime lastLoginTime;
 
     public String getEmail() {
         return email;

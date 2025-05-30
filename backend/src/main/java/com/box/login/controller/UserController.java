@@ -1,12 +1,12 @@
-package com.box.main.controller;
+package com.box.login.controller;
 
-import com.box.main.dto.ApiResponse;
-import com.box.main.dto.RegisterRequest;
-import com.box.main.dto.LoginRequest;
-import com.box.main.dto.UserLoginResponseDTO;
-import com.box.main.dto.ResetPasswordRequest;
-import com.box.main.entity.User;
-import com.box.main.service.UserService;
+import com.box.login.dto.ApiResponse;
+import com.box.login.dto.RegisterRequest;
+import com.box.login.dto.LoginRequest;
+import com.box.login.dto.UserLoginResponseDTO;
+import com.box.login.dto.ResetPasswordRequest;
+import com.box.login.entity.User;
+import com.box.login.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;

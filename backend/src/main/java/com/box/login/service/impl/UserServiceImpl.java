@@ -1,9 +1,9 @@
-package com.box.main.service.impl;
+package com.box.login.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.box.main.entity.User;
-import com.box.main.mapper.UserMapper;
-import com.box.main.service.UserService;
+import com.box.login.entity.User;
+import com.box.login.mapper.UserMapper;
+import com.box.login.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -12,6 +12,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
 import java.security.Key;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,10 +61,17 @@ public class UserServiceImpl implements UserService {
     public String login(String username, String password) {
         User user = findByUsername(username);
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+            // 登录成功，记录最后登录时间
+            recordLogin(user.getId(), LocalDateTime.now());
             // 登录成功，生成Token
             return generateToken(user); // 返回Token字符串而不是User对象
         }
         return null;
+    }
+
+    @Override
+    public void recordLogin(Long userId, LocalDateTime lastLoginTime) {
+        userMapper.updateLastLoginTime(userId, java.sql.Timestamp.valueOf(lastLoginTime));
     }
 
     @Override

@@ -125,8 +125,8 @@ function toggleSidebar() {
 }
 
 .menu-item.active {
-  background-color: #d4d4d4 !important;
-  color: #333 !important;
+  background-color: #d4d4d4;
+  color: #333;
   font-weight: 500;
   box-shadow: none;
 }

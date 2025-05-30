@@ -7,7 +7,6 @@
 
 <script setup>
 import RegisterForm from '../components/RegisterForm.vue'
-// 可以在这里添加错误处理逻辑，检查请求返回的 400 错误信息
 </script>
 
 <style scoped>

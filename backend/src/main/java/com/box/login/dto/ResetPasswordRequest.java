@@ -1,4 +1,4 @@
-package com.box.main.dto;
+package com.box.login.dto;
 
 public class ResetPasswordRequest {
     private String username;

@@ -1,6 +1,6 @@
-package com.box.main.controller;
+package com.box.login.controller;
 
-import com.box.main.utils.CaptchaUtil;
+import com.box.login.utils.CaptchaUtil;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

@@ -1,6 +1,5 @@
-package com.box.main.dto;
+package com.box.login.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data

@@ -1,6 +1,7 @@
-package com.box.main.service;
+package com.box.login.service;
 
-import com.box.main.entity.User;
+import com.box.login.entity.User;
+import java.time.LocalDateTime;
 
 public interface UserService {
     User findByUsername(String username);
@@ -8,4 +9,5 @@ public interface UserService {
     String login(String username, String password);
     boolean checkPassword(User user, String rawPassword);
     boolean updatePassword(User user, String newPassword);
+    void recordLogin(Long userId, LocalDateTime lastLoginTime); // 必须有这行
 }

@@ -1,4 +1,4 @@
-package com.box.main;
+package com.box.login;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

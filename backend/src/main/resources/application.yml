@@ -21,7 +21,7 @@ spring:
 
 mybatis-plus:
   mapper-locations: classpath:/mapper/*.xml
-  type-aliases-package: com.box.main.entity
+  type-aliases-package: com.box.login.entity
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 

@@ -1,4 +1,4 @@
-package com.box.main.dto;
+package com.box.login.dto;
 
 import java.time.LocalDateTime;
 

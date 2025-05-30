@@ -1,4 +1,4 @@
-package com.box.main.utils;
+package com.box.login.utils;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;

@@ -1,4 +1,4 @@
-package com.box.main.config;
+package com.box.login.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
