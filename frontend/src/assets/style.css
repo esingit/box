@@ -1,9 +1,134 @@
-body, html, #app {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    background: #eee;
-    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+html, body, #app {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #222;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 600;
+}
+
+input, select, textarea {
+  background: #fff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04) inset;
+  font-size: 16px;
+  padding: 10px 16px;
+  color: #222;
+  outline: none;
+  transition: border 0.18s, box-shadow 0.18s;
+  box-sizing: border-box;
+}
+input::placeholder, textarea::placeholder {
+  color: #bbb;
+  font-size: 18px;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: #a0a0a0;
+  box-shadow: 0 0 0 2px rgba(160, 160, 160, 0.3);
+}
+
+button, .btn {
+  display: inline-block;
+  background: #fff;
+  color: #222;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 999px;
+  padding: 6px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: background 0.18s, border 0.18s, color 0.18s;
+  outline: none;
+}
+button:hover, .btn:hover {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+button:active, .btn:active {
+  background: #ededed;
+  border-color: #bdbdbd;
+}
+button:disabled, .btn:disabled {
+  background: #f5f5f5;
+  color: #bbb;
+  border-color: #eee;
+  cursor: not-allowed;
+}
+
+/* 错误、成功提示 */
+.error-msg, .message.error {
+  color: #e74c3c;
+  font-weight: 500;
+  margin-top: 8px;
+}
+.success-msg, .message.success {
+  color: #10b981;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+/* 列表、表格 */
+ul, ol {
+  padding-left: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/* 侧边栏、菜单 */
+.menu-item, .dropdown-item {
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: #333;
+  background: none;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.menu-item.active, .dropdown-item.active, .menu-item:hover, .dropdown-item:hover {
+  background: #f4f6f8;
+}
+
+/* 顶部栏 */
+.main-header {
+  background: none;
+  box-shadow: none;
+  margin-bottom: 18px;
+}
+.user-menu-btn, .user-auth-link {
+  background: none;
+  border: none;
+  color: #333;
+  font-size: 15px;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.user-menu-btn:hover, .user-auth-link:hover {
+  background: #f4f6f8;
+}
+
+/* 弹窗遮罩 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.18);
+  z-index: 1000;
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+  .card, .auth-form-container, .modal-content, .content-area, .fitness-page, .main-content {
+    padding: 12px;
+    border-radius: 8px;
   }
+  .sidebar, .sidebar-menu {
+    border-radius: 8px 0 0 8px;
+    padding: 12px 0;
+  }
+}

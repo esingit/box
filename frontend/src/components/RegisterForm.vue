@@ -26,7 +26,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '../stores/userStore'
-import { emitter } from '../utils/eventBus'
 
 const username = ref('')
 const password = ref('')
@@ -82,7 +81,6 @@ async function submit() {
       success.value = response.message || '注册成功';
       showCaptcha.value = false;
       setTimeout(() => {
-        // 可以添加跳转逻辑
       }, 1000);
     } else {
       console.log("准备设置错误信息，后端返回的 message:", response.message);
@@ -123,69 +121,3 @@ onMounted(() => {
   fetchCaptchaAndId()
 })
 </script>
-
-<style scoped>
-.form-group {
-  margin-bottom: 15px;
-}
-label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-input {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-  box-sizing: border-box;
-}
-
-.captcha-container {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.captcha-input {
-  flex: 1;
-  width: auto !important;
-}
-
-.captcha-image {
-  height: 38px;
-  border-radius: 4px;
-  cursor: pointer;
-  border: 1px solid #ddd;
-}
-
-.btn {
-  width: 100%;
-  padding: 10px 0;
-  background: #10b981;
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-.btn:hover:not(:disabled) {
-  background: #059669;
-}
-.btn:disabled {
-  background: #6ee7b7;
-  cursor: not-allowed;
-}
-.error-msg {
-  margin-top: 12px;
-  color: #f43f5e;
-  font-weight: 600;
-}
-.success-msg {
-  margin-top: 12px;
-  color: #10b981;
-  font-weight: 600;
-}
-</style>
