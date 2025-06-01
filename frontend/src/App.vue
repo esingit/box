@@ -1,7 +1,7 @@
 <template>
   <div id="app" class="app-container">
+    <Sidebar v-if="isLoggedIn" :isLoggedIn="isLoggedIn" />
     <div class="content-wrapper">
-      <Sidebar v-if="isLoggedIn" :isLoggedIn="isLoggedIn" />
       <main class="main-content">
         <div class="main-header">
           <div class="user-menu">
