@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1 class="centered-title">
-      <Box/>
+      <Box class="home-box-icon" :class="{ 'rotate': isRotating }" @click="rotateBox"/>
       BOX
     </h1>
     <transition name="slide-fade">
@@ -22,6 +22,16 @@ import {emitter} from '../utils/eventBus'
 
 const activeTab = ref('login')
 const showAuth = ref(false)
+const isRotating = ref(false)
+
+function rotateBox() {
+  if (!isRotating.value) {
+    isRotating.value = true
+    setTimeout(() => {
+      isRotating.value = false
+    }, 500)
+  }
+}
 
 // 监听事件
 onMounted(() => {
@@ -41,3 +51,17 @@ onUnmounted(() => {
   emitter.off('login-success')
 })
 </script>
+
+<style>
+.home-box-icon {
+  font-size: 36px;
+  cursor: pointer;
+  transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+.home-box-icon:hover {
+  opacity: 0.8;
+}
+.home-box-icon[data-rotating="true"] {
+  transform: rotate(180deg);
+}
+</style>
