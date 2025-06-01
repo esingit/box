@@ -66,12 +66,20 @@ async function fetchCaptchaAndId() {
 }
 
 watch(showCaptcha, async (newValue) => {
-  if (newValue && !captchaUrl.value) {
-    await fetchCaptchaAndId();
+  if (newValue) {
+    error.value = null;
+    if (!captchaUrl.value) {
+      await fetchCaptchaAndId();
+    }
+  } else {
+    captcha.value = '';
+    captchaId.value = '';
+    captchaUrl.value = '';
   }
 });
 
 async function refreshCaptcha() {
+  error.value = null;
   await fetchCaptchaAndId();
 }
 

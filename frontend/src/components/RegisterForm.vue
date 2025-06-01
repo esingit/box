@@ -18,18 +18,18 @@
         </div>
       </div>
       <div class="form-submit">
+        <p v-if="error" class="error-msg">{{ error }}</p>
+        <p v-if="success" class="success-msg">{{ success }}</p>
         <button type="submit" class="btn" :disabled="isLoading">
           {{ isLoading ? '注册中...' : '注册' }}
         </button>
-        <p v-if="error" class="error-msg">{{ error }}</p>
-        <p v-if="success" class="success-msg">{{ success }}</p>
       </div>
     </form>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useUserStore } from '../stores/userStore'
 
 const username = ref('')
@@ -42,6 +42,20 @@ const success = ref(null)
 const isLoading = ref(false)
 const userStore = useUserStore()
 const showCaptcha = ref(false)
+
+watch(showCaptcha, async (newValue) => {
+  if (newValue) {
+    error.value = null;
+    success.value = null;
+    if (!captchaUrl.value) {
+      await fetchCaptchaAndId();
+    }
+  } else {
+    captcha.value = '';
+    captchaId.value = '';
+    captchaUrl.value = '';
+  }
+});
 
 async function fetchCaptchaAndId() {
   try {
@@ -64,12 +78,15 @@ async function fetchCaptchaAndId() {
 }
 
 async function refreshCaptcha() {
+  error.value = null;
+  success.value = null;
   await fetchCaptchaAndId()
 }
 
 async function submit() {
-  error.value = null
-  isLoading.value = true
+  error.value = null;
+  success.value = null;
+  isLoading.value = true;
   try {
     let payload = {
       username: username.value,
@@ -78,7 +95,7 @@ async function submit() {
       captchaId: showCaptcha.value ? captchaId.value : ""
     };
 
-    const response = await userStore.register(payload)
+    const response = await userStore.register(payload);
 
     console.log("后端注册响应:", response);
 
@@ -90,35 +107,35 @@ async function submit() {
     } else {
       console.log("准备设置错误信息，后端返回的 message:", response.message);
       if (response.message) {
-        error.value = `注册失败: ${response.message}`;
+        error.value = `${response.message}`;
       } else {
         error.value = '注册失败，请稍后重试';
       }
       console.log("设置后的错误信息:", error.value);
-      
-      if (response.showCaptcha) {
+
+      if (response.showCaptcha || (response.message && response.message.includes('验证码'))) {
         showCaptcha.value = true;
         await fetchCaptchaAndId();
+        captcha.value = '';
       } else {
         showCaptcha.value = false;
       }
-      captcha.value = '';
     }
-  } catch (error) {
-    console.error('注册请求异常:', error);
-    
-    if (error.response && error.response.data) {
-      error.value = error.response.data.message || '注册失败';
-      if (error.response.data.showCaptcha) {
+  } catch (err) {
+    console.error('注册请求异常:', err);
+
+    if (err.response && err.response.data) {
+      error.value = err.response.data.message || '注册失败';
+      if (err.response.data.showCaptcha || (err.response.data.message && err.response.data.message.includes('验证码'))) {
         showCaptcha.value = true;
         await fetchCaptchaAndId();
+        captcha.value = '';
       }
-      captcha.value = '';
     } else {
-      error.value = error.message || '注册失败，请稍后重试';
+      error.value = err.message || '注册失败，请稍后重试';
     }
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
