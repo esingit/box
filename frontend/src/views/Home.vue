@@ -51,17 +51,3 @@ onUnmounted(() => {
   emitter.off('login-success')
 })
 </script>
-
-<style>
-.home-box-icon {
-  font-size: 36px;
-  cursor: pointer;
-  transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
-}
-.home-box-icon:hover {
-  opacity: 0.8;
-}
-.home-box-icon[data-rotating="true"] {
-  transform: rotate(180deg);
-}
-</style>

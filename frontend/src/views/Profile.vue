@@ -8,7 +8,7 @@
       <!-- 弹窗头部 -->
       <div class="modal-header">
         <h2 class="modal-title">设置</h2>
-        <button class="btn close-button" @click="closeModal">
+        <button class="close-button" @click="closeModal">
           <svg class="close-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -64,8 +64,8 @@
           </div>
 
           <!-- 安全设置面板 -->
-          <div v-if="activeTab === 'security'">
-            <form @submit.prevent="handleReset" class="reset-form">
+          <div v-if="activeTab === 'security'" class="security-panel">
+            <form @submit.prevent="handleReset">
               <div class="form-group">
                 <label class="form-label">旧密码</label>
                 <input 
@@ -94,13 +94,13 @@
                 />
               </div>
               <div class="form-submit">
+                <p v-if="resetMsg" :class="['message', resetSuccess ? 'success' : 'error']">
+                  {{ resetMsg }}
+                </p>
                 <button class="btn" type="submit">
                   确认修改
                 </button>
               </div>
-              <p v-if="resetMsg" :class="['message', resetSuccess ? 'success' : 'error']">
-                {{ resetMsg }}
-              </p>
             </form>
           </div>
         </div>
