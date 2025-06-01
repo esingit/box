@@ -1,11 +1,11 @@
 <template>
   <div>
-    <h1>
+    <h1 class="centered-title">
       <Box/>
       BOX
     </h1>
     <transition name="slide-fade">
-      <div v-if="showAuth">
+      <div v-if="showAuth" class="auth-form-container">
         <LoginForm v-if="activeTab === 'login'"/>
         <RegisterForm v-else/>
       </div>

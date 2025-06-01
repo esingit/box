@@ -1,26 +1,31 @@
 <template>
-  <form @submit.prevent="submit">
-    <div class="form-group">
-      <label>用户名</label>
-      <input v-model="username" required autocomplete="username" />
-    </div>
-    <div class="form-group">
-      <label>密码</label>
-      <input type="password" v-model="password" required autocomplete="new-password" />
-    </div>
-    <div class="form-group" v-if="showCaptcha">
-      <label>验证码</label>
-      <div class="captcha-container">
-        <input v-model="captcha" required class="captcha-input" />
-        <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
+  <div class="auth-form-inner">
+    <h2>注册</h2>
+    <form @submit.prevent="submit">
+      <div class="form-group">
+        <label>用户名</label>
+        <input v-model="username" required autocomplete="username" />
       </div>
-    </div>
-    <button type="submit" class="btn" :disabled="isLoading">
-      {{ isLoading ? '注册中...' : '注册' }}
-    </button>
-    <p v-if="error" class="error-msg">{{ error }}</p>
-    <p v-if="success" class="success-msg">{{ success }}</p>
-  </form>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" v-model="password" required autocomplete="new-password" />
+      </div>
+      <div class="form-group" v-if="showCaptcha">
+        <label>验证码</label>
+        <div class="captcha-container">
+          <input v-model="captcha" required class="captcha-input" />
+          <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
+        </div>
+      </div>
+      <div class="form-submit">
+        <button type="submit" class="btn" :disabled="isLoading">
+          {{ isLoading ? '注册中...' : '注册' }}
+        </button>
+        <p v-if="error" class="error-msg">{{ error }}</p>
+        <p v-if="success" class="success-msg">{{ success }}</p>
+      </div>
+    </form>
+  </div>
 </template>
 
 <script setup>

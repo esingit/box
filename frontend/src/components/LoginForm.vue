@@ -1,25 +1,30 @@
 <template>
-  <form @submit.prevent="submit">
-    <div class="form-group">
-      <label>用户名</label>
-      <input v-model="username" required autocomplete="username" />
-    </div>
-    <div class="form-group">
-      <label>密码</label>
-      <input type="password" v-model="password" required autocomplete="current-password" />
-    </div>
-    <div class="form-group" v-if="showCaptcha">
-      <label>验证码</label>
-      <div class="captcha-container">
-        <input v-model="captcha" required class="captcha-input" />
-        <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
+  <div class="auth-form-inner">
+    <h2>登录</h2>
+    <form @submit.prevent="submit">
+      <div class="form-group">
+        <label>用户名</label>
+        <input v-model="username" required autocomplete="username" />
       </div>
-    </div>
-    <button type="submit" class="btn" :disabled="isLoading">
-      {{ isLoading ? '登录中...' : '登录' }}
-    </button>
-    <p v-if="error" class="error-msg">{{ error }}</p>
-  </form>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" v-model="password" required autocomplete="current-password" />
+      </div>
+      <div class="form-group" v-if="showCaptcha">
+        <label>验证码</label>
+        <div class="captcha-container">
+          <input v-model="captcha" required class="captcha-input" />
+          <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
+        </div>
+      </div>
+      <div class="form-submit">
+        <p v-if="error" class="error-msg">{{ error }}</p>
+        <button type="submit" class="btn" :disabled="isLoading">
+          {{ isLoading ? '登录中...' : '登录' }}
+        </button>
+      </div>
+    </form>
+  </div>
 </template>
 
 <script setup>
@@ -56,23 +61,23 @@ async function fetchCaptchaAndId() {
 
   } catch (error) {
     console.error('获取验证码异常:', error)
-    captchaUrl.value = ''
+    captchaUrl.value = '';
   }
 }
 
 watch(showCaptcha, async (newValue) => {
   if (newValue && !captchaUrl.value) {
-    await fetchCaptchaAndId()
+    await fetchCaptchaAndId();
   }
-})
+});
 
 async function refreshCaptcha() {
-  await fetchCaptchaAndId()
+  await fetchCaptchaAndId();
 }
 
 async function submit() {
-  error.value = null
-  isLoading.value = true
+  error.value = null;
+  isLoading.value = true;
   try {
     let payload = {
       username: username.value,
@@ -89,19 +94,19 @@ async function submit() {
       payload.captcha = captcha.value;
     }
 
-    const response = await userStore.login(payload)
+    const response = await userStore.login(payload);
 
     if (response.success) {
-      emitter.emit('login-success')
+      emitter.emit('login-success');
       showCaptcha.value = false;
       username.value = '';
       password.value = '';
       captcha.value = '';
       captchaUrl.value = '';
       error.value = null;
-      router.push('/')
+      router.push('/');
     } else {
-      error.value = response.message || '用户名或密码错误'
+      error.value = response.message || '用户名或密码错误';
       if (response.showCaptcha) {
          showCaptcha.value = true;
          await fetchCaptchaAndId();
@@ -111,12 +116,12 @@ async function submit() {
       }
     }
   } catch (err) {
-    error.value = err.message || '登录失败，请稍后重试'
+    error.value = err.message || '登录失败，请稍后重试';
     if (showCaptcha.value) {
         await fetchCaptchaAndId();
     }
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 </script>
