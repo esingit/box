@@ -821,3 +821,19 @@ select:focus, .type-select:focus, .unit-select:focus, .fitness-select:focus {
 select::-ms-expand {
   display: none;
 }
+
+/* 表格数字靠右，其他居中 */
+.fitness-header .item-count,
+.fitness-item .item-count {
+  text-align: right;
+}
+.fitness-header .item-type,
+.fitness-header .item-unit,
+.fitness-header .item-time,
+.fitness-header .item-action,
+.fitness-item .item-type,
+.fitness-item .item-unit,
+.fitness-item .item-time,
+.fitness-item .item-action {
+  text-align: center;
+}

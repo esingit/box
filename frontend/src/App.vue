@@ -38,6 +38,7 @@
     </div>
     <Profile ref="profileRef" />
     <Notification />
+    <ConfirmDialog />
   </div>
 </template>
 
@@ -48,6 +49,7 @@ import { useRouter } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
 import Profile from './views/Profile.vue';
 import Notification from './components/Notification.vue';
+import ConfirmDialog from './components/ConfirmDialog.vue';
 import { LogIn, UserPlus, User, UserCircle, LogOut } from 'lucide-vue-next';
 import emitter from './utils/eventBus.js';
 

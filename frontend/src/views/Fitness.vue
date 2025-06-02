@@ -57,7 +57,7 @@
 <script setup>
 import { ref } from 'vue'
 import { LucideClipboardList } from 'lucide-vue-next'
-import mitt from '../utils/eventBus'
+import emitter from '../utils/eventBus.js'
 
 const types = [
   '俯卧撑',
@@ -98,12 +98,18 @@ function addRecord() {
   selectedType.value = types[0]
   unit.value = units[0]
   finishDate.value = getTodayDate()
-  mitt.emit('notify', '添加成功', 'success')
+  emitter.emit('notify', '添加成功', 'success')
 }
 
 function deleteRecord(idx) {
-  records.value.splice(idx, 1)
-  mitt.emit('notify', '删除成功', 'success')
+  emitter.emit('confirm', {
+    title: '删除确认',
+    message: '确定要删除该记录吗？',
+    onConfirm: () => {
+      records.value.splice(idx, 1)
+      emitter.emit('notify', '删除成功', 'success')
+    }
+  })
 }
 
 function editRecord(idx) {
@@ -121,7 +127,7 @@ function saveEdit() {
     records.value[editingIdx.value].unit = editUnit.value
     records.value[editingIdx.value].finish_date = editFinishDate.value
     editingIdx.value = null
-    mitt.emit('notify', '保存成功', 'success')
+    emitter.emit('notify', '保存成功', 'success')
   }
 }
 
