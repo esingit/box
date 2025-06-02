@@ -22,10 +22,10 @@ public class BaseEntity {
     private Integer deleted;
 
     @TableField(fill = FieldFill.INSERT)
-    private Long createUser;
+    private String createUser;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    private Long updateUser;
+    private String updateUser;
 
     private String remark;
-} 
+}

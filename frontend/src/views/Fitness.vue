@@ -13,6 +13,7 @@
         <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
       </select>
       <input type="date" v-model="finishDate" class="date-input" required />
+      <input type="text" v-model="addRemark" class="remark-input" placeholder="备注" />
       <button type="submit" class="add-btn">添加</button>
     </form>
     <ul class="fitness-list">
@@ -21,6 +22,7 @@
         <span class="item-count">数量</span>
         <span class="item-unit">单位</span>
         <span class="item-time">日期</span>
+        <span class="item-remark">备注</span>
         <span class="item-action center">操作</span>
       </li>
       <li v-for="(record, idx) in records" :key="record.id" class="fitness-item">
@@ -28,6 +30,7 @@
         <span class="item-count">{{ record.count }}</span>
         <span class="item-unit">{{ record.unit }}</span>
         <span class="item-time">{{ record.finish_date }}</span>
+        <span class="item-remark">{{ record.remark }}</span>
         <span class="item-action">
           <button @click="editRecord(idx)" class="edit-btn">编辑</button>
           <button @click="deleteRecord(idx)" class="delete-btn">删除</button>
@@ -45,6 +48,7 @@
           <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
         </select>
         <input type="date" v-model="editFinishDate" class="date-input fitness-input" required />
+        <input type="text" v-model="editRemark" class="remark-input fitness-input" placeholder="备注" />
         <div class="modal-actions">
           <button @click="saveEdit" class="add-btn">保存</button>
           <button @click="cancelEdit" class="delete-btn">取消</button>
@@ -53,6 +57,53 @@
     </div>
   </div>
 </template>
+
+<style scoped>
+.fitness-list {
+  margin: 24px 0 0 0;
+  padding: 0;
+  list-style: none;
+}
+.fitness-header {
+  font-weight: bold;
+  background: #f5f6fa;
+  border-radius: 8px 8px 0 0;
+  padding: 16px 0 16px 0;
+  display: flex;
+  gap: 8px;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+.fitness-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 18px 0 18px 0;
+  font-size: 15px;
+  transition: background 0.2s;
+}
+.fitness-item:hover {
+  background: #f8faff;
+}
+.item-type, .item-count, .item-unit, .item-time, .item-remark, .item-action {
+  flex: 1;
+  text-align: center;
+}
+.item-action {
+  flex: 1.5;
+}
+.fitness-title {
+  display: flex;
+  align-items: center;
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 24px;
+  letter-spacing: 2px;
+  gap: 10px;
+}
+</style>
 
 <script setup>
 import { ref, onMounted } from 'vue'
@@ -75,6 +126,8 @@ const editType = ref('')
 const editCount = ref(1)
 const editUnit = ref('')
 const editFinishDate = ref('')
+const editRemark = ref('')
+const addRemark = ref('')
 
 async function fetchRecords() {
   const res = await axios.get('/api/fitness-record/list')
@@ -108,11 +161,13 @@ function getTodayDate() {
 
 async function addRecord() {
   if (!count.value || count.value < 1 || !finishDate.value) return
+  const finishTime = finishDate.value + 'T00:00:00'
   const payload = {
     type: selectedType.value,
     count: count.value,
     unit: unit.value,
-    finishTime: finishDate.value
+    finishTime,
+    remark: addRemark.value
   }
   const res = await axios.post('/api/fitness-record/add', payload)
   if (res.data && res.data.success) {
@@ -121,6 +176,7 @@ async function addRecord() {
     selectedType.value = types.value[0]
     unit.value = units.value[0]
     finishDate.value = getTodayDate()
+    addRemark.value = ''
     emitter.emit('notify', '添加成功', 'success')
   }
 }
@@ -131,17 +187,20 @@ function editRecord(idx) {
   editCount.value = records.value[idx].count
   editUnit.value = records.value[idx].unit
   editFinishDate.value = records.value[idx].finishTime ? records.value[idx].finishTime.slice(0, 10) : ''
+  editRemark.value = records.value[idx].remark || ''
 }
 
 async function saveEdit() {
   if (editingIdx.value !== null && editFinishDate.value) {
     const record = records.value[editingIdx.value]
+    const finishTime = editFinishDate.value + 'T00:00:00'
     const payload = {
       id: record.id,
       type: editType.value,
       count: editCount.value,
       unit: editUnit.value,
-      finishTime: editFinishDate.value
+      finishTime,
+      remark: editRemark.value
     }
     const res = await axios.put('/api/fitness-record/update', payload)
     if (res.data && res.data.success) {

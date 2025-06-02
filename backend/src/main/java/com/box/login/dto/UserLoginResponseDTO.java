@@ -1,11 +1,16 @@
 package com.box.login.dto;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+import lombok.Data;
+
 import java.time.LocalDateTime;
 
+@Data
 public class UserLoginResponseDTO {
     private String token;
     private String username;
     private String email;
+    @TableField("last_login_time")
     private LocalDateTime lastLoginTime;
 
     public UserLoginResponseDTO(String token, String username, String email, LocalDateTime lastLoginTime) {
@@ -14,38 +19,4 @@ public class UserLoginResponseDTO {
         this.email = email;
         this.lastLoginTime = lastLoginTime;
     }
-
-    // Getters
-    public String getToken() {
-        return token;
     }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public LocalDateTime getLastLoginTime() {
-        return lastLoginTime;
-    }
-
-    // Setters
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setLastLoginTime(LocalDateTime lastLoginTime) {
-        this.lastLoginTime = lastLoginTime;
-    }
-} 
