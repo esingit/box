@@ -800,3 +800,24 @@ ul, ol {
     padding: 8px 2px;
   }
 }
+
+/* 统一 select 下拉样式，兼容 macOS 各主流浏览器 */
+select, .type-select, .unit-select, .fitness-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: #fff url('data:image/svg+xml;utf8,<svg fill="gray" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 0.75em center/1em;
+  padding-right: 2.5em;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 999px;
+  font-size: 15px;
+  min-width: 90px;
+  cursor: pointer;
+}
+select:focus, .type-select:focus, .unit-select:focus, .fitness-select:focus {
+  border-color: #a0a0a0;
+}
+/* 隐藏原生下拉箭头（部分浏览器） */
+select::-ms-expand {
+  display: none;
+}
