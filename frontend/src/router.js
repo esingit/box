@@ -19,7 +19,12 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
-  if (to.path === '/login' && userStore.isLoggedIn) {
+  // 需要登录的页面路径
+  const protectedPaths = ['/fitness']
+  if (protectedPaths.includes(to.path) && !userStore.isLoggedIn) {
+    // 未登录访问受保护页面，跳转到主页
+    next('/')
+  } else if (to.path === '/login' && userStore.isLoggedIn) {
     next('/')
   } else {
     next()

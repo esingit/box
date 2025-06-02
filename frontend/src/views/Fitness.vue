@@ -76,6 +76,13 @@ const editCount = ref(1)
 const editUnit = ref('')
 const editFinishDate = ref('')
 
+async function fetchRecords() {
+  const res = await axios.get('/api/fitness-record/list')
+  if (res.data && res.data.success) {
+    records.value = res.data.data || []
+  }
+}
+
 onMounted(async () => {
   // 获取类型
   const typeRes = await axios.get('/api/common-meta/key1-value1-by-type', { params: { typeCode: 'FITNESS_TYPE' } })
@@ -91,6 +98,7 @@ onMounted(async () => {
     unit.value = units.value[0] || ''
     editUnit.value = units.value[0] || ''
   }
+  await fetchRecords()
 })
 
 function getTodayDate() {
@@ -98,31 +106,23 @@ function getTodayDate() {
   return now.toISOString().slice(0, 10)
 }
 
-function addRecord() {
+async function addRecord() {
   if (!count.value || count.value < 1 || !finishDate.value) return
-  records.value.push({
-    id: nextId++,
+  const payload = {
     type: selectedType.value,
     count: count.value,
     unit: unit.value,
-    finish_date: finishDate.value,
-  })
-  count.value = 1
-  selectedType.value = types.value[0]
-  unit.value = units.value[0]
-  finishDate.value = getTodayDate()
-  emitter.emit('notify', '添加成功', 'success')
-}
-
-function deleteRecord(idx) {
-  emitter.emit('confirm', {
-    title: '删除确认',
-    message: '确定要删除该记录吗？',
-    onConfirm: () => {
-      records.value.splice(idx, 1)
-      emitter.emit('notify', '删除成功', 'success')
-    }
-  })
+    finishTime: finishDate.value
+  }
+  const res = await axios.post('/api/fitness-record/add', payload)
+  if (res.data && res.data.success) {
+    await fetchRecords()
+    count.value = 1
+    selectedType.value = types.value[0]
+    unit.value = units.value[0]
+    finishDate.value = getTodayDate()
+    emitter.emit('notify', '添加成功', 'success')
+  }
 }
 
 function editRecord(idx) {
@@ -130,21 +130,44 @@ function editRecord(idx) {
   editType.value = records.value[idx].type
   editCount.value = records.value[idx].count
   editUnit.value = records.value[idx].unit
-  editFinishDate.value = records.value[idx].finish_date
+  editFinishDate.value = records.value[idx].finishTime ? records.value[idx].finishTime.slice(0, 10) : ''
 }
 
-function saveEdit() {
+async function saveEdit() {
   if (editingIdx.value !== null && editFinishDate.value) {
-    records.value[editingIdx.value].type = editType.value
-    records.value[editingIdx.value].count = editCount.value
-    records.value[editingIdx.value].unit = editUnit.value
-    records.value[editingIdx.value].finish_date = editFinishDate.value
-    editingIdx.value = null
-    emitter.emit('notify', '保存成功', 'success')
+    const record = records.value[editingIdx.value]
+    const payload = {
+      id: record.id,
+      type: editType.value,
+      count: editCount.value,
+      unit: editUnit.value,
+      finishTime: editFinishDate.value
+    }
+    const res = await axios.put('/api/fitness-record/update', payload)
+    if (res.data && res.data.success) {
+      await fetchRecords()
+      editingIdx.value = null
+      emitter.emit('notify', '保存成功', 'success')
+    }
   }
 }
 
 function cancelEdit() {
   editingIdx.value = null
+}
+
+async function deleteRecord(idx) {
+  emitter.emit('confirm', {
+    title: '删除确认',
+    message: '确定要删除该记录吗？',
+    onConfirm: async () => {
+      const id = records.value[idx].id
+      const res = await axios.delete(`/api/fitness-record/delete/${id}`)
+      if (res.data && res.data.success) {
+        await fetchRecords()
+        emitter.emit('notify', '删除成功', 'success')
+      }
+    }
+  })
 }
 </script>

@@ -9,6 +9,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import java.util.List;
 
 @Configuration
@@ -23,13 +24,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf().disable()
-            .cors().and()
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/user/**", "/api/captcha/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .headers().frameOptions().disable();
+                .csrf().disable()
+                .cors().and()
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/api/user/**", "/api/captcha/**").permitAll()
+                        .requestMatchers("/api/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .headers().frameOptions().disable();
         return http.build();
     }
 
