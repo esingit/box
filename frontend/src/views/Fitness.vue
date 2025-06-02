@@ -4,130 +4,77 @@
       <LucideClipboardList class="title-icon" color="#222" size="24" />
       <span>记录</span>
     </div>
-    <form class="fitness-form" @submit.prevent="addRecord">
-      <select v-model="selectedType" class="type-select">
-        <option v-for="type in types" :key="type" :value="type">{{ type }}</option>
-      </select>
-      <input type="number" v-model.number="count" min="1" placeholder="数量" class="count-input" />
-      <select v-model="unit" class="unit-select">
-        <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
-      </select>
-      <input type="date" v-model="finishDate" class="date-input" required />
-      <input type="text" v-model="addRemark" class="remark-input" placeholder="备注" />
-      <button type="submit" class="add-btn">添加</button>
-    </form>
-    <ul class="fitness-list">
-      <li class="fitness-header">
-        <span class="item-type center">类型</span>
-        <span class="item-count">数量</span>
-        <span class="item-unit">单位</span>
-        <span class="item-time">日期</span>
-        <span class="item-remark">备注</span>
-        <span class="item-action center">操作</span>
-      </li>
-      <li v-for="(record, idx) in records" :key="record.id" class="fitness-item">
-        <span class="item-type">{{ record.type }}</span>
-        <span class="item-count">{{ record.count }}</span>
-        <span class="item-unit">{{ record.unit }}</span>
-        <span class="item-time">{{ record.finish_date }}</span>
-        <span class="item-remark">{{ record.remark }}</span>
-        <span class="item-action">
-          <button @click="editRecord(idx)" class="edit-btn">编辑</button>
-          <button @click="deleteRecord(idx)" class="delete-btn">删除</button>
-        </span>
-      </li>
-    </ul>
-    <div v-if="editingIdx !== null" class="edit-modal">
-      <div class="modal-content">
-        <h3>编辑记录</h3>
-        <select v-model="editType" class="type-select fitness-select">
-          <option v-for="type in types" :key="type" :value="type">{{ type }}</option>
-        </select>
-        <input type="number" v-model.number="editCount" min="1" class="count-input fitness-input" />
-        <select v-model="editUnit" class="unit-select fitness-select">
-          <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
-        </select>
-        <input type="date" v-model="editFinishDate" class="date-input fitness-input" required />
-        <input type="text" v-model="editRemark" class="remark-input fitness-input" placeholder="备注" />
-        <div class="modal-actions">
-          <button @click="saveEdit" class="add-btn">保存</button>
-          <button @click="cancelEdit" class="delete-btn">取消</button>
-        </div>
-      </div>
-    </div>
+    <FitnessForm
+      :form="form"
+      :types="types"
+      :units="units"
+      :adding="adding"
+      @submit="addRecord"
+    />
+    <FitnessList
+      :records="records"
+      @edit="editRecord"
+      @delete="deleteRecord"
+    />
+    <FitnessEditModal
+      :show="editingIdx !== null"
+      :editForm="editForm"
+      :types="types"
+      :units="units"
+      @save="saveEdit"
+      @cancel="cancelEdit"
+    />
   </div>
 </template>
 
-<style scoped>
-.fitness-list {
-  margin: 24px 0 0 0;
-  padding: 0;
-  list-style: none;
-}
-.fitness-header {
-  font-weight: bold;
-  background: #f5f6fa;
-  border-radius: 8px 8px 0 0;
-  padding: 16px 0 16px 0;
-  display: flex;
-  gap: 8px;
-  font-size: 16px;
-  letter-spacing: 1px;
-}
-.fitness-item {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
-  padding: 18px 0 18px 0;
-  font-size: 15px;
-  transition: background 0.2s;
-}
-.fitness-item:hover {
-  background: #f8faff;
-}
-.item-type, .item-count, .item-unit, .item-time, .item-remark, .item-action {
-  flex: 1;
-  text-align: center;
-}
-.item-action {
-  flex: 1.5;
-}
-.fitness-title {
-  display: flex;
-  align-items: center;
-  font-size: 22px;
-  font-weight: bold;
-  margin-bottom: 24px;
-  letter-spacing: 2px;
-  gap: 10px;
-}
-</style>
-
 <script setup>
-import { ref, onMounted } from 'vue'
+import '../assets/fitness.css'
+import { ref, reactive, onMounted } from 'vue'
 import { LucideClipboardList } from 'lucide-vue-next'
 import emitter from '../utils/eventBus.js'
 import axios from '../utils/axios.js'
+import FitnessForm from '../components/FitnessForm.vue'
+import FitnessList from '../components/FitnessList.vue'
+import FitnessEditModal from '../components/FitnessEditModal.vue'
 
 const types = ref([])
 const units = ref([])
-
-const selectedType = ref('')
-const count = ref(1)
-const unit = ref('')
-const finishDate = ref(getTodayDate())
 const records = ref([])
-let nextId = 1
+const adding = ref(false)
 
+// 添加表单和编辑表单统一用 reactive 管理
+const form = reactive({
+  type: '',
+  count: 1,
+  unit: '',
+  finishTime: getTodayDate(),
+  remark: ''
+})
+const editForm = reactive({
+  type: '',
+  count: 1,
+  unit: '',
+  finishTime: getTodayDate(),
+  remark: ''
+})
 const editingIdx = ref(null)
-const editType = ref('')
-const editCount = ref(1)
-const editUnit = ref('')
-const editFinishDate = ref('')
-const editRemark = ref('')
-const addRemark = ref('')
+
+async function initSelectOptions() {
+  const [typeRes, unitRes] = await Promise.all([
+    axios.get('/api/common-meta/key1-value1-by-type', { params: { typeCode: 'FITNESS_TYPE' } }),
+    axios.get('/api/common-meta/key1-value1-by-type', { params: { typeCode: 'UNIT' } })
+  ])
+  if (typeRes.data?.success) {
+    types.value = typeRes.data.data.map(item => item.value1)
+    form.type = types.value[0] || ''
+    editForm.type = types.value[0] || ''
+  }
+  if (unitRes.data?.success) {
+    units.value = unitRes.data.data.map(item => item.value1)
+    form.unit = units.value[0] || ''
+    editForm.unit = units.value[0] || ''
+  }
+}
 
 async function fetchRecords() {
   const res = await axios.get('/api/fitness-record/list')
@@ -137,20 +84,7 @@ async function fetchRecords() {
 }
 
 onMounted(async () => {
-  // 获取类型
-  const typeRes = await axios.get('/api/common-meta/key1-value1-by-type', { params: { typeCode: 'FITNESS_TYPE' } })
-  if (typeRes.data && typeRes.data.success) {
-    types.value = typeRes.data.data.map(item => item.value1)
-    selectedType.value = types.value[0] || ''
-    editType.value = types.value[0] || ''
-  }
-  // 获取单位
-  const unitRes = await axios.get('/api/common-meta/key1-value1-by-type', { params: { typeCode: 'UNIT' } })
-  if (unitRes.data && unitRes.data.success) {
-    units.value = unitRes.data.data.map(item => item.value1)
-    unit.value = units.value[0] || ''
-    editUnit.value = units.value[0] || ''
-  }
+  await initSelectOptions()
   await fetchRecords()
 })
 
@@ -160,47 +94,51 @@ function getTodayDate() {
 }
 
 async function addRecord() {
-  if (!count.value || count.value < 1 || !finishDate.value) return
-  const finishTime = finishDate.value + 'T00:00:00'
-  const payload = {
-    type: selectedType.value,
-    count: count.value,
-    unit: unit.value,
-    finishTime,
-    remark: addRemark.value
-  }
-  const res = await axios.post('/api/fitness-record/add', payload)
-  if (res.data && res.data.success) {
-    await fetchRecords()
-    count.value = 1
-    selectedType.value = types.value[0]
-    unit.value = units.value[0]
-    finishDate.value = getTodayDate()
-    addRemark.value = ''
-    emitter.emit('notify', '添加成功', 'success')
+  if (!form.count || form.count < 1 || !form.finishTime) return
+  adding.value = true
+  try {
+    const res = await axios.post('/api/fitness-record/add', {
+      type: form.type,
+      count: form.count,
+      unit: form.unit,
+      finishTime: form.finishTime + 'T00:00:00',
+      remark: form.remark
+    })
+    if (res.data?.success) {
+      await fetchRecords()
+      form.type = types.value[0]
+      form.unit = units.value[0]
+      form.count = 1
+      form.finishTime = getTodayDate()
+      form.remark = ''
+      emitter.emit('notify', '添加成功', 'success')
+    }
+  } finally {
+    adding.value = false
   }
 }
 
 function editRecord(idx) {
   editingIdx.value = idx
-  editType.value = records.value[idx].type
-  editCount.value = records.value[idx].count
-  editUnit.value = records.value[idx].unit
-  editFinishDate.value = records.value[idx].finishTime ? records.value[idx].finishTime.slice(0, 10) : ''
-  editRemark.value = records.value[idx].remark || ''
+  const record = records.value[idx]
+  editForm.type = record.type
+  editForm.count = record.count
+  editForm.unit = record.unit
+  // finishTime 容错处理
+  editForm.finishTime = record.finishTime ? record.finishTime.slice(0, 10) : getTodayDate()
+  editForm.remark = record.remark || ''
 }
 
 async function saveEdit() {
-  if (editingIdx.value !== null && editFinishDate.value) {
+  if (editingIdx.value !== null && editForm.finishTime) {
     const record = records.value[editingIdx.value]
-    const finishTime = editFinishDate.value + 'T00:00:00'
     const payload = {
       id: record.id,
-      type: editType.value,
-      count: editCount.value,
-      unit: editUnit.value,
-      finishTime,
-      remark: editRemark.value
+      type: editForm.type,
+      count: editForm.count,
+      unit: editForm.unit,
+      finishTime: editForm.finishTime + 'T00:00:00',
+      remark: editForm.remark
     }
     const res = await axios.put('/api/fitness-record/update', payload)
     if (res.data && res.data.success) {
