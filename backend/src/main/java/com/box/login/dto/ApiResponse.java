@@ -27,4 +27,8 @@ public class ApiResponse {
     public String getMessage() { return message; }
     public Object getData() { return data; }
     public boolean isShowCaptcha() { return showCaptcha; }
+
+    public static ApiResponse success(Object data) {
+        return new ApiResponse(true, "success", data, false);
+    }
 }

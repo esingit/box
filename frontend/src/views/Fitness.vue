@@ -55,21 +55,17 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { LucideClipboardList } from 'lucide-vue-next'
 import emitter from '../utils/eventBus.js'
+import axios from '../utils/axios.js'
 
-const types = [
-  '俯卧撑',
-  '仰卧起坐',
-  '深蹲',
-  '引体向上',
-  '跑步',
-]
-const units = ['个', '米', '小时']
-const selectedType = ref(types[0])
+const types = ref([])
+const units = ref([])
+
+const selectedType = ref('')
 const count = ref(1)
-const unit = ref(units[0])
+const unit = ref('')
 const finishDate = ref(getTodayDate())
 const records = ref([])
 let nextId = 1
@@ -77,8 +73,25 @@ let nextId = 1
 const editingIdx = ref(null)
 const editType = ref('')
 const editCount = ref(1)
-const editUnit = ref(units[0])
+const editUnit = ref('')
 const editFinishDate = ref('')
+
+onMounted(async () => {
+  // 获取类型
+  const typeRes = await axios.get('/api/common-meta/key1-value1-by-type', { params: { typeCode: 'FITNESS_TYPE' } })
+  if (typeRes.data && typeRes.data.success) {
+    types.value = typeRes.data.data.map(item => item.value1)
+    selectedType.value = types.value[0] || ''
+    editType.value = types.value[0] || ''
+  }
+  // 获取单位
+  const unitRes = await axios.get('/api/common-meta/key1-value1-by-type', { params: { typeCode: 'UNIT' } })
+  if (unitRes.data && unitRes.data.success) {
+    units.value = unitRes.data.data.map(item => item.value1)
+    unit.value = units.value[0] || ''
+    editUnit.value = units.value[0] || ''
+  }
+})
 
 function getTodayDate() {
   const now = new Date()
@@ -95,8 +108,8 @@ function addRecord() {
     finish_date: finishDate.value,
   })
   count.value = 1
-  selectedType.value = types[0]
-  unit.value = units[0]
+  selectedType.value = types.value[0]
+  unit.value = units.value[0]
   finishDate.value = getTodayDate()
   emitter.emit('notify', '添加成功', 'success')
 }

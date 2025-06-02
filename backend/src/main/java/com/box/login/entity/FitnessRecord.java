@@ -15,5 +15,6 @@ public class FitnessRecord extends BaseEntity {
     private Long userId;
     private String type;
     private Integer count;
+    private String unit;
     private LocalDateTime finishTime;
 } 
