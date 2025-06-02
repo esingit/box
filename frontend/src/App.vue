@@ -37,6 +37,7 @@
       </main>
     </div>
     <Profile ref="profileRef" />
+    <Notification />
   </div>
 </template>
 
@@ -46,8 +47,9 @@ import { useUserStore } from './stores/userStore';
 import { useRouter } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
 import Profile from './views/Profile.vue';
+import Notification from './components/Notification.vue';
 import { LogIn, UserPlus, User, UserCircle, LogOut } from 'lucide-vue-next';
-import { emitter } from './utils/eventBus';
+import emitter from './utils/eventBus.js';
 
 const userStore = useUserStore();
 const router = useRouter();

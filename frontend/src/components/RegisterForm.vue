@@ -31,6 +31,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useUserStore } from '../stores/userStore'
+import emitter from '../utils/eventBus.js'
 
 const username = ref('')
 const password = ref('')
@@ -94,13 +95,11 @@ async function submit() {
       captcha: showCaptcha.value ? captcha.value : "",
       captchaId: showCaptcha.value ? captchaId.value : ""
     };
-
     const response = await userStore.register(payload);
-
     console.log("后端注册响应:", response);
-
     if (response.success) {
       success.value = response.message || '注册成功';
+      emitter.emit('notify', '注册成功', 'success');
       showCaptcha.value = false;
       setTimeout(() => {
       }, 1000);

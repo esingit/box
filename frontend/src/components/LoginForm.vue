@@ -30,7 +30,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useUserStore } from '../stores/userStore'
-import { emitter } from '../utils/eventBus'
+import emitter from '../utils/eventBus.js'
 import { useRouter } from 'vue-router'
 
 const username = ref('')
@@ -91,7 +91,6 @@ async function submit() {
       username: username.value,
       password: password.value,
     };
-
     if (showCaptcha.value) {
       if (!captcha.value) {
         error.value = '请输入验证码';
@@ -101,10 +100,9 @@ async function submit() {
       payload.captchaId = captchaId.value;
       payload.captcha = captcha.value;
     }
-
     const response = await userStore.login(payload);
-
     if (response.success) {
+      emitter.emit('notify', '登录成功', 'success');
       emitter.emit('login-success');
       showCaptcha.value = false;
       username.value = '';
