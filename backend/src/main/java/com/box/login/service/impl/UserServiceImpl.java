@@ -1,6 +1,7 @@
 package com.box.login.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.box.login.config.JwtProperties;
 import com.box.login.entity.User;
 import com.box.login.mapper.UserMapper;
 import com.box.login.service.UserService;
@@ -9,13 +10,15 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 
-import java.security.Key;
-import java.time.LocalDateTime;
+import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -23,9 +26,19 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private JwtProperties jwtProperties;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256); // 用于签发Token的密钥，实际应用中应保存在安全的地方
+    private SecretKey key; // 用于签发Token的密钥
     private final long validityInMilliseconds = 3600000; // Token有效期1小时
+
+    @PostConstruct
+    public void initKey() {
+        // 用配置文件的 secret 生成密钥
+        String secret = jwtProperties.getSecret();
+        this.key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), SignatureAlgorithm.HS256.getJcaName());
+    }
 
     @Override
     public User findByUsername(String username) {
@@ -51,6 +64,7 @@ public class UserServiceImpl implements UserService {
 
         return Jwts.builder()
                 .setClaims(claims)
+                .setSubject(user.getUsername()) // 设置标准sub字段
                 .setIssuedAt(now)
                 .setExpiration(validity)
                 .signWith(key)
