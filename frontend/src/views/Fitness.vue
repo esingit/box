@@ -37,16 +37,18 @@
     <div v-if="editingIdx !== null" class="edit-modal">
       <div class="modal-content">
         <h3>编辑记录</h3>
-        <select v-model="editType" class="type-select">
+        <select v-model="editType" class="type-select fitness-select">
           <option v-for="type in types" :key="type" :value="type">{{ type }}</option>
         </select>
-        <input type="number" v-model.number="editCount" min="1" class="count-input" />
-        <select v-model="editUnit" class="unit-select">
+        <input type="number" v-model.number="editCount" min="1" class="count-input fitness-input" />
+        <select v-model="editUnit" class="unit-select fitness-select">
           <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
         </select>
-        <input type="date" v-model="editFinishDate" class="date-input" required />
-        <button @click="saveEdit" class="add-btn">保存</button>
-        <button @click="cancelEdit" class="delete-btn">取消</button>
+        <input type="date" v-model="editFinishDate" class="date-input fitness-input" required />
+        <div class="modal-actions">
+          <button @click="saveEdit" class="add-btn">保存</button>
+          <button @click="cancelEdit" class="delete-btn">取消</button>
+        </div>
       </div>
     </div>
   </div>
