@@ -168,14 +168,14 @@ input:focus, textarea:focus, select:focus {
   border-color: #a0a0a0;
 }
 
-button, .btn {
+.btn {
   display: inline-block;
   background: #fff;
   color: #222;
   border: 1.5px solid #e0e0e0;
   border-radius: 999px;
-  padding: 6px 24px;
-  font-size: 15px;
+  padding: 12px 32px;
+  font-size: 18px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.18s, border 0.18s, color 0.18s;

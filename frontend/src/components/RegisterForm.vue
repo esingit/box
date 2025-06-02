@@ -1,26 +1,26 @@
 <template>
   <div class="auth-form-inner">
-    <h2>注册</h2>
+    <h2 class="menu-title">注册</h2>
     <form @submit.prevent="submit">
       <div class="form-group">
         <label>用户名</label>
-        <input v-model="username" required autocomplete="username" />
+        <input v-model="username" required autocomplete="username" class="input" />
       </div>
       <div class="form-group">
         <label>密码</label>
-        <input type="password" v-model="password" required autocomplete="new-password" />
+        <input type="password" v-model="password" required autocomplete="new-password" class="input" />
       </div>
       <div class="form-group" v-if="showCaptcha">
         <label>验证码</label>
         <div class="captcha-container">
-          <input v-model="captcha" required class="captcha-input" />
+          <input v-model="captcha" required class="input captcha-input" />
           <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
         </div>
       </div>
       <div class="form-submit">
         <p v-if="error" class="error-msg">{{ error }}</p>
         <p v-if="success" class="success-msg">{{ success }}</p>
-        <button type="submit" class="btn" :disabled="isLoading">
+        <button type="submit" class="btn btn-primary" :disabled="isLoading">
           {{ isLoading ? '注册中...' : '注册' }}
         </button>
       </div>
