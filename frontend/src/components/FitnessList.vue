@@ -25,15 +25,13 @@
       </span>
     </li>
   </ul>
-  <div v-if="showPagination && totalPages > 1" class="pagination-bar">
-    <button class="btn btn-white" :disabled="current === 1" @click="$emit('page-change', current - 1)">上一页</button>
-    <span>第 {{ current }} / {{ totalPages }} 页</span>
-    <button class="btn btn-white" :disabled="current === totalPages || totalPages === 0" @click="$emit('page-change', current + 1)">下一页</button>
-    <select class="page-size-select" :value="pageSize" @change="$emit('page-size-change', Number($event.target.value))">
-      <option v-for="size in [7, 10, 20, 50]" :key="size" :value="size">每页{{ size }}条</option>
-    </select>
-    <span class="total-count">共 {{ total }} 条</span>
-  </div>
+  <PaginationBar
+    :current="current"
+    :total="total"
+    :pageSize="pageSize"
+    @page-change="$emit('page-change', $event)"
+    @page-size-change="$emit('page-size-change', $event)"
+  />
 </template>
 
 <script setup>
@@ -54,6 +52,17 @@ const props = defineProps({
 })
 import { LucideEdit, LucideTrash2 } from 'lucide-vue-next'
 import { computed } from 'vue'
+import PaginationBar from './PaginationBar.vue'
 const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
 const showPagination = computed(() => props.total > props.pageSize)
 </script>
+
+<style scoped>
+.common-list,
+.common-list-header,
+.common-list-item {
+  padding-left: 16px;
+  padding-right: 16px;
+  box-sizing: border-box;
+}
+</style>
