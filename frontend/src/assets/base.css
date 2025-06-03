@@ -448,17 +448,21 @@ ul, ol {
 .common-list {
   width: 100%;
   max-width: 100%;
-  background: #fafbfc;
-  border-radius: 12px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  border-radius: 18px; /* 圆角加大 */
   list-style: none;
-  margin: 0;
-  padding: 0;
+  margin: 24px 0 0 0; /* 顶部加大边距 */
+  padding: 8px 0 8px 0; /* 上下内边距 */
 }
 .common-list-header {
   background: #f4f6f8;
   font-weight: 600;
   color: #666;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+}
+.common-list-item:last-child {
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
 }
 .common-list-item {
   border-top: 1px solid #f0f0f0;
@@ -504,7 +508,7 @@ ul, ol {
   white-space: normal;
   word-break: break-word;
 }
-.list-col-action { flex: 1.2 1 0%; display: flex; gap: 8px; justify-content: center; text-align: center; }
+.list-col-action { flex: 2 1 0%; display: flex; gap: 8px; justify-content: center; text-align: center; }
 .center { text-align: center; }
 @media (max-width: 700px) {
   .common-list-header, .common-list-item {

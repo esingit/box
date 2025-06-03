@@ -1,7 +1,7 @@
 <template>
   <ul class="common-list">
     <li class="common-list-header">
-      <span class="list-col-type center">类型</span>
+      <span class="list-col-type">类型</span>
       <span class="list-col-count">数量</span>
       <span class="list-col-unit">单位</span>
       <span class="list-col-time">日期</span>
