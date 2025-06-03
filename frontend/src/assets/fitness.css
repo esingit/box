@@ -55,8 +55,8 @@
   outline: none;
 }
 .fitness-form .add-btn:hover {
-  background: #f5f5f5;
-  border-color: #d0d0d0;
+  background: #ededed;
+  border-color: #ededed;
 }
 .fitness-form .add-btn:active {
   background: #ededed;
@@ -176,6 +176,115 @@
   background: #f5f5f5;
   color: #bbb;
   border-color: #eee;
+  cursor: not-allowed;
+}
+/* 查询栏样式 */
+.fitness-query-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.fitness-query-bar .query-fields {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+}
+.fitness-query-bar select,
+.fitness-query-bar input[type="date"],
+.fitness-query-bar input[type="text"] {
+  height: 40px;
+  border-radius: 20px;
+  padding: 0 16px;
+  font-size: 16px;
+  border: 1.5px solid #e0e0e0;
+  background: #fff;
+  color: #222;
+  min-width: 110px;
+  outline: none;
+  transition: border 0.18s;
+}
+.fitness-query-bar select:focus,
+.fitness-query-bar input[type="date"]:focus,
+.fitness-query-bar input[type="text"]:focus {
+  border-color: #a0a0a0;
+}
+.fitness-query-bar .query-btns {
+  display: flex;
+  gap: 10px;
+}
+.fitness-query-bar button {
+  height: 40px;
+  font-size: 16px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  cursor: pointer;
+  border: 1.5px solid #e0e0e0;
+  background: #fff;
+  color: #222;
+  transition: background 0.18s, border 0.18s, color 0.18s;
+}
+.fitness-query-bar button:focus {
+  border-color: #a0a0a0;
+}
+.fitness-query-bar .reset-btn {
+  background: #eee;
+  color: #333;
+  border: 1.5px solid #e0e0e0;
+}
+.fitness-query-bar button:hover {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+.fitness-query-bar button:active {
+  background: #ededed;
+  border-color: #bdbdbd;
+}
+.fitness-query-bar button:disabled {
+  background: #f5f5f5;
+  color: #bbb;
+  border-color: #eee;
+  cursor: not-allowed;
+}
+.fitness-query-bar .to-text {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 4px;
+  line-height: 40px;
+}
+.fitness-add-btn {
+  height: 40px;
+  font-size: 16px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  margin-bottom: 20px;
+  background: #222;
+  color: #fff;
+  border: 1.5px solid #222;
+  font-weight: 600;
+  transition: background 0.18s, border 0.18s, color 0.18s;
+}
+.fitness-add-btn:hover {
+  background: #444;
+  border-color: #444;
+}
+.fitness-add-btn:active {
+  background: #000;
+  border-color: #000;
+}
+.fitness-add-btn:disabled {
+  background: #888;
+  color: #eee;
+  border-color: #888;
   cursor: not-allowed;
 }
 @media (max-width: 700px) {

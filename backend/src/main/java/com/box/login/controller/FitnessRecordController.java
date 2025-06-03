@@ -23,8 +23,16 @@ public class FitnessRecordController {
     private UserService userService;
 
     @GetMapping("/list")
-    public ApiResponse<List<FitnessRecord>> listRecords() {
-        List<FitnessRecord> records = fitnessRecordService.listAll();
+    public ApiResponse<List<FitnessRecord>> listRecords(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String remark,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        User user = userService.findByUsername(username);
+        Long userId = user != null ? user.getId() : null;
+        List<FitnessRecord> records = fitnessRecordService.listByConditions(userId, type, remark, startDate, endDate);
         return ApiResponse.success(records);
     }
 

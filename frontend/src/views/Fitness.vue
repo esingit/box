@@ -4,7 +4,23 @@
       <LucideClipboardList class="title-icon" color="#222" size="24" />
       <span>记录</span>
     </div>
-    <button class="btn" @click="showAddModal = true" style="margin-bottom: 20px;">添加单据</button>
+    <div class="fitness-query-bar">
+      <div class="query-fields">
+        <select v-model="query.type">
+          <option value="">全部类型</option>
+          <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
+        </select>
+        <input type="date" v-model="query.startDate" />
+        <span class="to-text">至</span>
+        <input type="date" v-model="query.endDate" />
+        <input v-model="query.remark" placeholder="备注关键词" type="text" />
+      </div>
+      <div class="query-btns">
+        <button class="btn" @click="handleQuery">查询</button>
+        <button class="btn reset-btn" @click="resetQuery">重置</button>
+      </div>
+    </div>
+    <button class="fitness-add-btn btn" @click="showAddModal = true">添加单据</button>
     <FitnessModal
       :show="showAddModal"
       :form="form"
@@ -69,6 +85,12 @@ const editForm = reactive({
 })
 const editingIdx = ref(null)
 const showAddModal = ref(false)
+const query = reactive({
+  type: '',
+  startDate: '',
+  endDate: '',
+  remark: ''
+})
 
 async function initSelectOptions() {
   const [typeRes, unitRes] = await Promise.all([
@@ -88,7 +110,12 @@ async function initSelectOptions() {
 }
 
 async function fetchRecords() {
-  const res = await axios.get('/api/fitness-record/list')
+  const params = {}
+  if (query.type) params.type = query.type
+  if (query.startDate) params.startDate = query.startDate
+  if (query.endDate) params.endDate = query.endDate
+  if (query.remark) params.remark = query.remark
+  const res = await axios.get('/api/fitness-record/list', { params })
   if (res.data && res.data.success) {
     records.value = res.data.data || []
   }
@@ -183,5 +210,17 @@ async function deleteRecord(idx) {
       }
     }
   })
+}
+
+function handleQuery() {
+  fetchRecords()
+}
+
+function resetQuery() {
+  query.type = ''
+  query.startDate = ''
+  query.endDate = ''
+  query.remark = ''
+  fetchRecords()
 }
 </script>
