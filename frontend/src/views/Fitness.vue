@@ -5,12 +5,15 @@
       <span>记录</span>
     </div>
     <button class="btn" @click="showAddModal = true" style="margin-bottom: 20px;">添加单据</button>
-    <FitnessAddModal
+    <FitnessModal
       :show="showAddModal"
       :form="form"
       :types="types"
       :units="units"
-      :adding="adding"
+      :loading="adding"
+      title="添加单据"
+      confirmText="确定"
+      remarkPlaceholder="备注（可选）"
       @submit="handleAddRecord"
       @cancel="showAddModal = false"
     />
@@ -19,26 +22,29 @@
       @edit="editRecord"
       @delete="deleteRecord"
     />
-    <FitnessEditModal
+    <FitnessModal
       :show="editingIdx !== null"
-      :editForm="editForm"
+      :form="editForm"
       :types="types"
       :units="units"
-      @save="saveEdit"
+      :loading="false"
+      title="编辑记录"
+      confirmText="保存"
+      remarkPlaceholder="备注"
+      @submit="saveEdit"
       @cancel="cancelEdit"
     />
   </div>
 </template>
 
 <script setup>
-import '../assets/fitness.css'
+import '../assets/style.css'
 import { ref, reactive, onMounted } from 'vue'
 import { LucideClipboardList } from 'lucide-vue-next'
 import emitter from '../utils/eventBus.js'
 import axios from '../utils/axios.js'
-import FitnessAddModal from '../components/FitnessAddModal.vue'
+import FitnessModal from '../components/FitnessModal.vue'
 import FitnessList from '../components/FitnessList.vue'
-import FitnessEditModal from '../components/FitnessEditModal.vue'
 
 const types = ref([])
 const units = ref([])
