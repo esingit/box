@@ -5,6 +5,7 @@ import { createPinia } from 'pinia'
 
 import 'normalize.css'
 import './assets/base.css'
+import './assets/sidebar.css'
 import './assets/fitness.css'
 
 const app = createApp(App)

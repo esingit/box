@@ -1,11 +1,11 @@
 <template>
-  <div class="fitness-page">
-    <div class="fitness-title">
+  <div class="page-container">
+    <div class="page-title">
       <LucideClipboardList class="title-icon" color="#222" size="24" />
       <span>记录</span>
     </div>
     <div class="fitness-query-bar">
-      <div class="query-fields">
+      <div class="query-fields query-bar-fields">
         <select v-model="query.type">
           <option value="">全部类型</option>
           <option v-for="t in types" :key="t" :value="t">{{ t }}</option>

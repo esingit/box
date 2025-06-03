@@ -41,3 +41,5 @@ function toggleSidebar() {
   }
 }
 </script>
+
+<style src="./../assets/sidebar.css"></style>

@@ -5,15 +5,15 @@
         <LucideX class="close-icon" />
       </button>
       <h3>{{ title }}</h3>
-      <select v-model="form.type" class="type-select fitness-select">
+      <select v-model="form.type" class="type-select select">
         <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
       </select>
-      <input v-model.number="form.count" type="number" min="1" class="count-input fitness-input" required placeholder="数量" />
-      <select v-model="form.unit" class="unit-select fitness-select">
+      <input v-model.number="form.count" type="number" min="1" class="count-input input" required placeholder="数量" />
+      <select v-model="form.unit" class="unit-select select">
         <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
       </select>
-      <input v-model="form.finishTime" type="date" class="date-input fitness-input" required />
-      <input v-model="form.remark" type="text" class="remark-input fitness-input" :placeholder="remarkPlaceholder" />
+      <input v-model="form.finishTime" type="date" class="date-input input" required />
+      <input v-model="form.remark" type="text" class="remark-input input" :placeholder="remarkPlaceholder" />
       <div class="modal-actions">
         <button class="btn btn-white" :disabled="loading" @click="$emit('submit')">{{ confirmText }}</button>
       </div>

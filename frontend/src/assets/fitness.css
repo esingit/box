@@ -1,21 +1,4 @@
-/* 健身记录页面专用样式 */
-.fitness-page {
-  max-width: 1400px;
-  margin: 48px auto;
-  padding: 40px;
-  background: #fff;
-  border-radius: 16px;
-  border: 1.5px solid #e5e7eb;
-}
-.fitness-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 22px;
-  font-weight: 600;
-  margin-bottom: 24px;
-  color: #222;
-}
+/* 健身记录页面专用样式，仅保留独有部分 */
 .fitness-form {
   display: flex;
   gap: 12px;
@@ -26,84 +9,8 @@
 .fitness-form .count-input,
 .fitness-form .unit-select,
 .fitness-form .date-input {
-  border-radius: 999px;
-  border: 1.5px solid #e0e0e0;
-  padding: 8px 16px;
-  font-size: 15px;
-  outline: none;
-  transition: border 0.18s;
-  background: #fff;
-  color: #222;
   min-width: 90px;
 }
-.fitness-form .type-select:focus,
-.fitness-form .count-input:focus,
-.fitness-form .unit-select:focus,
-.fitness-form .date-input:focus {
-  border-color: #a0a0a0;
-}
-.fitness-list {
-  width: 100%;
-  max-width: 100%;
-  background: #fafbfc;
-  border-radius: 12px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.fitness-header {
-  background: #f4f6f8;
-  font-weight: 600;
-  color: #666;
-}
-.fitness-item {
-  border-top: 1px solid #f0f0f0;
-  background: #fff;
-  transition: background 0.2s;
-}
-.fitness-item:hover {
-  background: #f8fafc;
-}
-.fitness-header,
-.fitness-item {
-  display: flex;
-  width: 100%;
-  flex-wrap: nowrap;
-  align-items: stretch;
-}
-.fitness-header span,
-.fitness-item span {
-  padding: 8px 6px;
-  word-break: break-word;
-  white-space: normal;
-  flex-shrink: 1;
-}
-.item-type,
-.item-count,
-.item-unit,
-.item-time,
-.item-remark,
-.item-action {
-  min-width: 0;
-  max-width: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.item-type { flex: 2 1 0%; text-align: left; }
-.item-count { flex: 1 1 0%; text-align: right; }
-.item-unit { flex: 1 1 0%; text-align: center; }
-.item-time { flex: 2 1 0%; text-align: center; }
-.item-remark {
-  flex: 2 1 0%;
-  text-align: center;
-  white-space: normal;
-  word-break: break-word;
-}
-.item-action { flex: 1.2 1 0%; display: flex; gap: 8px; justify-content: center; text-align: center; }
-.center { text-align: center; }
-/* 查询栏样式 */
 .fitness-query-bar {
   display: flex;
   gap: 12px;
@@ -114,25 +21,6 @@
   display: flex;
   gap: 12px;
   flex: 1;
-}
-.fitness-query-bar select,
-.fitness-query-bar input[type="date"],
-.fitness-query-bar input[type="text"] {
-  height: 40px;
-  border-radius: 20px;
-  padding: 0 16px;
-  font-size: 16px;
-  border: 1.5px solid #e0e0e0;
-  background: #fff;
-  color: #222;
-  min-width: 110px;
-  outline: none;
-  transition: border 0.18s;
-}
-.fitness-query-bar select:focus,
-.fitness-query-bar input[type="date"]:focus,
-.fitness-query-bar input[type="text"]:focus {
-  border-color: #a0a0a0;
 }
 .fitness-query-bar .query-btns {
   display: flex;
@@ -148,23 +36,8 @@
   line-height: 40px;
 }
 @media (max-width: 700px) {
-  .fitness-page {
-    padding: 12px 4px;
-    border-radius: 8px;
-  }
   .fitness-form {
     flex-direction: column;
     gap: 8px;
-  }
-  .fitness-header, .fitness-item {
-    font-size: 14px;
-    padding: 8px 2px;
-  }
-  .item-type, .item-count, .item-unit, .item-time, .item-remark, .item-action {
-    min-width: 0;
-    max-width: none;
-    flex: 1 1 0%;
-    font-size: 13px;
-    padding: 0 2px;
   }
 }

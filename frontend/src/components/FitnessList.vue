@@ -1,21 +1,21 @@
 <template>
-  <ul class="fitness-list">
-    <li class="fitness-header">
-      <span class="item-type center">类型</span>
-      <span class="item-count">数量</span>
-      <span class="item-unit">单位</span>
-      <span class="item-time">日期</span>
-      <span class="item-remark">备注</span>
-      <span class="item-action center">操作</span>
+  <ul class="common-list">
+    <li class="common-list-header">
+      <span class="list-col-type center">类型</span>
+      <span class="list-col-count">数量</span>
+      <span class="list-col-unit">单位</span>
+      <span class="list-col-time">日期</span>
+      <span class="list-col-remark">备注</span>
+      <span class="list-col-action center">操作</span>
     </li>
-    <li v-if="records.length === 0" class="fitness-item empty">暂无记录</li>
-    <li v-for="(record, idx) in records" :key="record.id" class="fitness-item">
-      <span class="item-type">{{ record.type }}</span>
-      <span class="item-count">{{ record.count }}</span>
-      <span class="item-unit">{{ record.unit }}</span>
-      <span class="item-time">{{ record.finishTime ? record.finishTime.slice(0, 10) : '-' }}</span>
-      <span class="item-remark">{{ record.remark }}</span>
-      <span class="item-action">
+    <li v-if="records.length === 0" class="common-list-item empty">暂无记录</li>
+    <li v-for="(record, idx) in records" :key="record.id" class="common-list-item">
+      <span class="list-col-type">{{ record.type }}</span>
+      <span class="list-col-count">{{ record.count }}</span>
+      <span class="list-col-unit">{{ record.unit }}</span>
+      <span class="list-col-time">{{ record.finishTime ? record.finishTime.slice(0, 10) : '-' }}</span>
+      <span class="list-col-remark">{{ record.remark }}</span>
+      <span class="list-col-action">
         <button @click="$emit('edit', idx)" class="btn btn-gray" title="编辑">
           <LucideEdit size="18" style="vertical-align: middle;" />
         </button>
