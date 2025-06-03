@@ -87,6 +87,18 @@ function showRegister() {
   emitter.emit('show-auth', 'register');
 }
 
+function handleShowAuth(type) {
+  if (type === 'login') {
+    userStore.logout(); // 确保登出，状态重置
+    closeMenu();        // 关闭菜单
+    router.push('/');   // 跳转到主页
+  }
+}
+
+function handleLoginSuccess() {
+  closeMenu(); // 登录成功时自动关闭菜单
+}
+
 function handleClickOutside(event) {
   const menu = document.querySelector('.dropdown-menu');
   const btn = document.querySelector('.user-menu-btn');
@@ -103,8 +115,16 @@ function handleClickOutside(event) {
 
 onMounted(() => {
   document.addEventListener('mousedown', handleClickOutside);
+  emitter.on('show-auth', handleShowAuth);
+  emitter.on('login-success', handleLoginSuccess);
 });
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleClickOutside);
+  emitter.off('show-auth', handleShowAuth);
+  emitter.off('login-success', handleLoginSuccess);
 });
 </script>
+
+<style>
+/* 样式已迁移到 src/assets/base.css，无需弹窗样式 */
+</style>

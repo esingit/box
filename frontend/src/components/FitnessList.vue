@@ -56,13 +56,3 @@ import PaginationBar from './PaginationBar.vue'
 const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
 const showPagination = computed(() => props.total > props.pageSize)
 </script>
-
-<style scoped>
-.common-list,
-.common-list-header,
-.common-list-item {
-  padding-left: 16px;
-  padding-right: 16px;
-  box-sizing: border-box;
-}
-</style>

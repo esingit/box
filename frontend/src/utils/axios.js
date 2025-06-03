@@ -27,6 +27,17 @@ instance.interceptors.response.use(
   response => response,
   error => {
     if (error.response) {
+      // 处理 401 未授权（token 过期等）
+      if (error.response.status === 401) {
+        // 清除token和用户信息
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // 通过eventBus通知弹窗登录
+        import('../utils/eventBus').then(({ default: emitter }) => {
+          emitter.emit('notify', '登录已过期，请重新登录', 'error');
+          emitter.emit('show-auth', 'login');
+        });
+      }
       // 处理 403 错误
       if (error.response.status === 403) {
         // 可以在这里处理验证码逻辑
@@ -37,4 +48,4 @@ instance.interceptors.response.use(
   }
 )
 
-export default instance 
+export default instance
