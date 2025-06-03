@@ -178,8 +178,8 @@ ul, ol {
   border: 1px solid #e5e7eb;
 }
 .auth-form-container h2 {
-  margin: -30px -30px 24px -30px;
-  padding: 24px 30px;
+  padding-bottom: 28px;
+  margin-top: 0;
   color: #333;
   font-size: 20px;
   font-weight: 600;
