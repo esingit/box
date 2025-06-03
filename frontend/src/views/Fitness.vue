@@ -4,12 +4,15 @@
       <LucideClipboardList class="title-icon" color="#222" size="24" />
       <span>记录</span>
     </div>
-    <FitnessForm
+    <button class="btn" @click="showAddModal = true" style="margin-bottom: 20px;">添加单据</button>
+    <FitnessAddModal
+      :show="showAddModal"
       :form="form"
       :types="types"
       :units="units"
       :adding="adding"
-      @submit="addRecord"
+      @submit="handleAddRecord"
+      @cancel="showAddModal = false"
     />
     <FitnessList
       :records="records"
@@ -33,7 +36,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { LucideClipboardList } from 'lucide-vue-next'
 import emitter from '../utils/eventBus.js'
 import axios from '../utils/axios.js'
-import FitnessForm from '../components/FitnessForm.vue'
+import FitnessAddModal from '../components/FitnessAddModal.vue'
 import FitnessList from '../components/FitnessList.vue'
 import FitnessEditModal from '../components/FitnessEditModal.vue'
 
@@ -58,6 +61,7 @@ const editForm = reactive({
   remark: ''
 })
 const editingIdx = ref(null)
+const showAddModal = ref(false)
 
 async function initSelectOptions() {
   const [typeRes, unitRes] = await Promise.all([
@@ -116,6 +120,12 @@ async function addRecord() {
   } finally {
     adding.value = false
   }
+}
+
+function handleAddRecord() {
+  addRecord().then(() => {
+    showAddModal.value = false
+  })
 }
 
 function editRecord(idx) {

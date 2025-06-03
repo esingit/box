@@ -728,6 +728,7 @@ ul, ol {
   padding-right: 24px;
   margin-top: 0;
 }
+
 .edit-modal .add-btn {
   background: #fff;
   color: #222;
@@ -871,4 +872,41 @@ select::-ms-expand {
   font-weight: 400;
   margin-bottom: 8px;
   display: block;
+}
+
+/* 添加单据弹窗按钮样式 */
+.add-btn {
+  display: inline-block;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 32px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(16,185,129,0.08);
+  transition: background 0.18s, box-shadow 0.18s;
+  outline: none;
+}
+
+.add-btn:disabled {
+  background: #d1fae5;
+  color: #bbb;
+  cursor: not-allowed;
+}
+
+/* 添加单据弹窗表单输入样式优化 */
+.fitness-form .remark-input {
+  border-radius: 999px;
+  border: 1.5px solid #e0e0e0;
+  padding: 8px 20px;
+  font-size: 15px;
+  outline: none;
+  background: #fff;
+  color: #222;
+  min-width: 120px;
+  flex: 1;
+}
+.fitness-form .remark-input:focus {
+  border-color: #a0a0a0;
 }
