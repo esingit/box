@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import '../assets/style.css'
+import '../assets/base.css'
 import '../assets/fitness.css'
 import { ref, reactive, onMounted } from 'vue'
 import { LucideClipboardList } from 'lucide-vue-next'

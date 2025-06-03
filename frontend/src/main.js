@@ -4,7 +4,8 @@ import router from './router'
 import { createPinia } from 'pinia'
 
 import 'normalize.css'
-import './assets/style.css'
+import './assets/base.css'
+import './assets/fitness.css'
 
 const app = createApp(App)
 app.use(createPinia())
