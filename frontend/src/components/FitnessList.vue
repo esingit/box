@@ -16,8 +16,12 @@
       <span class="item-time">{{ record.finishTime ? record.finishTime.slice(0, 10) : '-' }}</span>
       <span class="item-remark">{{ record.remark }}</span>
       <span class="item-action">
-        <button @click="$emit('edit', idx)" class="edit-btn">编辑</button>
-        <button @click="$emit('delete', idx)" class="delete-btn">删除</button>
+        <button @click="$emit('edit', idx)" class="edit-btn" title="编辑">
+          <LucideEdit size="18" style="vertical-align: middle;" />
+        </button>
+        <button @click="$emit('delete', idx)" class="delete-btn" title="删除">
+          <LucideTrash2 size="18" style="vertical-align: middle;" />
+        </button>
       </span>
     </li>
   </ul>
@@ -27,4 +31,5 @@
 const props = defineProps({
   records: Array
 })
+import { LucideEdit, LucideTrash2 } from 'lucide-vue-next'
 </script>

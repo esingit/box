@@ -1,6 +1,9 @@
 <template>
   <div v-if="show" class="edit-modal">
     <div class="modal-content">
+      <button class="close-btn" @click="$emit('cancel')" title="关闭">
+        <LucideX class="close-icon" />
+      </button>
       <h3>添加单据</h3>
       <form class="fitness-form" @submit.prevent="onSubmit">
         <select v-model="form.type" class="type-select" required>
@@ -15,14 +18,14 @@
       </form>
       <div class="modal-actions">
         <button class="add-btn" :disabled="adding" @click="onSubmit">确定</button>
-        <button class="delete-btn" type="button" @click="$emit('cancel')">取消</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { toRefs, reactive, watch } from 'vue'
+import { toRefs } from 'vue'
+import { LucideX } from 'lucide-vue-next'
 const props = defineProps({
   show: Boolean,
   form: Object,
