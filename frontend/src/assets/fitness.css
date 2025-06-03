@@ -69,21 +69,18 @@
   cursor: not-allowed;
 }
 .fitness-list {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: none;
+  overflow-x: auto;
+  box-sizing: border-box;
+  background: #fafbfc;
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  list-style: none;
   margin: 0;
   padding: 0;
-  list-style: none;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
-  background: #fafbfc;
-  table-layout: fixed;
-  width: 100%;
-}
-.fitness-header, .fitness-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 8px;
-  font-size: 15px;
 }
 .fitness-header {
   background: #f4f6f8;
@@ -98,19 +95,44 @@
 .fitness-item:hover {
   background: #f8fafc;
 }
-.item-type, .item-count, .item-unit, .item-time, .item-action {
-  flex: 1;
-  text-align: left;
-  padding: 0 4px;
-}
-.item-type.center, .item-action.center {
-  text-align: center;
-}
-.item-action {
+.fitness-header,
+.fitness-item {
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  width: 100%;
+  flex-wrap: nowrap;
+  align-items: stretch;
 }
+.fitness-header span,
+.fitness-item span {
+  padding: 8px 6px;
+  word-break: break-word;
+  white-space: normal;
+  flex-shrink: 1;
+}
+.item-type,
+.item-count,
+.item-unit,
+.item-time,
+.item-remark,
+.item-action {
+  min-width: 0;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-type { flex: 2 1 0%; text-align: left; }
+.item-count { flex: 1 1 0%; text-align: right; }
+.item-unit { flex: 1 1 0%; text-align: center; }
+.item-time { flex: 2 1 0%; text-align: center; }
+.item-remark {
+  flex: 2 1 0%;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+}
+.item-action { flex: 1.2 1 0%; display: flex; gap: 8px; justify-content: center; text-align: center; }
+.center { text-align: center; }
 .edit-btn, .delete-btn {
   border: 1.5px solid #e0e0e0;
   border-radius: 999px;
@@ -156,48 +178,6 @@
   border-color: #eee;
   cursor: not-allowed;
 }
-/* 表格列宽度与省略号处理，防止内容撑开表格宽度 */
-.fitness-header .item-type,
-.fitness-item .item-type {
-  max-width: 120px;
-  min-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fitness-header .item-count,
-.fitness-item .item-count {
-  max-width: 80px;
-  min-width: 60px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fitness-header .item-unit,
-.fitness-item .item-unit {
-  max-width: 80px;
-  min-width: 60px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fitness-header .item-time,
-.fitness-item .item-time {
-  max-width: 140px;
-  min-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fitness-header .item-action,
-.fitness-item .item-action {
-  max-width: 160px;
-  min-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 @media (max-width: 700px) {
   .fitness-page {
     padding: 12px 4px;
@@ -210,5 +190,12 @@
   .fitness-header, .fitness-item {
     font-size: 14px;
     padding: 8px 2px;
+  }
+  .item-type, .item-count, .item-unit, .item-time, .item-remark, .item-action {
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 0%;
+    font-size: 13px;
+    padding: 0 2px;
   }
 }
