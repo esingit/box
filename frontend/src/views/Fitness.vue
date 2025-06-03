@@ -35,8 +35,12 @@
     />
     <FitnessList
       :records="records"
+      :current="current"
+      :total="total"
+      :page-size="pageSize"
       @edit="editRecord"
       @delete="deleteRecord"
+      @page-change="handlePageChange"
     />
     <FitnessModal
       :show="editingIdx !== null"
@@ -91,6 +95,9 @@ const query = reactive({
   endDate: '',
   remark: ''
 })
+const current = ref(1)
+const total = ref(0)
+const pageSize = ref(10)
 
 async function initSelectOptions() {
   const [typeRes, unitRes] = await Promise.all([
@@ -109,15 +116,20 @@ async function initSelectOptions() {
   }
 }
 
-async function fetchRecords() {
-  const params = {}
+async function fetchRecords(page = 1) {
+  const params = {
+    page,
+    pageSize: pageSize.value
+  }
   if (query.type) params.type = query.type
   if (query.startDate) params.startDate = query.startDate
   if (query.endDate) params.endDate = query.endDate
   if (query.remark) params.remark = query.remark
   const res = await axios.get('/api/fitness-record/list', { params })
   if (res.data && res.data.success) {
-    records.value = res.data.data || []
+    records.value = (res.data.data && res.data.data.records) ? res.data.data.records : []
+    total.value = res.data.data ? Number(res.data.data.total) : 0
+    current.value = res.data.data ? Number(res.data.data.current) : 1
   }
 }
 
@@ -222,5 +234,9 @@ function resetQuery() {
   query.endDate = ''
   query.remark = ''
   fetchRecords()
+}
+
+function handlePageChange(page) {
+  fetchRecords(page)
 }
 </script>

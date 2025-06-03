@@ -4,6 +4,8 @@ import com.box.login.entity.FitnessRecord;
 import com.box.login.mapper.FitnessRecordMapper;
 import com.box.login.service.FitnessRecordService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -37,9 +39,8 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
     }
 
     @Override
-    public List<FitnessRecord> listByConditions(Long userId, String type, String remark, String startDate, String endDate) {
+    public List<FitnessRecord> listByConditions(String type, String remark, String startDate, String endDate) {
         QueryWrapper<FitnessRecord> wrapper = new QueryWrapper<>();
-        if (userId != null) wrapper.eq("user_id", userId);
         if (type != null && !type.isEmpty()) wrapper.eq("type", type);
         if (remark != null && !remark.isEmpty()) wrapper.like("remark", remark);
         if (startDate != null && !startDate.isEmpty()) {
@@ -49,5 +50,19 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
             wrapper.le("finish_time", LocalDate.parse(endDate).atTime(23,59,59));
         }
         return fitnessRecordMapper.selectList(wrapper);
+    }
+
+    @Override
+    public IPage<FitnessRecord> pageByConditions(Page<FitnessRecord> page, String type, String remark, String startDate, String endDate) {
+        QueryWrapper<FitnessRecord> wrapper = new QueryWrapper<>();
+        if (type != null && !type.isEmpty()) wrapper.eq("type", type);
+        if (remark != null && !remark.isEmpty()) wrapper.like("remark", remark);
+        if (startDate != null && !startDate.isEmpty()) {
+            wrapper.ge("finish_time", java.time.LocalDate.parse(startDate).atStartOfDay());
+        }
+        if (endDate != null && !endDate.isEmpty()) {
+            wrapper.le("finish_time", java.time.LocalDate.parse(endDate).atTime(23,59,59));
+        }
+        return fitnessRecordMapper.selectPage(page, wrapper);
     }
 }

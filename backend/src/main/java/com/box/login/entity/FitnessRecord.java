@@ -17,8 +17,6 @@ public class FitnessRecord extends BaseEntity {
     @TableId
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long userId;
     private String type;
     private Integer count;
     private String unit;
