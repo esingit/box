@@ -97,7 +97,7 @@
                 <p v-if="resetMsg" :class="['message', resetSuccess ? 'success' : 'error']">
                   {{ resetMsg }}
                 </p>
-                <button class="btn" type="submit">
+                <button class="btn btn-black" type="submit">
                   确认修改
                 </button>
               </div>

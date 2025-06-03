@@ -19,7 +19,7 @@
       </div>
       <div class="form-submit">
         <p v-if="error" class="error-msg">{{ error }}</p>
-        <button type="submit" class="btn" :disabled="isLoading">
+        <button type="submit" class="btn btn-black" :disabled="isLoading">
           {{ isLoading ? '登录中...' : '登录' }}
         </button>
       </div>

@@ -15,7 +15,7 @@
       <input v-model="form.finishTime" type="date" class="date-input fitness-input" required />
       <input v-model="form.remark" type="text" class="remark-input fitness-input" :placeholder="remarkPlaceholder" />
       <div class="modal-actions">
-        <button class="add-btn" :disabled="loading" @click="$emit('submit')">{{ confirmText }}</button>
+        <button class="btn btn-white" :disabled="loading" @click="$emit('submit')">{{ confirmText }}</button>
       </div>
     </div>
   </div>

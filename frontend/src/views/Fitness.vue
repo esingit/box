@@ -16,11 +16,11 @@
         <input v-model="query.remark" placeholder="备注关键词" type="text" />
       </div>
       <div class="query-btns">
-        <button class="btn" @click="handleQuery">查询</button>
-        <button class="btn reset-btn" @click="resetQuery">重置</button>
+        <button class="btn btn-white" @click="handleQuery">查询</button>
+        <button class="btn btn-gray" @click="resetQuery">重置</button>
       </div>
     </div>
-    <button class="fitness-add-btn btn" @click="showAddModal = true">添加单据</button>
+    <button class="btn btn-black" @click="showAddModal = true">添加单据</button>
     <FitnessModal
       :show="showAddModal"
       :form="form"

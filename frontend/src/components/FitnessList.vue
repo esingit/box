@@ -16,10 +16,10 @@
       <span class="item-time">{{ record.finishTime ? record.finishTime.slice(0, 10) : '-' }}</span>
       <span class="item-remark">{{ record.remark }}</span>
       <span class="item-action">
-        <button @click="$emit('edit', idx)" class="edit-btn" title="编辑">
+        <button @click="$emit('edit', idx)" class="btn btn-gray" title="编辑">
           <LucideEdit size="18" style="vertical-align: middle;" />
         </button>
-        <button @click="$emit('delete', idx)" class="delete-btn" title="删除">
+        <button @click="$emit('delete', idx)" class="btn btn-red" title="删除">
           <LucideTrash2 size="18" style="vertical-align: middle;" />
         </button>
       </span>

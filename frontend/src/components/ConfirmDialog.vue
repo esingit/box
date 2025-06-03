@@ -5,8 +5,8 @@
         <div class="confirm-title">{{ title }}</div>
         <div class="confirm-message">{{ message }}</div>
         <div class="confirm-actions">
-          <button class="btn confirm-btn" @click="onConfirm">确定</button>
-          <button class="btn cancel-btn" @click="onCancel">取消</button>
+          <button class="btn btn-black" @click="onConfirm">{{ confirmText || '确定' }}</button>
+          <button class="btn btn-gray" @click="onCancel">{{ cancelText || '取消' }}</button>
         </div>
       </div>
     </div>
@@ -81,7 +81,7 @@ onMounted(() => {
   justify-content: center;
   gap: 18px;
 }
-.confirm-btn {
+.btn-black {
   background: #222;
   color: #fff;
   border: none;
@@ -92,10 +92,10 @@ onMounted(() => {
   cursor: pointer;
   transition: background 0.18s;
 }
-.confirm-btn:hover {
+.btn-black:hover {
   background: #444;
 }
-.cancel-btn {
+.btn-gray {
   background: #f7f7f8;
   color: #222;
   border: 1.5px solid #e0e0e0;
@@ -106,7 +106,7 @@ onMounted(() => {
   cursor: pointer;
   transition: background 0.18s;
 }
-.cancel-btn:hover {
+.btn-gray:hover {
   background: #ededed;
 }
 </style>

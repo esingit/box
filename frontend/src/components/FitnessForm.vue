@@ -9,7 +9,7 @@
     </select>
     <input type="date" v-model="form.finishTime" class="date-input" required />
     <input type="text" v-model="form.remark" class="remark-input" placeholder="备注" />
-    <button type="submit" :disabled="adding" class="add-btn">{{ adding ? '添加中...' : '添加' }}</button>
+    <button type="submit" :disabled="adding" class="btn btn-white">{{ adding ? '添加中...' : '添加' }}</button>
   </form>
 </template>
 

@@ -42,39 +42,9 @@
 .fitness-form .date-input:focus {
   border-color: #a0a0a0;
 }
-.fitness-form .add-btn {
-  background: #fff;
-  color: #222;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 999px;
-  padding: 6px 24px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.18s, border 0.18s, color 0.18s;
-  outline: none;
-}
-.fitness-form .add-btn:hover {
-  background: #ededed;
-  border-color: #ededed;
-}
-.fitness-form .add-btn:active {
-  background: #ededed;
-  border-color: #bdbdbd;
-}
-.fitness-form .add-btn:disabled {
-  background: #f5f5f5;
-  color: #bbb;
-  border-color: #eee;
-  cursor: not-allowed;
-}
 .fitness-list {
   width: 100%;
   max-width: 100%;
-  height: auto;
-  max-height: none;
-  overflow-x: auto;
-  box-sizing: border-box;
   background: #fafbfc;
   border-radius: 12px;
   box-shadow: 0 1px 6px rgba(0,0,0,0.04);
@@ -133,51 +103,6 @@
 }
 .item-action { flex: 1.2 1 0%; display: flex; gap: 8px; justify-content: center; text-align: center; }
 .center { text-align: center; }
-.edit-btn, .delete-btn {
-  border: 1.5px solid #e0e0e0;
-  border-radius: 999px;
-  padding: 6px 24px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  background: #fff;
-  color: #222;
-  transition: background 0.18s, border 0.18s, color 0.18s;
-  outline: none;
-}
-.edit-btn:hover, .delete-btn:hover {
-  background: #f5f5f5;
-  border-color: #d0d0d0;
-}
-.edit-btn:active, .delete-btn:active {
-  background: #ededed;
-  border-color: #bdbdbd;
-}
-.edit-btn:disabled, .delete-btn:disabled {
-  background: #f5f5f5;
-  color: #bbb;
-  border-color: #eee;
-  cursor: not-allowed;
-}
-.delete-btn {
-  background: #e74c3c;
-  color: #fff;
-  border-color: #e74c3c;
-}
-.delete-btn:hover:not(:disabled) {
-  background: #c0392b;
-  border-color: #c0392b;
-}
-.delete-btn:active:not(:disabled) {
-  background: #a93226;
-  border-color: #a93226;
-}
-.delete-btn:disabled {
-  background: #f5f5f5;
-  color: #bbb;
-  border-color: #eee;
-  cursor: not-allowed;
-}
 /* 查询栏样式 */
 .fitness-query-bar {
   display: flex;
@@ -213,42 +138,6 @@
   display: flex;
   gap: 10px;
 }
-.fitness-query-bar button {
-  height: 40px;
-  font-size: 16px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 24px;
-  cursor: pointer;
-  border: 1.5px solid #e0e0e0;
-  background: #fff;
-  color: #222;
-  transition: background 0.18s, border 0.18s, color 0.18s;
-}
-.fitness-query-bar button:focus {
-  border-color: #a0a0a0;
-}
-.fitness-query-bar .reset-btn {
-  background: #eee;
-  color: #333;
-  border: 1.5px solid #e0e0e0;
-}
-.fitness-query-bar button:hover {
-  background: #f5f5f5;
-  border-color: #d0d0d0;
-}
-.fitness-query-bar button:active {
-  background: #ededed;
-  border-color: #bdbdbd;
-}
-.fitness-query-bar button:disabled {
-  background: #f5f5f5;
-  color: #bbb;
-  border-color: #eee;
-  cursor: not-allowed;
-}
 .fitness-query-bar .to-text {
   font-size: 16px;
   display: flex;
@@ -257,35 +146,6 @@
   height: 40px;
   padding: 0 4px;
   line-height: 40px;
-}
-.fitness-add-btn {
-  height: 40px;
-  font-size: 16px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 24px;
-  margin-bottom: 20px;
-  background: #222;
-  color: #fff;
-  border: 1.5px solid #222;
-  font-weight: 600;
-  transition: background 0.18s, border 0.18s, color 0.18s;
-}
-.fitness-add-btn:hover {
-  background: #444;
-  border-color: #444;
-}
-.fitness-add-btn:active {
-  background: #000;
-  border-color: #000;
-}
-.fitness-add-btn:disabled {
-  background: #888;
-  color: #eee;
-  border-color: #888;
-  cursor: not-allowed;
 }
 @media (max-width: 700px) {
   .fitness-page {
