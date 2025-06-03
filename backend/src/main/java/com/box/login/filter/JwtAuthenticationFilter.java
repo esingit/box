@@ -32,15 +32,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String token = getJwtFromRequest(request);
         try {
-            if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-                String username = jwtTokenProvider.getUsernameFromJWT(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                // 设置当前用户到 UserContextHolder
-                UserContextHolder.set(username);
+            if (StringUtils.hasText(token)) {
+                if (jwtTokenProvider.validateToken(token)) {
+                    String username = jwtTokenProvider.getUsernameFromJWT(token);
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    // 设置当前用户到 UserContextHolder
+                    UserContextHolder.set(username);
+                } else {
+                    // token无效或过期，返回401
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"success\":false,\"message\":\"Token已过期或无效\"}");
+                    return;
+                }
             }
             filterChain.doFilter(request, response);
         } finally {
