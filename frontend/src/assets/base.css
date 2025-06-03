@@ -420,7 +420,7 @@ ul, ol {
 /* 通用页面容器样式 */
 .page-container {
   max-width: 1400px;
-  margin: 48px auto;
+  margin: 28px auto;
   padding: 40px;
   background: #fff;
   border-radius: 16px;
@@ -477,7 +477,7 @@ ul, ol {
   display: flex;
   width: 100%;
   flex-wrap: nowrap;
-  align-items: stretch;
+  align-items: center;
 }
 .common-list-header span,
 .common-list-item span {
