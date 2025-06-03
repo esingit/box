@@ -41,6 +41,7 @@
       @edit="editRecord"
       @delete="deleteRecord"
       @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
     />
     <FitnessModal
       :show="editingIdx !== null"
@@ -97,7 +98,7 @@ const query = reactive({
 })
 const current = ref(1)
 const total = ref(0)
-const pageSize = ref(10)
+const pageSize = ref(7)
 
 async function initSelectOptions() {
   const [typeRes, unitRes] = await Promise.all([
@@ -116,10 +117,10 @@ async function initSelectOptions() {
   }
 }
 
-async function fetchRecords(page = 1) {
+async function fetchRecords(page = 1, size = pageSize.value) {
   const params = {
     page,
-    pageSize: pageSize.value
+    pageSize: size
   }
   if (query.type) params.type = query.type
   if (query.startDate) params.startDate = query.startDate
@@ -130,6 +131,7 @@ async function fetchRecords(page = 1) {
     records.value = (res.data.data && res.data.data.records) ? res.data.data.records : []
     total.value = res.data.data ? Number(res.data.data.total) : 0
     current.value = res.data.data ? Number(res.data.data.current) : 1
+    pageSize.value = res.data.data ? Number(res.data.data.size) : pageSize.value
   }
 }
 
@@ -237,6 +239,11 @@ function resetQuery() {
 }
 
 function handlePageChange(page) {
-  fetchRecords(page)
+  fetchRecords(page, pageSize.value)
+}
+
+function handlePageSizeChange(size) {
+  pageSize.value = size
+  fetchRecords(1, size)
 }
 </script>

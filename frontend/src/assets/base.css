@@ -711,3 +711,12 @@ ul, ol {
   height: 20px;
   color: #666;
 }
+
+/* 分页条样式 */
+.pagination-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 16px;
+  gap: 16px;
+}
