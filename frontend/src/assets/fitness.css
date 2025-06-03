@@ -1,0 +1,214 @@
+/* 健身记录页面专用样式 */
+.fitness-page {
+  max-width: 1400px;
+  margin: 48px auto;
+  padding: 40px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1.5px solid #e5e7eb;
+}
+.fitness-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  color: #222;
+}
+.fitness-form {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.fitness-form .type-select,
+.fitness-form .count-input,
+.fitness-form .unit-select,
+.fitness-form .date-input {
+  border-radius: 999px;
+  border: 1.5px solid #e0e0e0;
+  padding: 8px 16px;
+  font-size: 15px;
+  outline: none;
+  transition: border 0.18s;
+  background: #fff;
+  color: #222;
+  min-width: 90px;
+}
+.fitness-form .type-select:focus,
+.fitness-form .count-input:focus,
+.fitness-form .unit-select:focus,
+.fitness-form .date-input:focus {
+  border-color: #a0a0a0;
+}
+.fitness-form .add-btn {
+  background: #fff;
+  color: #222;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 999px;
+  padding: 6px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, border 0.18s, color 0.18s;
+  outline: none;
+}
+.fitness-form .add-btn:hover {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+.fitness-form .add-btn:active {
+  background: #ededed;
+  border-color: #bdbdbd;
+}
+.fitness-form .add-btn:disabled {
+  background: #f5f5f5;
+  color: #bbb;
+  border-color: #eee;
+  cursor: not-allowed;
+}
+.fitness-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  background: #fafbfc;
+  table-layout: fixed;
+  width: 100%;
+}
+.fitness-header, .fitness-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 8px;
+  font-size: 15px;
+}
+.fitness-header {
+  background: #f4f6f8;
+  font-weight: 600;
+  color: #666;
+}
+.fitness-item {
+  border-top: 1px solid #f0f0f0;
+  background: #fff;
+  transition: background 0.2s;
+}
+.fitness-item:hover {
+  background: #f8fafc;
+}
+.item-type, .item-count, .item-unit, .item-time, .item-action {
+  flex: 1;
+  text-align: left;
+  padding: 0 4px;
+}
+.item-type.center, .item-action.center {
+  text-align: center;
+}
+.item-action {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.edit-btn, .delete-btn {
+  border: 1.5px solid #e0e0e0;
+  border-radius: 999px;
+  padding: 6px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fff;
+  color: #222;
+  transition: background 0.18s, border 0.18s, color 0.18s;
+  outline: none;
+}
+.edit-btn:hover, .delete-btn:hover {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+.edit-btn:active, .delete-btn:active {
+  background: #ededed;
+  border-color: #bdbdbd;
+}
+.edit-btn:disabled, .delete-btn:disabled {
+  background: #f5f5f5;
+  color: #bbb;
+  border-color: #eee;
+  cursor: not-allowed;
+}
+.delete-btn {
+  background: #e74c3c;
+  color: #fff;
+  border-color: #e74c3c;
+}
+.delete-btn:hover:not(:disabled) {
+  background: #c0392b;
+  border-color: #c0392b;
+}
+.delete-btn:active:not(:disabled) {
+  background: #a93226;
+  border-color: #a93226;
+}
+.delete-btn:disabled {
+  background: #f5f5f5;
+  color: #bbb;
+  border-color: #eee;
+  cursor: not-allowed;
+}
+/* 表格列宽度与省略号处理，防止内容撑开表格宽度 */
+.fitness-header .item-type,
+.fitness-item .item-type {
+  max-width: 120px;
+  min-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fitness-header .item-count,
+.fitness-item .item-count {
+  max-width: 80px;
+  min-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fitness-header .item-unit,
+.fitness-item .item-unit {
+  max-width: 80px;
+  min-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fitness-header .item-time,
+.fitness-item .item-time {
+  max-width: 140px;
+  min-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fitness-header .item-action,
+.fitness-item .item-action {
+  max-width: 160px;
+  min-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .fitness-page {
+    padding: 12px 4px;
+    border-radius: 8px;
+  }
+  .fitness-form {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .fitness-header, .fitness-item {
+    font-size: 14px;
+    padding: 8px 2px;
+  }
+}

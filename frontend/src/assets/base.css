@@ -1,3 +1,4 @@
+/* 全局基础样式和通用组件样式 */
 html, body, #app {
   margin: 0;
   padding: 0;
@@ -44,11 +45,9 @@ html, body, #app {
   overflow-x: hidden;
   flex-shrink: 0;
 }
-
 .sidebar.collapsed {
   width: 70px;
 }
-
 .sidebar .logo {
   width: 100%;
   height: 64px;
@@ -58,16 +57,13 @@ html, body, #app {
   cursor: pointer;
   padding: 0;
 }
-
 .sidebar .logo-icon {
   font-size: 32px;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .sidebar .logo-icon.rotate {
   transform: rotate(180deg);
 }
-
 .sidebar .menu {
   width: 100%;
   display: flex;
@@ -76,7 +72,6 @@ html, body, #app {
   padding: 8px;
   box-sizing: border-box;
 }
-
 .sidebar .menu-item {
   display: flex;
   align-items: center;
@@ -92,19 +87,15 @@ html, body, #app {
   width: 100%;
   box-sizing: border-box;
 }
-
 .sidebar .menu-item:hover {
   background: #f0f0f0;
 }
-
 .sidebar .menu-item.active {
   background: #e5e7eb;
 }
-
 .sidebar .icon {
   min-width: 24px;
 }
-
 .sidebar .menu-text {
   font-size: 15px;
   font-weight: 500;
@@ -112,16 +103,13 @@ html, body, #app {
   opacity: 1;
   transition: opacity 0.3s;
 }
-
 .sidebar.collapsed .menu-text {
   opacity: 0;
   width: 0;
 }
-
 .dropdown-menu {
   z-index: 1000;
 }
-
 @media (max-width: 800px) {
   .content-wrapper {
     margin-left: 0;
@@ -141,11 +129,9 @@ html, body, #app {
     overflow: hidden;
   }
 }
-
 h1, h2, h3, h4 {
   font-weight: 600;
 }
-
 input, select, textarea {
   background: #fff;
   border: 1.5px solid #e0e0e0;
@@ -164,7 +150,24 @@ input::placeholder, textarea::placeholder {
 input:focus, textarea:focus, select:focus {
   border-color: #a0a0a0;
 }
-
+select, .type-select, .unit-select, .fitness-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: #fff url('data:image/svg+xml;utf8,<svg fill="gray" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 0.75em center/1em;
+  padding-right: 2.5em;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 999px;
+  font-size: 15px;
+  min-width: 90px;
+  cursor: pointer;
+}
+select:focus, .type-select:focus, .unit-select:focus, .fitness-select:focus {
+  border-color: #a0a0a0;
+}
+select::-ms-expand {
+  display: none;
+}
 .btn {
   display: inline-block;
   background: #fff;
@@ -192,7 +195,6 @@ button:disabled, .btn:disabled {
   border-color: #eee;
   cursor: not-allowed;
 }
-
 .error-msg, .message.error {
   color: #e74c3c;
   font-weight: 500;
@@ -431,7 +433,7 @@ ul, ol {
   border: none;
   background: none;
   box-shadow: none;
-  border-radius: 50%; /* 保证圆形 */
+  border-radius: 50%;
   transition: background 0.18s;
   margin: 0;
   padding: 0;
@@ -544,118 +546,184 @@ ul, ol {
   color: #333;
   background: #f8f8f8;
 }
-
-/* Fitness 页面专用样式 */
-.fitness-page {
-  max-width: 1400px; /* 原为900px，扩大页面宽度 */
-  margin: 48px auto;
-  padding: 40px;
-  background: #fff;
-  border-radius: 16px;
-  border: 1.5px solid #e5e7eb;
-}
-.fitness-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 22px;
-  font-weight: 600;
-  margin-bottom: 24px;
-  color: #222;
-}
-.fitness-form {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-.fitness-form .type-select,
-.fitness-form .count-input,
-.fitness-form .unit-select,
-.fitness-form .date-input {
-  border-radius: 999px;
-  border: 1.5px solid #e0e0e0;
-  padding: 8px 16px;
-  font-size: 15px;
-  outline: none;
-  transition: border 0.18s;
-  background: #fff;
-  color: #222;
-  min-width: 90px;
-}
-.fitness-form .type-select:focus,
-.fitness-form .count-input:focus,
-.fitness-form .unit-select:focus,
-.fitness-form .date-input:focus {
-  border-color: #a0a0a0;
-}
-.fitness-form .add-btn {
+.security-panel .btn {
+  display: inline-block;
   background: #fff;
   color: #222;
   border: 1.5px solid #e0e0e0;
   border-radius: 999px;
-  padding: 6px 24px;
+  padding: 8px 20px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.18s, border 0.18s, color 0.18s;
   outline: none;
 }
-.fitness-form .add-btn:hover {
+.security-panel .btn:hover {
   background: #f5f5f5;
   border-color: #d0d0d0;
 }
-.fitness-form .add-btn:active {
+.security-panel .btn:active {
   background: #ededed;
   border-color: #bdbdbd;
 }
-.fitness-form .add-btn:disabled {
+.security-panel .btn:disabled {
   background: #f5f5f5;
   color: #bbb;
   border-color: #eee;
   cursor: not-allowed;
 }
-.fitness-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
-  background: #fafbfc;
+.security-panel .form-label {
+  color: #666;
+  font-size: 14px;
+  font-weight: 400;
+  margin-bottom: 8px;
+  display: block;
 }
-.fitness-header, .fitness-item {
+.add-btn {
+  display: inline-block;
+  color: #fff;
+  background: #10b981;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 32px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(16,185,129,0.08);
+  transition: background 0.18s, box-shadow 0.18s;
+  outline: none;
+}
+.add-btn:disabled {
+  background: #d1fae5;
+  color: #bbb;
+  cursor: not-allowed;
+}
+
+/* 弹窗相关 */
+.edit-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.18);
+  z-index: 2000;
   display: flex;
   align-items: center;
-  padding: 12px 8px;
-  font-size: 15px;
-}
-.fitness-header {
-  background: #f4f6f8;
-  font-weight: 600;
-  color: #666;
-}
-.fitness-item {
-  border-top: 1px solid #f0f0f0;
-  background: #fff;
-  transition: background 0.2s;
-}
-.fitness-item:hover {
-  background: #f8fafc;
-}
-.item-type, .item-count, .item-unit, .item-time, .item-action {
-  flex: 1;
-  text-align: left;
-  padding: 0 4px;
-}
-.item-type.center, .item-action.center {
-  text-align: center;
-}
-.item-action {
-  display: flex;
-  gap: 8px;
   justify-content: center;
 }
+.edit-modal .modal-content {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px 24px 24px 24px;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+}
+.edit-modal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+.edit-modal h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #222;
+  border-bottom: 1.5px solid #e5e7eb;
+  padding-bottom: 12px;
+  margin-left: -24px;
+  margin-right: -24px;
+  padding-left: 24px;
+  padding-right: 24px;
+  margin-top: 0;
+}
+.edit-modal .close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.18s;
+  z-index: 10;
+  box-shadow: none;
+  padding: 0;
+}
+.edit-modal .close-btn:hover {
+  background: #e0e0e0;
+}
+.edit-modal .close-btn:active {
+  background: #d1d5db;
+}
+.edit-modal .close-icon {
+  width: 20px;
+  height: 20px;
+  color: #666;
+}
+.edit-modal .add-btn {
+  background: #fff;
+  color: #222;
+  border: 1.5px solid #e0e0e0;
+}
+.edit-modal .add-btn:hover {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+.edit-modal .add-btn:active {
+  background: #ededed;
+  border-color: #bdbdbd;
+}
+.edit-modal .add-btn:disabled {
+  background: #f5f5f5;
+  color: #bbb;
+  border-color: #eee;
+  cursor: not-allowed;
+}
+.edit-modal .delete-btn {
+  background: #fff;
+  color: #222;
+  border: 1.5px solid #e0e0e0;
+}
+.edit-modal .delete-btn:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+.edit-modal .delete-btn:active:not(:disabled) {
+  background: #ededed;
+  border-color: #bdbdbd;
+}
+.edit-modal .delete-btn:disabled {
+  background: #f5f5f5;
+  color: #bbb;
+  border-color: #eee;
+  cursor: not-allowed;
+}
+
+/* 通用输入框 */
+.fitness-form .remark-input {
+  border-radius: 999px;
+  border: 1.5px solid #e0e0e0;
+  padding: 8px 20px;
+  font-size: 15px;
+  outline: none;
+  background: #fff;
+  color: #222;
+  min-width: 120px;
+  flex: 1;
+}
+.fitness-form .remark-input:focus {
+  border-color: #a0a0a0;
+}
+
 .edit-btn, .delete-btn {
   border: 1.5px solid #e0e0e0;
   border-radius: 999px;
@@ -700,274 +768,4 @@ ul, ol {
   color: #bbb;
   border-color: #eee;
   cursor: not-allowed;
-}
-/* 编辑弹窗 */
-.edit-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.18);
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.edit-modal .modal-content {
-  position: relative;
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px 24px 24px 24px;
-  min-width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  align-items: stretch;
-}
-.edit-modal .modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 8px;
-}
-.edit-modal h3 {
-  margin: 0 0 12px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #222;
-  border-bottom: 1.5px solid #e5e7eb;
-  padding-bottom: 24px;
-  margin-top: 0;
-}
-
-/* 优化设置弹窗关闭按钮为圆形区域 */
-.close-button {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  box-shadow: none;
-  border-radius: 50%; /* 保证圆形 */
-  transition: background 0.18s;
-  margin: 0;
-  padding: 0;
-}
-.close-button:hover {
-  background: #f5f5f5;
-  border-radius: 50%;
-}
-.close-button:active {
-  background: #ededed;
-  border-radius: 50%;
-}
-.edit-modal .close-btn {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: none;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.18s;
-  z-index: 10;
-  box-shadow: none;
-  padding: 0;
-}
-.edit-modal .close-btn:hover {
-  background: #e0e0e0;
-}
-.edit-modal .close-btn:active {
-  background: #d1d5db;
-}
-.edit-modal .close-icon {
-  width: 20px;
-  height: 20px;
-  color: #666;
-}
-.edit-modal .add-btn {
-  background: #fff;
-  color: #222;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 999px;
-  padding: 6px 24px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.18s, border 0.18s, color 0.18s;
-  outline: none;
-}
-.edit-modal .add-btn:hover {
-  background: #f5f5f5;
-  border-color: #d0d0d0;
-}
-.edit-modal .add-btn:active {
-  background: #ededed;
-  border-color: #bdbdbd;
-}
-.edit-modal .add-btn:disabled {
-  background: #f5f5f5;
-  color: #bbb;
-  border-color: #eee;
-  cursor: not-allowed;
-}
-.edit-modal .delete-btn {
-  background: #fff;
-  color: #222;
-  border: 1.5px solid #e0e0e0;
-}
-.edit-modal .delete-btn:hover:not(:disabled) {
-  background: #f5f5f5;
-  border-color: #d0d0d0;
-}
-.edit-modal .delete-btn:active:not(:disabled) {
-  background: #ededed;
-  border-color: #bdbdbd;
-}
-.edit-modal .delete-btn:disabled {
-  background: #f5f5f5;
-  color: #bbb;
-  border-color: #eee;
-  cursor: not-allowed;
-}
-@media (max-width: 700px) {
-  .fitness-page {
-    padding: 12px 4px;
-    border-radius: 8px;
-  }
-  .edit-modal .modal-content {
-    padding: 8px 8px 12px 8px;
-  }
-  .edit-modal h3 {
-    margin-left: -8px;
-    margin-right: -8px;
-    padding-left: 8px;
-    padding-right: 8px;
-    margin-top: 0;
-  }
-  .fitness-form {
-    flex-direction: column;
-    gap: 8px;
-  }
-  .fitness-header, .fitness-item {
-    font-size: 14px;
-    padding: 8px 2px;
-  }
-}
-
-/* 统一 select 下拉样式，兼容 macOS 各主流浏览器 */
-select, .type-select, .unit-select, .fitness-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background: #fff url('data:image/svg+xml;utf8,<svg fill="gray" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 0.75em center/1em;
-  padding-right: 2.5em;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 999px;
-  font-size: 15px;
-  min-width: 90px;
-  cursor: pointer;
-}
-select:focus, .type-select:focus, .unit-select:focus, .fitness-select:focus {
-  border-color: #a0a0a0;
-}
-/* 隐藏原生下拉箭头（部分浏览器） */
-select::-ms-expand {
-  display: none;
-}
-
-/* 表格数字靠右，其他居中 */
-.fitness-header .item-count,
-.fitness-item .item-count {
-  text-align: right;
-}
-.fitness-header .item-type,
-.fitness-header .item-unit,
-.fitness-header .item-time,
-.fitness-header .item-action,
-.fitness-item .item-type,
-.fitness-item .item-unit,
-.fitness-item .item-time,
-.fitness-item .item-action {
-  text-align: center;
-}
-
-/* 安全设置按钮与登录按钮一致，按钮尺寸调小 */
-.security-panel .btn {
-  display: inline-block;
-  background: #fff;
-  color: #222;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 999px;
-  padding: 8px 20px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.18s, border 0.18s, color 0.18s;
-  outline: none;
-}
-.security-panel .btn:hover {
-  background: #f5f5f5;
-  border-color: #d0d0d0;
-}
-.security-panel .btn:active {
-  background: #ededed;
-  border-color: #bdbdbd;
-}
-.security-panel .btn:disabled {
-  background: #f5f5f5;
-  color: #bbb;
-  border-color: #eee;
-  cursor: not-allowed;
-}
-
-/* 安全设置标题字体与个人中心一致 */
-.security-panel .form-label {
-  color: #666;
-  font-size: 14px;
-  font-weight: 400;
-  margin-bottom: 8px;
-  display: block;
-}
-
-/* 添加单据弹窗按钮样式 */
-.add-btn {
-  display: inline-block;
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  padding: 10px 32px;
-  font-size: 17px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(16,185,129,0.08);
-  transition: background 0.18s, box-shadow 0.18s;
-  outline: none;
-}
-
-.add-btn:disabled {
-  background: #d1fae5;
-  color: #bbb;
-  cursor: not-allowed;
-}
-
-/* 添加单据弹窗表单输入样式优化 */
-.fitness-form .remark-input {
-  border-radius: 999px;
-  border: 1.5px solid #e0e0e0;
-  padding: 8px 20px;
-  font-size: 15px;
-  outline: none;
-  background: #fff;
-  color: #222;
-  min-width: 120px;
-  flex: 1;
-}
-.fitness-form .remark-input:focus {
-  border-color: #a0a0a0;
 }

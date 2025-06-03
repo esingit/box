@@ -39,6 +39,7 @@
 
 <script setup>
 import '../assets/style.css'
+import '../assets/fitness.css'
 import { ref, reactive, onMounted } from 'vue'
 import { LucideClipboardList } from 'lucide-vue-next'
 import emitter from '../utils/eventBus.js'
