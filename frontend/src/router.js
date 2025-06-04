@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/views/Home.vue'
 import Fitness from '@/views/fitness/Fitness.vue'
 import { useUserStore } from '@/stores/userStore'
+import emitter from '@/utils/eventBus'
 
 const routes = [
   { path: '/', component: Home },
@@ -16,10 +17,11 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   // 不需要登录的页面路径
-  const publicPaths = ['/login', '/register','/']
+  const publicPaths = ['/login', '/register', '/']
   if (!userStore.isLoggedIn && !publicPaths.includes(to.path)) {
-    // 未登录访问受保护页面，跳转到登录页
-    next('/login')
+    // 未登录访问受保护页面，显示登录弹窗并保持在当前页面
+    next(false)
+    emitter.emit('show-auth', 'login')
   } else {
     next()
   }

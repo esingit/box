@@ -104,7 +104,8 @@ function showRegister() {
 function handleLoginSuccess() {
   closeMenu(); // 登录成功时自动关闭菜单
   showLoginModal.value = false;
-  // 用户已经自动重新登录，不需要额外处理
+  // 触发登录成功事件，以便其他组件可以更新状态
+  emitter.emit('login-success');
 }
 
 function handleRegisterSuccess() {

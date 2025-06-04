@@ -26,6 +26,18 @@
   display: flex;
   gap: 10px;
 }
+.fitness-query-bar .query-btns button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+.fitness-query-bar .query-btns button:hover {
+  transform: scale(1.05);
+}
 .fitness-query-bar .to-text {
   font-size: 16px;
   display: flex;

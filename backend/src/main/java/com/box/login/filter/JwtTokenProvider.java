@@ -17,7 +17,10 @@ public class JwtTokenProvider {
     private String jwtSecret;
     
     // token 的过期时间 2小时
-    private final long jwtExpirationInMs = 2 * 60 * 60 * 1000; // 2小时
+    private final long jwtExpirationInMs = 10 * 1000; // 2小时
+    
+    // token 的刷新时间窗口 30分钟
+    private final long refreshWindowInMs = 5 * 1000; // 30分钟
 
     private SecretKey getSecretKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
@@ -51,6 +54,49 @@ public class JwtTokenProvider {
             throw new JwtException("Token已过期", e);
         } catch (JwtException | IllegalArgumentException e) {
             throw new JwtException("Token无效", e);
+        }
+    }
+
+    public boolean shouldRefreshToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSecretKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            
+            Date expiration = claims.getExpiration();
+            Date now = new Date();
+            
+            // 如果 token 在刷新窗口期内（距离过期小于 refreshWindowInMs）
+            return now.getTime() > expiration.getTime() - refreshWindowInMs;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isTokenExpired(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSecretKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            
+            return claims.getExpiration().before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    public String refreshToken(String oldToken) {
+        try {
+            String username = getUsernameFromJWT(oldToken);
+            return generateToken(username);
+        } catch (Exception e) {
+            return null;
         }
     }
 }

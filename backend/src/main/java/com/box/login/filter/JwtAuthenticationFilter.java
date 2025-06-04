@@ -1,6 +1,7 @@
 package com.box.login.filter;
 
 import com.box.login.config.UserContextHolder;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,8 +34,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = getJwtFromRequest(request);
             
-            // 如果请求中没有token
+            // 如果请求中没有token，并且不是登录、注册、验证码等公开接口
             if (!StringUtils.hasText(token)) {
+                String path = request.getRequestURI();
+                if (path.startsWith("/api/user/login") || 
+                    path.startsWith("/api/user/register") || 
+                    path.startsWith("/api/captcha")) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write("{\"success\":false,\"message\":\"未登录或Token已过期\"}");
@@ -58,7 +66,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // token验证失败，返回401
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("{\"success\":false,\"message\":\"Token已过期或无效\"}");
+                String message = e instanceof JwtException ? e.getMessage() : "Token已过期或无效";
+                response.getWriter().write("{\"success\":false,\"message\":\"" + message + "\"}");
             }
         } finally {
             // 清理 ThreadLocal，防止内存泄漏

@@ -74,12 +74,17 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    logout() {
-      this.token = null
-      this.user = null
-      this.isLoggedIn = false
+    logout(clearUI = true) {
+      // 清除 token
       localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      this.token = null
+      
+      // 只有在需要时才清除UI状态
+      if (clearUI) {
+        this.user = null
+        this.isLoggedIn = false
+        localStorage.removeItem('user')
+      }
     },
 
     formatLastLoginTime() {

@@ -16,8 +16,12 @@
         <input v-model="query.remark" placeholder="备注关键词" type="text" />
       </div>
       <div class="query-btns">
-        <button class="btn btn-white" @click="handleQuery">查询</button>
-        <button class="btn btn-gray" @click="resetQuery">重置</button>
+        <button class="btn btn-white" title="查询" @click="handleQuery">
+          <LucideSearch size="18" style="vertical-align: middle;" />
+        </button>
+        <button class="btn btn-gray" title="重置" @click="resetQuery">
+          <LucideRotateCcw size="18" style="vertical-align: middle;" />
+        </button>
       </div>
     </div>
     <button class="btn btn-black" @click="showAddModal = true">添加记录</button>
@@ -62,7 +66,7 @@
 import '@/assets/base.css'
 import '@/assets/fitness.css'
 import { ref, reactive, onMounted } from 'vue'
-import { LucideClipboardList } from 'lucide-vue-next'
+import { LucideClipboardList, LucideSearch, LucideRotateCcw } from 'lucide-vue-next'
 import emitter from '@/utils/eventBus.js'
 import axios from '@/utils/axios.js'
 import FitnessModal from '@/components/fitness/FitnessModal.vue'

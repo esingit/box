@@ -7,9 +7,11 @@ import com.box.login.dto.UserLoginResponseDTO;
 import com.box.login.dto.ResetPasswordRequest;
 import com.box.login.entity.User;
 import com.box.login.service.UserService;
+import com.box.login.filter.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,6 +27,9 @@ public class UserController {
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
+    
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
@@ -184,6 +189,43 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse(false, "服务器异常: " + e.getMessage()));
         }
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiResponse<String>> refreshToken(HttpServletRequest request) {
+        String token = getTokenFromRequest(request);
+        
+        if (token == null) {
+            return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(false, "Token不存在", null, false));
+        }
+        
+        try {
+            if (jwtTokenProvider.isTokenExpired(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse<>(false, "Token已过期，请重新登录", null, false));
+            }
+            
+            if (jwtTokenProvider.shouldRefreshToken(token)) {
+                String newToken = jwtTokenProvider.refreshToken(token);
+                if (newToken != null) {
+                    return ResponseEntity.ok(new ApiResponse<>(true, "Token刷新成功", newToken, false));
+                }
+            }
+            
+            return ResponseEntity.ok(new ApiResponse<>(true, "Token仍然有效", token, false));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponse<>(false, "Token无效", null, false));
+        }
+    }
+    
+    private String getTokenFromRequest(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 }
 
