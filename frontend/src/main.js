@@ -1,12 +1,12 @@
 import { createApp } from 'vue'
-import App from './App.vue'
-import router from './router'
+import App from '@/App.vue'
+import router from '@/router'
 import { createPinia } from 'pinia'
 
 import 'normalize.css'
-import './assets/base.css'
-import './assets/sidebar.css'
-import './assets/fitness.css'
+import '@/assets/base.css'
+import '@/assets/sidebar.css'
+import '@/assets/fitness.css'
 
 const app = createApp(App)
 app.use(createPinia())

@@ -44,14 +44,14 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useUserStore } from './stores/userStore';
+import { useUserStore } from '@/stores/userStore';
 import { useRouter } from 'vue-router';
-import Sidebar from './components/Sidebar.vue';
-import Profile from './views/Profile.vue';
-import Notification from './components/Notification.vue';
-import ConfirmDialog from './components/ConfirmDialog.vue';
+import Sidebar from '@/components/Sidebar.vue';
+import Profile from '@/views/Profile.vue';
+import Notification from '@/components/Notification.vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { LogIn, UserPlus, User, UserCircle, LogOut } from 'lucide-vue-next';
-import emitter from './utils/eventBus.js';
+import emitter from '@/utils/eventBus.js';
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -88,10 +88,11 @@ function showRegister() {
 }
 
 function handleShowAuth(type) {
+  console.log('show-auth 事件接收成功，参数：', type) // 检查是否触发
   if (type === 'login') {
     userStore.logout(); // 确保登出，状态重置
     closeMenu();        // 关闭菜单
-    router.push('/');   // 跳转到主页
+    router.push('/login');   // 跳转到登录页
   }
 }
 

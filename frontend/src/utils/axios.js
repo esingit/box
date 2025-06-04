@@ -1,4 +1,5 @@
 import axios from 'axios'
+import emitter from '@/utils/eventBus'
 
 // 创建 axios 实例
 const instance = axios.create({
@@ -33,10 +34,8 @@ instance.interceptors.response.use(
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         // 通过eventBus通知弹窗登录
-        import('@/utils/eventBus').then(({ default: emitter }) => {
-          emitter.emit('notify', '登录已过期，请重新登录', 'error');
-          emitter.emit('show-auth', 'login');
-        });
+        emitter.emit('notify', '登录已过期，请重新登录', 'error');
+        emitter.emit('show-auth', 'login');
       }
       // 处理 403 错误
       if (error.response.status === 403) {
