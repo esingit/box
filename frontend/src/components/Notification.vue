@@ -29,7 +29,3 @@ onMounted(() => {
   mitt.on('notify', show)
 })
 </script>
-
-<style scoped>
-/* 已移除局部通知样式，全部使用全局base.css */
-</style>

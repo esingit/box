@@ -124,7 +124,3 @@ onBeforeUnmount(() => {
   emitter.off('login-success', handleLoginSuccess);
 });
 </script>
-
-<style>
-/* 样式已迁移到 src/assets/base.css，无需弹窗样式 */
-</style>
