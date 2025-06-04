@@ -88,11 +88,13 @@ function showRegister() {
 }
 
 function handleShowAuth(type) {
-  console.log('show-auth 事件接收成功，参数：', type) // 检查是否触发
   if (type === 'login') {
     userStore.logout(); // 确保登出，状态重置
     closeMenu();        // 关闭菜单
-    router.push('/login');   // 跳转到登录页
+    let path = router.currentRoute.value.path;
+    if (path !== '/' && path !== '/login') {
+      router.push('/login');   // 跳转到登录页
+    }
   }
 }
 
