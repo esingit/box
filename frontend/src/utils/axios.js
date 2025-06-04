@@ -87,42 +87,58 @@ instance.interceptors.response.use(
         
         // 触发登录弹窗事件
         return new Promise((resolve, reject) => {
+          let isHandled = false; // 标记是否已经处理过响应
+          
           // 发送显示登录弹窗的事件
           emitter.emit('show-auth', 'login')
           
           // 监听登录成功事件
           const loginSuccessHandler = async (newToken) => {
+            if (isHandled) return; // 防止重复处理
+            isHandled = true;
+            
             if (!newToken) {
-              console.error('未收到新的 token')
-              reject(new Error('登录失败：未收到新的 token'))
-              return
+              emitter.off('loginSuccess', loginSuccessHandler); // 清理监听器
+              reject(new Error('登录失败：未收到新的 token'));
+              return;
             }
             
-            console.debug('收到新的 token，准备重试请求')
+            console.debug('收到新的 token，准备重试请求:', failedRequest.url);
+            
             try {
+              // 确保移除旧的 token
+              delete failedRequest.headers['Authorization'];
               // 使用新token重试之前失败的请求
               const retryResponse = await instance({
                 ...failedRequest,
                 headers: {
                   ...failedRequest.headers,
-                  Authorization: `Bearer ${newToken}`
+                  'Authorization': `Bearer ${newToken}`
                 }
-              })
+              });
               
-              // 移除事件监听
-              emitter.off('loginSuccess', loginSuccessHandler)
-              
-              // 返回重试的响应
-              resolve(retryResponse)
+              console.debug('重试请求成功:', failedRequest.url);
+              resolve(retryResponse);
             } catch (retryError) {
-              console.error('使用新 token 重试请求失败:', retryError)
-              // 如果重试也失败了，则返回错误
-              reject(retryError)
+              console.error('使用新 token 重试请求失败:', retryError);
+              reject(retryError);
+            } finally {
+              // 确保清理事件监听
+              emitter.off('loginSuccess', loginSuccessHandler);
             }
-          }
+          };
           
           // 添加登录成功的事件监听
-          emitter.on('loginSuccess', loginSuccessHandler)
+          emitter.on('loginSuccess', loginSuccessHandler);
+          
+          // 添加超时处理
+          setTimeout(() => {
+            if (!isHandled) {
+              isHandled = true;
+              emitter.off('loginSuccess', loginSuccessHandler);
+              reject(new Error('登录超时'));
+            }
+          }, 300000); // 5分钟超时
         })
       }
       
