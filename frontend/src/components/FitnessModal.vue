@@ -7,15 +7,30 @@
           <LucideX class="close-icon" />
         </button>
       </div>
-      <select v-model="form.type" class="type-select select">
-        <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
-      </select>
-      <input v-model.number="form.count" type="number" min="1" class="count-input input" required placeholder="数量" />
-      <select v-model="form.unit" class="unit-select select">
-        <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
-      </select>
-      <input v-model="form.finishTime" type="date" class="date-input input" required />
-      <input v-model="form.remark" type="text" class="remark-input input" :placeholder="remarkPlaceholder" />
+      <div class="input-group">
+        <label class="input-label">类型</label>
+        <select v-model="form.type" class="type-select select">
+          <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label class="input-label">数量</label>
+        <input v-model.number="form.count" type="number" min="1" class="count-input input" required placeholder="数量" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">单位</label>
+        <select v-model="form.unit" class="unit-select select">
+          <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label class="input-label">完成日期</label>
+        <input v-model="form.finishTime" type="date" class="date-input input" required />
+      </div>
+      <div class="input-group">
+        <label class="input-label">备注</label>
+        <input v-model="form.remark" type="text" class="remark-input input" :placeholder="remarkPlaceholder" />
+      </div>
       <div class="modal-actions">
         <button class="btn btn-white" :disabled="loading" @click="$emit('submit')">{{ confirmText }}</button>
       </div>

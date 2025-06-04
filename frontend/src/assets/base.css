@@ -80,6 +80,24 @@ input::placeholder, textarea::placeholder {
 input:focus, textarea:focus, select:focus {
   border-color: #a0a0a0;
 }
+.input-group {
+  display: flex;
+  align-items: center;
+}
+.input-group .input,.select {
+  flex: 1;
+  margin: 0 24px;
+}
+.input-label {
+  min-width: 70px;
+  margin-left: 24px;
+  text-align: left;
+  color: #333;
+  font-size: 15px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-start;
+}
 /* 全局选择框样式 */
 select, .type-select, .unit-select {
   appearance: none;
@@ -318,6 +336,7 @@ ul, ol {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 12px
 }
 .modal-title {
   margin: 24px;
@@ -635,7 +654,7 @@ ul, ol {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 8px;
+  margin: 0 24px 24px 24px;
 }
 .edit-modal h3 {
   font-size: 18px;
