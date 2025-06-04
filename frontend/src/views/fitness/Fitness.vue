@@ -65,8 +65,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { LucideClipboardList } from 'lucide-vue-next'
 import emitter from '../utils/eventBus.js'
 import axios from '../utils/axios.js'
-import FitnessModal from '../components/FitnessModal.vue'
-import FitnessList from '../components/FitnessList.vue'
+import FitnessModal from '../components/fitness/FitnessModal.vue'
+import FitnessList from '../components/fitness/FitnessList.vue'
 
 const types = ref([])
 const units = ref([])
