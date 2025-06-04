@@ -5,7 +5,8 @@ import { useUserStore } from '@/stores/userStore'
 import emitter from '@/utils/eventBus'
 
 const routes = [
-  { path: '/', component: Home },
+  { path: '/', redirect: '/home' },  // 将根路径重定向到主页
+  { path: '/home', component: Home },
   { path: '/fitness', component: Fitness },
 ]
 
@@ -17,7 +18,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   // 不需要登录的页面路径
-  const publicPaths = ['/login', '/register', '/']
+  const publicPaths = ['/login', '/register', '/home']
   if (!userStore.isLoggedIn && !publicPaths.includes(to.path)) {
     // 未登录访问受保护页面，显示登录弹窗并保持在当前页面
     next(false)

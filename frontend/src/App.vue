@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { useRouter } from 'vue-router';
 import Sidebar from '@/components/Sidebar.vue';
@@ -56,7 +56,6 @@ import LoginForm from '@/components/LoginForm.vue';
 import RegisterForm from '@/components/RegisterForm.vue';
 import { LogIn, UserPlus, User, UserCircle, LogOut } from 'lucide-vue-next';
 import emitter from '@/utils/eventBus.js';
-import { watch } from 'vue';
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -67,12 +66,31 @@ const profileRef = ref(null);
 const showLoginModal = ref(false);
 const showRegisterModal = ref(false);
 
-// 移除未登录自动跳转到 /login 的逻辑，弹窗模式下无需强制跳转
-// watch(isLoggedIn, (val) => {
-//   if (!val) {
-//     router.push('/login'); // 如果用户未登录，跳转到登录页
-//   }
-// });
+// 监听登录状态变化
+watch(isLoggedIn, (val) => {
+  if (!val && router.currentRoute.value.path !== '/') {
+    // 如果未登录且不在首页，显示登录弹窗
+    showLoginModal.value = true;
+  }
+});
+
+// 监听登录相关事件
+onMounted(() => {
+  emitter.on('show-auth', (type, message) => {
+    if (type === 'login') {
+      showLoginModal.value = true;
+      if (message) {
+        emitter.emit('login-error', message);
+      }
+    } else if (type === 'register') {
+      showRegisterModal.value = true;
+    }
+  });
+});
+
+onBeforeUnmount(() => {
+  emitter.off('show-auth');
+});
 
 function toggleMenu() {
   showMenu.value = !showMenu.value;
@@ -87,10 +105,11 @@ function openProfile() {
   closeMenu();
 }
 
-function logout() {
-  userStore.logout();
+async function logout() {
+  await userStore.logout();
   router.push('/');
   closeMenu();
+  emitter.emit('notify', '已成功注销', 'success');
 }
 
 function showLogin() {
@@ -128,22 +147,21 @@ function handleClickOutside(event) {
   }
 }
 
-function handleShowAuth(type) {
-  // 弹窗模式下只弹窗，不做路由跳转
-  if (type === 'login') {
-    showLogin();
-  }
-  if (type === 'register') {
-    showRegister();
-  }
-}
-
 onMounted(() => {
   document.addEventListener('mousedown', handleClickOutside);
-  emitter.on('show-auth', handleShowAuth);
-  emitter.on('login-success', handleLoginSuccess);
+  emitter.on('show-auth', (type, message) => {
+    if (type === 'login') {
+      showLoginModal.value = true;
+      if (message) {
+        emitter.emit('login-error', message);
+      }
+    } else if (type === 'register') {
+      showRegisterModal.value = true;
+    }
+  });
 });
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleClickOutside);
+  emitter.off('show-auth');
 });
 </script>

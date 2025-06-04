@@ -80,15 +80,25 @@ instance.interceptors.response.use(undefined, async (error) => {
           // 重试原始请求
           return instance(originalRequest)
         } else {
-          // 如果刷新失败，只清除token并显示登录对话框
+          // 刷新失败时清空等待队列
+          waitingRequests.forEach(callback => callback(null))
+          waitingRequests = []
+          
+          // 如果刷新失败，清除token并显示带错误信息的登录对话框
           const userStore = useUserStore()
-          userStore.logout(false) // 不清除UI状态
-          emitter.emit('show-auth', 'login')
-          return Promise.reject(error)
+          await userStore.logout(false) // 不清除UI状态，保留侧边栏等UI组件
+          // 显示登录对话框，但保持当前页面状态
+          emitter.emit('show-auth', 'login', {
+            message: response.data.message || 'Token已过期，请重新登录',
+            preserveState: true
+          })
+          return Promise.reject(new Error(response.data.message || 'Token刷新失败'))
         }
       } catch (refreshError) {
-        // 如果刷新 token 失败，保持当前状态并显示登录对话框
-        emitter.emit('show-auth', 'login')
+        // 如果刷新 token 失败，清除token并显示登录对话框
+        const userStore = useUserStore()
+        await userStore.logout(false) // 不清除UI状态
+        emitter.emit('show-auth', 'login', '登录已过期，请重新登录')
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
@@ -98,6 +108,7 @@ instance.interceptors.response.use(undefined, async (error) => {
     // 处理其他常见错误
     const statusMessages = {
       400: '请求参数错误',
+      401: error.response.data?.message || 'Token已过期，请重新登录',
       403: error.response.data?.message || '权限不足',
       404: '请求的资源不存在',
       500: '服务器内部错误',

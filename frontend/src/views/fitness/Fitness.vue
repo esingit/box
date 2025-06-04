@@ -65,7 +65,7 @@
 <script setup>
 import '@/assets/base.css'
 import '@/assets/fitness.css'
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { LucideClipboardList, LucideSearch, LucideRotateCcw } from 'lucide-vue-next'
 import emitter from '@/utils/eventBus.js'
 import axios from '@/utils/axios.js'
@@ -142,6 +142,17 @@ async function fetchRecords(page = 1, size = pageSize.value) {
 onMounted(async () => {
   await initSelectOptions()
   await fetchRecords()
+  
+  // 监听刷新数据事件
+  emitter.on('refresh-data', async () => {
+    await initSelectOptions()
+    await fetchRecords()
+  })
+})
+
+// 在组件销毁时移除事件监听
+onUnmounted(() => {
+  emitter.off('refresh-data')
 })
 
 function getTodayDate() {

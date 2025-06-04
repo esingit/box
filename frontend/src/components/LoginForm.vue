@@ -36,7 +36,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/userStore'
 import emitter from '@/utils/eventBus.js'
 import { useRouter } from 'vue-router'
@@ -50,9 +50,19 @@ const isLoading = ref(false)
 const userStore = useUserStore()
 const router = useRouter()
 
+// 监听错误消息
+onMounted(() => {
+  emitter.on('login-error', (message) => {
+    error.value = message;
+  });
+});
+
+onUnmounted(() => {
+  emitter.off('login-error');
+});
+
 function handleClose() {
-  // 清除用户状态和token
-  userStore.logout()
+  // 只关闭弹窗，不清除用户状态
   emit('close')
 }
 
@@ -121,6 +131,8 @@ async function submit() {
       emitter.emit('notify', '登录成功', 'success');
       // 发送登录成功事件，并传递新的 token，确保和 axios.js 中的事件名一致
       emitter.emit('loginSuccess', response.token);
+      // 发送数据刷新事件
+      emitter.emit('refresh-data');
       // 关闭登录弹窗
       emit('close');
       emit('login-success');

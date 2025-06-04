@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import axios from '@/utils/axios.js'
+import { useRouter } from 'vue-router'
 
 const API_URL = '/api/user'
 
@@ -74,16 +75,33 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    logout(clearUI = true) {
-      // 清除 token
-      localStorage.removeItem('token')
-      this.token = null
-      
-      // 只有在需要时才清除UI状态
-      if (clearUI) {
-        this.user = null
-        this.isLoggedIn = false
-        localStorage.removeItem('user')
+    async logout(clearUI = true, router = null) {
+      try {
+        // 尝试调用后端登出接口，添加skipAuthRetry标记避免401刷新
+        await axios.post(`${API_URL}/logout`, null, {
+          skipAuthRetry: true
+        }).catch(() => {
+          // 忽略后端登出失败的错误
+        })
+      } finally {
+        // 清除 token
+        localStorage.removeItem('token')
+        this.token = null
+        
+        // 只有在需要时才清除UI状态
+        if (clearUI) {
+          this.user = null
+          this.isLoggedIn = false
+          localStorage.removeItem('user')
+        } else {
+          // 当不清除UI状态时，也需要设置登录状态为false
+          this.isLoggedIn = false
+        }
+
+        // 如果提供了router实例，则跳转到主页
+        if (router) {
+          router.push('/home')
+        }
       }
     },
 
@@ -98,4 +116,4 @@ export const useUserStore = defineStore('user', {
       return 'N/A'
     }
   }
-}) 
+})
