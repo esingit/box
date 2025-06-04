@@ -52,6 +52,7 @@ import Notification from '@/components/Notification.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { LogIn, UserPlus, User, UserCircle, LogOut } from 'lucide-vue-next';
 import emitter from '@/utils/eventBus.js';
+import { watch } from 'vue';
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -59,6 +60,12 @@ const isLoggedIn = computed(() => userStore.isLoggedIn);
 const user = computed(() => userStore.user);
 const showMenu = ref(false);
 const profileRef = ref(null);
+
+watch(isLoggedIn, (val) => {
+  if (!val) {
+    router.push('/login'); // 如果用户未登录，跳转到登录页
+  }
+});
 
 function toggleMenu() {
   showMenu.value = !showMenu.value;
@@ -88,18 +95,13 @@ function showRegister() {
 }
 
 function handleShowAuth(type) {
-  if (type === 'login') {
-    userStore.logout(); // 确保登出，状态重置
-    closeMenu();        // 关闭菜单
     let path = router.currentRoute.value.path;
+  if (type === 'login') {
     if (path !== '/' && path !== '/login') {
       router.push('/login');   // 跳转到登录页
     }
   }
   if (type === 'register') {
-    userStore.logout(); // 确保登出，状态重置
-    closeMenu();        // 关闭菜单
-    let path = router.currentRoute.value.path;
     if (path !== '/' && path !== '/register') {
       router.push('/register'); // 跳转到注册页
     }

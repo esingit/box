@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useUserStore } from '@/stores/userStore';
 import emitter from '@/utils/eventBus'
 
 // 创建 axios 实例
@@ -30,16 +31,20 @@ instance.interceptors.response.use(
     if (error.response) {
       // 处理 401 未授权（token 过期等）
       if (error.response.status === 401) {
-        // 清除token和用户信息
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // 这个方法会清除 token 并设置 isLoggedIn = false
+        const userStore = useUserStore()
+        userStore.logout()
         // 通过eventBus通知弹窗登录
         emitter.emit('notify', '登录已过期，请重新登录', 'error');
-        emitter.emit('show-auth', 'login');
       }
-      // 处理 403 错误
-      if (error.response.status === 403) {
-      }
+      // 返回模拟响应，防止页面爆红报错
+      return Promise.resolve({
+        data: {
+          code: 401,
+          data: null,
+          message: 'UNAUTHORIZED'
+        }
+      })
     }
     return Promise.reject(error)
   }
