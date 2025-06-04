@@ -20,14 +20,14 @@
         <button class="btn btn-gray" @click="resetQuery">重置</button>
       </div>
     </div>
-    <button class="btn btn-black" @click="showAddModal = true">添加单据</button>
+    <button class="btn btn-black" @click="showAddModal = true">添加记录</button>
     <FitnessModal
       :show="showAddModal"
       :form="form"
       :types="types"
       :units="units"
       :loading="adding"
-      title="添加单据"
+      title="添加记录"
       confirmText="确定"
       remarkPlaceholder="备注（可选）"
       @submit="handleAddRecord"
@@ -59,14 +59,14 @@
 </template>
 
 <script setup>
-import '../assets/base.css'
-import '../assets/fitness.css'
+import '@/assets/base.css'
+import '@/assets/fitness.css'
 import { ref, reactive, onMounted } from 'vue'
 import { LucideClipboardList } from 'lucide-vue-next'
-import emitter from '../utils/eventBus.js'
-import axios from '../utils/axios.js'
-import FitnessModal from '../components/fitness/FitnessModal.vue'
-import FitnessList from '../components/fitness/FitnessList.vue'
+import emitter from '@/utils/eventBus.js'
+import axios from '@/utils/axios.js'
+import FitnessModal from '@/components/fitness/FitnessModal.vue'
+import FitnessList from '@/components/fitness/FitnessList.vue'
 
 const types = ref([])
 const units = ref([])

@@ -52,7 +52,7 @@ const props = defineProps({
 })
 import { LucideEdit, LucideTrash2 } from 'lucide-vue-next'
 import { computed } from 'vue'
-import PaginationBar from './PaginationBar.vue'
+import PaginationBar from '@/components/PaginationBar.vue'
 const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
 const showPagination = computed(() => props.total > props.pageSize)
 </script>

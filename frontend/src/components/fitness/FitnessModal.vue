@@ -48,7 +48,7 @@ const props = defineProps({
   loading: Boolean,
   title: {
     type: String,
-    default: '操作单据'
+    default: '操作记录'
   },
   confirmText: {
     type: String,
