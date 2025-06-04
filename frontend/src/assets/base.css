@@ -638,11 +638,9 @@ ul, ol {
   margin-top: 8px;
 }
 .edit-modal h3 {
-  padding: 24px;
   font-size: 18px;
   font-weight: 600;
   color: #222;
-  border-bottom: 1.5px solid #e5e7eb;
 }
 .edit-modal .close-btn {
   position: absolute;

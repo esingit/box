@@ -1,10 +1,12 @@
 <template>
   <div v-if="show" class="edit-modal">
     <div class="modal-content">
-      <button class="close-btn" @click="$emit('cancel')" title="关闭">
-        <LucideX class="close-icon" />
-      </button>
-      <h3>{{ title }}</h3>
+      <div class="modal-header">
+        <h3 class="modal-title">{{ title }}</h3>
+        <button class="close-button" @click="$emit('cancel')">
+          <LucideX class="close-icon" />
+        </button>
+      </div>
       <select v-model="form.type" class="type-select select">
         <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
       </select>

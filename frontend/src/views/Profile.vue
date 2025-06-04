@@ -9,9 +9,7 @@
       <div class="modal-header">
         <h2 class="modal-title">设置</h2>
         <button class="close-button" @click="closeModal">
-          <svg class="close-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <LucideX class="close-icon" />
         </button>
       </div>
 
@@ -111,6 +109,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { LucideX } from 'lucide-vue-next'
 import { useUserStore } from '../stores/userStore'
 
 const userStore = useUserStore()
