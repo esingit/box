@@ -15,8 +15,9 @@ import javax.crypto.SecretKey;
 public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String jwtSecret;
+    
     // token 的过期时间 2小时
-    private final long jwtExpirationInMs = 5000;
+    private final long jwtExpirationInMs = 2 * 60 * 60 * 1000; // 2小时
 
     private SecretKey getSecretKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));

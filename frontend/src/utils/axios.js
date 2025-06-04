@@ -71,8 +71,8 @@ instance.interceptors.response.use(
     if (error.response) {
       const { status } = error.response
       
-      // 处理 401 未授权（token 过期等）
-      if (status === 401) {
+      // 处理 401（未授权）和 403（权限不足）
+      if (status === 401 || (status === 403 && error.response.data?.message?.includes('token'))) {
         // 如果当前请求已经是登录请求，则不需要重试
         if (error.config.url.includes('/login')) {
           return Promise.reject(error)
@@ -145,7 +145,7 @@ instance.interceptors.response.use(
       // 处理其他常见错误
       const statusMessages = {
         400: '请求参数错误',
-        403: '权限不足',
+        403: error.response.data?.message || '权限不足',
         404: '请求的资源不存在',
         500: '服务器内部错误',
         502: '网关错误',
