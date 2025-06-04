@@ -30,9 +30,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
-        String token = getJwtFromRequest(request);
         try {
-            if (StringUtils.hasText(token)) {
+            String token = getJwtFromRequest(request);
+            
+            // 如果请求中没有token
+            if (!StringUtils.hasText(token)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"success\":false,\"message\":\"未登录或Token已过期\"}");
+                return;
+            }
+            
+            try {
                 if (jwtTokenProvider.validateToken(token)) {
                     String username = jwtTokenProvider.getUsernameFromJWT(token);
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -42,15 +51,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     // 设置当前用户到 UserContextHolder
                     UserContextHolder.set(username);
-                } else {
-                    // token无效或过期，返回401
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType("application/json;charset=UTF-8");
-                    response.getWriter().write("{\"success\":false,\"message\":\"Token已过期或无效\"}");
-                    return;
+                    // 继续处理请求
+                    filterChain.doFilter(request, response);
                 }
+            } catch (Exception e) {
+                // token验证失败，返回401
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"success\":false,\"message\":\"Token已过期或无效\"}");
             }
-            filterChain.doFilter(request, response);
         } finally {
             // 清理 ThreadLocal，防止内存泄漏
             UserContextHolder.clear();

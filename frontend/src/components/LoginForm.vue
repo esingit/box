@@ -1,9 +1,9 @@
 <template>
-  <div class="auth-form-modal-overlay" @click.self="$emit('close')">
+  <div class="auth-form-modal-overlay" @click.self="handleClose">
     <div :class="['auth-form-modal', { 'show-captcha': showCaptcha }]">
       <div class="auth-form-header">
         <h2 class="auth-form-title">登录</h2>
-        <button class="auth-form-close" @click="$emit('close')">×</button>
+        <button class="auth-form-close" @click="handleClose">×</button>
       </div>
       <div class="auth-form-divider"></div>
       <div class="auth-form-inner">
@@ -49,6 +49,12 @@ const error = ref(null)
 const isLoading = ref(false)
 const userStore = useUserStore()
 const router = useRouter()
+
+function handleClose() {
+  // 清除用户状态和token
+  userStore.logout()
+  emit('close')
+}
 
 const captcha = ref('')
 const captchaId = ref('')

@@ -71,12 +71,17 @@ instance.interceptors.response.use(
     if (error.response) {
       const { status } = error.response
       
-      // 处理 401（未授权）和 403（权限不足）
-      if (status === 401 || (status === 403 && error.response.data?.message?.includes('token'))) {
+      // 处理 401（未授权）、403（权限不足）以及其他 token 相关错误
+      if (status === 401 || 
+          status === 403 ||
+          error.response.data?.message?.toLowerCase().includes('token')) {
+            
         // 如果当前请求已经是登录请求，则不需要重试
         if (error.config.url.includes('/login')) {
           return Promise.reject(error)
         }
+        
+        console.debug('Token 无效或过期，准备重新登录:', error.response.data?.message);
         
         // 清除用户状态
         const userStore = useUserStore()

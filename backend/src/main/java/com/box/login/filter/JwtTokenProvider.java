@@ -47,8 +47,10 @@ public class JwtTokenProvider {
         try {
             Jwts.parserBuilder().setSigningKey(getSecretKey()).build().parseClaimsJws(authToken);
             return true;
-        } catch (JwtException | IllegalArgumentException ex) {
-            return false;
+        } catch (ExpiredJwtException e) {
+            throw new JwtException("Token已过期", e);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new JwtException("Token无效", e);
         }
     }
 }
