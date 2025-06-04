@@ -1,6 +1,5 @@
 <template>
   <div class="auth-form-container">
-    <h2>登录</h2>
     <LoginForm />
   </div>
 </template>

@@ -96,6 +96,14 @@ function handleShowAuth(type) {
       router.push('/login');   // 跳转到登录页
     }
   }
+  if (type === 'register') {
+    userStore.logout(); // 确保登出，状态重置
+    closeMenu();        // 关闭菜单
+    let path = router.currentRoute.value.path;
+    if (path !== '/' && path !== '/register') {
+      router.push('/register'); // 跳转到注册页
+    }
+  }
 }
 
 function handleLoginSuccess() {

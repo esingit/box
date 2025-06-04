@@ -39,8 +39,6 @@ instance.interceptors.response.use(
       }
       // 处理 403 错误
       if (error.response.status === 403) {
-        // 可以在这里处理验证码逻辑
-        console.log('需要验证码')
       }
     }
     return Promise.reject(error)
