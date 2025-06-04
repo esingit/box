@@ -29,8 +29,8 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import { useUserStore } from '../stores/userStore'
-import emitter from '../utils/eventBus.js'
+import { useUserStore } from '@/stores/userStore'
+import emitter from '@/utils/eventBus.js'
 import { useRouter } from 'vue-router'
 
 const username = ref('')

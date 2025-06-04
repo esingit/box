@@ -16,9 +16,9 @@
 <script setup>
 import {onMounted, onUnmounted, ref} from 'vue'
 import {Box} from 'lucide-vue-next'
-import LoginForm from '../components/LoginForm.vue'
-import RegisterForm from '../components/RegisterForm.vue'
-import emitter from '../utils/eventBus.js'
+import LoginForm from '@/components/LoginForm.vue'
+import RegisterForm from '@/components/RegisterForm.vue'
+import emitter from '@/utils/eventBus.js'
 
 const activeTab = ref('login')
 const showAuth = ref(false)

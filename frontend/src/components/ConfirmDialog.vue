@@ -15,7 +15,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import emitter from '../utils/eventBus.js'
+import emitter from '@/utils/eventBus.js'
 
 const visible = ref(false)
 const title = ref('操作确认')

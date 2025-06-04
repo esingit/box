@@ -8,7 +8,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import mitt from '../utils/eventBus'
+import mitt from '@/utils/eventBus'
 
 const visible = ref(false)
 const message = ref('')

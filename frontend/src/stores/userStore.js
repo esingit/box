@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import axios from '../utils/axios.js'
+import axios from '@/utils/axios.js'
 
 const API_URL = '/api/user'
 

@@ -110,7 +110,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { LucideX } from 'lucide-vue-next'
-import { useUserStore } from '../stores/userStore'
+import { useUserStore } from '@/stores/userStore'
 
 const userStore = useUserStore()
 const user = computed(() => userStore.user)

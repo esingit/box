@@ -30,8 +30,8 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { useUserStore } from '../stores/userStore'
-import emitter from '../utils/eventBus.js'
+import { useUserStore } from '@/stores/userStore'
+import emitter from '@/utils/eventBus.js'
 
 const username = ref('')
 const password = ref('')
