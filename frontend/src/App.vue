@@ -37,6 +37,8 @@
       </main>
     </div>
     <Profile ref="profileRef" />
+    <LoginForm v-if="showLoginModal" @close="showLoginModal = false" @login-success="handleLoginSuccess" />
+    <RegisterForm v-if="showRegisterModal" @close="showRegisterModal = false" @register-success="handleRegisterSuccess" />
     <Notification />
     <ConfirmDialog />
   </div>
@@ -50,6 +52,8 @@ import Sidebar from '@/components/Sidebar.vue';
 import Profile from '@/views/Profile.vue';
 import Notification from '@/components/Notification.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import LoginForm from '@/components/LoginForm.vue';
+import RegisterForm from '@/components/RegisterForm.vue';
 import { LogIn, UserPlus, User, UserCircle, LogOut } from 'lucide-vue-next';
 import emitter from '@/utils/eventBus.js';
 import { watch } from 'vue';
@@ -60,12 +64,15 @@ const isLoggedIn = computed(() => userStore.isLoggedIn);
 const user = computed(() => userStore.user);
 const showMenu = ref(false);
 const profileRef = ref(null);
+const showLoginModal = ref(false);
+const showRegisterModal = ref(false);
 
-watch(isLoggedIn, (val) => {
-  if (!val) {
-    router.push('/login'); // 如果用户未登录，跳转到登录页
-  }
-});
+// 移除未登录自动跳转到 /login 的逻辑，弹窗模式下无需强制跳转
+// watch(isLoggedIn, (val) => {
+//   if (!val) {
+//     router.push('/login'); // 如果用户未登录，跳转到登录页
+//   }
+// });
 
 function toggleMenu() {
   showMenu.value = !showMenu.value;
@@ -87,29 +94,23 @@ function logout() {
 }
 
 function showLogin() {
-  emitter.emit('show-auth', 'login');
+  showLoginModal.value = true;
 }
 
 function showRegister() {
-  emitter.emit('show-auth', 'register');
-}
-
-function handleShowAuth(type) {
-    let path = router.currentRoute.value.path;
-  if (type === 'login') {
-    if (path !== '/' && path !== '/login') {
-      router.push('/login');   // 跳转到登录页
-    }
-  }
-  if (type === 'register') {
-    if (path !== '/' && path !== '/register') {
-      router.push('/register'); // 跳转到注册页
-    }
-  }
+  showRegisterModal.value = true;
 }
 
 function handleLoginSuccess() {
   closeMenu(); // 登录成功时自动关闭菜单
+  showLoginModal.value = false;
+  // 用户已经自动重新登录，不需要额外处理
+}
+
+function handleRegisterSuccess() {
+  showRegisterModal.value = false;
+  // 可选：注册成功后自动弹出登录弹窗
+  // showLoginModal.value = true;
 }
 
 function handleClickOutside(event) {
@@ -126,6 +127,16 @@ function handleClickOutside(event) {
   }
 }
 
+function handleShowAuth(type) {
+  // 弹窗模式下只弹窗，不做路由跳转
+  if (type === 'login') {
+    showLogin();
+  }
+  if (type === 'register') {
+    showRegister();
+  }
+}
+
 onMounted(() => {
   document.addEventListener('mousedown', handleClickOutside);
   emitter.on('show-auth', handleShowAuth);
@@ -133,7 +144,5 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleClickOutside);
-  emitter.off('show-auth', handleShowAuth);
-  emitter.off('login-success', handleLoginSuccess);
 });
 </script>

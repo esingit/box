@@ -1,14 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/views/Home.vue'
-import Login from '@/views/Login.vue'
-import Register from '@/views/Register.vue'
 import Fitness from '@/views/fitness/Fitness.vue'
 import { useUserStore } from '@/stores/userStore'
 
 const routes = [
   { path: '/', component: Home },
-  { path: '/login', component: Login },
-  { path: '/register', component: Register },
   { path: '/fitness', component: Fitness },
 ]
 
@@ -19,13 +15,11 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
-  // 需要登录的页面路径
-  const protectedPaths = ['/fitness']
-  if (protectedPaths.includes(to.path) && !userStore.isLoggedIn) {
-    // 未登录访问受保护页面，跳转到主页
-    next('/')
-  } else if (to.path === '/login' && userStore.isLoggedIn) {
-    next('/')
+  // 不需要登录的页面路径
+  const publicPaths = ['/login', '/register','/']
+  if (!userStore.isLoggedIn && !publicPaths.includes(to.path)) {
+    // 未登录访问受保护页面，跳转到登录页
+    next('/login')
   } else {
     next()
   }

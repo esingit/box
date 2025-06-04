@@ -1,30 +1,38 @@
 <template>
-  <div class="auth-form-inner">
-    <h2 class="menu-title">注册</h2>
-    <form @submit.prevent="submit">
-      <div class="form-group">
-        <label>用户名</label>
-        <input v-model="username" required autocomplete="username" class="input" />
+  <div class="auth-form-modal-overlay" @click.self="$emit('close')">
+    <div class="auth-form-modal">
+      <div class="auth-form-header">
+        <h2 class="auth-form-title">注册</h2>
+        <button class="auth-form-close" @click="$emit('close')">×</button>
       </div>
-      <div class="form-group">
-        <label>密码</label>
-        <input type="password" v-model="password" required autocomplete="new-password" class="input" />
+      <div class="auth-form-divider"></div>
+      <div class="auth-form-inner">
+        <form @submit.prevent="submit">
+          <div class="form-group">
+            <label>用户名</label>
+            <input v-model="username" required autocomplete="username" class="input" />
+          </div>
+          <div class="form-group">
+            <label>密码</label>
+            <input type="password" v-model="password" required autocomplete="new-password" class="input" />
+          </div>
+          <div class="form-group" v-if="showCaptcha">
+            <label>验证码</label>
+            <div class="captcha-container">
+              <input v-model="captcha" required class="input captcha-input" />
+              <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
+            </div>
+          </div>
+          <div class="form-submit">
+            <p v-if="error" class="error-msg">{{ error }}</p>
+            <p v-if="success" class="success-msg">{{ success }}</p>
+            <button type="submit" class="btn btn-black" :disabled="isLoading">
+              {{ isLoading ? '注册中...' : '注册' }}
+            </button>
+          </div>
+        </form>
       </div>
-      <div class="form-group" v-if="showCaptcha">
-        <label>验证码</label>
-        <div class="captcha-container">
-          <input v-model="captcha" required class="input captcha-input" />
-          <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
-        </div>
-      </div>
-      <div class="form-submit">
-        <p v-if="error" class="error-msg">{{ error }}</p>
-        <p v-if="success" class="success-msg">{{ success }}</p>
-        <button type="submit" class="btn btn-black" :disabled="isLoading">
-          {{ isLoading ? '注册中...' : '注册' }}
-        </button>
-      </div>
-    </form>
+    </div>
   </div>
 </template>
 

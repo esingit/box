@@ -83,7 +83,7 @@
                 />
               </div>
               <div class="form-group">
-                <label class="form-label">确认新密码</label>
+                <label class="form-label">确认密码</label>
                 <input 
                   type="password" 
                   v-model="confirmPassword"

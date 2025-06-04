@@ -1,29 +1,37 @@
 <template>
-  <div class="auth-form-inner">
-    <h2>登录</h2>
-    <form @submit.prevent="submit">
-      <div class="form-group">
-        <label>用户名</label>
-        <input v-model="username" required autocomplete="username" />
+  <div class="auth-form-modal-overlay" @click.self="$emit('close')">
+    <div :class="['auth-form-modal', { 'show-captcha': showCaptcha }]">
+      <div class="auth-form-header">
+        <h2 class="auth-form-title">登录</h2>
+        <button class="auth-form-close" @click="$emit('close')">×</button>
       </div>
-      <div class="form-group">
-        <label>密码</label>
-        <input type="password" v-model="password" required autocomplete="current-password" />
+      <div class="auth-form-divider"></div>
+      <div class="auth-form-inner">
+        <form @submit.prevent="submit">
+          <div class="form-group">
+            <label>用户名</label>
+            <input v-model="username" required autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label>密码</label>
+            <input type="password" v-model="password" required autocomplete="current-password" />
+          </div>
+          <div class="form-group" v-if="showCaptcha">
+            <label>验证码</label>
+            <div class="captcha-container">
+              <input v-model="captcha" required class="captcha-input" />
+              <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
+            </div>
+          </div>
+          <div class="form-submit">
+            <p v-if="error" class="error-msg">{{ error }}</p>
+            <button type="submit" class="btn btn-black" :disabled="isLoading">
+              {{ isLoading ? '登录中...' : '登录' }}
+            </button>
+          </div>
+        </form>
       </div>
-      <div class="form-group" v-if="showCaptcha">
-        <label>验证码</label>
-        <div class="captcha-container">
-          <input v-model="captcha" required class="captcha-input" />
-          <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
-        </div>
-      </div>
-      <div class="form-submit">
-        <p v-if="error" class="error-msg">{{ error }}</p>
-        <button type="submit" class="btn btn-black" :disabled="isLoading">
-          {{ isLoading ? '登录中...' : '登录' }}
-        </button>
-      </div>
-    </form>
+    </div>
   </div>
 </template>
 
@@ -32,6 +40,8 @@ import { ref, watch } from 'vue'
 import { useUserStore } from '@/stores/userStore'
 import emitter from '@/utils/eventBus.js'
 import { useRouter } from 'vue-router'
+
+const emit = defineEmits(['close', 'login-success'])
 
 const username = ref('')
 const password = ref('')
@@ -103,14 +113,18 @@ async function submit() {
     const response = await userStore.login(payload);
     if (response.success) {
       emitter.emit('notify', '登录成功', 'success');
-      emitter.emit('login-success');
+      // 发送登录成功事件，并传递新的 token
+      emitter.emit('loginSuccess', userStore.token);
+      // 关闭登录弹窗
+      emit('close');
+      emit('login-success');
+      // 清空表单
       showCaptcha.value = false;
       username.value = '';
       password.value = '';
       captcha.value = '';
       captchaUrl.value = '';
       error.value = null;
-      router.push('/');
     } else {
       error.value = response.message || '用户名或密码错误';
       if (response.showCaptcha) {

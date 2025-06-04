@@ -44,7 +44,3 @@ onMounted(() => {
   emitter.on('confirm', showConfirm)
 })
 </script>
-
-<style scoped>
-/* 已移除局部弹窗和按钮样式，全部使用全局base.css */
-</style>

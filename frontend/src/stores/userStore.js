@@ -53,7 +53,10 @@ export const useUserStore = defineStore('user', {
           localStorage.setItem('token', this.token)
           localStorage.setItem('user', JSON.stringify(this.user))
           
-          return { success: true }
+          return { 
+            success: true,
+            token: this.token 
+          }
         } else {
           return {
             success: false,
