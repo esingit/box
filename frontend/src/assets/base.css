@@ -172,14 +172,13 @@ ul, ol {
 .auth-form-container {
   max-width: 400px;
   margin: 40px auto;
-  padding: 30px;
   border-radius: 12px;
   background: #fff;
   border: 1px solid #e5e7eb;
 }
 .auth-form-container h2 {
-  padding-bottom: 24px;
-  margin-top: 0;
+  padding: 24px;
+  margin: 0 0 24px 0;
   color: #333;
   font-size: 20px;
   font-weight: 600;
@@ -213,14 +212,15 @@ ul, ol {
 .form-group {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
+  margin: 6px 12px;
 }
 .form-group label {
   width: 80px;
-  margin-right: 10px;
+  margin: 12px;
   text-align: left;
 }
 .form-group input {
+  margin: 6px 12px;
   flex: 1;
 }
 .captcha-container {
@@ -240,7 +240,7 @@ ul, ol {
 }
 .form-submit {
   text-align: right;
-  margin-top: 20px;
+  margin: 12px 24px 24px 12px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -313,18 +313,14 @@ ul, ol {
   background: #fff;
   border-radius: 12px;
 }
-.modal-content {
-  padding: 24px;
-}
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 24px;
   border-bottom: 1px solid #e5e7eb;
 }
 .modal-title {
-  margin: 0;
+  margin: 24px;
   font-size: 20px;
   font-weight: 600;
 }
@@ -339,8 +335,7 @@ ul, ol {
   box-shadow: none;
   border-radius: 50%;
   transition: background 0.18s;
-  margin: 0;
-  padding: 0;
+  margin: 24px;
 }
 .close-button:hover {
   background: #f5f5f5;
@@ -358,7 +353,7 @@ ul, ol {
   display: flex;
   gap: 24px;
   min-height: 400px;
-  margin-top: 24px;
+  margin: 24px;
 }
 .menu-list {
   display: flex;
@@ -392,24 +387,23 @@ ul, ol {
 }
 .info-label {
   font-size: 14px;
-  color: #666;
+  color: #444;
   margin-bottom: 8px;
   display: block;
 }
 .info-value {
   margin: 0;
   font-size: 16px;
-  color: #333;
+  color: #222;
   line-height: 1.5;
 }
 .form-label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 500;
 }
 .form-input {
   width: 100%;
-  margin-bottom: 16px;
+  margin: 0 20px;
 }
 @media (max-width: 640px) {
   .modal-body {
@@ -531,37 +525,6 @@ ul, ol {
   }
 }
 
-/* 查询栏输入框全局样式 */
-.query-bar-fields select,
-.query-bar-fields input[type="date"],
-.query-bar-fields input[type="text"] {
-  background: #fff;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 999px;
-  font-size: 16px;
-  padding: 10px 16px;
-  color: #222;
-  outline: none;
-  transition: border 0.18s;
-  min-width: 110px;
-  box-sizing: border-box;
-  height: 40px;
-}
-.query-bar-fields select:focus,
-.query-bar-fields input[type="date"]:focus,
-.query-bar-fields input[type="text"]:focus {
-  border-color: #a0a0a0;
-}
-@media (max-width: 700px) {
-  .query-bar-fields select,
-  .query-bar-fields input[type="date"],
-  .query-bar-fields input[type="text"] {
-    font-size: 15px;
-    padding: 8px 12px;
-    height: 36px;
-  }
-}
-
 /* 通用弹窗样式 */
 .confirm-modal-overlay {
   position: fixed;
@@ -662,13 +625,11 @@ ul, ol {
   position: relative;
   background: #fff;
   border-radius: 16px;
-  padding: 24px 24px 24px 24px;
   min-width: 320px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   align-items: stretch;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
 }
 .edit-modal .modal-actions {
   display: flex;
@@ -677,13 +638,11 @@ ul, ol {
   margin-top: 8px;
 }
 .edit-modal h3 {
-  margin: 0 0 12px 0;
+  padding: 24px;
   font-size: 18px;
   font-weight: 600;
   color: #222;
   border-bottom: 1.5px solid #e5e7eb;
-  padding-bottom: 28px;
-  margin-top: 0;
 }
 .edit-modal .close-btn {
   position: absolute;
