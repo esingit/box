@@ -1,6 +1,6 @@
 <template>
   <div id="app" class="app-container">
-    <Sidebar v-if="isLoggedIn" :isLoggedIn="isLoggedIn" />
+    <Sidebar v-if="!['/', '/home'].includes($route.path) || isLoggedIn" :isLoggedIn="isLoggedIn" />
     <div class="content-wrapper">
       <main class="main-content">
         <div class="main-header">
@@ -68,8 +68,8 @@ const showRegisterModal = ref(false);
 
 // 监听登录状态变化
 watch(isLoggedIn, (val) => {
-  if (!val && router.currentRoute.value.path !== '/') {
-    // 如果未登录且不在首页，显示登录弹窗
+  if (!val && !['/', '/home'].includes(router.currentRoute.value.path)) {
+    // 如果未登录且不在公开页面，显示登录弹窗但不改变路由
     showLoginModal.value = true;
   }
 });

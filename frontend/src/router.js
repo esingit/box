@@ -19,10 +19,18 @@ router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   // 不需要登录的页面路径
   const publicPaths = ['/login', '/register', '/home']
+  
   if (!userStore.isLoggedIn && !publicPaths.includes(to.path)) {
-    // 未登录访问受保护页面，显示登录弹窗但允许继续访问当前页面
-    emitter.emit('show-auth', 'login', '请先登录')
-    next(false) // 保持在当前页面
+    // 如果是直接访问需要登录的页面（不是从其他页面跳转来的）
+    if (!from.name) {
+      // 重定向到首页并显示登录框
+      next('/home')
+      emitter.emit('show-auth', 'login', '请先登录')
+    } else {
+      // 如果是从其他页面跳转，允许访问但显示登录框
+      next()
+      emitter.emit('show-auth', 'login', '请先登录')
+    }
   } else {
     next()
   }
