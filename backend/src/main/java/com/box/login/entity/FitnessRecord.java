@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -16,9 +17,15 @@ import java.time.LocalDateTime;
 public class FitnessRecord extends BaseEntity {
     @TableId
     @JsonSerialize(using = ToStringSerializer.class)
-    private Long id;
-    private String type;
-    private Integer count;
-    private String unit;
-    private LocalDateTime finishTime;
+    private Long id; // 主键ID
+    
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long typeId; // 健身类型ID
+    
+    private BigDecimal count; // 数量
+    
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long unitId; // 单位ID
+    
+    private LocalDateTime finishTime; // 健身完成时间
 }

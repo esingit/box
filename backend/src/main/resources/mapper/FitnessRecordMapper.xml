@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.box.login.mapper.FitnessRecordMapper">
+    <resultMap id="fitnessRecordDTOMap" type="com.box.login.dto.FitnessRecordDTO">
+        <result property="id" column="id"/>
+        <result property="typeId" column="type_id"/>
+        <result property="count" column="count"/>
+        <result property="unitId" column="unit_id"/>
+        <result property="finishTime" column="finish_time"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="createUser" column="create_user"/>
+        <result property="updateUser" column="update_user"/>
+        <result property="version" column="version"/>
+        <result property="deleted" column="deleted"/>
+        <result property="typeName" column="type_name"/>
+        <result property="typeValue" column="type_value"/>
+        <result property="unitName" column="unit_name"/>
+        <result property="unitValue" column="unit_value"/>
+    </resultMap>
+
+    <select id="selectPageWithMeta" resultMap="fitnessRecordDTOMap">
+        SELECT 
+            fr.*,
+            type_meta.type_name as type_name,
+            type_meta.value1 as type_value,
+            unit_meta.type_name as unit_name,
+            unit_meta.value1 as unit_value
+        FROM fitness_record fr
+        LEFT JOIN common_meta type_meta ON fr.type_id = type_meta.id
+        LEFT JOIN common_meta unit_meta ON fr.unit_id = unit_meta.id
+        <where>
+            <if test="typeId != null">
+                AND fr.type_id = #{typeId}
+            </if>
+            <if test="remark != null and remark != ''">
+                AND fr.remark LIKE CONCAT('%', #{remark}, '%')
+            </if>
+            <if test="startDate != null and startDate != ''">
+                AND fr.finish_time >= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND fr.finish_time &lt;= #{endDate}
+            </if>
+            AND fr.deleted = 0
+        </where>
+        ORDER BY fr.finish_time DESC
+    </select>
+</mapper>

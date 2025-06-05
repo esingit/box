@@ -1,5 +1,6 @@
 package com.box.login.controller;
 
+import com.box.login.dto.FitnessRecordDTO;
 import com.box.login.entity.FitnessRecord;
 import com.box.login.service.FitnessRecordService;
 import com.box.login.dto.ApiResponse;
@@ -17,15 +18,15 @@ public class FitnessRecordController {
     private FitnessRecordService fitnessRecordService;
 
     @GetMapping("/list")
-    public ApiResponse<IPage<FitnessRecord>> listRecords(
-            @RequestParam(required = false) String type,
+    public ApiResponse<IPage<FitnessRecordDTO>> listRecords(
+            @RequestParam(required = false) Long typeId,
             @RequestParam(required = false) String remark,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<FitnessRecord> pageObj = new Page<>(page, pageSize);
-        IPage<FitnessRecord> records = fitnessRecordService.pageByConditions(pageObj, type, remark, startDate, endDate);
+        IPage<FitnessRecordDTO> records = fitnessRecordService.pageByConditions(pageObj, typeId, remark, startDate, endDate);
         return ApiResponse.success(records);
     }
 

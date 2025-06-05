@@ -1,5 +1,6 @@
 package com.box.login.service.impl;
 
+import com.box.login.dto.FitnessRecordDTO;
 import com.box.login.entity.FitnessRecord;
 import com.box.login.mapper.FitnessRecordMapper;
 import com.box.login.service.FitnessRecordService;
@@ -39,9 +40,9 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
     }
 
     @Override
-    public List<FitnessRecord> listByConditions(String type, String remark, String startDate, String endDate) {
+    public List<FitnessRecord> listByConditions(Long typeId, String remark, String startDate, String endDate) {
         QueryWrapper<FitnessRecord> wrapper = new QueryWrapper<>();
-        if (type != null && !type.isEmpty()) wrapper.eq("type", type);
+        if (typeId != null) wrapper.eq("type_id", typeId);
         if (remark != null && !remark.isEmpty()) wrapper.like("remark", remark);
         if (startDate != null && !startDate.isEmpty()) {
             wrapper.ge("finish_time", LocalDate.parse(startDate).atStartOfDay());
@@ -53,16 +54,7 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
     }
 
     @Override
-    public IPage<FitnessRecord> pageByConditions(Page<FitnessRecord> page, String type, String remark, String startDate, String endDate) {
-        QueryWrapper<FitnessRecord> wrapper = new QueryWrapper<>();
-        if (type != null && !type.isEmpty()) wrapper.eq("type", type);
-        if (remark != null && !remark.isEmpty()) wrapper.like("remark", remark);
-        if (startDate != null && !startDate.isEmpty()) {
-            wrapper.ge("finish_time", java.time.LocalDate.parse(startDate).atStartOfDay());
-        }
-        if (endDate != null && !endDate.isEmpty()) {
-            wrapper.le("finish_time", java.time.LocalDate.parse(endDate).atTime(23,59,59));
-        }
-        return fitnessRecordMapper.selectPage(page, wrapper);
+    public IPage<FitnessRecordDTO> pageByConditions(Page<FitnessRecord> page, Long typeId, String remark, String startDate, String endDate) {
+        return fitnessRecordMapper.selectPageWithMeta(page, typeId, remark, startDate, endDate);
     }
 }

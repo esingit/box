@@ -9,18 +9,18 @@
       </div>
       <div class="input-group">
         <label class="input-label">类型</label>
-        <select v-model="form.type" class="type-select select">
-          <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
+        <select v-model="form.typeId" class="type-select select">
+          <option v-for="type in types" :key="type.id" :value="type.id">{{ type.value1 }}</option>
         </select>
       </div>
       <div class="input-group">
         <label class="input-label">数量</label>
-        <input v-model.number="form.count" type="number" min="1" class="count-input input" required placeholder="数量" />
+        <input v-model.number="form.count" type="number" min="0.01" step="0.01" class="count-input input" required placeholder="数量" />
       </div>
       <div class="input-group">
         <label class="input-label">单位</label>
-        <select v-model="form.unit" class="unit-select select">
-          <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
+        <select v-model="form.unitId" class="unit-select select">
+          <option v-for="unit in units" :key="unit.id" :value="unit.id">{{ unit.value1 }}</option>
         </select>
       </div>
       <div class="input-group">
@@ -43,8 +43,14 @@ import { LucideX } from 'lucide-vue-next'
 const props = defineProps({
   show: Boolean,
   form: Object,
-  types: Array,
-  units: Array,
+  types: {
+    type: Array,
+    default: () => []
+  },
+  units: {
+    type: Array,
+    default: () => []
+  },
   loading: Boolean,
   title: {
     type: String,

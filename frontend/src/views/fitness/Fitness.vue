@@ -6,9 +6,9 @@
     </div>
     <div class="fitness-query-bar">
       <div class="query-fields query-bar-fields">
-        <select v-model="query.type">
+        <select v-model="query.typeId">
           <option value="">全部类型</option>
-          <option v-for="t in types" :key="t" :value="t">{{ t }}</option>
+          <option v-for="t in types" :key="t.id" :value="t.id">{{ t.value1 }}</option>
         </select>
         <input type="date" v-model="query.startDate" />
         <span class="to-text">至</span>
@@ -69,6 +69,7 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { LucideClipboardList, LucideSearch, LucideRotateCcw } from 'lucide-vue-next'
 import emitter from '@/utils/eventBus.js'
 import axios from '@/utils/axios.js'
+import { formatFitnessRecord, clearCommonMetaCache } from '@/utils/commonMeta'
 import FitnessModal from '@/components/fitness/FitnessModal.vue'
 import FitnessList from '@/components/fitness/FitnessList.vue'
 
@@ -79,23 +80,23 @@ const adding = ref(false)
 
 // 添加表单和编辑表单统一用 reactive 管理
 const form = reactive({
-  type: '',
+  typeId: null,
   count: 1,
-  unit: '',
+  unitId: null,
   finishTime: getTodayDate(),
   remark: ''
 })
 const editForm = reactive({
-  type: '',
+  typeId: null,
   count: 1,
-  unit: '',
+  unitId: null,
   finishTime: getTodayDate(),
   remark: ''
 })
 const editingIdx = ref(null)
 const showAddModal = ref(false)
 const query = reactive({
-  type: '',
+  typeId: '',
   startDate: '',
   endDate: '',
   remark: ''
@@ -106,18 +107,22 @@ const pageSize = ref(7)
 
 async function initSelectOptions() {
   const [typeRes, unitRes] = await Promise.all([
-    axios.get('/api/common-meta/key1-value1-by-type', { params: { typeCode: 'FITNESS_TYPE' } }),
-    axios.get('/api/common-meta/key1-value1-by-type', { params: { typeCode: 'UNIT' } })
+    axios.get('/api/common-meta/by-type', { params: { typeCode: 'FITNESS_TYPE' } }),
+    axios.get('/api/common-meta/by-type', { params: { typeCode: 'UNIT' } })
   ])
   if (typeRes.data?.success) {
-    types.value = typeRes.data.data.map(item => item.value1)
-    form.type = types.value[0] || ''
-    editForm.type = types.value[0] || ''
+    types.value = typeRes.data.data
+    if (types.value.length > 0) {
+      form.typeId = types.value[0].id
+      editForm.typeId = types.value[0].id
+    }
   }
   if (unitRes.data?.success) {
-    units.value = unitRes.data.data.map(item => item.value1)
-    form.unit = units.value[0] || ''
-    editForm.unit = units.value[0] || ''
+    units.value = unitRes.data.data
+    if (units.value.length > 0) {
+      form.unitId = units.value[0].id
+      editForm.unitId = units.value[0].id
+    }
   }
 }
 
@@ -126,13 +131,15 @@ async function fetchRecords(page = 1, size = pageSize.value) {
     page,
     pageSize: size
   }
-  if (query.type) params.type = query.type
+  if (query.typeId) params.typeId = query.typeId
   if (query.startDate) params.startDate = query.startDate
   if (query.endDate) params.endDate = query.endDate
   if (query.remark) params.remark = query.remark
   const res = await axios.get('/api/fitness-record/list', { params })
   if (res.data && res.data.success) {
-    records.value = (res.data.data && res.data.data.records) ? res.data.data.records : []
+    const rawRecords = (res.data.data && res.data.data.records) ? res.data.data.records : []
+    // 格式化每条记录的类型和单位
+    records.value = await Promise.all(rawRecords.map(record => formatFitnessRecord(record)))
     total.value = res.data.data ? Number(res.data.data.total) : 0
     current.value = res.data.data ? Number(res.data.data.current) : 1
     pageSize.value = res.data.data ? Number(res.data.data.size) : pageSize.value
@@ -165,9 +172,9 @@ async function addRecord() {
   adding.value = true
   try {
     const res = await axios.post('/api/fitness-record/add', {
-      type: form.type,
+      typeId: form.typeId,
       count: form.count,
-      unit: form.unit,
+      unitId: form.unitId,
       finishTime: form.finishTime + 'T00:00:00',
       remark: form.remark
     })
@@ -194,9 +201,9 @@ function handleAddRecord() {
 function editRecord(idx) {
   editingIdx.value = idx
   const record = records.value[idx]
-  editForm.type = record.type
+  editForm.typeId = record.typeId
   editForm.count = record.count
-  editForm.unit = record.unit
+  editForm.unitId = record.unitId
   // finishTime 容错处理
   editForm.finishTime = record.finishTime ? record.finishTime.slice(0, 10) : getTodayDate()
   editForm.remark = record.remark || ''
@@ -207,9 +214,9 @@ async function saveEdit() {
     const record = records.value[editingIdx.value]
     const payload = {
       id: record.id,
-      type: editForm.type,
+      typeId: editForm.typeId,
       count: editForm.count,
-      unit: editForm.unit,
+      unitId: editForm.unitId,
       finishTime: editForm.finishTime + 'T00:00:00',
       remark: editForm.remark
     }
@@ -246,7 +253,7 @@ function handleQuery() {
 }
 
 function resetQuery() {
-  query.type = ''
+  query.typeId = ''
   query.startDate = ''
   query.endDate = ''
   query.remark = ''
