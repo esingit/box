@@ -37,7 +37,7 @@
       </main>
     </div>
     <Profile ref="profileRef" />
-    <LoginForm v-if="showLoginModal" @close="showLoginModal = false" @login-success="handleLoginSuccess" />
+    <LoginForm v-if="showLoginModal" @close="handleLoginModalClose" @login-success="handleLoginSuccess" />
     <RegisterForm v-if="showRegisterModal" @close="showRegisterModal = false" @register-success="handleRegisterSuccess" />
     <Notification />
     <ConfirmDialog />
@@ -65,14 +65,36 @@ const showMenu = ref(false);
 const profileRef = ref(null);
 const showLoginModal = ref(false);
 const showRegisterModal = ref(false);
+const publicPaths = ['/login', '/register', '/home']; // 公共路径列表
+
+// 检查是否需要显示登录框的函数
+const checkAndShowLoginModal = () => {
+  if (!isLoggedIn.value && !publicPaths.includes(router.currentRoute.value.path)) {
+    showLoginModal.value = true;
+  }
+};
+
+// 检查登录状态的函数
+const checkLoginStatus = () => {
+  if (!isLoggedIn.value && !publicPaths.includes(router.currentRoute.value.path)) {
+    showLoginModal.value = true;
+  }
+};
 
 // 监听登录状态变化
 watch(isLoggedIn, (val) => {
-  if (!val && !['/', '/home'].includes(router.currentRoute.value.path)) {
-    // 如果未登录且不在公开页面，显示登录弹窗但不改变路由
-    showLoginModal.value = true;
+  if (!val) {
+    checkAndShowLoginModal();
   }
 });
+
+// 监听路由变化
+watch(
+  () => router.currentRoute.value.path,
+  () => {
+    checkAndShowLoginModal();
+  }
+);
 
 // 监听登录相关事件
 onMounted(() => {
@@ -86,10 +108,26 @@ onMounted(() => {
       showRegisterModal.value = true;
     }
   });
+
+  const handleUserAction = (event) => {
+    // 排除登录框、注册框等身份验证相关组件的点击
+    const excludeClasses = ['login-form', 'register-form', 'user-auth-link', 'auth-separator'];
+    const clickedElement = event.target;
+    const isAuthComponent = excludeClasses.some(className => 
+      clickedElement.closest(`.${className}`)
+    );
+
+    if (!isAuthComponent) {
+      checkLoginStatus();
+    }
+  };
+
+  document.addEventListener('click', handleUserAction);
 });
 
 onBeforeUnmount(() => {
   emitter.off('show-auth');
+  document.removeEventListener('click', handleUserAction);
 });
 
 function toggleMenu() {
@@ -118,6 +156,11 @@ function showLogin() {
 
 function showRegister() {
   showRegisterModal.value = true;
+}
+
+function handleLoginModalClose() {
+  showLoginModal.value = false;
+  // 关闭登录框时不跳转，保持在当前页面
 }
 
 function handleLoginSuccess() {

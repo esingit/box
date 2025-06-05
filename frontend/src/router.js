@@ -25,12 +25,14 @@ router.beforeEach((to, from, next) => {
     if (!from.name) {
       // 重定向到首页并显示登录框
       next('/home')
-      emitter.emit('show-auth', 'login', '请先登录')
     } else {
-      // 如果是从其他页面跳转，允许访问但显示登录框
+      // 如果是从其他页面跳转，允许访问
       next()
-      emitter.emit('show-auth', 'login', '请先登录')
     }
+    // 通知需要登录，设置延迟以确保组件已经挂载
+    setTimeout(() => {
+      emitter.emit('show-auth', 'login', '请先登录')
+    }, 100)
   } else {
     next()
   }
