@@ -43,6 +43,9 @@
             <if test="endDate != null and endDate != ''">
                 AND fr.finish_time &lt;= #{endDate}
             </if>
+            <if test="createUser != null and createUser != ''">
+                AND fr.create_user = #{createUser}
+            </if>
             AND fr.deleted = 0
         </where>
         ORDER BY fr.finish_time DESC

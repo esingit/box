@@ -11,5 +11,5 @@ import org.apache.ibatis.annotations.Param;
 public interface FitnessRecordMapper extends BaseMapper<FitnessRecord> {
     IPage<FitnessRecordDTO> selectPageWithMeta(IPage<FitnessRecord> page, @Param("typeId") Long typeId,
                                               @Param("remark") String remark, @Param("startDate") String startDate,
-                                              @Param("endDate") String endDate);
+                                              @Param("endDate") String endDate, @Param("createUser") String createUser);
 }

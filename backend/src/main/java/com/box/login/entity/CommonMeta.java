@@ -5,6 +5,10 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * 公共元数据实体类
+ * 用于存储通用的键值对数据
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("common_meta")

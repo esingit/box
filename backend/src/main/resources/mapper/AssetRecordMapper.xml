@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.box.login.mapper.AssetRecordMapper">
+    <resultMap id="assetRecordDTOMap" type="com.box.login.dto.AssetRecordDTO">
+        <result property="id" column="id"/>
+        <result property="assetNameId" column="asset_name_id"/>
+        <result property="assetName" column="asset_name"/>
+        <result property="amount" column="amount"/>
+        <result property="type" column="type"/>
+        <result property="recordTime" column="record_time"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createUser" column="create_user"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <select id="selectDetailById" resultMap="assetRecordDTOMap">
+        SELECT 
+            ar.*,
+            an.name as asset_name
+        FROM asset_record ar
+        LEFT JOIN asset_name an ON ar.asset_name_id = an.id
+        WHERE ar.id = #{id}
+        AND ar.create_user = #{createUser}
+        AND ar.deleted = 0
+    </select>
+
+    <select id="selectPageWithDetails" resultMap="assetRecordDTOMap">
+        SELECT 
+            ar.*,
+            an.name as asset_name
+        FROM asset_record ar
+        LEFT JOIN asset_name an ON ar.asset_name_id = an.id
+        <where>
+            AND ar.create_user = #{createUser}
+            AND ar.deleted = 0
+            <if test="assetName != null and assetName != ''">
+                AND an.name LIKE CONCAT('%', #{assetName}, '%')
+            </if>
+        </where>
+        ORDER BY ar.record_time DESC
+    </select>
+</mapper>

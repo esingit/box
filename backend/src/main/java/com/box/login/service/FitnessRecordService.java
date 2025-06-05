@@ -13,5 +13,5 @@ public interface FitnessRecordService {
     void updateRecord(FitnessRecord record);
     void deleteRecord(Long id);
     List<FitnessRecord> listByConditions(Long typeId, String remark, String startDate, String endDate);
-    IPage<FitnessRecordDTO> pageByConditions(Page<FitnessRecord> page, Long typeId, String remark, String startDate, String endDate);
+    IPage<FitnessRecordDTO> pageByConditions(Page<FitnessRecord> page, Long typeId, String remark, String startDate, String endDate, String createUser);
 }

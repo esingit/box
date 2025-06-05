@@ -1,17 +1,19 @@
 package com.box.login.config;
 
-public class UserContextHolder {
-    private static final ThreadLocal<String> currentUser = new ThreadLocal<>();
+import org.springframework.core.NamedThreadLocal;
 
-    public static void set(String username) {
-        currentUser.set(username);
+public class UserContextHolder {
+    private static final ThreadLocal<String> userHolder = new NamedThreadLocal<>("Current User");
+
+    public static void setCurrentUser(String username) {
+        userHolder.set(username);
     }
 
-    public static String get() {
-        return currentUser.get();
+    public static String getCurrentUsername() {
+        return userHolder.get();
     }
 
     public static void clear() {
-        currentUser.remove();
+        userHolder.remove();
     }
 }

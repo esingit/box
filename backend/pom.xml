@@ -82,6 +82,19 @@
       <artifactId>spring-boot-starter-data-redis</artifactId>
     </dependency>
 
+    <!-- SpringDoc OpenAPI (代替 Swagger) -->
+    <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        <version>2.1.0</version>
+    </dependency>
+
+    <!-- Validation -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
     <!-- 添加 Servlet API 依赖 -->
     <dependency>
       <groupId>javax.servlet</groupId>

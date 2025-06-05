@@ -12,7 +12,7 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
 
     private String getCurrentUsername() {
         try {
-            String username = UserContextHolder.get();
+            String username = UserContextHolder.getCurrentUsername();
             if (username == null || "anonymousUser".equals(username)) return null;
             return username;
         } catch (Exception e) {

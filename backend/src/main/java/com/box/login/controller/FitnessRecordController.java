@@ -4,6 +4,7 @@ import com.box.login.dto.FitnessRecordDTO;
 import com.box.login.entity.FitnessRecord;
 import com.box.login.service.FitnessRecordService;
 import com.box.login.dto.ApiResponse;
+import com.box.login.config.UserContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +14,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 @RestController
 @RequestMapping("/api/fitness-record")
 public class FitnessRecordController {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FitnessRecordController.class);
 
     @Autowired
     private FitnessRecordService fitnessRecordService;
@@ -24,9 +27,14 @@ public class FitnessRecordController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer pageSize) {
+            @RequestParam(defaultValue = "7") Integer pageSize) {
+        log.debug("Received list request - typeId: {}, remark: {}, startDate: {}, endDate: {}, page: {}, pageSize: {}", 
+                 typeId, remark, startDate, endDate, page, pageSize);
         Page<FitnessRecord> pageObj = new Page<>(page, pageSize);
-        IPage<FitnessRecordDTO> records = fitnessRecordService.pageByConditions(pageObj, typeId, remark, startDate, endDate);
+        String currentUser = UserContextHolder.getCurrentUsername();
+        log.debug("Querying records for user: {}", currentUser);
+        IPage<FitnessRecordDTO> records = fitnessRecordService.pageByConditions(pageObj, typeId, remark, startDate, endDate, currentUser);
+        log.debug("Query completed. Total records: {}, Current page: {}", records.getTotal(), records.getCurrent());
         return ApiResponse.success(records);
     }
 

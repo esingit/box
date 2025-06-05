@@ -1,6 +1,5 @@
 package com.box.login.controller;
 
-import com.box.login.dto.ApiResponse;
 import com.box.login.dto.RegisterRequest;
 import com.box.login.dto.LoginRequest;
 import com.box.login.dto.UserLoginResponseDTO;
@@ -10,8 +9,6 @@ import com.box.login.service.UserService;
 import com.box.login.filter.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,7 +29,7 @@ public class UserController {
     private JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
+    public Result<User> register(@RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
         // --- 获取IP地址并检查注册频率 --- START
         String ip = httpRequest.getRemoteAddr();
         String registerKey = "register:" + ip;
@@ -56,13 +53,13 @@ public class UserController {
         
         if (savedCaptcha == null) {
                 // 如果需要验证码但验证码过期或不存在，返回错误并指示需要验证码
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "验证码已过期", null, true));
+                return Result.<User>error("验证码已过期", true);
         }
         
         if (!savedCaptcha.equalsIgnoreCase(request.getCaptcha())) {
-                 // 如果需要验证码但验证码错误，返回错误并指示需要验证码
+                // 如果需要验证码但验证码错误，返回错误并指示需要验证码
                 // 注意：验证码错误也应该刷新验证码，但这里只是后端逻辑，刷新由前端根据showCaptcha标志触发
-                 return ResponseEntity.badRequest().body(new ApiResponse(false, "验证码错误", null, true));
+                return Result.<User>error("验证码错误", true);
         }
         
             // 验证码验证成功，清除验证码
@@ -84,20 +81,20 @@ public class UserController {
             boolean registered = userService.register(user);
             
             if (registered) {
-                return ResponseEntity.ok(new ApiResponse(true, "注册成功"));
+                return Result.success(user);
             } else {
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "用户名已存在"));
+                return Result.<User>error("用户名已存在");
             }
         } catch (Exception e) {
             // 如果注册过程中出现异常，回滚注册次数计数器（可选，取决于您的需求）
             // redisTemplate.opsForValue().decrement(registerKey);
-            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+            return Result.<User>error(e.getMessage());
         }
         // --- 继续原有的注册逻辑... --- END
     }
 
     @PostMapping("/login")
-    public Result login(@RequestBody LoginRequest request) {
+    public Result<UserLoginResponseDTO> login(@RequestBody LoginRequest request) {
         String username = request.getUsername();
         String password = request.getPassword();
 
@@ -113,12 +110,12 @@ public class UserController {
         if (captchaRequired) {
             String savedCaptcha = redisTemplate.opsForValue().get(captchaKey);
             if (savedCaptcha == null) {
-                return new Result(false, "验证码已过期", null, true);
+                return Result.<UserLoginResponseDTO>error("验证码已过期", true);
             }
             if (!savedCaptcha.equalsIgnoreCase(request.getCaptcha())) {
                 incrementLoginFailCount(username, loginFailKey, failCount);
                 redisTemplate.delete(captchaKey);
-                return new Result(false, "验证码错误", null, true);
+                return Result.<UserLoginResponseDTO>error("验证码错误", true);
             }
             redisTemplate.delete(captchaKey);
         }
@@ -142,17 +139,17 @@ public class UserController {
                         userEntity.getEmail(),
                         userEntity.getLastLoginTime() 
                 );
-                return new Result(true, "登录成功", responseData);
+                return Result.success(responseData);
             } else {
                 // 理论上，如果token生成成功，用户应该能被找到
                 // 但作为防御性编程，处理此情况
-                return new Result(false, "登录成功但无法检索用户信息", null); 
+                return Result.error("登录成功但无法检索用户信息");
             }
         } else {
             incrementLoginFailCount(username, loginFailKey, failCount);
             boolean needsCaptchaAfterFail = redisTemplate.opsForValue().get(loginFailKey) != null &&
                                             Integer.parseInt(redisTemplate.opsForValue().get(loginFailKey)) >= 3;
-            return new Result(false, "用户名或密码错误", null, needsCaptchaAfterFail);
+            return Result.error("用户名或密码错误", needsCaptchaAfterFail);
         }
     }
 
@@ -168,55 +165,52 @@ public class UserController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public Result<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
         try {
             // 1. 查找用户
             User user = userService.findByUsername(request.getUsername());
             if (user == null) {
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "用户不存在"));
+                return Result.error("用户不存在");
             }
             // 2. 校验旧密码
             if (!userService.checkPassword(user, request.getOldPassword())) {
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "旧密码错误"));
+                return Result.error("旧密码错误");
             }
             // 3. 更新新密码
             boolean updated = userService.updatePassword(user, request.getNewPassword());
             if (updated) {
-                return ResponseEntity.ok(new ApiResponse(true, "密码重置成功！"));
+                return Result.success();
             } else {
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "密码重置失败"));
+                return Result.error("密码重置失败");
             }
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse(false, "服务器异常: " + e.getMessage()));
+            return Result.error("服务器异常: " + e.getMessage());
         }
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<ApiResponse<String>> refreshToken(HttpServletRequest request) {
+    public Result<String> refreshToken(HttpServletRequest request) {
         String token = getTokenFromRequest(request);
         
         if (token == null) {
-            return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, "Token不存在", null, false));
+            return Result.error("Token不存在");
         }
         
         try {
             if (jwtTokenProvider.isTokenExpired(token)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ApiResponse<>(false, "Token已过期，请重新登录", null, false));
+                return Result.error("Token已过期，请重新登录");
             }
             
             if (jwtTokenProvider.shouldRefreshToken(token)) {
                 String newToken = jwtTokenProvider.refreshToken(token);
                 if (newToken != null) {
-                    return ResponseEntity.ok(new ApiResponse<>(true, "Token刷新成功", newToken, false));
+                    return Result.success(newToken);
                 }
             }
             
-            return ResponseEntity.ok(new ApiResponse<>(true, "Token仍然有效", token, false));
+            return Result.success(token);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ApiResponse<>(false, "Token无效", null, false));
+            return Result.error("Token无效");
         }
     }
     
@@ -227,31 +221,4 @@ public class UserController {
         }
         return null;
     }
-}
-
-class Result {
-    private boolean success;
-    private String message;
-    private Object data;
-    private boolean showCaptcha;
-
-    public Result(boolean success, String message, Object data, boolean showCaptcha) {
-        this.success = success;
-        this.message = message;
-        this.data = data;
-        this.showCaptcha = showCaptcha;
-    }
-
-    public Result(boolean success, String message) {
-        this(success, message, null, false);
-    }
-
-    public Result(boolean success, String message, Object data) {
-        this(success, message, data, false);
-    }
-
-    public boolean isSuccess() { return success; }
-    public String getMessage() { return message; }
-    public Object getData() { return data; }
-    public boolean isShowCaptcha() { return showCaptcha; }
 }

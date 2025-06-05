@@ -127,22 +127,29 @@ async function initSelectOptions() {
 }
 
 async function fetchRecords(page = 1, size = pageSize.value) {
-  const params = {
-    page,
-    pageSize: size
-  }
-  if (query.typeId) params.typeId = query.typeId
-  if (query.startDate) params.startDate = query.startDate
-  if (query.endDate) params.endDate = query.endDate
-  if (query.remark) params.remark = query.remark
-  const res = await axios.get('/api/fitness-record/list', { params })
-  if (res.data && res.data.success) {
-    const rawRecords = (res.data.data && res.data.data.records) ? res.data.data.records : []
-    // 格式化每条记录的类型和单位
-    records.value = await Promise.all(rawRecords.map(record => formatFitnessRecord(record)))
-    total.value = res.data.data ? Number(res.data.data.total) : 0
-    current.value = res.data.data ? Number(res.data.data.current) : 1
-    pageSize.value = res.data.data ? Number(res.data.data.size) : pageSize.value
+  try {
+    const params = {
+      page,
+      pageSize: size
+    }
+    if (query.typeId) params.typeId = query.typeId
+    if (query.startDate) params.startDate = query.startDate
+    if (query.endDate) params.endDate = query.endDate
+    if (query.remark) params.remark = query.remark
+    const res = await axios.get('/api/fitness-record/list', { params })
+    if (res.data?.success) {
+      const rawRecords = (res.data.data?.records) || []
+      // 格式化每条记录的类型和单位
+      records.value = await Promise.all(rawRecords.map(record => formatFitnessRecord(record)))
+      total.value = res.data.data ? Number(res.data.data.total) : 0
+      current.value = res.data.data ? Number(res.data.data.current) : 1
+      pageSize.value = res.data.data ? Number(res.data.data.size) : pageSize.value
+    } else {
+      emitter.emit('notify', '获取数据失败: ' + (res.data?.message || '未知错误'), 'error')
+    }
+  } catch (err) {
+    console.error('获取健身记录失败:', err)
+    emitter.emit('notify', '获取数据失败: ' + (err.message || '未知错误'), 'error')
   }
 }
 

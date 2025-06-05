@@ -24,17 +24,24 @@ spring:
     generator:
       write-numbers-as-strings: true
 
+jwt:
+  secret: RjFk8V2p9X7mN3qL5tYzA4wQ1cB6vE0sH8uD2xG4nJ7bK9mP3rT5
+
 mybatis-plus:
   mapper-locations: classpath:/mapper/*.xml
   type-aliases-package: com.box.login.entity
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    map-underscore-to-camel-case: true
+    cache-enabled: false
 
 # 日志配置
 logging:
   level:
     root: INFO
-    com.box.main: DEBUG
+    com.box.login: DEBUG
+    com.box.login.mapper: DEBUG
+    com.box.login.mapper.FitnessRecordMapper: TRACE
     org.springframework.data.redis: INFO
     org.springframework.security: DEBUG
 
@@ -45,6 +52,3 @@ cors:
   allowed-headers: "*"
   allow-credentials: true
   max-age: 3600
-
-jwt:
-  secret: "your-very-long-secret-key-should-be-at-least-32-bytes-123456"

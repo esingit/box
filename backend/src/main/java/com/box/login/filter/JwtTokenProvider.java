@@ -48,6 +48,9 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String authToken) {
         try {
+            if (authToken == null || authToken.trim().isEmpty()) {
+                throw new JwtException("Token is empty");
+            }
             Jwts.parserBuilder().setSigningKey(getSecretKey()).build().parseClaimsJws(authToken);
             return true;
         } catch (ExpiredJwtException e) {
