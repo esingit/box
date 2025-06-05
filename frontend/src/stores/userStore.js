@@ -77,30 +77,32 @@ export const useUserStore = defineStore('user', {
 
     async logout(clearUI = true, router = null) {
       try {
-        // 尝试调用后端登出接口，添加skipAuthRetry标记避免401刷新
-        await axios.post(`${API_URL}/logout`, null, {
-          skipAuthRetry: true
-        }).catch(() => {
-          // 忽略后端登出失败的错误
-        })
+        // 只在主动登出时调用后端接口
+        if (clearUI) {
+          await axios.post(`${API_URL}/logout`, null, {
+            skipAuthRetry: true
+          }).catch(() => {
+            // 忽略后端登出失败的错误
+          })
+        }
       } finally {
         // 清除 token
         localStorage.removeItem('token')
         this.token = null
         
-        // 只有在需要时才清除UI状态
+        // 只有在主动登出时才清除完整的UI状态
         if (clearUI) {
           this.user = null
           this.isLoggedIn = false
           localStorage.removeItem('user')
+          
+          // 只在主动登出时跳转到主页
+          if (router) {
+            router.push('/home')
+          }
         } else {
-          // 当不清除UI状态时，也需要设置登录状态为false
+          // 当不清除UI状态时，只更新登录状态
           this.isLoggedIn = false
-        }
-
-        // 如果提供了router实例，则跳转到主页
-        if (router) {
-          router.push('/home')
         }
       }
     },

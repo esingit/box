@@ -20,9 +20,9 @@ router.beforeEach((to, from, next) => {
   // 不需要登录的页面路径
   const publicPaths = ['/login', '/register', '/home']
   if (!userStore.isLoggedIn && !publicPaths.includes(to.path)) {
-    // 未登录访问受保护页面，显示登录弹窗并保持在当前页面
-    next(false)
-    emitter.emit('show-auth', 'login')
+    // 未登录访问受保护页面，显示登录弹窗但允许继续访问当前页面
+    emitter.emit('show-auth', 'login', '请先登录')
+    next(false) // 保持在当前页面
   } else {
     next()
   }
