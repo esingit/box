@@ -17,10 +17,10 @@ public class JwtTokenProvider {
     private String jwtSecret;
     
     // token 的过期时间 2小时
-    private final long jwtExpirationInMs = 60 * 1000; // 2小时
+    private final long jwtExpirationInMs = 2 * 60 * 60 * 1000; // 2小时
     
     // token 的刷新时间窗口 30分钟
-    private final long refreshWindowInMs = 30 * 1000; // 30分钟
+    private final long refreshWindowInMs = 30 * 60 * 1000; // 30分钟
 
     private SecretKey getSecretKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));

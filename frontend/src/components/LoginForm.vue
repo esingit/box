@@ -1,9 +1,9 @@
 <template>
-  <div class="auth-form-modal-overlay" @click.self="handleClose">
-    <div :class="['auth-form-modal', { 'show-captcha': showCaptcha }]">
+  <div class="auth-form-modal-overlay" @click.self="$emit('close')" @mousedown.stop>
+    <div :class="['auth-form-modal', { 'show-captcha': showCaptcha }]" @click.stop>
       <div class="auth-form-header">
         <h2 class="auth-form-title">登录</h2>
-        <button class="auth-form-close" @click="handleClose">×</button>
+        <button class="auth-form-close btn-close" data-modal-close @click.stop="$emit('close')">×</button>
       </div>
       <div class="auth-form-divider"></div>
       <div class="auth-form-inner">
@@ -61,10 +61,7 @@ onUnmounted(() => {
   emitter.off('login-error');
 });
 
-function handleClose() {
-  // 只关闭弹窗，不清除用户状态
-  emit('close')
-}
+// Remove handleClose function as we're using direct emit now
 
 const captcha = ref('')
 const captchaId = ref('')

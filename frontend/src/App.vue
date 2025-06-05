@@ -96,8 +96,50 @@ watch(
   }
 );
 
-// 监听登录相关事件
+// 检查需要登录的页面操作
+const checkProtectedAction = (event) => {
+  // 已登录或在公开页面时不需要处理
+  if (isLoggedIn.value || publicPaths.includes(router.currentRoute.value.path)) {
+    return false;
+  }
+
+  // 获取触发事件的元素及其所有父元素
+  const path = event.composedPath();
+  
+  // 排除需要忽略的元素
+  const excludeSelectors = [
+    '.auth-form-modal',
+    '.auth-form-modal-overlay',
+    '.user-auth-link',
+    '.auth-separator',
+    '[data-modal-close]',
+    '.modal-close-btn',
+    '.modal-header',
+    '.btn-close'
+  ];
+  
+  // 检查事件路径上的所有元素是否包含需要排除的选择器
+  const isExcluded = path.some(element => {
+    if (!(element instanceof Element)) return false;
+    return excludeSelectors.some(selector => element.matches(selector));
+  });
+
+  if (!isExcluded) {
+    showLoginModal.value = true;
+    return true;
+  }
+
+  return false;
+};
+
+// 用户操作处理函数
+const handleUserAction = (event) => {
+  checkProtectedAction(event);
+};
+
 onMounted(() => {
+  document.addEventListener('click', handleUserAction);
+
   emitter.on('show-auth', (type, message) => {
     if (type === 'login') {
       showLoginModal.value = true;
@@ -108,26 +150,11 @@ onMounted(() => {
       showRegisterModal.value = true;
     }
   });
-
-  const handleUserAction = (event) => {
-    // 排除登录框、注册框等身份验证相关组件的点击
-    const excludeClasses = ['login-form', 'register-form', 'user-auth-link', 'auth-separator'];
-    const clickedElement = event.target;
-    const isAuthComponent = excludeClasses.some(className => 
-      clickedElement.closest(`.${className}`)
-    );
-
-    if (!isAuthComponent) {
-      checkLoginStatus();
-    }
-  };
-
-  document.addEventListener('click', handleUserAction);
 });
 
 onBeforeUnmount(() => {
-  emitter.off('show-auth');
   document.removeEventListener('click', handleUserAction);
+  emitter.off('show-auth');
 });
 
 function toggleMenu() {
@@ -160,7 +187,6 @@ function showRegister() {
 
 function handleLoginModalClose() {
   showLoginModal.value = false;
-  // 关闭登录框时不跳转，保持在当前页面
 }
 
 function handleLoginSuccess() {
