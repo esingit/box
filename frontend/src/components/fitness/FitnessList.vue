@@ -25,13 +25,15 @@
       </span>
     </li>
   </ul>
-  <PaginationBar
-    :current="current"
-    :total="total"
-    :pageSize="pageSize"
-    @page-change="$emit('page-change', $event)"
-    @page-size-change="$emit('page-size-change', $event)"
-  />
+  <div class="pagination-container">
+    <PaginationBar
+      :current="current"
+      :total="total"
+      :pageSize="pageSize"
+      @page-change="$emit('page-change', $event)"
+      @page-size-change="$emit('page-size-change', $event)"
+    />
+  </div>
 </template>
 
 <script setup>

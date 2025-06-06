@@ -103,10 +103,12 @@ public class AssetRecordController {
 
     @Operation(summary = "获取最近日期的资产统计")
     @GetMapping("/latest-stats")
-    public ApiResponse<AssetStatsDTO> getLatestStats() {
+    public ApiResponse<AssetStatsDTO> getLatestStats(
+            @Parameter(description = "日期偏移量，0表示最新，1表示昨天，以此类推") 
+            @RequestParam(required = false, defaultValue = "0") Integer offset) {
         try {
             String currentUser = UserContextHolder.getCurrentUsername();
-            AssetStatsDTO stats = assetRecordService.getLatestStats(currentUser);
+            AssetStatsDTO stats = assetRecordService.getLatestStats(currentUser, offset);
             return ApiResponse.success(stats);
         } catch (Exception e) {
             log.error("Failed to get latest asset stats", e);

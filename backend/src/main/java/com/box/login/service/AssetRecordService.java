@@ -16,5 +16,5 @@ public interface AssetRecordService {
     IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, Long typeId, String remark,
                                            String startDate, String endDate, String createUser);
     void copyLastRecords(boolean force);
-    AssetStatsDTO getLatestStats(String createUser);
+    AssetStatsDTO getLatestStats(String createUser, Integer offset);
 }

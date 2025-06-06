@@ -5,19 +5,27 @@
       <span>资产记录</span>
     </div>
     <div class="asset-overview">
-      <div class="overview-title">今日资产总计</div>
       <div class="asset-statistics">
         <div class="stat-item">
           <div class="stat-label">总资产</div>
           <div class="stat-value positive">{{ formatAmount(totalAssets) }}</div>
+          <div class="stat-change" :class="assetsChange > 0 ? 'positive' : assetsChange < 0 ? 'negative' : ''">
+            {{ getChangePrefix(assetsChange) }}{{ formatAmount(assetsChange) }}
+          </div>
         </div>
         <div class="stat-item">
           <div class="stat-label">总负债</div>
           <div class="stat-value negative">{{ formatAmount(totalLiabilities) }}</div>
+          <div class="stat-change" :class="liabilitiesChange > 0 ? 'negative' : liabilitiesChange < 0 ? 'positive' : ''">
+            {{ getChangePrefix(liabilitiesChange) }}{{ formatAmount(liabilitiesChange) }}
+          </div>
         </div>
         <div class="stat-item">
           <div class="stat-label">净资产</div>
           <div class="stat-value" :class="getNetWorthClass">{{ formatAmount(netWorth) }}</div>
+          <div class="stat-change" :class="netWorthChange > 0 ? 'positive' : netWorthChange < 0 ? 'negative' : ''">
+            {{ getChangePrefix(netWorthChange) }}{{ formatAmount(netWorthChange) }}
+          </div>
         </div>
       </div>
     </div>
@@ -112,16 +120,29 @@ const adding = ref(false)
 const totalAssets = ref(0)
 const totalLiabilities = ref(0)
 
+// 昨日的资产统计
+const yesterdayAssets = ref(0)
+const yesterdayLiabilities = ref(0)
+
 // 获取最近日期的资产统计
 async function fetchLatestAssetStats() {
   try {
-    const res = await axios.get('/api/asset-record/latest-stats')
-    if (res.data?.success) {
-      totalAssets.value = res.data.data.totalAssets || 0
-      totalLiabilities.value = res.data.data.totalLiabilities || 0
+    const [latestRes, yesterdayRes] = await Promise.all([
+      axios.get('/api/asset-record/latest-stats'),
+      axios.get('/api/asset-record/latest-stats?offset=1')
+    ])
+    
+    if (latestRes.data?.success) {
+      totalAssets.value = latestRes.data.data.totalAssets || 0
+      totalLiabilities.value = latestRes.data.data.totalLiabilities || 0
+    }
+    
+    if (yesterdayRes.data?.success) {
+      yesterdayAssets.value = yesterdayRes.data.data.totalAssets || 0
+      yesterdayLiabilities.value = yesterdayRes.data.data.totalLiabilities || 0
     }
   } catch (err) {
-    console.error('获取最近资产统计失败:', err)
+    console.error('获取资产统计失败:', err)
     emitter.emit('notify', '获取资产统计失败：' + (err.message || '未知错误'), 'error')
   }
 }
@@ -131,12 +152,32 @@ const netWorth = computed(() => {
   return totalAssets.value - totalLiabilities.value
 })
 
-// 根据净资产值确定显示的样式类
-const getNetWorthClass = computed(() => {
-  if (netWorth.value > 0) return 'positive'
-  if (netWorth.value < 0) return 'negative'
-  return 'neutral'
+// 计算昨日净资产
+const yesterdayNetWorth = computed(() => {
+  return yesterdayAssets.value - yesterdayLiabilities.value
 })
+
+// 计算资产变化
+const assetsChange = computed(() => {
+  return totalAssets.value - yesterdayAssets.value
+})
+
+// 计算负债变化
+const liabilitiesChange = computed(() => {
+  return totalLiabilities.value - yesterdayLiabilities.value
+})
+
+// 计算净资产变化
+const netWorthChange = computed(() => {
+  return netWorth.value - yesterdayNetWorth.value
+})
+
+// 根据变化值获取数值前缀
+function getChangePrefix(value) {
+  if (value > 0) return '+'
+  if (value < 0) return ''
+  return ''
+}
 
 // 格式化金额显示
 function formatAmount(amount) {
@@ -218,9 +259,10 @@ async function fetchRecords(page = 1, size = pageSize.value) {
     if (query.remark) params.remark = query.remark
     
     // 并行获取记录列表和最新统计
-    const [listRes, statsRes] = await Promise.all([
+    const [listRes, latestRes, yesterdayRes] = await Promise.all([
       axios.get('/api/asset-record/list', { params }),
-      axios.get('/api/asset-record/latest-stats')
+      axios.get('/api/asset-record/latest-stats'),
+      axios.get('/api/asset-record/latest-stats?offset=1')
     ])
     
     if (listRes.data?.success) {
@@ -232,9 +274,11 @@ async function fetchRecords(page = 1, size = pageSize.value) {
       pageSize.value = listRes.data.data ? Number(listRes.data.data.size) : pageSize.value
       
       // 更新资产统计
-      if (statsRes.data?.success) {
-        totalAssets.value = statsRes.data.data.totalAssets || 0
-        totalLiabilities.value = statsRes.data.data.totalLiabilities || 0
+      if (latestRes.data?.success) {
+        totalAssets.value = latestRes.data.data.totalAssets || 0
+        totalLiabilities.value = latestRes.data.data.totalLiabilities || 0
+        yesterdayAssets.value = yesterdayRes.data?.data?.totalAssets || 0
+        yesterdayLiabilities.value = yesterdayRes.data?.data?.totalLiabilities || 0
       }
     } else {
       emitter.emit('notify', '获取数据失败: ' + (listRes.data?.message || '未知错误'), 'error')
@@ -248,12 +292,18 @@ async function fetchRecords(page = 1, size = pageSize.value) {
 onMounted(async () => {
   try {
     await checkAndInitData()
-    await fetchRecords()
+    await Promise.all([
+      fetchRecords(),
+      fetchLatestAssetStats()
+    ])
     
     // 监听刷新数据事件
     emitter.on('refresh-data', async () => {
       await checkAndInitData()
-      await fetchRecords()
+      await Promise.all([
+        fetchRecords(),
+        fetchLatestAssetStats()
+      ])
     })
   } catch (error) {
     console.error('初始化数据失败:', error)

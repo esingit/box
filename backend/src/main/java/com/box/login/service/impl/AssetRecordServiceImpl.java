@@ -3,20 +3,22 @@ package com.box.login.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.box.login.config.UserContextHolder;
 import com.box.login.dto.AssetRecordDTO;
 import com.box.login.dto.AssetStatsDTO;
 import com.box.login.entity.AssetRecord;
 import com.box.login.entity.CommonMeta;
 import com.box.login.mapper.AssetRecordMapper;
 import com.box.login.service.AssetRecordService;
-import com.box.login.config.UserContextHolder;
 import com.box.login.service.CommonMetaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -43,7 +45,7 @@ public class AssetRecordServiceImpl implements AssetRecordService {
     @Override
     public void addRecord(AssetRecord record) {
         log.debug("Adding new record: {}", record);
-        
+
         // 参数验证
         if (record.getAssetNameId() == null) {
             throw new RuntimeException("资产名称不能为空");
@@ -60,7 +62,7 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         if (record.getAssetLocationId() == null) {
             throw new RuntimeException("资产位置不能为空");
         }
-        
+
         try {
             // 设置创建人
             record.setCreateUser(UserContextHolder.getCurrentUsername());
@@ -68,7 +70,7 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             if (record.getAcquireTime() == null) {
                 record.setAcquireTime(LocalDateTime.now());
             }
-            
+
             log.debug("Inserting record with data: {}", record);
             assetRecordMapper.insert(record);
             log.debug("Record inserted successfully");
@@ -102,10 +104,10 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
     @Override
     @Transactional(readOnly = true)
-    public IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, Long typeId, String remark, 
-                                                String startDate, String endDate, String createUser) {
-        log.debug("Executing pageByConditions - typeId: {}, startDate: {}, endDate: {}, createUser: {}", 
-                 typeId, startDate, endDate, createUser);
+    public IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, Long typeId, String remark,
+                                                  String startDate, String endDate, String createUser) {
+        log.debug("Executing pageByConditions - typeId: {}, startDate: {}, endDate: {}, createUser: {}",
+                typeId, startDate, endDate, createUser);
         return assetRecordMapper.selectPageWithMeta(page, typeId, remark, startDate, endDate, createUser);
     }
 
@@ -113,31 +115,32 @@ public class AssetRecordServiceImpl implements AssetRecordService {
     public void copyLastRecords(boolean force) {
         String currentUser = UserContextHolder.getCurrentUsername();
         LocalDateTime today = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
-        
+
         // 首先检查今天是否已有记录
-        if (!force) {        QueryWrapper<AssetRecord> todayWrapper = new QueryWrapper<>();
-        todayWrapper.eq("create_user", currentUser)
-                  .eq("deleted", 0)
-                  .apply("DATE(acquire_time) = CURRENT_DATE()");
-        
-        Long todayCount = assetRecordMapper.selectCount(todayWrapper).longValue();
+        if (!force) {
+            QueryWrapper<AssetRecord> todayWrapper = new QueryWrapper<>();
+            todayWrapper.eq("create_user", currentUser)
+                    .eq("deleted", 0)
+                    .apply("DATE(acquire_time) = CURRENT_DATE()");
+
+            Long todayCount = assetRecordMapper.selectCount(todayWrapper).longValue();
             if (todayCount > 0) {
                 throw new RuntimeException("今日已有记录，如需重复复制请使用强制模式");
             }
         }
-        
+
         // 查询最近的一天的日期（不包括今天）
         QueryWrapper<AssetRecord> dateWrapper = new QueryWrapper<>();
         dateWrapper.select("DATE(acquire_time) as date_only")
-                  .eq("create_user", currentUser)
-                  .eq("deleted", 0)
-                  .apply("DATE(acquire_time) < CURRENT_DATE()")
-                  .groupBy("DATE(acquire_time)")
-                  .orderByDesc("date_only")
-                  .last("LIMIT 1");
-        
+                .eq("create_user", currentUser)
+                .eq("deleted", 0)
+                .apply("DATE(acquire_time) < CURRENT_DATE()")
+                .groupBy("DATE(acquire_time)")
+                .orderByDesc("date_only")
+                .last("LIMIT 1");
+
         List<Map<String, Object>> dateList = assetRecordMapper.selectMaps(dateWrapper);
-        
+
         if (dateList.isEmpty()) {
             log.info("没有找到历史记录");
             throw new RuntimeException("没有找到可以复制的历史记录");
@@ -145,32 +148,32 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
         String dateStr = dateList.get(0).get("date_only").toString();
         log.info("找到最近记录日期: {}", dateStr);
-        
+
         // 查询指定日期的所有记录
         QueryWrapper<AssetRecord> wrapper = new QueryWrapper<>();
         wrapper.eq("create_user", currentUser)
-              .eq("deleted", 0)
-              .apply("DATE(acquire_time) = STR_TO_DATE({0}, '%Y-%m-%d')", dateStr)
-              .orderByAsc("create_time");
-        
+                .eq("deleted", 0)
+                .apply("DATE(acquire_time) = STR_TO_DATE({0}, '%Y-%m-%d')", dateStr)
+                .orderByAsc("create_time");
+
         List<AssetRecord> recordsToCopy = assetRecordMapper.selectList(wrapper);
-        
+
         if (recordsToCopy.isEmpty()) {
             log.info("在日期 {} 没有找到用户 {} 的记录", dateStr, currentUser);
             throw new RuntimeException("在最近的记录日期中没有找到可复制的记录");
         }
 
         log.info("找到 {} 条记录需要复制", recordsToCopy.size());
-        
+
         // 如果是强制模式，先删除今天的所有记录
         if (force) {
             QueryWrapper<AssetRecord> deleteWrapper = new QueryWrapper<>();
             deleteWrapper.eq("create_user", currentUser)
-                       .eq("deleted", 0)
-                       .apply("DATE(acquire_time) = CURRENT_DATE()");
+                    .eq("deleted", 0)
+                    .apply("DATE(acquire_time) = CURRENT_DATE()");
             assetRecordMapper.delete(deleteWrapper);
         }
-        
+
         // 复制记录
         for (AssetRecord record : recordsToCopy) {
             AssetRecord newRecord = new AssetRecord();
@@ -182,7 +185,7 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             newRecord.setCreateUser(currentUser);
             newRecord.setAmount(record.getAmount());
             newRecord.setRemark(record.getRemark());
-            
+
             assetRecordMapper.insert(newRecord);
             log.info("Copied record: type={}, amount={}", record.getAssetTypeId(), record.getAmount());
         }
@@ -190,17 +193,22 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
     @Override
     @Transactional(readOnly = true)
-    public AssetStatsDTO getLatestStats(String createUser) {
-        log.debug("获取用户 {} 的最新资产统计", createUser);
+    public AssetStatsDTO getLatestStats(String createUser, Integer offset) {
+        log.debug("获取用户 {} 的资产统计, 偏移天数: {}", createUser, offset);
 
-        // 1. 找到最新的记录日期
+        // 1. 找到指定偏移日期的记录日期
         QueryWrapper<AssetRecord> dateWrapper = new QueryWrapper<>();
         dateWrapper.select("DATE(acquire_time) as date_only")
-                  .eq("create_user", createUser)
-                  .eq("deleted", 0)
-                  .groupBy("DATE(acquire_time)")
-                  .orderByDesc("date_only")
-                  .last("LIMIT 1");
+                .eq("create_user", createUser)
+                .eq("deleted", 0)
+                .groupBy("DATE(acquire_time)")
+                .orderByDesc("date_only");
+
+        if (offset > 0) {
+            dateWrapper.last("LIMIT " + offset + ", 1");
+        } else {
+            dateWrapper.last("LIMIT 1");
+        }
 
         Map<String, Object> dateResult = assetRecordMapper.selectMaps(dateWrapper).stream().findFirst().orElse(null);
         if (dateResult == null || dateResult.get("date_only") == null) {
@@ -218,8 +226,8 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         // 2. 查询该日期的资产和负债总额
         QueryWrapper<AssetRecord> statsWrapper = new QueryWrapper<>();
         statsWrapper.eq("create_user", createUser)
-                   .eq("deleted", 0)
-                   .apply("DATE(acquire_time) = STR_TO_DATE({0}, '%Y-%m-%d')", latestDate);
+                .eq("deleted", 0)
+                .apply("DATE(acquire_time) = STR_TO_DATE({0}, '%Y-%m-%d')", latestDate);
 
         List<AssetRecord> records = assetRecordMapper.selectList(statsWrapper);
 
@@ -232,21 +240,21 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             try {
                 CommonMeta type = commonMetaService.getById(record.getAssetTypeId());
                 BigDecimal amount = record.getAmount();
-                
-                log.info("处理记录 - ID: {}, 类型ID: {}, 金额: {}, 类型名称: {}", 
-                    record.getId(), record.getAssetTypeId(), amount, 
-                    type != null ? type.getValue1() : "未知");
-                
+
+                log.info("处理记录 - ID: {}, 类型ID: {}, 金额: {}, 类型名称: {}",
+                        record.getId(), record.getAssetTypeId(), amount,
+                        type != null ? type.getValue1() : "未知");
+
                 String typeValue = type != null ? type.getValue1() : "未知";
                 // 严格匹配"负债"类型
                 if (type != null && "负债".equals(type.getValue1())) {
                     totalLiabilities = totalLiabilities.add(amount);
-                    log.info("计入负债 - 类型: {}, 金额: {}, 累计负债: {}", 
-                        typeValue, amount, totalLiabilities);
+                    log.info("计入负债 - 类型: {}, 金额: {}, 累计负债: {}",
+                            typeValue, amount, totalLiabilities);
                 } else {
                     totalAssets = totalAssets.add(amount);
-                    log.info("计入资产 - 类型: {}, 金额: {}, 累计资产: {}", 
-                        typeValue, amount, totalAssets);
+                    log.info("计入资产 - 类型: {}, 金额: {}, 累计资产: {}",
+                            typeValue, amount, totalAssets);
                 }
             } catch (Exception e) {
                 log.error("处理资产记录时发生错误 - 记录ID: " + record.getId(), e);
@@ -257,10 +265,20 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
         log.info("计算完成 - 总资产: {}, 总负债: {}", totalAssets, totalLiabilities);
 
+        // 格式化日期显示
+        String formattedDate;
+        try {
+            LocalDate date = LocalDate.parse(latestDate);
+            formattedDate = date.format(DateTimeFormatter.ofPattern("MM月dd日"));
+        } catch (Exception e) {
+            formattedDate = latestDate;
+        }
+
         return AssetStatsDTO.builder()
                 .totalAssets(totalAssets.doubleValue())
                 .totalLiabilities(totalLiabilities.doubleValue())
                 .latestDate(latestDate)
+                .formattedDate(formattedDate)
                 .build();
     }
 

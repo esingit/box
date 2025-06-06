@@ -1,8 +1,8 @@
 .asset-query-bar {
   margin: 20px 0;
-  padding: 15px;
+  padding: 20px;
   background-color: #f5f5f5;
-  border-radius: 8px;
+  border-radius: 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -16,9 +16,9 @@
 
 .query-fields select,
 .query-fields input {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 12px 20px;
+  border: 1.5px solid #ddd;
+  border-radius: 999px;
   font-size: 14px;
 }
 
@@ -35,31 +35,59 @@
   margin-top: 20px;
 }
 
+/* 数据表格基础样式 */
 .data-table {
   width: 100%;
   border-collapse: collapse;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
   margin-bottom: 20px;
 }
 
 .data-table th,
 .data-table td {
-  padding: 12px;
+  padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .data-table th {
-  background-color: #f9f9f9;
-  font-weight: 500;
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #444;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
 }
 
 .data-table tbody tr:hover {
-  background-color: #f5f5f5;
+  background-color: #f8fafc;
 }
 
 .operations {
   display: flex;
   gap: 10px;
+}
+
+/* 操作按钮组样式 */
+.operations {
+  white-space: nowrap;
+  display: flex;
+  gap: 8px;
+}
+
+.operations button {
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  transition: all 0.3s ease;
 }
 
 .operations .btn-link {
@@ -69,12 +97,6 @@
 
 .operations .btn-link:hover {
   color: #000;
-}
-
-.pagination-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
 }
 
 /* 资产名称维护弹窗样式 */
@@ -124,29 +146,30 @@
 
 /* 资产总览样式 */
 .asset-overview {
-  margin: 15px 0;
+  margin: 10px 0;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 15px;
+  position: relative;
 }
 
-.overview-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
-  white-space: nowrap;
-  padding: 15px 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
+
 
 .asset-statistics {
   flex: 1;
   display: flex;
-  gap: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+  gap: 15px;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.asset-statistics:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
 }
 
 .stat-item {
@@ -155,14 +178,15 @@
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #666;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 }
 
 .stat-value {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
+  line-height: 1.2;
 }
 
 .stat-value.positive {
@@ -177,6 +201,22 @@
   color: #0d6efd;
 }
 
+.stat-change {
+  font-size: 11px;
+  font-weight: normal;
+  color: #666;
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+.stat-change.positive {
+  color: #22c55e;
+}
+
+.stat-change.negative {
+  color: #ef4444;
+}
+
 /* 按钮组样式 */
 .button-group {
   display: flex;
@@ -188,8 +228,8 @@
   background-color: #000;
   color: #fff;
   border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
+  padding: 12px 24px;
+  border-radius: 999px;
   cursor: pointer;
 }
 
@@ -200,9 +240,9 @@
 .btn.btn-white {
   background-color: #fff;
   color: #000;
-  border: 1px solid #ddd;
-  padding: 10px 20px;
-  border-radius: 4px;
+  border: 1.5px solid #ddd;
+  padding: 12px 24px;
+  border-radius: 999px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -328,9 +368,9 @@
 .error-message {
   color: #dc3545;
   margin: 8px 0;
-  padding: 8px;
-  border: 1px solid #dc3545;
-  border-radius: 4px;
+  padding: 12px 20px;
+  border: 1.5px solid #dc3545;
+  border-radius: 999px;
   background-color: #fff;
 }
 
@@ -346,4 +386,19 @@
 
 .editing .edit-input {
   width: calc(100% - 16px);
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .data-table th,
+  .data-table td {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  
+  .operations button {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+  }
 }

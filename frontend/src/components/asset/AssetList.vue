@@ -23,11 +23,11 @@
           <td>{{ formatDate(record.acquireTime) }}</td>
           <td>{{ record.remark }}</td>
           <td class="operations">
-            <button class="btn btn-link" @click="$emit('edit', idx)" title="编辑">
-              <LucideEdit2 size="16" />
+            <button @click="$emit('edit', idx)" class="btn btn-white" title="编辑">
+              <LucideEdit size="18" style="vertical-align: middle;" />
             </button>
-            <button class="btn btn-link" @click="$emit('delete', idx)" title="删除">
-              <LucideTrash2 size="16" />
+            <button @click="$emit('delete', idx)" class="btn btn-red" title="删除">
+              <LucideTrash2 size="18" style="vertical-align: middle;" />
             </button>
           </td>
         </tr>
@@ -46,7 +46,7 @@
 </template>
 
 <script setup>
-import { LucideEdit2, LucideTrash2 } from 'lucide-vue-next'
+import { LucideEdit, LucideTrash2 } from 'lucide-vue-next'
 import PaginationBar from '@/components/PaginationBar.vue'
 
 const props = defineProps({
@@ -68,10 +68,8 @@ const props = defineProps({
   }
 })
 
-defineEmits(['edit', 'delete', 'page-change', 'page-size-change'])
-
 function formatDate(dateStr) {
-  if (!dateStr) return ''
+  if (!dateStr) return '-'
   return dateStr.slice(0, 10)
 }
 </script>
