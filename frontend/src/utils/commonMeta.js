@@ -42,7 +42,8 @@ export function clearCommonMetaCache() {
  * @returns {Promise<Object>} 格式化后的记录
  */
 export async function formatFitnessRecord(record) {
-    if (!record) return record
+    // 如果记录中已经有格式化后的值，就直接返回
+    if (!record || (record.typeValue && record.unitValue)) return record
 
     const [typeData, unitData] = await Promise.all([
         getCommonMetaById(record.typeId),
@@ -51,7 +52,29 @@ export async function formatFitnessRecord(record) {
 
     return {
         ...record,
-        typeText: typeData?.value1 || '-',
-        unitText: unitData?.value1 || '-'
+        typeValue: record.typeValue || typeData?.value1 || '-',
+        unitValue: record.unitValue || unitData?.value1 || '-'
+    }
+}
+
+/**
+ * 格式化资产记录中的所有元数据
+ * @param {Object} record 资产记录数据
+ * @returns {Promise<Object>} 格式化后的记录
+ */
+export async function formatAssetRecord(record) {
+    if (!record) return record
+
+    const [typeData, unitData, locationData] = await Promise.all([
+        getCommonMetaById(record.assetTypeId),
+        getCommonMetaById(record.unitId),
+        getCommonMetaById(record.assetLocationId)
+    ])
+
+    return {
+        ...record,
+        assetTypeValue: typeData?.value1 || '-',
+        unitValue: unitData?.value1 || '-',
+        locationValue: locationData?.value1 || '-'
     }
 }

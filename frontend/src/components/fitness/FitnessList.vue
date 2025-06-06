@@ -10,9 +10,9 @@
     </li>
     <li v-if="records.length === 0" class="common-list-item empty">暂无记录</li>
     <li v-for="(record, idx) in records" :key="record.id || idx" class="common-list-item">
-      <span class="list-col-type">{{ record.typeText }}</span>
+      <span class="list-col-type">{{ record.typeValue }}</span>
       <span class="list-col-count">{{ record.count }}</span>
-      <span class="list-col-unit">{{ record.unitText }}</span>
+      <span class="list-col-unit">{{ record.unitValue }}</span>
       <span class="list-col-time">{{ record.finishTime ? record.finishTime.slice(0, 10) : '-' }}</span>
       <span class="list-col-remark">{{ record.remark }}</span>
       <span class="list-col-action">

@@ -20,6 +20,28 @@ const axiosConfig = {
 // 创建 axios 实例
 const instance = axios.create(axiosConfig)
 
+// 添加请求拦截器用于调试和认证
+instance.interceptors.request.use(
+  config => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
+    }
+    console.log(`[DEBUG] 发送请求: ${config.method.toUpperCase()} ${config.url}`, {
+      ...config,
+      headers: {
+        ...config.headers,
+        Authorization: config.headers['Authorization'] ? '(已携带token)' : '(无token)'
+      }
+    })
+    return config
+  },
+  error => {
+    console.error('[DEBUG] 请求错误:', error)
+    return Promise.reject(error)
+  }
+)
+
 // 用于记录是否正在刷新 token
 let isRefreshing = false;
 // 存储等待 token 刷新的请求

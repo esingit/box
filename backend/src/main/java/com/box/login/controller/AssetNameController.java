@@ -1,6 +1,10 @@
 package com.box.login.controller;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.box.login.config.UserContextHolder;
 import com.box.login.entity.AssetName;
 import com.box.login.service.AssetNameService;
 import org.springdoc.core.annotations.ParameterObject;
@@ -12,13 +16,39 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/asset-names")
 @Tag(name = "资产名称管理", description = "资产名称的增删改查接口")
 public class AssetNameController {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AssetNameController.class);
     
     @Autowired
     private AssetNameService assetNameService;
+
+    @GetMapping("/all")
+    @Operation(
+        summary = "获取所有资产名称",
+        description = "获取当前用户的所有未删除的资产名称",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "获取成功")
+        }
+    )
+    public Result<List<AssetName>> listAll() {
+        try {
+            LambdaQueryWrapper<AssetName> wrapper = Wrappers.lambdaQuery(AssetName.class)
+                .eq(AssetName::getCreateUser, UserContextHolder.getCurrentUsername())
+                .eq(AssetName::getDeleted, 0)
+                .orderByDesc(AssetName::getCreateTime)
+                .select(AssetName::getId, AssetName::getName, AssetName::getDescription); // 只选择需要的字段
+            return Result.success(assetNameService.list(wrapper));
+        } catch (Exception e) {
+            log.error("获取资产名称列表失败:", e);
+            return Result.error("获取资产名称列表失败: " + e.getMessage());
+        }
+    }
 
     @PostMapping
     @Operation(

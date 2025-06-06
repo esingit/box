@@ -8,6 +8,7 @@ const routes = [
   { path: '/', redirect: '/home' },  // 将根路径重定向到主页
   { path: '/home', component: Home },
   { path: '/fitness', component: Fitness },
+  { path: '/asset', component: () => import('@/views/asset/Asset.vue') },
 ]
 
 const router = createRouter({

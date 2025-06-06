@@ -64,15 +64,16 @@ public class AssetNameServiceImpl extends ServiceImpl<AssetNameMapper, AssetName
         Page<AssetName> page = new Page<>(current, size);
         LambdaQueryWrapper<AssetName> wrapper = Wrappers.lambdaQuery(AssetName.class);
         
-        // 添加当前用户过滤
-        wrapper.eq(AssetName::getCreateUser, UserContextHolder.getCurrentUsername());
+        // 添加当前用户过滤，并且只查询未删除的记录
+        wrapper.eq(AssetName::getCreateUser, UserContextHolder.getCurrentUsername())
+              .eq(AssetName::getDeleted, 0);
         
         // 添加其他查询条件
         if (name != null && !name.isEmpty()) {
             wrapper.like(AssetName::getName, name);
         }
         if (description != null && !description.isEmpty()) {
-            wrapper.like(AssetName::getRemark, description);
+            wrapper.like(AssetName::getDescription, description);
         }
         if (startTime != null && !startTime.isEmpty()) {
             wrapper.ge(AssetName::getCreateTime, LocalDateTime.parse(startTime));

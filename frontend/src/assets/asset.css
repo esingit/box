@@ -1,0 +1,78 @@
+.asset-query-bar {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.query-fields {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.query-fields select,
+.query-fields input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.query-fields .to-text {
+  color: #666;
+}
+
+.query-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.asset-list {
+  margin-top: 20px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.data-table th {
+  background-color: #f9f9f9;
+  font-weight: 500;
+}
+
+.data-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.operations {
+  display: flex;
+  gap: 10px;
+}
+
+.operations .btn-link {
+  color: #666;
+  padding: 4px;
+}
+
+.operations .btn-link:hover {
+  color: #000;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}

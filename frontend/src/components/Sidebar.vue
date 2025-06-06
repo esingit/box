@@ -10,8 +10,8 @@
       <router-link to="/fitness" class="menu-item" active-class="active">
         <LucideDumbbell class="icon" /> <span class="menu-text">健身</span>
       </router-link>
-      <router-link to="/inventory" class="menu-item" active-class="active">
-        <LucideClipboardList class="icon" /> <span class="menu-text">盘点</span>
+      <router-link to="/asset" class="menu-item" active-class="active">
+        <LucideWallet class="icon" /> <span class="menu-text">资产</span>
       </router-link>
     </nav>
   </aside>
@@ -19,7 +19,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { LucideHome, LucideBox, LucideDumbbell, LucideClipboardList } from 'lucide-vue-next'
+import { LucideHome, LucideBox, LucideDumbbell, LucideWallet } from 'lucide-vue-next'
 
 const props = defineProps({
   isLoggedIn: {

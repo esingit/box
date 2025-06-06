@@ -4,39 +4,74 @@
     <resultMap id="assetRecordDTOMap" type="com.box.login.dto.AssetRecordDTO">
         <result property="id" column="id"/>
         <result property="assetNameId" column="asset_name_id"/>
-        <result property="assetName" column="asset_name"/>
+        <result property="assetTypeId" column="asset_type_id"/>
+
         <result property="amount" column="amount"/>
-        <result property="type" column="type"/>
-        <result property="recordTime" column="record_time"/>
-        <result property="createTime" column="create_time"/>
-        <result property="createUser" column="create_user"/>
+        <result property="unitId" column="unit_id"/>
+        <result property="assetLocationId" column="asset_location_id"/>
+        <result property="acquireTime" column="acquire_time"/>
         <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="createUser" column="create_user"/>
+        <result property="updateUser" column="update_user"/>
+        <result property="version" column="version"/>
+        <result property="deleted" column="deleted"/>
+        <result property="assetName" column="asset_name"/>
+        <result property="assetTypeName" column="asset_type_name"/>
+        <result property="assetTypeValue" column="asset_type_value"/>
+        <result property="unitName" column="unit_name"/>
+        <result property="unitValue" column="unit_value"/>
+        <result property="locationName" column="location_name"/>
+        <result property="locationValue" column="location_value"/>
     </resultMap>
 
-    <select id="selectDetailById" resultMap="assetRecordDTOMap">
+    <select id="selectPageWithMeta" resultMap="assetRecordDTOMap">
         SELECT 
-            ar.*,
-            an.name as asset_name
+            ar.id,
+            ar.asset_name_id,
+            ar.asset_type_id,
+            ar.amount,
+            ar.unit_id,
+            ar.asset_location_id,
+            ar.acquire_time,
+            ar.remark,
+            ar.create_time,
+            ar.update_time,
+            ar.create_user,
+            ar.update_user,
+            ar.version,
+            ar.deleted,
+            COALESCE(an.name, '') as asset_name,
+            COALESCE(type_meta.type_name, '') as asset_type_name,
+            COALESCE(type_meta.value1, '') as asset_type_value,
+            COALESCE(unit_meta.type_name, '') as unit_name,
+            COALESCE(unit_meta.value1, '') as unit_value,
+            COALESCE(location_meta.type_name, '') as location_name,
+            COALESCE(location_meta.value1, '') as location_value
         FROM asset_record ar
         LEFT JOIN asset_name an ON ar.asset_name_id = an.id
-        WHERE ar.id = #{id}
-        AND ar.create_user = #{createUser}
-        AND ar.deleted = 0
-    </select>
-
-    <select id="selectPageWithDetails" resultMap="assetRecordDTOMap">
-        SELECT 
-            ar.*,
-            an.name as asset_name
-        FROM asset_record ar
-        LEFT JOIN asset_name an ON ar.asset_name_id = an.id
+        LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE'
+        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'CURRENCY'
+        LEFT JOIN common_meta location_meta ON ar.asset_location_id = location_meta.id AND location_meta.type_code = 'ASSET_LOCATION'
         <where>
-            AND ar.create_user = #{createUser}
-            AND ar.deleted = 0
-            <if test="assetName != null and assetName != ''">
-                AND an.name LIKE CONCAT('%', #{assetName}, '%')
+            <if test="typeId != null">
+                AND ar.asset_type_id = #{typeId}
             </if>
+            <if test="remark != null and remark != ''">
+                AND ar.remark LIKE CONCAT('%', #{remark}, '%')
+            </if>
+            <if test="startDate != null and startDate != ''">
+                AND ar.acquire_time >= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND ar.acquire_time &lt;= #{endDate}
+            </if>
+            <if test="createUser != null and createUser != ''">
+                AND ar.create_user = #{createUser}
+            </if>
+            AND ar.deleted = 0
         </where>
-        ORDER BY ar.record_time DESC
+        ORDER BY ar.acquire_time DESC
     </select>
 </mapper>
