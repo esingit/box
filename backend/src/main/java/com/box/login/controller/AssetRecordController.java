@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.box.login.config.UserContextHolder;
 import com.box.login.dto.ApiResponse;
 import com.box.login.dto.AssetRecordDTO;
+import com.box.login.dto.AssetStatsDTO;
 import com.box.login.entity.AssetRecord;
 import com.box.login.service.AssetRecordService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -90,12 +91,25 @@ public class AssetRecordController {
 
     @Operation(summary = "复制上次资产记录")
     @PostMapping("/copy-last")
-    public ApiResponse<Void> copyLastRecords() {
+    public ApiResponse<Void> copyLastRecords(@RequestParam(required = false) Boolean force) {
         try {
-            assetRecordService.copyLastRecords();
+            assetRecordService.copyLastRecords(force != null && force);
             return ApiResponse.success();
         } catch (Exception e) {
             log.error("Failed to copy last records", e);
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    @Operation(summary = "获取最近日期的资产统计")
+    @GetMapping("/latest-stats")
+    public ApiResponse<AssetStatsDTO> getLatestStats() {
+        try {
+            String currentUser = UserContextHolder.getCurrentUsername();
+            AssetStatsDTO stats = assetRecordService.getLatestStats(currentUser);
+            return ApiResponse.success(stats);
+        } catch (Exception e) {
+            log.error("Failed to get latest asset stats", e);
             return ApiResponse.error(e.getMessage());
         }
     }

@@ -43,7 +43,7 @@
     </div>
     <div class="button-group">
       <button class="btn btn-black" @click="showModal">添加记录</button>
-      <button class="btn btn-white" @click="copyLastRecords">一键复制上次记录</button>
+      <button class="btn btn-white" @click="copyLastRecords">复制上回记录</button>
     </div>
     <AssetModal
       :show="showAddModal"
@@ -108,28 +108,23 @@ const records = ref([])
 const adding = ref(false)
 
 // 计算总资产（非负债）
-const totalAssets = computed(() => {
-  return records.value.reduce((sum, record) => {
-    // 检查资产类型是否为负债类型
-    const type = assetStore.types.find(t => t.id === record.assetTypeId)
-    if (type && !type.value2?.includes('负债')) {
-      return sum + record.amount
-    }
-    return sum
-  }, 0)
-})
+// 最近日期的资产统计
+const totalAssets = ref(0)
+const totalLiabilities = ref(0)
 
-// 计算总负债
-const totalLiabilities = computed(() => {
-  return records.value.reduce((sum, record) => {
-    // 检查资产类型是否为负债类型
-    const type = assetStore.types.find(t => t.id === record.assetTypeId)
-    if (type && type.value2?.includes('负债')) {
-      return sum + record.amount
+// 获取最近日期的资产统计
+async function fetchLatestAssetStats() {
+  try {
+    const res = await axios.get('/api/asset-record/latest-stats')
+    if (res.data?.success) {
+      totalAssets.value = res.data.data.totalAssets || 0
+      totalLiabilities.value = res.data.data.totalLiabilities || 0
     }
-    return sum
-  }, 0)
-})
+  } catch (err) {
+    console.error('获取最近资产统计失败:', err)
+    emitter.emit('notify', '获取资产统计失败：' + (err.message || '未知错误'), 'error')
+  }
+}
 
 // 计算净资产
 const netWorth = computed(() => {
@@ -221,16 +216,28 @@ async function fetchRecords(page = 1, size = pageSize.value) {
     if (query.startDate) params.startDate = query.startDate
     if (query.endDate) params.endDate = query.endDate
     if (query.remark) params.remark = query.remark
-    const res = await axios.get('/api/asset-record/list', { params })
-    if (res.data?.success) {
-      const rawRecords = (res.data.data?.records) || []
+    
+    // 并行获取记录列表和最新统计
+    const [listRes, statsRes] = await Promise.all([
+      axios.get('/api/asset-record/list', { params }),
+      axios.get('/api/asset-record/latest-stats')
+    ])
+    
+    if (listRes.data?.success) {
+      const rawRecords = (listRes.data.data?.records) || []
       // 格式化每条记录的类型和单位
       records.value = await Promise.all(rawRecords.map(record => formatAssetRecord(record)))
-      total.value = res.data.data ? Number(res.data.data.total) : 0
-      current.value = res.data.data ? Number(res.data.data.current) : 1
-      pageSize.value = res.data.data ? Number(res.data.data.size) : pageSize.value
+      total.value = listRes.data.data ? Number(listRes.data.data.total) : 0
+      current.value = listRes.data.data ? Number(listRes.data.data.current) : 1
+      pageSize.value = listRes.data.data ? Number(listRes.data.data.size) : pageSize.value
+      
+      // 更新资产统计
+      if (statsRes.data?.success) {
+        totalAssets.value = statsRes.data.data.totalAssets || 0
+        totalLiabilities.value = statsRes.data.data.totalLiabilities || 0
+      }
     } else {
-      emitter.emit('notify', '获取数据失败: ' + (res.data?.message || '未知错误'), 'error')
+      emitter.emit('notify', '获取数据失败: ' + (listRes.data?.message || '未知错误'), 'error')
     }
   } catch (err) {
     console.error('获取资产记录失败:', err)
@@ -438,18 +445,46 @@ function handlePageSizeChange(size) {
 }
 
 async function copyLastRecords() {
-  try {
-    const res = await axios.post('/api/asset-record/copy-last')
-    if (res.data?.success) {
-      await fetchRecords()
-      emitter.emit('notify', '复制上次记录成功', 'success')
-    } else {
-      emitter.emit('notify', res.data?.message || '复制失败', 'error')
+  emitter.emit('confirm', {
+    title: '复制确认',
+    message: '确定要复制上次的资产记录吗？',
+    onConfirm: async () => {
+      try {
+        const res = await axios.post('/api/asset-record/copy-last')
+        if (res.data?.success) {
+          await fetchRecords()
+          emitter.emit('notify', '复制上次记录成功', 'success')
+        } else {
+          // 如果是今日已有记录的情况
+          if (res.data?.message?.includes('今日已有记录')) {
+            emitter.emit('confirm', {
+              title: '提示',
+              message: '今日已有资产记录，是否仍要复制？',
+              onConfirm: async () => {
+                try {
+                  const forceRes = await axios.post('/api/asset-record/copy-last?force=true')
+                  if (forceRes.data?.success) {
+                    await fetchRecords()
+                    emitter.emit('notify', '复制上次记录成功', 'success')
+                  } else {
+                    emitter.emit('notify', forceRes.data?.message || '复制失败', 'error')
+                  }
+                } catch (err) {
+                  console.error('强制复制记录失败:', err)
+                  emitter.emit('notify', err.message || '复制失败', 'error')
+                }
+              }
+            })
+          } else {
+            emitter.emit('notify', res.data?.message || '复制失败', 'error')
+          }
+        }
+      } catch (error) {
+        console.error('复制上次记录失败:', error)
+        emitter.emit('notify', error.message || '复制失败', 'error')
+      }
     }
-  } catch (error) {
-    console.error('复制上次记录失败:', error)
-    emitter.emit('notify', error.message || '复制失败', 'error')
-  }
+  })
 }
 
 async function showModal() {
