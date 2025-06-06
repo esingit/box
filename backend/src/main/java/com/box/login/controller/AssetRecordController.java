@@ -87,4 +87,16 @@ public class AssetRecordController {
             return ApiResponse.error(e.getMessage());
         }
     }
+
+    @Operation(summary = "复制上次资产记录")
+    @PostMapping("/copy-last")
+    public ApiResponse<Void> copyLastRecords() {
+        try {
+            assetRecordService.copyLastRecords();
+            return ApiResponse.success();
+        } catch (Exception e) {
+            log.error("Failed to copy last records", e);
+            return ApiResponse.error(e.getMessage());
+        }
+    }
 }

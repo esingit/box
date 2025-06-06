@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -100,5 +101,83 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         log.debug("Executing pageByConditions - typeId: {}, startDate: {}, endDate: {}, createUser: {}", 
                  typeId, startDate, endDate, createUser);
         return assetRecordMapper.selectPageWithMeta(page, typeId, remark, startDate, endDate, createUser);
+    }
+
+    @Override
+    public void copyLastRecords() {
+        String currentUser = UserContextHolder.getCurrentUsername();
+        LocalDateTime today = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        
+        // DEBUG: 打印所有历史记录的日期
+        log.info("=== 开始调试：打印所有记录 ===");
+        List<AssetRecord> allRecords = assetRecordMapper.selectList(
+            new QueryWrapper<AssetRecord>()
+                .eq("create_user", currentUser)
+                .eq("deleted", 0)
+                .orderByDesc("acquire_time")
+        );
+        for (AssetRecord r : allRecords) {
+            log.info("记录: id={}, acquire_time={}, amount={}", r.getId(), r.getAcquireTime(), r.getAmount());
+        }
+        log.info("=== 今天的日期是: {} ===", today);
+
+        // 查询最近的一天的日期（不包括今天）
+        QueryWrapper<AssetRecord> dateWrapper = new QueryWrapper<>();
+        dateWrapper.select("DATE(acquire_time) as date_only")
+                  .eq("create_user", currentUser)
+                  .eq("deleted", 0)
+                  .apply("DATE(acquire_time) < DATE(NOW())")
+                  .groupBy("DATE(acquire_time)")
+                  .orderByDesc("date_only")
+                  .last("LIMIT 1");
+        
+        log.info("查询最近日期的SQL条件: {}", dateWrapper.getSqlSegment());
+        List<Map<String, Object>> dateList = assetRecordMapper.selectMaps(dateWrapper);
+        
+        if (dateList.isEmpty()) {
+            log.info("没有找到历史记录");
+            return;
+        }
+        
+        String dateStr = dateList.get(0).get("date_only").toString();
+        log.info("找到最近记录日期: {}", dateStr);
+        log.info("开始复制 {} 的记录", dateStr);
+        
+        // 查询指定日期的所有记录
+        QueryWrapper<AssetRecord> wrapper = new QueryWrapper<>();
+        wrapper.eq("create_user", currentUser)
+              .eq("deleted", 0)
+              .apply("DATE(acquire_time) = STR_TO_DATE({0}, '%Y-%m-%d')", dateStr)
+              .orderByAsc("create_time"); // 按创建时间顺序复制
+              
+        log.info("查询指定日期记录的SQL条件: {}", wrapper.getSqlSegment());
+
+        List<AssetRecord> recordsToCopy = assetRecordMapper.selectList(wrapper);
+        
+        if (recordsToCopy.isEmpty()) {
+            log.info("在日期 {} 没有找到用户 {} 的记录", dateStr, currentUser);
+            return;
+        }
+
+        log.info("找到 {} 条记录需要复制", recordsToCopy.size());
+        
+        for (AssetRecord record : recordsToCopy) {
+            AssetRecord newRecord = new AssetRecord();
+            // 复制基本字段
+            newRecord.setAssetNameId(record.getAssetNameId());
+            newRecord.setAssetTypeId(record.getAssetTypeId());
+            newRecord.setUnitId(record.getUnitId());
+            newRecord.setAssetLocationId(record.getAssetLocationId());
+            // 设置今天的日期
+            newRecord.setAcquireTime(today);
+            // 设置创建人
+            newRecord.setCreateUser(currentUser);
+            // 复制金额
+            newRecord.setAmount(record.getAmount());
+            
+            // 插入新记录
+            assetRecordMapper.insert(newRecord);
+            log.info("Copied record: type={}, amount={}", record.getAssetTypeId(), record.getAmount());
+        }
     }
 }

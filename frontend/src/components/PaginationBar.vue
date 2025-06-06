@@ -7,7 +7,7 @@
     >
       上一页
     </button>
-    <span>第 {{ currentPage }} / {{ totalPages }} 页</span>
+    <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
     <button 
       class="btn btn-white" 
       :disabled="currentPage >= totalPages || totalPages === 0" 
@@ -18,7 +18,7 @@
     <select 
       class="page-size-select" 
       :value="pageSize" 
-      @change="handlePageSizeChange($event)"
+      @change="$emit('page-size-change', Number($event.target.value))"
     >
       <option v-for="size in pageSizeOptions" :key="size" :value="size">
         每页{{ size }}条
@@ -30,6 +30,8 @@
 
 <script setup>
 import { computed } from 'vue'
+
+const pageSizeOptions = [7, 10, 20, 50]
 
 const props = defineProps({
   current: {
@@ -48,9 +50,6 @@ const props = defineProps({
 
 const emit = defineEmits(['page-change', 'page-size-change'])
 
-// 页面大小选项
-const pageSizeOptions = [10, 20, 50, 100]
-
 // 计算总页数
 const totalPages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))
 
@@ -66,14 +65,6 @@ function handlePageChange(page) {
     emit('page-change', validPage)
   }
 }
-
-// 处理每页显示数量变化
-function handlePageSizeChange(event) {
-  const newSize = Number(event.target.value)
-  if (newSize !== props.pageSize) {
-    emit('page-size-change', newSize)
-  }
-}
 </script>
 
 <style scoped>
@@ -81,33 +72,38 @@ function handlePageSizeChange(event) {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 12px 0;
 }
 
-.btn-white {
+.btn {
   padding: 6px 12px;
-  border: 1px solid #ddd;
-  background: white;
+  border: 1px solid #dcdfe6;
+  background-color: #fff;
   border-radius: 4px;
   cursor: pointer;
+  transition: all 0.3s;
 }
 
-.btn-white:disabled {
-  color: #999;
+.btn:hover:not(:disabled) {
+  color: #409eff;
+  border-color: #c6e2ff;
+  background-color: #ecf5ff;
+}
+
+.btn:disabled {
   cursor: not-allowed;
-}
-
-.btn-white:not(:disabled):hover {
-  border-color: #666;
+  opacity: 0.6;
 }
 
 .page-size-select {
   padding: 6px;
-  border: 1px solid #ddd;
+  border: 1px solid #dcdfe6;
   border-radius: 4px;
-  cursor: pointer;
+  outline: none;
 }
 
+.page-info,
 .total-count {
-  color: #666;
+  color: #606266;
 }
 </style>

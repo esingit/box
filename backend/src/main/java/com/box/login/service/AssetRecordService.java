@@ -14,4 +14,5 @@ public interface AssetRecordService {
     void deleteRecord(Long id);
     IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, Long typeId, String remark,
                                            String startDate, String endDate, String createUser);
+    void copyLastRecords();
 }

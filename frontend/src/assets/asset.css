@@ -121,3 +121,229 @@
   font-size: 15px;  /* 调整输入框字体大小 */
   padding: 8px 16px;  /* 调整输入框内边距 */
 }
+
+/* 资产总览样式 */
+.asset-overview {
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.overview-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  white-space: nowrap;
+  padding: 15px 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.asset-statistics {
+  flex: 1;
+  display: flex;
+  gap: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.stat-value.positive {
+  color: #28a745;
+}
+
+.stat-value.negative {
+  color: #dc3545;
+}
+
+.stat-value.neutral {
+  color: #0d6efd;
+}
+
+/* 按钮组样式 */
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.btn.btn-black {
+  background-color: #000;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn.btn-black:hover {
+  background-color: #333;
+}
+
+.btn.btn-white {
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #ddd;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn.btn-white:hover {
+  background-color: #f8f9fa;
+  border-color: #999;
+}
+
+/* 资产名称模态框基础样式 */
+.names-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+
+.modal-content {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  width: 90%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.search-input {
+  flex: 1;
+  margin-right: 16px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.names-table-container {
+  position: relative;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* 添加和编辑表单样式 */
+.add-form,
+.edit-form {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.add-form {
+  z-index: 1002;
+}
+
+.edit-form {
+  z-index: 1003;
+}
+
+.form-content {
+  margin-top: 16px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  border-color: #000;
+  outline: none;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* 加载和错误状态样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+}
+
+.error-message {
+  color: #dc3545;
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid #dc3545;
+  border-radius: 4px;
+  background-color: #fff;
+}
+
+/* 按钮和编辑状态样式 */
+.btn-link {
+  padding: 4px;
+  color: #666;
+}
+
+.btn-link:hover {
+  color: #000;
+}
+
+.editing .edit-input {
+  width: calc(100% - 16px);
+}

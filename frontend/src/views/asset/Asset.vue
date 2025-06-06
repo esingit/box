@@ -4,13 +4,25 @@
       <LucideWallet class="title-icon" color="#222" size="24" />
       <span>资产记录</span>
     </div>
+    <div class="asset-overview">
+      <div class="overview-title">今日资产总计</div>
+      <div class="asset-statistics">
+        <div class="stat-item">
+          <div class="stat-label">总资产</div>
+          <div class="stat-value positive">{{ formatAmount(totalAssets) }}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">总负债</div>
+          <div class="stat-value negative">{{ formatAmount(totalLiabilities) }}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">净资产</div>
+          <div class="stat-value" :class="getNetWorthClass">{{ formatAmount(netWorth) }}</div>
+        </div>
+      </div>
+    </div>
     <div class="asset-query-bar">
-      <div class="query-fields query-bar    form.typeId = assetStore.types[0].id
-    form.unitId = assetStore.units[0].id
-    form.assetLocationId = assetStore.locations[0].id
-      form.amount = 0
-      form.acquireTime = getTodayDate()
-      form.remark = ''s">
+      <div class="query-fields">
         <select v-model="query.typeId">
           <option value="">全部类型</option>
           <option v-for="t in assetStore.types" :key="t.id" :value="t.id">{{ t.value1 }}</option>
@@ -29,7 +41,10 @@
         </button>
       </div>
     </div>
-    <button class="btn btn-black" @click="showModal">添加记录</button>
+    <div class="button-group">
+      <button class="btn btn-black" @click="showModal">添加记录</button>
+      <button class="btn btn-white" @click="copyLastRecords">一键复制上次记录</button>
+    </div>
     <AssetModal
       :show="showAddModal"
       :form="form"
@@ -76,7 +91,7 @@
 <script setup>
 import '@/assets/base.css'
 import '@/assets/asset.css'
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { LucideWallet, LucideSearch, LucideRotateCcw } from 'lucide-vue-next'
 import emitter from '@/utils/eventBus.js'
 import axios from '@/utils/axios.js'
@@ -91,6 +106,51 @@ const userStore = useUserStore()
 
 const records = ref([])
 const adding = ref(false)
+
+// 计算总资产（非负债）
+const totalAssets = computed(() => {
+  return records.value.reduce((sum, record) => {
+    // 检查资产类型是否为负债类型
+    const type = assetStore.types.find(t => t.id === record.assetTypeId)
+    if (type && !type.value2?.includes('负债')) {
+      return sum + record.amount
+    }
+    return sum
+  }, 0)
+})
+
+// 计算总负债
+const totalLiabilities = computed(() => {
+  return records.value.reduce((sum, record) => {
+    // 检查资产类型是否为负债类型
+    const type = assetStore.types.find(t => t.id === record.assetTypeId)
+    if (type && type.value2?.includes('负债')) {
+      return sum + record.amount
+    }
+    return sum
+  }, 0)
+})
+
+// 计算净资产
+const netWorth = computed(() => {
+  return totalAssets.value - totalLiabilities.value
+})
+
+// 根据净资产值确定显示的样式类
+const getNetWorthClass = computed(() => {
+  if (netWorth.value > 0) return 'positive'
+  if (netWorth.value < 0) return 'negative'
+  return 'neutral'
+})
+
+// 格式化金额显示
+function formatAmount(amount) {
+  return new Intl.NumberFormat('zh-CN', {
+    style: 'currency',
+    currency: 'CNY',
+    minimumFractionDigits: 2
+  }).format(amount)
+}
 
 // 确保用户已登录
 async function checkAndInitData() {
@@ -377,6 +437,21 @@ function handlePageSizeChange(size) {
   fetchRecords(1, size)
 }
 
+async function copyLastRecords() {
+  try {
+    const res = await axios.post('/api/asset-record/copy-last')
+    if (res.data?.success) {
+      await fetchRecords()
+      emitter.emit('notify', '复制上次记录成功', 'success')
+    } else {
+      emitter.emit('notify', res.data?.message || '复制失败', 'error')
+    }
+  } catch (error) {
+    console.error('复制上次记录失败:', error)
+    emitter.emit('notify', error.message || '复制失败', 'error')
+  }
+}
+
 async function showModal() {
   try {
     console.log('开始打开模态框流程...')
@@ -426,3 +501,5 @@ async function refreshAssetNames() {
   await fetchRecords() // 同时刷新资产记录列表以显示更新后的名称
 }
 </script>
+
+
