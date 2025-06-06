@@ -69,7 +69,7 @@ const publicPaths = ['/login', '/register', '/home']; // 公共路径列表
 
 // 检查是否需要显示登录框的函数
 const checkAndShowLoginModal = () => {
-  if (!isLoggedIn.value && !publicPaths.includes(router.currentRoute.value.path)) {
+  if (!showLoginModal.value && !isLoggedIn.value && !publicPaths.includes(router.currentRoute.value.path)) {
     showLoginModal.value = true;
   }
 };
@@ -77,7 +77,7 @@ const checkAndShowLoginModal = () => {
 // 检查登录状态的函数
 const checkLoginStatus = () => {
   if (!isLoggedIn.value && !publicPaths.includes(router.currentRoute.value.path)) {
-    showLoginModal.value = true;
+    checkAndShowLoginModal();
   }
 };
 
@@ -96,42 +96,6 @@ watch(
   }
 );
 
-// 检查需要登录的页面操作
-const checkProtectedAction = (event) => {
-  // 已登录或在公开页面时不需要处理
-  if (isLoggedIn.value || publicPaths.includes(router.currentRoute.value.path)) {
-    return false;
-  }
-
-  // 获取触发事件的元素及其所有父元素
-  const path = event.composedPath();
-  
-  // 排除需要忽略的元素
-  const excludeSelectors = [
-    '.auth-form-modal',
-    '.auth-form-modal-overlay',
-    '.user-auth-link',
-    '.auth-separator',
-    '[data-modal-close]',
-    '.modal-close-btn',
-    '.modal-header',
-    '.btn-close'
-  ];
-  
-  // 检查事件路径上的所有元素是否包含需要排除的选择器
-  const isExcluded = path.some(element => {
-    if (!(element instanceof Element)) return false;
-    return excludeSelectors.some(selector => element.matches(selector));
-  });
-
-  if (!isExcluded) {
-    showLoginModal.value = true;
-    return true;
-  }
-
-  return false;
-};
-
 // 用户操作处理函数
 const handleUserAction = (event) => {
   checkProtectedAction(event);
@@ -141,12 +105,12 @@ onMounted(() => {
   document.addEventListener('click', handleUserAction);
 
   emitter.on('show-auth', (type, message) => {
-    if (type === 'login') {
+    if (type === 'login' && !showLoginModal.value) {
       showLoginModal.value = true;
       if (message) {
         emitter.emit('login-error', message);
       }
-    } else if (type === 'register') {
+    } else if (type === 'register' && !showRegisterModal.value) {
       showRegisterModal.value = true;
     }
   });
@@ -192,8 +156,8 @@ function handleLoginModalClose() {
 function handleLoginSuccess() {
   closeMenu(); // 登录成功时自动关闭菜单
   showLoginModal.value = false;
-  // 触发登录成功事件，以便其他组件可以更新状态
-  emitter.emit('login-success');
+  // 登录成功提示
+  emitter.emit('notify', '登录成功', 'success');
 }
 
 function handleRegisterSuccess() {
@@ -219,12 +183,12 @@ function handleClickOutside(event) {
 onMounted(() => {
   document.addEventListener('mousedown', handleClickOutside);
   emitter.on('show-auth', (type, message) => {
-    if (type === 'login') {
+    if (type === 'login' && !showLoginModal.value) {
       showLoginModal.value = true;
       if (message) {
         emitter.emit('login-error', message);
       }
-    } else if (type === 'register') {
+    } else if (type === 'register' && !showRegisterModal.value) {
       showRegisterModal.value = true;
     }
   });

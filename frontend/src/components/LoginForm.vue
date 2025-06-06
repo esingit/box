@@ -125,8 +125,7 @@ async function submit() {
     }
     const response = await userStore.login(payload);
     if (response.success) {
-      emitter.emit('notify', '登录成功', 'success');
-      // 发送登录成功事件，并传递新的 token，确保和 axios.js 中的事件名一致
+      // 发送登录成功事件，并传递新的 token
       emitter.emit('loginSuccess', response.token);
       // 发送数据刷新事件
       emitter.emit('refresh-data');
