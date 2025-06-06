@@ -12,12 +12,18 @@
           资产名称
           <span class="required">*</span>
         </label>
-        <select id="assetName" v-model="form.assetNameId" class="asset-name-select select" required>
-          <option value="">请选择资产名称</option>
-          <option v-for="name in assetNames" :key="name.id" :value="name.id">
-            {{ name.name }}
-          </option>
-        </select>
+        <div class="asset-name-controls">
+          <select id="assetName" v-model="form.assetNameId" class="asset-name-select select" required>
+            <option value="">请选择资产名称</option>
+            <option v-for="name in assetNames" :key="name.id" :value="name.id">
+              {{ name.name }}
+            </option>
+          </select>
+          <button class="btn btn-gray maintain-btn" @click.prevent="handleMaintainClick">
+            <LucideSettings size="16" class="btn-icon" />
+            维护
+          </button>
+        </div>
       </div>
       <div class="input-group">
         <label class="input-label">
@@ -94,11 +100,18 @@
       </div>
     </div>
   </div>
+  <AssetNamesModal
+    v-if="showNamesModal"
+    :show="true"
+    @close="showNamesModal = false"
+    @refresh="handleNamesModalRefresh"
+  />
 </template>
 
 <script setup>
-import { LucideX } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { LucideX, LucideSettings } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import AssetNamesModal from './AssetNamesModal.vue'
 
 const props = defineProps({
   show: {
@@ -161,7 +174,7 @@ const formatDate = (date) => {
   return `${date}T00:00:00`
 }
 
-const emit = defineEmits(['submit', 'cancel'])
+const emit = defineEmits(['submit', 'cancel', 'refresh-names'])
 
 const handleSubmit = () => {
   if (isFormValid.value) {
@@ -170,6 +183,17 @@ const handleSubmit = () => {
     formData.acquireTime = formatDate(formData.acquireTime)
     emit('submit', formData)
   }
+}
+
+const showNamesModal = ref(false)
+
+function handleNamesModalRefresh() {
+  emit('refresh-names')
+}
+
+function handleMaintainClick() {
+  console.log('Maintain button clicked') // 添加调试日志
+  showNamesModal.value = true
 }
 </script>
 
@@ -254,6 +278,27 @@ const handleSubmit = () => {
 .select:focus {
   outline: none;
   border-color: #666;
+}
+
+.asset-name-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.asset-name-select {
+  flex: 1;
+}
+
+.maintain-btn {
+  padding: 8px 12px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-icon {
+  vertical-align: middle;
 }
 
 .modal-actions {

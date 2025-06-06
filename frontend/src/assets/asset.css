@@ -76,3 +76,48 @@
   justify-content: flex-end;
   margin-top: 20px;
 }
+
+/* 资产名称维护弹窗样式 */
+.names-modal .modal-content {
+  max-width: 800px !important;  /* 调整最大宽度 */
+}
+
+.names-modal .names-table-container {
+  max-height: 500px !important;  /* 调整表格区域高度 */
+}
+
+.names-modal .data-table {
+  font-size: 15px;  /* 调整字体大小 */
+}
+
+.names-modal .data-table th,
+.names-modal .data-table td {
+  padding: 15px;  /* 调整单元格内边距 */
+}
+
+.names-modal .edit-input {
+  height: 36px;  /* 调整编辑输入框高度 */
+  font-size: 15px;  /* 调整编辑输入框字体大小 */
+}
+
+.names-modal .search-input {
+  height: 40px;  /* 调整搜索框高度 */
+  font-size: 15px;  /* 调整搜索框字体大小 */
+  padding: 8px 16px;  /* 调整搜索框内边距 */
+}
+
+.names-modal .btn {
+  font-size: 15px;  /* 调整按钮字体大小 */
+  padding: 10px 20px;  /* 调整按钮内边距 */
+}
+
+/* 添加名称弹窗样式 */
+.add-form .modal-content {
+  max-width: 500px;  /* 调整添加表单的宽度 */
+}
+
+.add-form .input {
+  height: 40px;  /* 调整输入框高度 */
+  font-size: 15px;  /* 调整输入框字体大小 */
+  padding: 8px 16px;  /* 调整输入框内边距 */
+}

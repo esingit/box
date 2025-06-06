@@ -17,7 +17,6 @@
         <result property="updateUser" column="update_user"/>
         <result property="version" column="version"/>
         <result property="deleted" column="deleted"/>
-        <result property="assetName" column="asset_name"/>
         <result property="assetTypeName" column="asset_type_name"/>
         <result property="assetTypeValue" column="asset_type_value"/>
         <result property="unitName" column="unit_name"/>

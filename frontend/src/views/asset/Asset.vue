@@ -43,6 +43,7 @@
       remarkPlaceholder="备注（可选）"
       @submit="handleAddRecord"
       @cancel="cancelModal"
+      @refresh-names="refreshAssetNames"
     />
     <AssetList
       :records="records"
@@ -67,6 +68,7 @@
       remarkPlaceholder="备注"
       @submit="saveEdit"
       @cancel="cancelEdit"
+      @refresh-names="refreshAssetNames"
     />
   </div>
 </template>
@@ -416,5 +418,11 @@ function cancelModal() {
     acquireTime: getTodayDate(),
     remark: ''
   })
+}
+
+// 添加刷新资产名称的处理函数
+async function refreshAssetNames() {
+  await assetStore.fetchAssetNames()
+  await fetchRecords() // 同时刷新资产记录列表以显示更新后的名称
 }
 </script>

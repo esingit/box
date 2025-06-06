@@ -37,7 +37,6 @@ public class AssetRecord extends BaseEntity {
      * 资产类型ID（关联common_meta表）
      */
     @JsonSerialize(using = ToStringSerializer.class)
-    @TableField("asset_type_id")
     private Long assetTypeId;
     
     /**
@@ -55,28 +54,10 @@ public class AssetRecord extends BaseEntity {
      * 资产位置ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
-    @TableField("asset_location_id")
     private Long assetLocationId;
 
     /**
      * 购入/登记时间
      */
     private LocalDateTime acquireTime;
-
-    /**
-     * 备注
-     */
-    private String remark;
-
-    /**
-     * 版本号
-     */
-    @Version
-    private Integer version;
-
-    @TableField(exist = false)
-    private String type; // 收入/支出
-
-    @TableField(exist = false)
-    private String assetName;
 }
