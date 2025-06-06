@@ -47,11 +47,11 @@
 
 /* 资产名称维护弹窗样式 */
 .names-modal .modal-content {
-  max-width: 800px !important;  /* 调整最大宽度 */
+  max-width: 800px;  /* 调整最大宽度 */
 }
 
 .names-modal .names-table-container {
-  max-height: 500px !important;  /* 调整表格区域高度 */
+  max-height: 500px;  /* 调整表格区域高度 */
 }
 
 .names-modal .data-table {

@@ -101,6 +101,137 @@
   background: var(--bg-primary);
 }
 
+/* 用户设置弹窗特定样式 */
+.user-settings-modal {
+  width: 800px;
+  max-width: 90vw;
+}
+
+.user-settings-modal .modal-body {
+  display: flex;
+  gap: var(--spacing-xl);
+  padding: 0;
+  height: 500px;
+}
+
+.user-settings-modal .sidebar-menu {
+  width: 200px;
+  border-right: 1px solid var(--border-color);
+  padding: var(--spacing-lg);
+}
+
+.user-settings-modal .menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.user-settings-modal .menu-item {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: none;
+  background: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--text-secondary);
+}
+
+.user-settings-modal .menu-item:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.user-settings-modal .menu-item.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.user-settings-modal .menu-item-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.user-settings-modal .menu-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.user-settings-modal .content-area {
+  flex: 1;
+  padding: var(--spacing-xl);
+  overflow-y: auto;
+}
+
+/* 个人信息面板样式 */
+.profile-panel .info-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.profile-panel .info-label {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+  display: block;
+  font-size: var(--font-size-sm);
+}
+
+.profile-panel .info-value {
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  margin: 0;
+}
+
+/* 安全设置面板样式 */
+.security-panel .form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.security-panel .form-label {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+  display: block;
+  font-size: var(--font-size-sm);
+}
+
+.security-panel .form-input {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+}
+
+.security-panel .form-input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-color-alpha);
+}
+
+.security-panel .form-submit {
+  margin-top: var(--spacing-xl);
+}
+
+.security-panel .message {
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.security-panel .message.success {
+  background: var(--success-color-alpha);
+  color: var(--success-color);
+}
+
+.security-panel .message.error {
+  background: var(--error-color-alpha);
+  color: var(--error-color);
+}
+
 /* 宽屏模态框 */
 .modal-container.user-settings-modal {
   width: 800px;

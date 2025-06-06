@@ -246,3 +246,35 @@
   align-items: center;
   height: 60px;
 }
+/* 健身记录列表样式 */
+.fitness-list .count-cell {
+  font-weight: 500;
+  color: var(--primary-color);
+}
+
+.fitness-list .remark-cell {
+  max-width: 200px;
+}
+
+.fitness-list .remark-cell span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fitness-list .empty-icon {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--spacing-sm);
+}
+
+.fitness-list .center {
+  text-align: center;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .fitness-list .remark-cell {
+    max-width: 120px;
+  }
+}

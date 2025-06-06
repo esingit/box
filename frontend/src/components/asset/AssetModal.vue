@@ -217,7 +217,6 @@ function handleMaintainClick() {
   border-radius: 12px;
   width: 90%;
   max-width: 420px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .modal-header {

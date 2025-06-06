@@ -17,6 +17,7 @@ import '@/assets/components/table.css'
 import '@/assets/components/profile.css'
 import '@/assets/components/header.css'
 import '@/assets/components/notification.css'
+import '@/assets/components/pagination.css'
 
 // 页面专用样式
 import '@/assets/sidebar.css'

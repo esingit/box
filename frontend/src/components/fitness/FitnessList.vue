@@ -76,36 +76,4 @@ const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
 const showPagination = computed(() => props.total > props.pageSize)
 </script>
 
-<style scoped>
-.count-cell {
-  font-weight: 500;
-  color: var(--primary-color);
-}
 
-.remark-cell {
-  max-width: 200px;
-}
-
-.remark-cell span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.empty-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-
-.center {
-  text-align: center;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .remark-cell {
-    max-width: 120px;
-  }
-}
-</style>

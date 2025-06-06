@@ -163,6 +163,3 @@ defineExpose({
 })
 </script>
 
-<style scoped>
-/* 保留特定于此组件的样式（如果有） */
-</style>

@@ -67,43 +67,5 @@ function handlePageChange(page) {
 }
 </script>
 
-<style scoped>
-.pagination-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-}
 
-.btn {
-  padding: 6px 12px;
-  border: 1px solid #dcdfe6;
-  background-color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
 
-.btn:hover:not(:disabled) {
-  color: #409eff;
-  border-color: #c6e2ff;
-  background-color: #ecf5ff;
-}
-
-.btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.page-size-select {
-  padding: 6px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  outline: none;
-}
-
-.page-info,
-.total-count {
-  color: #606266;
-}
-</style>
