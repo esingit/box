@@ -1,0 +1,315 @@
+/* 通用表单组件样式 */
+
+/* 表单容器 */
+.auth-form-modal-overlay,
+.auth-form-container {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+}
+
+/* 表单组样式 */
+.form-group {
+  margin-bottom: var(--spacing-lg);
+  max-width: 100%;
+  position: relative;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+/* 表单容器样式 */
+.auth-form-modal,
+.auth-form-container {
+  background: var(--bg-primary);
+  width: calc(100% - var(--spacing-xl) * 2);
+  max-width: 400px;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+
+.auth-form-container {
+  position: relative;
+  margin: var(--spacing-xl) auto;
+}
+
+.auth-form-header {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.auth-form-title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.auth-form-close {
+  width: var(--btn-height);
+  height: var(--btn-height);
+  font-size: var(--font-size-xxl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.auth-form-close:hover {
+  color: var(--text-primary);
+}
+
+.auth-form-inner {
+  padding: var(--spacing-xl);
+}
+
+/* 登录表单样式 */
+.auth-form-modal {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.auth-form-modal .form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.auth-form-modal input {
+  width: 100%;
+  max-width: 100%;
+  height: 40px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  box-sizing: border-box;
+  transition: all var(--transition-fast);
+}
+
+.auth-form-modal input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+  outline: none;
+}
+
+/* 输入框 */
+.form-group input {
+  width: 100%;
+  height: var(--input-height);
+  padding: 0 var(--spacing-lg);
+  font-size: var(--font-size-base);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast);
+}
+
+.form-group input:hover {
+  border-color: var(--border-hover);
+}
+
+.form-group input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* 验证码区域 */
+.captcha-container {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.captcha-input {
+  flex: 1;
+  min-width: 0; /* 防止flex子项超出容器 */
+}
+
+.captcha-image {
+  height: 40px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+/* 提交区域 */
+.form-submit {
+  margin-top: var(--spacing-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: stretch;
+}
+
+.form-submit button {
+  width: 100%;
+}
+
+.error-msg {
+  color: var(--error-color);
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-sm);
+}
+
+/* 普通表单输入框 */
+.input-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.input-label {
+  min-width: 70px;
+  margin-right: var(--spacing-xxl);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.required {
+  color: var(--error-color);
+}
+
+/* 输入框基础样式 */
+.input,
+.select,
+.textarea {
+  flex: 1;
+  height: 44px;
+  padding: 0 var(--spacing-lg);
+  font-size: var(--font-size-base);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+}
+
+.input:hover,
+.select:hover,
+.textarea:hover {
+  border-color: var(--border-hover);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* 文本域特殊样式 */
+.textarea {
+  height: auto;
+  min-height: 100px;
+  padding: var(--spacing-lg);
+  resize: vertical;
+  border-radius: var(--radius-xl);
+}
+
+/* 下拉框特殊样式 */
+.select {
+  appearance: none;
+  padding-right: 36px;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="gray" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+/* 禁用状态 */
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  background-color: var(--bg-disabled);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* 表单组样式 */
+.form-group {
+  margin-bottom: var(--spacing-xl);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* 错误提示 */
+.error-msg {
+  color: var(--error-color);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-xs);
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .input-label {
+    margin-bottom: var(--spacing-xs);
+    margin-right: 0;
+  }
+  
+  .input,
+  .select,
+  .textarea {
+    height: 40px;
+    font-size: var(--font-size-sm);
+  }
+  
+  .form-group {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .form-input,
+  .form-select {
+    font-size: var(--font-size-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+  
+  .auth-form-modal {
+    width: 90%;
+    margin: var(--spacing-md);
+  }
+  
+  .auth-form-inner {
+    padding: var(--spacing-lg);
+  }
+  
+  .auth-form-modal input {
+    height: 36px;
+    font-size: var(--font-size-sm);
+  }
+}

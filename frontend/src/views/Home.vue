@@ -1,9 +1,11 @@
 <template>
-  <div>
-    <h1 class="centered-title">
-      <Box class="home-box-icon" :class="{ 'rotate': isRotating }" @click="rotateBox"/>
-      BOX
-    </h1>
+  <div class="home-container">
+    <div class="home-content">
+      <h1 class="home-title">
+        <Box class="home-box-icon" :class="{ 'rotate': isRotating }" @click="rotateBox"/>
+        BOX
+      </h1>
+    </div>
     <transition name="slide-fade">
       <div v-if="showAuth" class="auth-form-container">
         <LoginForm v-if="activeTab === 'login'"/>

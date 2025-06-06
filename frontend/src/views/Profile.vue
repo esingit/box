@@ -1,105 +1,77 @@
 <template>
-  <!-- 弹窗遮罩层 -->
-  <div v-if="isOpen" class="modal-overlay" @click="closeModal"></div>
-
-  <!-- 弹窗内容 -->
-  <div v-if="isOpen" class="modal-container">
-    <div class="modal-content">
-      <!-- 弹窗头部 -->
-      <div class="modal-header">
-        <h2 class="modal-title">设置</h2>
-        <button class="close-button" @click="closeModal">
-          <LucideX class="close-icon" />
-        </button>
-      </div>
-
-      <!-- 弹窗主体内容 -->
-      <div class="modal-body">
-        <!-- 左侧菜单 -->
-        <div class="sidebar-menu">
-          <nav class="menu-list">
-            <button 
-              @click="activeTab = 'profile'"
-              :class="['menu-item', { active: activeTab === 'profile' }]"
-            >
-              <div class="menu-item-content">
-                <svg class="menu-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                个人信息
-              </div>
-            </button>
-            <button 
-              @click="activeTab = 'security'"
-              :class="['menu-item', { active: activeTab === 'security' }]"
-            >
-              <div class="menu-item-content">
-                <svg class="menu-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                安全设置
-              </div>
-            </button>
-          </nav>
+  <div v-if="isOpen" class="modal-overlay" @click.self="closeModal">
+    <div class="modal-container user-settings-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">设置</h2>
+          <button class="close-button" @click="closeModal">
+            <LucideX class="close-icon" />
+          </button>
         </div>
-
-        <!-- 右侧内容区 -->
-        <div class="content-area">
-          <!-- 个人信息面板 -->
-          <div v-if="activeTab === 'profile'" class="profile-panel">
-            <div class="info-group">
-              <label class="info-label">用户名</label>
-              <p class="info-value">{{ user?.username }}</p>
-            </div>
-            <div class="info-group">
-              <label class="info-label">邮箱</label>
-              <p class="info-value">{{ user?.email || 'N/A' }}</p>
-            </div>
-            <div class="info-group">
-              <label class="info-label">上次登录时间</label>
-              <p class="info-value">{{ formatDateTime(user?.lastLoginTime) }}</p>
-            </div>
+        <div class="modal-body">
+          <div class="sidebar-menu">
+            <nav class="menu-list">
+              <button 
+                @click="activeTab = 'profile'"
+                :class="['menu-item', { active: activeTab === 'profile' }]"
+              >
+                <div class="menu-item-content">
+                  <svg class="menu-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  个人信息
+                </div>
+              </button>
+              <button 
+                @click="activeTab = 'security'"
+                :class="['menu-item', { active: activeTab === 'security' }]"
+              >
+                <div class="menu-item-content">
+                  <svg class="menu-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  安全设置
+                </div>
+              </button>
+            </nav>
           </div>
-
-          <!-- 安全设置面板 -->
-          <div v-if="activeTab === 'security'" class="security-panel">
-            <form @submit.prevent="handleReset">
-              <div class="form-group">
-                <label class="form-label">旧密码</label>
-                <input 
-                  type="password" 
-                  v-model="oldPassword"
-                  class="form-input"
-                  required
-                />
+          <div class="content-area">
+            <div v-if="activeTab === 'profile'" class="profile-panel">
+              <div class="info-group">
+                <label class="info-label">用户名</label>
+                <p class="info-value">{{ user?.username }}</p>
               </div>
-              <div class="form-group">
-                <label class="form-label">新密码</label>
-                <input 
-                  type="password" 
-                  v-model="newPassword"
-                  class="form-input"
-                  required
-                />
+              <div class="info-group">
+                <label class="info-label">邮箱</label>
+                <p class="info-value">{{ user?.email || 'N/A' }}</p>
               </div>
-              <div class="form-group">
-                <label class="form-label">确认密码</label>
-                <input 
-                  type="password" 
-                  v-model="confirmPassword"
-                  class="form-input"
-                  required
-                />
+              <div class="info-group">
+                <label class="info-label">上次登录时间</label>
+                <p class="info-value">{{ formatDateTime(user?.lastLoginTime) }}</p>
               </div>
-              <div class="form-submit">
-                <p v-if="resetMsg" :class="['message', resetSuccess ? 'success' : 'error']">
-                  {{ resetMsg }}
-                </p>
-                <button class="btn btn-black" type="submit">
-                  确认修改
-                </button>
-              </div>
-            </form>
+            </div>
+            <div v-if="activeTab === 'security'" class="security-panel">
+              <form @submit.prevent="handleReset">
+                <div class="form-group">
+                  <label class="form-label">旧密码</label>
+                  <input type="password" v-model="oldPassword" class="form-input" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">新密码</label>
+                  <input type="password" v-model="newPassword" class="form-input" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">确认密码</label>
+                  <input type="password" v-model="confirmPassword" class="form-input" required />
+                </div>
+                <div class="form-submit">
+                  <p v-if="resetMsg" :class="['message', resetSuccess ? 'success' : 'error']">
+                    {{ resetMsg }}
+                  </p>
+                  <button class="btn btn-black" type="submit">确认修改</button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>
@@ -190,3 +162,7 @@ defineExpose({
   openModal
 })
 </script>
+
+<style scoped>
+/* 保留特定于此组件的样式（如果有） */
+</style>

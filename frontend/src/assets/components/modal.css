@@ -1,0 +1,146 @@
+/* 模态框基础样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-container {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  border: 1.5px solid var(--border-color);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.2s ease-out;
+  transform-origin: center;
+  max-height: 90vh;
+  position: relative;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 60px;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.close-button {
+  padding: var(--spacing-xs);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.close-button:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.close-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.modal-body {
+  padding: var(--spacing-xl);
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 确保模态框内容不被遮罩影响 */
+.modal-content,
+.modal-header,
+.modal-body {
+  position: relative;
+  background: var(--bg-primary);
+}
+
+/* 宽屏模态框 */
+.modal-container.user-settings-modal {
+  width: 800px;
+  max-width: 90%;
+  max-height: 90vh;
+}
+
+/* 带侧边栏的模态框布局 */
+.modal-body.with-sidebar {
+  padding: var(--spacing-xl);
+  display: flex;
+  gap: var(--spacing-xl);
+}
+
+.sidebar-menu {
+  width: 200px;
+  border-right: 1px solid var(--border-color);
+  z-index: calc(var(--z-modal) + 1);
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: var(--spacing-sm);
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .modal-container {
+    width: 100%;
+    margin: var(--spacing-sm) 0;
+    border-radius: var(--radius-lg);
+  }
+  
+  .modal-header {
+    padding: var(--spacing-md);
+    min-height: 50px;
+  }
+  
+  .modal-body {
+    padding: var(--spacing-md);
+  }
+}

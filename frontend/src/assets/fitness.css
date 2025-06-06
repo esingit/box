@@ -1,58 +1,244 @@
-/* 健身记录页面专用样式，仅保留独有部分 */
+/* 全局样式变量 */
+:root {
+  /* 颜色变量 */
+  --bg-white: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-hover: #f5f7fa;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-light: #999999;
+  --primary-color: #1890ff;
+  --danger-color: #ff4d4f;
+  --border-color: #eaeaea;
+
+  /* 尺寸变量 */
+  --border-radius: 8px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+}
+
+/* 健身记录页面专用样式 */
 .fitness-form {
   display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xxl);
   flex-wrap: wrap;
 }
+
 .fitness-form .type-select,
 .fitness-form .count-input,
 .fitness-form .unit-select,
 .fitness-form .date-input {
   min-width: 90px;
 }
+
 .fitness-query-bar {
+  margin: var(--spacing-xl) 0;
+  padding: var(--spacing-xl);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
   display: flex;
-  gap: 12px;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  gap: var(--spacing-xl);
 }
-.fitness-query-bar .query-fields {
+
+.query-bar-fields {
   display: flex;
-  gap: 12px;
-  flex: 1;
+  gap: var(--spacing-md);
+  align-items: center;
+  flex-wrap: wrap;
 }
-.fitness-query-bar .query-btns {
-  display: flex;
-  gap: 10px;
-}
-.fitness-query-bar .query-btns button {
-  width: 40px;
+
+.query-bar-fields select,
+.query-bar-fields input {
   height: 40px;
-  padding: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  min-width: 120px;
+}
+
+.query-bar-fields input[type="date"] {
+  min-width: 150px;
+}
+
+.query-bar-fields input[type="text"] {
+  min-width: 200px;
+}
+
+.to-text {
+  color: var(--text-secondary);
+  margin: 0 var(--spacing-xs);
+}
+
+.query-btns {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
+  gap: var(--spacing-sm);
 }
-.fitness-query-bar .query-btns button:hover {
-  transform: scale(1.05);
+
+/* 按钮样式 */
+.btn.btn-gray {
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border-color);
+  color: var(--text-secondary);
 }
-.fitness-query-bar .to-text {
-  font-size: 16px;
+
+.btn.btn-gray:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* 列表样式 */
+.fitness-list {
+  margin-top: var(--spacing-xl);
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border-color);
+  overflow: hidden;
+}
+
+.fitness-list .data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fitness-list th,
+.fitness-list td {
+  padding: var(--spacing-md) var(--spacing-lg);
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.fitness-list th {
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+
+.fitness-list tr:last-child td {
+  border-bottom: none;
+}
+
+.fitness-list tr:hover td {
+  background: var(--bg-hover);
+}
+
+/* 操作列样式 */
+.operations {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 40px;
-  padding: 0 4px;
-  line-height: 40px;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
 }
+
+.operations .btn-link {
+  padding: var(--spacing-xs);
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.operations .btn-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+/* 分页样式 */
+.pagination-bar {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-md) 0;
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+/* 通用容器样式 */
+.fitness-container {
+  padding: var(--spacing-md);
+  background: var(--bg-white);
+  border-radius: var(--border-radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* 表单样式 */
+.fitness-form-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.fitness-form-label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.fitness-input,
+.fitness-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.fitness-input:focus,
+.fitness-select:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .fitness-query-bar {
+    flex-direction: column;
+    gap: var(--spacing-lg);
+  }
+
+  .query-bar-fields {
+    width: 100%;
+  }
+
+  .query-btns {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .query-bar-fields select,
+  .query-bar-fields input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .operations {
+    flex-wrap: wrap;
+  }
+
+  .fitness-container {
+    padding: var(--spacing-sm);
+  }
+
+  .fitness-form-group {
+    margin-bottom: var(--spacing-sm);
+  }
+}
+
 @media (max-width: 700px) {
   .fitness-form {
     flex-direction: column;
     gap: 8px;
   }
 }
+
 .common-list-item.empty {
   text-align: center;
   display: flex;

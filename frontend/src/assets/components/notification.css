@@ -1,0 +1,60 @@
+/* 通知组件样式 */
+.notification {
+  position: fixed;
+  top: calc(var(--header-height) + var(--spacing-xl));
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 280px;
+  max-width: 80vw;
+  background: var(--bg-primary);
+  border-radius: var(--radius-full);
+  padding: var(--spacing-md) var(--spacing-xxl);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  border: 1.5px solid var(--border-color);
+  z-index: var(--z-notification);
+  backdrop-filter: blur(4px);
+}
+
+.notification.success {
+  color: var(--success-color);
+  border-color: var(--success-color);
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.05), rgba(16, 185, 129, 0.1));
+}
+
+.notification.error {
+  color: var(--error-color);
+  border-color: var(--error-color);
+  background: linear-gradient(to right, rgba(231, 76, 60, 0.05), rgba(231, 76, 60, 0.1));
+}
+
+.notification.warning {
+  color: var(--warning-color);
+  border-color: var(--warning-color);
+  background: linear-gradient(to right, rgba(179, 163, 105, 0.05), rgba(179, 163, 105, 0.1));
+}
+
+/* 动画效果 */
+.notification.fade-enter-active,
+.notification.fade-leave-active {
+  transition: all var(--transition-base) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notification.fade-enter-from,
+.notification.fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -20px);
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .notification {
+    min-width: auto;
+    width: calc(100% - var(--spacing-xl) * 2);
+    font-size: var(--font-size-sm);
+    padding: var(--spacing-sm) var(--spacing-xl);
+  }
+}

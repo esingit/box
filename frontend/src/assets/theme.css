@@ -1,0 +1,88 @@
+:root {
+  /* 颜色系统 */
+  --primary-color: #000000;
+  --primary-hover: #333333;
+  --primary-active: #000000;
+  
+  /* 文本颜色 */
+  --text-primary: #222222;
+  --text-secondary: #666666;
+  --text-disabled: #bbbbbb;
+  --text-light: #ffffff;
+  
+  /* 背景颜色 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-disabled: #f5f5f5;
+  --bg-overlay: rgba(0, 0, 0, 0.18);
+  
+  /* 边框颜色 */
+  --border-color: #e0e0e0;
+  --border-hover: #d0d0d0;
+  --border-active: #a0a0a0;
+  
+  /* 状态颜色 */
+  --success-color: #10b981;
+  --error-color: #e74c3c;
+  --warning-color: #b3a369;
+  --info-color: #0d6efd;
+  
+  /* 字体 */
+  --font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-xxl: 20px;
+  
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-xxl: 24px;
+  --spacing-xxxl: 32px;
+  
+  /* 边框圆角 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-xxl: 32px;
+  --radius-full: 999px;
+  
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.05);
+  
+  /* 过渡动画 */
+  --transition-fast: 0.2s;
+  --transition-base: 0.3s;
+  --transition-slow: 0.5s;
+  --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Z-index 层级 */
+  --z-negative: -1;
+  --z-normal: 1;
+  --z-sticky: 100;
+  --z-dropdown: 1000;
+  --z-fixed: 1200;
+  --z-modal: 2000;
+  --z-popover: 2100;
+  --z-tooltip: 3000;
+  
+  /* 布局 */
+  --sidebar-width: 150px;
+  --sidebar-collapsed-width: 70px;
+  --header-height: 64px;
+  
+  /* 组件特定 */
+  --input-height: 44px;
+  --input-height-sm: 36px;
+  --btn-height: 40px;
+  --btn-height-sm: 32px;
+}
