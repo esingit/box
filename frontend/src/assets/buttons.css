@@ -36,7 +36,7 @@
 
 .btn-text:hover {
   background-color: var(--bg-hover);
-  color: var(--text-primary);
+  border-color: var(--border-hover);
 }
 
 .btn-danger {
@@ -67,19 +67,26 @@
 /* Action buttons */
 .action-btn {
   background: transparent;
-  border: none;
+  border: 1px solid var(--border-primary);
   padding: 6px;
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   color: var(--text-secondary);
-  transition: var(--transition);
+  transition: all var(--transition);
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-btn:hover {
   background-color: var(--bg-hover);
+  border-color: var(--border-hover);
   color: var(--text-primary);
 }
 
 .action-btn.delete:hover {
   color: var(--error-color);
+  border-color: var(--error-color);
 }

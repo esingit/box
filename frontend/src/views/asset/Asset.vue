@@ -1,73 +1,53 @@
 <template>
   <div class="page-container">
-    <div class="page-title">
-      <LucideWallet class="title-icon" color="#222" size="24" />
-      <span>资产记录</span>
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <PageHeader title="资产" :icon="WalletIcon" />
     </div>
-    <div class="asset-overview">
-      <div class="asset-statistics">
-        <div class="stat-item">
+
+    <!-- 资产概览卡片 -->
+    <div class="stats-container">
+      <div class="stats-grid">
+        <div class="stat-card">
           <div class="stat-label">总资产</div>
           <div class="stat-value positive">{{ formatAmount(totalAssets) }}</div>
           <div class="stat-change" :class="assetsChange > 0 ? 'positive' : assetsChange < 0 ? 'negative' : ''">
             {{ getChangePrefix(assetsChange) }}{{ formatAmount(assetsChange) }}
           </div>
         </div>
-        <div class="stat-item">
+        <div class="stat-card">
           <div class="stat-label">总负债</div>
           <div class="stat-value negative">{{ formatAmount(totalLiabilities) }}</div>
           <div class="stat-change" :class="liabilitiesChange > 0 ? 'negative' : liabilitiesChange < 0 ? 'positive' : ''">
             {{ getChangePrefix(liabilitiesChange) }}{{ formatAmount(liabilitiesChange) }}
           </div>
         </div>
-        <div class="stat-item">
+        <div class="stat-card">
           <div class="stat-label">净资产</div>
-          <div class="stat-value" :class="getNetWorthClass">{{ formatAmount(netWorth) }}</div>
+          <div class="stat-value" :class="netWorth > 0 ? 'positive' : 'negative'">{{ formatAmount(netWorth) }}</div>
           <div class="stat-change" :class="netWorthChange > 0 ? 'positive' : netWorthChange < 0 ? 'negative' : ''">
             {{ getChangePrefix(netWorthChange) }}{{ formatAmount(netWorthChange) }}
           </div>
         </div>
       </div>
     </div>
-    <div class="asset-query-bar">
-      <div class="query-fields">
-        <select v-model="query.typeId">
-          <option value="">全部类型</option>
-          <option v-for="t in assetStore.types" :key="t.id" :value="t.id">{{ t.value1 }}</option>
-        </select>
-        <input type="date" v-model="query.startDate" />
-        <span class="to-text">至</span>
-        <input type="date" v-model="query.endDate" />
-        <input v-model="query.remark" placeholder="备注关键词" type="text" />
-      </div>
-      <div class="query-btns">
-        <button class="btn btn-primary" title="查询" @click="handleQuery">
-          <LucideSearch size="18" style="vertical-align: middle;" />
-        </button>
-        <button class="btn btn-text" title="重置" @click="resetQuery">
-          <LucideRotateCcw size="18" style="vertical-align: middle;" />
-        </button>
-      </div>
-    </div>
-    <div>
+
+    <!-- 搜索面板 -->
+    <SearchPanel
+      :query="query"
+      :types="assetStore.types"
+      @update:query="val => Object.assign(query, val)"
+      @search="handleQuery"
+      @reset="resetQuery"
+    />
+
+    <!-- 操作按钮区域 -->
+    <div class="action-bar">
       <button class="btn btn-primary" @click="showModal">添加记录</button>
       <button class="btn btn-outline" @click="copyLastRecords">复制上回记录</button>
     </div>
-    <AssetModal
-      :show="showAddModal"
-      :form="form"
-      :asset-names="assetStore.assetNames"
-      :types="assetStore.types"
-      :units="assetStore.units"
-      :locations="assetStore.locations"
-      :loading="adding"
-      title="添加记录"
-      confirmText="确定"
-      remarkPlaceholder="备注（可选）"
-      @submit="handleAddRecord"
-      @cancel="cancelModal"
-      @refresh-names="refreshAssetNames"
-    />
+
+    <!-- 记录列表 -->
     <AssetList
       :records="records"
       :current="current"
@@ -78,7 +58,28 @@
       @page-change="handlePageChange"
       @page-size-change="handlePageSizeChange"
     />
+
+    <!-- 添加记录弹窗 -->
     <AssetModal
+      v-if="showAddModal"
+      :show="showAddModal"
+      :form="form"
+      :asset-names="assetStore.assetNames"
+      :types="assetStore.types"
+      :units="assetStore.units"
+      :locations="assetStore.locations"
+      :loading="adding"
+      title="添加记录"
+      confirm-text="确定"
+      remark-placeholder="备注（可选）"
+      @submit="handleAddRecord"
+      @cancel="cancelModal"
+      @refresh-names="refreshAssetNames"
+    />
+    
+    <!-- 编辑记录弹窗 -->
+    <AssetModal
+      v-if="editingIdx !== null"
       :show="editingIdx !== null"
       :form="editForm"
       :asset-names="assetStore.assetNames"
@@ -87,8 +88,8 @@
       :locations="assetStore.locations"
       :loading="false"
       title="编辑记录"
-      confirmText="保存"
-      remarkPlaceholder="备注"
+      confirm-text="保存"
+      remark-placeholder="备注"
       @submit="saveEdit"
       @cancel="cancelEdit"
       @refresh-names="refreshAssetNames"
@@ -97,358 +98,171 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { LucideWallet, LucideSearch, LucideRotateCcw } from 'lucide-vue-next'
-import emitter from '../../utils/eventBus.js'
-import axios from '../../utils/axios.js'
-import { formatAssetRecord } from '../../utils/commonMeta'
-import { useAssetStore } from '../../stores/assetStore'
-import { useUserStore } from '../../stores/userStore'
-import AssetModal from '../../components/asset/AssetModal.vue'
-import AssetList from '../../components/asset/AssetList.vue'
+import { useAssetStore } from '@/stores/assetStore'
+import { useAuth } from '@/composables/useAuth'
+import PageHeader from '@/components/common/PageHeader.vue'
+import AssetList from '@/components/asset/AssetList.vue'
+import AssetModal from '@/components/asset/AssetModal.vue'
+import SearchPanel from '@/components/asset/SearchPanel.vue'
 
 const assetStore = useAssetStore()
-const userStore = useUserStore()
+const { isLoggedIn } = useAuth()
 
-const records = ref([])
-const adding = ref(false)
+// 图标
+const WalletIcon = LucideWallet
 
-// 计算总资产（非负债）
-// 最近日期的资产统计
-const totalAssets = ref(0)
-const totalLiabilities = ref(0)
-
-// 昨日的资产统计
-const yesterdayAssets = ref(0)
-const yesterdayLiabilities = ref(0)
-
-// 获取最近日期的资产统计
-async function fetchLatestAssetStats() {
-  try {
-    const [latestRes, yesterdayRes] = await Promise.all([
-      axios.get('/api/asset-record/latest-stats'),
-      axios.get('/api/asset-record/latest-stats?offset=1')
-    ])
-    
-    if (latestRes.data?.success) {
-      totalAssets.value = latestRes.data.data.totalAssets || 0
-      totalLiabilities.value = latestRes.data.data.totalLiabilities || 0
-    }
-    
-    if (yesterdayRes.data?.success) {
-      yesterdayAssets.value = yesterdayRes.data.data.totalAssets || 0
-      yesterdayLiabilities.value = yesterdayRes.data.data.totalLiabilities || 0
-    }
-  } catch (err) {
-    console.error('获取资产统计失败:', err)
-    emitter.emit('notify', '获取资产统计失败：' + (err.message || '未知错误'), 'error')
-  }
-}
-
-// 计算净资产
-const netWorth = computed(() => {
-  return totalAssets.value - totalLiabilities.value
-})
-
-// 计算昨日净资产
-const yesterdayNetWorth = computed(() => {
-  return yesterdayAssets.value - yesterdayLiabilities.value
-})
-
-// 计算资产变化
-const assetsChange = computed(() => {
-  return totalAssets.value - yesterdayAssets.value
-})
-
-// 计算负债变化
-const liabilitiesChange = computed(() => {
-  return totalLiabilities.value - yesterdayLiabilities.value
-})
-
-// 计算净资产变化
-const netWorthChange = computed(() => {
-  return netWorth.value - yesterdayNetWorth.value
-})
-
-// 根据变化值获取数值前缀
-function getChangePrefix(value) {
-  if (value > 0) return '+'
-  if (value < 0) return ''
-  return ''
-}
-
-// 格式化金额显示
-function formatAmount(amount) {
-  return new Intl.NumberFormat('zh-CN', {
-    style: 'currency',
-    currency: 'CNY',
-    minimumFractionDigits: 2
-  }).format(amount)
-}
-
-// 确保用户已登录
-async function checkAndInitData() {
-  if (!userStore.token) {
-    await userStore.autoLogin()
-  }
-  return assetStore.initData()
-}  // 添加表单和编辑表单统一用 reactive 管理
-const form = reactive({
-  assetNameId: null,
-  assetTypeId: null,
-  amount: 0,
-  unitId: null,
-  assetLocationId: null,
-  acquireTime: getTodayDate(),
-  remark: ''
-})
-
-const editForm = reactive({
-  assetNameId: null,
-  assetTypeId: null,
-  amount: 0,
-  unitId: null,
-  assetLocationId: null,
-  acquireTime: getTodayDate(),
-  remark: ''
-})
-
-const editingIdx = ref(null)
+// 状态
 const showAddModal = ref(false)
+const editingIdx = ref(null)
+const adding = ref(false)
+const current = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+
+// 查询条件
 const query = reactive({
   typeId: '',
   startDate: '',
   endDate: '',
   remark: ''
 })
-const current = ref(1)
-const total = ref(0)
-const pageSize = ref(7)
 
-async function initSelectOptions() {
-  await assetStore.initData()
-  // 等待数据加载完成后再初始化表单默认值
-  if (assetStore.types.length > 0) {
-    form.assetTypeId = assetStore.types[0].id
-    editForm.assetTypeId = assetStore.types[0].id
-  }
-  if (assetStore.units.length > 0) {
-    form.unitId = assetStore.units[0].id
-    editForm.unitId = assetStore.units[0].id
-  }    if (assetStore.locations.length > 0) {
-    form.assetLocationId = assetStore.locations[0].id
-    editForm.assetLocationId = assetStore.locations[0].id
-  }
-  if (assetStore.assetNames.length > 0) {
-    form.assetNameId = assetStore.assetNames[0].id
-    editForm.assetNameId = assetStore.assetNames[0].id
-  }
-}
-
-async function fetchRecords(page = 1, size = pageSize.value) {
-  try {
-    const params = {
-      page,
-      pageSize: size
-    }
-    if (query.typeId) params.typeId = query.typeId
-    if (query.startDate) params.startDate = query.startDate
-    if (query.endDate) params.endDate = query.endDate
-    if (query.remark) params.remark = query.remark
-    
-    // 并行获取记录列表和最新统计
-    const [listRes, latestRes, yesterdayRes] = await Promise.all([
-      axios.get('/api/asset-record/list', { params }),
-      axios.get('/api/asset-record/latest-stats'),
-      axios.get('/api/asset-record/latest-stats?offset=1')
-    ])
-    
-    if (listRes.data?.success) {
-      const rawRecords = (listRes.data.data?.records) || []
-      // 格式化每条记录的类型和单位
-      records.value = await Promise.all(rawRecords.map(record => formatAssetRecord(record)))
-      total.value = listRes.data.data ? Number(listRes.data.data.total) : 0
-      current.value = listRes.data.data ? Number(listRes.data.data.current) : 1
-      pageSize.value = listRes.data.data ? Number(listRes.data.data.size) : pageSize.value
-      
-      // 更新资产统计
-      if (latestRes.data?.success) {
-        totalAssets.value = latestRes.data.data.totalAssets || 0
-        totalLiabilities.value = latestRes.data.data.totalLiabilities || 0
-        yesterdayAssets.value = yesterdayRes.data?.data?.totalAssets || 0
-        yesterdayLiabilities.value = yesterdayRes.data?.data?.totalLiabilities || 0
-      }
-    } else {
-      emitter.emit('notify', '获取数据失败: ' + (listRes.data?.message || '未知错误'), 'error')
-    }
-  } catch (err) {
-    console.error('获取资产记录失败:', err)
-    emitter.emit('notify', '获取数据失败: ' + (err.message || '未知错误'), 'error')
-  }
-}
-
-onMounted(async () => {
-  try {
-    await checkAndInitData()
-    await Promise.all([
-      fetchRecords(),
-      fetchLatestAssetStats()
-    ])
-    
-    // 监听刷新数据事件
-    emitter.on('refresh-data', async () => {
-      await checkAndInitData()
-      await Promise.all([
-        fetchRecords(),
-        fetchLatestAssetStats()
-      ])
-    })
-  } catch (error) {
-    console.error('初始化数据失败:', error)
-    emitter.emit('notify', '初始化数据失败', 'error')
-  }
+// 表单数据
+const form = reactive({
+  assetName: '',
+  typeId: '',
+  amount: '',
+  unitId: '',
+  locationId: '',
+  acquireTime: new Date().toISOString().split('T')[0],
+  remark: ''
 })
 
-// 在组件销毁时移除事件监听
-onUnmounted(() => {
-  emitter.off('refresh-data')
+const editForm = reactive({...form})
+
+// 计算属性
+const records = ref([])
+
+const totalAssets = computed(() => {
+  return records.value.reduce((sum, record) => {
+    return record.amount > 0 ? sum + record.amount : sum
+  }, 0)
 })
 
-function getTodayDate() {
-  const now = new Date()
-  return now.toISOString().slice(0, 10)
+const totalLiabilities = computed(() => {
+  return Math.abs(records.value.reduce((sum, record) => {
+    return record.amount < 0 ? sum + record.amount : sum
+  }, 0))
+})
+
+const netWorth = computed(() => totalAssets.value - totalLiabilities.value)
+
+// 变化率计算
+const assetsChange = computed(() => {
+  if (!records.value.length) return 0
+  const sorted = [...records.value]
+    .filter(r => r.amount > 0)
+    .sort((a, b) => new Date(b.acquireTime) - new Date(a.acquireTime))
+  const latest = sorted[0]?.amount || 0
+  const previous = sorted[1]?.amount || 0
+  return latest - previous
+})
+
+const liabilitiesChange = computed(() => {
+  if (!records.value.length) return 0
+  const sorted = [...records.value]
+    .filter(r => r.amount < 0)
+    .sort((a, b) => new Date(b.acquireTime) - new Date(a.acquireTime))
+  const latest = sorted[0]?.amount || 0
+  const previous = sorted[1]?.amount || 0
+  return latest - previous
+})
+
+const netWorthChange = computed(() => assetsChange.value + liabilitiesChange.value)
+
+// 方法
+async function handleQuery() {
+  try {
+    const result = await assetStore.fetchRecords({
+      ...query,
+      page: current.value,
+      pageSize: pageSize.value
+    })
+    records.value = result.records
+    total.value = result.total
+  } catch (error) {
+    console.error('获取记录失败：', error)
+  }
 }
 
-async function addRecord() {
-  // 表单验证
-  if (!form.assetNameId) {
-    emitter.emit('notify', '请选择资产名称', 'error')
-    return
-  }
-  if (!form.assetTypeId) {
-    emitter.emit('notify', '请选择资产分类', 'error')
-    return
-  }
-  if (!form.amount || form.amount <= 0) {
-    emitter.emit('notify', '请输入正确的金额', 'error')
-    return
-  }
-  if (!form.unitId) {
-    emitter.emit('notify', '请选择货币单位', 'error')
-    return
-  }
-  if (!form.assetLocationId) {
-    emitter.emit('notify', '请选择资产位置', 'error')
-    return
-  }
-  if (!form.acquireTime) {
-    emitter.emit('notify', '请选择日期', 'error')
-    return
-  }
+function resetQuery() {
+  Object.assign(query, {
+    typeId: '',
+    startDate: '',
+    endDate: '',
+    remark: ''
+  })
+  handleQuery()
+}
 
-  adding.value = true
+function showModal() {
+  showAddModal.value = true
+}
+
+function cancelModal() {
+  showAddModal.value = false
+  Object.assign(form, {
+    assetName: '',
+    typeId: '',
+    amount: '',
+    unitId: '',
+    locationId: '',
+    acquireTime: new Date().toISOString().split('T')[0],
+    remark: ''
+  })
+}
+
+function formatAmount(amount) {
+  return new Intl.NumberFormat('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount)
+}
+
+function getChangePrefix(change) {
+  return change > 0 ? '+' : ''
+}
+
+async function handleAddRecord(formData) {
   try {
-    const res = await axios.post('/api/asset-record/add', {
-      assetNameId: form.assetNameId,
-      assetTypeId: form.assetTypeId,
-      amount: form.amount,
-      unitId: form.unitId,
-      assetLocationId: form.assetLocationId,
-      acquireTime: form.acquireTime + 'T00:00:00',
-      remark: form.remark
-    })
-    if (res.data?.success) {
-      await fetchRecords()
-      // 重置表单时使用 store 中的第一个选项
-      form.assetNameId = assetStore.assetNames[0]?.id
-      form.typeId = assetStore.types[0]?.id
-      form.unitId = assetStore.units[0]?.id
-      form.locationId = assetStore.locations[0]?.id
-      form.amount = 0
-      form.acquireTime = getTodayDate()
-      form.remark = ''
-      emitter.emit('notify', '添加成功', 'success')
-    } else {
-      emitter.emit('notify', res.data?.message || '添加失败', 'error')
-    }
+    adding.value = true
+    await assetStore.addRecord(formData)
+    showAddModal.value = false
+    await handleQuery()
   } catch (error) {
-    console.error('添加资产记录失败:', error)
-    emitter.emit('notify', error.message || '添加失败', 'error')
+    console.error('添加记录失败：', error)
   } finally {
     adding.value = false
   }
 }
 
-function handleAddRecord() {
-  addRecord().then(() => {
-    showAddModal.value = false
-  })
-}
-
-function editRecord(idx) {
+async function editRecord(idx) {
   editingIdx.value = idx
-  const record = records.value[idx]
-  editForm.assetNameId = record.assetNameId
-  editForm.assetTypeId = record.assetTypeId
-  editForm.amount = record.amount
-  editForm.unitId = record.unitId
-  editForm.assetLocationId = record.assetLocationId
-  editForm.acquireTime = record.acquireTime ? record.acquireTime.slice(0, 10) : getTodayDate()
-  editForm.remark = record.remark || ''
+  Object.assign(editForm, records.value[idx])
 }
 
-async function saveEdit() {
-  // 表单验证
-  if (!editForm.assetNameId) {
-    emitter.emit('notify', '请选择资产名称', 'error')
-    return
-  }
-  if (!editForm.assetTypeId) {
-    emitter.emit('notify', '请选择资产分类', 'error')
-    return
-  }
-  if (!editForm.amount || editForm.amount <= 0) {
-    emitter.emit('notify', '请输入正确的金额', 'error')
-    return
-  }
-  if (!editForm.unitId) {
-    emitter.emit('notify', '请选择货币单位', 'error')
-    return
-  }
-  if (!editForm.assetLocationId) {
-    emitter.emit('notify', '请选择资产位置', 'error')
-    return
-  }
-  if (!editForm.acquireTime) {
-    emitter.emit('notify', '请选择日期', 'error')
-    return
-  }
-  
-  if (editingIdx.value !== null) {
-    const record = records.value[editingIdx.value]
-    const payload = {
-      id: record.id,
-      assetNameId: editForm.assetNameId,
-      assetTypeId: editForm.assetTypeId,
-      amount: editForm.amount,
-      unitId: editForm.unitId,
-      assetLocationId: editForm.assetLocationId,
-      acquireTime: editForm.acquireTime + 'T00:00:00',
-      remark: editForm.remark
-    }
-    try {
-      const res = await axios.put('/api/asset-record/update', payload)
-      if (res.data && res.data.success) {
-        await fetchRecords()
-        editingIdx.value = null
-        emitter.emit('notify', '保存成功', 'success')
-      } else {
-        emitter.emit('notify', res.data?.message || '保存失败', 'error')
-      }
-    } catch (error) {
-      console.error('更新资产记录失败:', error)
-      emitter.emit('notify', error.message || '保存失败', 'error')
-    }
+async function saveEdit(formData) {
+  try {
+    await assetStore.updateRecord({
+      id: records.value[editingIdx.value].id,
+      ...formData
+    })
+    editingIdx.value = null
+    await handleQuery()
+  } catch (error) {
+    console.error('更新记录失败：', error)
   }
 }
 
@@ -457,140 +271,52 @@ function cancelEdit() {
 }
 
 async function deleteRecord(idx) {
-  emitter.emit('confirm', {
-    title: '删除确认',
-    message: '确定要删除该记录吗？',
-    onConfirm: async () => {
-      const id = records.value[idx].id
-      const res = await axios.delete(`/api/asset-record/delete/${id}`)
-      if (res.data && res.data.success) {
-        await fetchRecords()
-        emitter.emit('notify', '删除成功', 'success')
-      }
-    }
-  })
+  const record = records.value[idx]
+  if (!confirm(`确定要删除这条记录吗？`)) return
+  
+  try {
+    await assetStore.deleteRecord(record.id)
+    await handleQuery()
+  } catch (error) {
+    console.error('删除记录失败：', error)
+  }
 }
 
-function handleQuery() {
-  fetchRecords()
-}
-
-function resetQuery() {
-  query.typeId = ''
-  query.startDate = ''
-  query.endDate = ''
-  query.remark = ''
-  fetchRecords()
+async function copyLastRecords() {
+  try {
+    await assetStore.copyLastRecords()
+    await handleQuery()
+  } catch (error) {
+    console.error('复制上回记录失败：', error)
+  }
 }
 
 function handlePageChange(page) {
-  fetchRecords(page, pageSize.value)
+  current.value = page
+  handleQuery()
 }
 
 function handlePageSizeChange(size) {
   pageSize.value = size
-  fetchRecords(1, size)
+  current.value = 1
+  handleQuery()
 }
 
-async function copyLastRecords() {
-  emitter.emit('confirm', {
-    title: '复制确认',
-    message: '确定要复制上次的资产记录吗？',
-    onConfirm: async () => {
-      try {
-        const res = await axios.post('/api/asset-record/copy-last')
-        if (res.data?.success) {
-          await fetchRecords()
-          emitter.emit('notify', '复制上次记录成功', 'success')
-        } else {
-          // 如果是今日已有记录的情况
-          if (res.data?.message?.includes('今日已有记录')) {
-            emitter.emit('confirm', {
-              title: '提示',
-              message: '今日已有资产记录，是否仍要复制？',
-              onConfirm: async () => {
-                try {
-                  const forceRes = await axios.post('/api/asset-record/copy-last?force=true')
-                  if (forceRes.data?.success) {
-                    await fetchRecords()
-                    emitter.emit('notify', '复制上次记录成功', 'success')
-                  } else {
-                    emitter.emit('notify', forceRes.data?.message || '复制失败', 'error')
-                  }
-                } catch (err) {
-                  console.error('强制复制记录失败:', err)
-                  emitter.emit('notify', err.message || '复制失败', 'error')
-                }
-              }
-            })
-          } else {
-            emitter.emit('notify', res.data?.message || '复制失败', 'error')
-          }
-        }
-      } catch (error) {
-        console.error('复制上次记录失败:', error)
-        emitter.emit('notify', error.message || '复制失败', 'error')
-      }
-    }
-  })
-}
-
-async function showModal() {
-  try {
-    console.log('开始打开模态框流程...')
-    console.log('当前用户Token:', localStorage.getItem('token'))
-    console.log('正在检查并初始化数据...')
-    await checkAndInitData() // 确保数据已加载
-    console.log('数据初始化完成，开始获取资产名称列表...')
-    await assetStore.fetchAssetNames() // 刷新资产名称列表
-    console.log('获取到的资产名称列表:', assetStore.assetNames)
-    showAddModal.value = true
-    console.log('模态框已打开')
-  } catch (error) {
-    console.error('打开模态框失败:', {
-      error,
-      message: error.message,
-      response: error.response?.data,
-      stack: error.stack
-    })
-    emitter.emit('notify', `加载数据失败: ${error.response?.data?.message || error.message}`, 'error')
-    // 如果是 token 相关错误，尝试重新登录
-    if (error.response?.status === 401 || 
-        error.response?.status === 403 || 
-        error.response?.data?.message?.toLowerCase().includes('token')) {
-      console.log('检测到认证问题，尝试重新登录...')
-      await userStore.autoLogin()
-    }
-  }
-}
-
-// 添加刷新资产名称的处理函数
 async function refreshAssetNames() {
-  try {
-    await assetStore.fetchAssetNames()
-    // 同时刷新资产记录列表以显示更新后的名称
-    await fetchRecords()
-    emitter.emit('notify', '资产名称列表已更新', 'success')
-  } catch (error) {
-    console.error('刷新资产名称列表失败:', error)
-    emitter.emit('notify', '刷新资产名称列表失败', 'error')
+  await assetStore.fetchAssetNames()
+}
+
+// 生命周期钩子
+onMounted(async () => {
+  if (isLoggedIn) {
+    await Promise.all([
+      assetStore.fetchTypes(),
+      assetStore.fetchUnits(),
+      assetStore.fetchLocations(),
+      assetStore.fetchAssetNames()
+    ])
+    handleQuery()
   }
-}
-
-// 取消模态框
-function cancelModal() {
-  showAddModal.value = false
-  // 重置表单
-  Object.assign(form, {
-    assetNameId: assetStore.assetNames[0]?.id || null,
-    assetTypeId: assetStore.types[0]?.id || null,
-    amount: 0,
-    unitId: assetStore.units[0]?.id || null,
-    assetLocationId: assetStore.locations[0]?.id || null,
-    acquireTime: getTodayDate(),
-    remark: ''
-  })
-}
+})
 </script>
-
 

@@ -10,7 +10,6 @@
           :size="48" 
         />
       </div>
-      <p class="text-secondary" style="margin-top: var(--spacing-lg)">您的个人管理助手</p>
     </div>
   </div>
 </template>

@@ -32,7 +32,7 @@
 </template>
 
 <script setup>
-import { ref, watch, reactive } from 'vue';
+import { reactive, watch } from 'vue';
 import { LucideSearch, LucideRotateCcw } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -66,7 +66,6 @@ watch(() => props.query, (newQuery) => {
 
 // 监听本地查询对象变化
 watch(localQuery, (newQuery) => {
-  console.log('SearchPanel - 本地查询条件变化：', newQuery);
   emit('update:query', {
     typeId: newQuery.typeId,
     startDate: newQuery.startDate,

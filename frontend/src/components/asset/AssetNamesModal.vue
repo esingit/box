@@ -1,111 +1,77 @@
 <template>
-  <div v-if="show" class="modal-overlay">
-    <div class="modal-content names-modal">
-      <div class="modal-header">
-        <h3 class="modal-title">资产名称维护</h3>
-        <button class="close-button" @click="handleClose">
-          <LucideX class="close-icon" />
-        </button>
-      </div>
-      
-      <!-- 搜索和操作栏 -->
-      <div class="toolbar">
-        <button v-if="!showAdd && !showEdit" class="btn btn-primary" @click="showAddForm">
-          <LucidePlus :size="16" class="btn-icon" />
-          新增
-        </button>
-        <div class="search-wrapper">
-          <input 
-            v-model="searchTerm" 
-            type="text" 
-            placeholder="搜索资产名称..."
-            class="search-input" 
-          />
-        </div>
-      </div>
+  <div v-if="show" class="modal-overlay" @click.self="handleClose">
+    <div class="modal-container modal-lg">
+      <ModalHeader 
+        title="资产名称维护" 
+        @close="handleClose" 
+      />
 
-      <!-- 新增表单 -->
-      <div v-if="showAdd" class="add-form">
-        <div class="input-group">
-          <input 
-            v-model="newName" 
-            type="text" 
-            placeholder="输入资产名称"
-            class="form-input"
-          />
-          <input 
-            v-model="newDescription" 
-            type="text" 
-            placeholder="输入描述（可选）"
-            class="form-input"
-          />
-          <div class="form-actions">
-            <button class="btn btn-primary" @click="addName">确定</button>
-            <button class="btn btn-text" @click="cancelAdd">取消</button>
+      <div class="modal-body">
+        <!-- 工具栏 -->
+        <div class="query-bar">
+          <div class="query-fields">
+            <input
+              v-model="searchTerm"
+              type="text"
+              class="input search-input"
+              placeholder="搜索资产名称..."
+              @input="handleSearch"
+            />
+          </div>
+          <div class="query-btns">
+            <button 
+              v-if="!showAdd && !showEdit" 
+              class="btn btn-primary" 
+              @click="showAddForm"
+            >
+              <LucidePlus class="btn-icon" :size="16" />
+              <span>新增</span>
+            </button>
           </div>
         </div>
-      </div>
 
-      <!-- 编辑表单 -->
-      <div v-if="showEdit" class="edit-form">
-        <div class="input-group">
-          <input 
-            v-model="editingName" 
-            type="text" 
-            placeholder="输入资产名称"
-            class="form-input"
-          />
-          <input 
-            v-model="editingDescription" 
-            type="text" 
-            placeholder="输入描述（可选）"
-            class="form-input"
-          />
-          <div class="form-actions">
-            <button class="btn btn-primary" @click="saveEdit">保存</button>
-            <button class="btn btn-text" @click="cancelEdit">取消</button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 资产名称列表 -->
-      <div class="names-list">
-        <div v-if="loading" class="loading-state">
-          加载中...
-        </div>
-        <div v-else-if="error" class="error-state">
-          {{ error }}
-        </div>
-        <div v-else-if="names.length === 0" class="empty-state">
-          暂无资产名称
-        </div>
-        <template v-else>
-          <div v-for="name in names" :key="name.id" class="name-item">
-            <div class="name-info">
-              <span class="name-text">{{ name.name }}</span>
-              <span v-if="name.description" class="name-desc">{{ name.description }}</span>
-            </div>
-            <div class="name-actions">
-              <button class="action-btn" @click="startEdit(name)" title="编辑">
-                <LucidePencil :size="16" />
-              </button>
-              <button class="action-btn delete" @click="confirmDelete(name)" title="删除">
-                <LucideTrash2 :size="16" />
-              </button>
-            </div>
-          </div>
-        </template>
-      </div>
-
-      <!-- 分页器 -->
-      <div class="pagination-wrapper">
-        <PaginationBar
-          :current="current"
-          :total="total"
-          :page-size="pageSize"
-          @page-change="handlePageChange"
-          @page-size-change="handlePageSizeChange"
+        <!-- 资产名称表单弹窗 -->
+        <AssetNameForm
+          v-if="showAdd || showEdit"
+          :show="showAdd || showEdit"
+          :loading="loading"
+          :edit-data="showEdit ? {
+            id: editingId,
+            name: editingName,
+            description: editingDescription
+          } : null"
+          @close="() => showAdd ? (showAdd = false) : (showEdit = false)"
+          @submit="handleFormSubmit"
         />
+
+        <!-- 列表区域 -->
+        <div v-else class="content-container">
+          <div v-if="loading" class="empty-container">
+            <EmptyState
+              message="加载中..."
+              icon="Loader"
+            />
+          </div>
+          <template v-else>
+            <div class="table-wrapper">
+              <AssetNamesTable 
+                :names="filteredNameList"
+                @edit="startEdit"
+                @delete="confirmDelete"
+              />
+            </div>
+            
+            <div class="pagination-container mt-4">
+              <PaginationBar
+                :current="current"
+                :total="total"
+                :page-size="pageSize"
+                @page-change="handlePageChange"
+                @page-size-change="handlePageSizeChange"
+              />
+            </div>
+          </template>
+        </div>
       </div>
     </div>
   </div>
@@ -113,10 +79,15 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { LucideX, LucideCheck, LucideEdit2, LucideTrash2, LucidePencil, LucidePlus } from 'lucide-vue-next'
-import PaginationBar from '../../components/PaginationBar.vue'
-import emitter from '../../utils/eventBus.js'
-import axios from '../../utils/axios.js'
+import { LucidePlus } from 'lucide-vue-next'
+import EmptyState from '@/components/common/EmptyState.vue'
+import PaginationBar from '@/components/PaginationBar.vue'
+import ModalHeader from './ModalHeader.vue'
+import AssetNamesTable from './AssetNamesTable.vue'
+import AssetNameForm from './AssetNameForm.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import emitter from '@/utils/eventBus.js'
+import axios from '@/utils/axios.js'
 
 // 防抖函数
 function debounce(fn, delay = 300) {
@@ -136,9 +107,33 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'refresh'])
 
+// 状态管理
+const searchTerm = ref('')
+const names = ref([])
+const loading = ref(false)
+const error = ref(null)
+const showAdd = ref(false)
+const showEdit = ref(false)
+const newName = ref('')
+const newDescription = ref('')
+const editingId = ref(null)
+const editingName = ref('')
+const editingDescription = ref('')
+const current = ref(1)
+const total = ref(0)
+const pageSize = ref(10)
+
+// 新增响应式变量
+const formError = ref('')
+
 // 处理关闭模态框
 function handleClose() {
-  // 重置状态
+  // 重置所有状态
+  resetState()
+  emit('close')
+}
+
+function resetState() {
   showAdd.value = false
   showEdit.value = false
   searchTerm.value = ''
@@ -148,24 +143,7 @@ function handleClose() {
   editingName.value = ''
   editingDescription.value = ''
   error.value = null
-  
-  emit('close')
 }
-
-const searchTerm = ref('')
-const names = ref([])
-const showAdd = ref(false)
-const showEdit = ref(false) // 新增编辑模态框显示状态
-const loading = ref(false) // 加载状态
-const error = ref(null) // 错误状态
-const newName = ref('')
-const newDescription = ref('') // 新增描述字段
-const editingDescription = ref('') // 编辑时的描述字段
-const current = ref(1)
-const total = ref(0)
-const pageSize = ref(10)
-const editingId = ref(null)
-const editingName = ref('')
 
 // 监听搜索词变化
 watch(searchTerm, debounce(() => {
@@ -234,7 +212,7 @@ async function addName() {
   }
 }
 
-// 编辑资产名称
+// 处理编辑
 function startEdit(name) {
   editingId.value = name.id
   editingName.value = name.name
@@ -279,27 +257,31 @@ function cancelEdit() {
 
 // 删除资产名称
 async function confirmDelete(name) {
-  if (!window.confirm(`确定要删除资产名称"${name.name}"吗？`)) return
-  
-  loading.value = true
-  error.value = null
-  try {
-    const res = await axios.delete(`/api/asset-names/${name.id}`)
-    if (res.data?.success) {
-      emitter.emit('notify', '删除成功', 'success')
-      await fetchNames()
-      emit('refresh')
-    } else {
-      error.value = res.data?.message || '删除失败'
-      emitter.emit('notify', error.value, 'error')
+  emitter.emit('confirm', {
+    title: '删除确认',
+    message: `确定要删除资产名称"${name.name}"吗？`,
+    onConfirm: async () => {
+      loading.value = true
+      error.value = null
+      try {
+        const res = await axios.delete(`/api/asset-names/${name.id}`)
+        if (res.data?.success) {
+          emitter.emit('notify', '删除成功', 'success')
+          await fetchNames()
+          emit('refresh')
+        } else {
+          error.value = res.data?.message || '删除失败'
+          emitter.emit('notify', error.value, 'error')
+        }
+      } catch (error) {
+        console.error('删除资产名称失败:', error)
+        error.value = error.message || '删除失败'
+        emitter.emit('notify', error.value, 'error')
+      } finally {
+        loading.value = false
+      }
     }
-  } catch (error) {
-    console.error('删除资产名称失败:', error)
-    error.value = error.message || '删除失败'
-    emitter.emit('notify', error.value, 'error')
-  } finally {
-    loading.value = false
-  }
+  })
 }
 
 function showAddForm() {
@@ -309,11 +291,13 @@ function showAddForm() {
 function cancelAdd() {
   showAdd.value = false
   newName.value = ''
+  newDescription.value = ''
+  handleClose() // 调用 handleClose 完全关闭模态框
 }
 
 function handlePageChange(page) {
-  // 确保页码在有效范围内
-  const validPage = Math.min(Math.max(1, page), Math.ceil(total.value / pageSize.value))
+  const maxPage = Math.ceil(total.value / pageSize.value)
+  const validPage = Math.min(Math.max(1, page), maxPage)
   if (validPage !== page) {
     emitter.emit('notify', '页码超出范围', 'warning')
   }
@@ -322,22 +306,89 @@ function handlePageChange(page) {
 
 function handlePageSizeChange(size) {
   pageSize.value = size
-  // 切换每页条数时,重新计算当前页码
   const maxPage = Math.ceil(total.value / size)
   const validPage = Math.min(current.value, maxPage)
   fetchNames(validPage)
 }
 
+// 处理表单提交
+async function handleFormSubmit(data) {
+  loading.value = true
+  formError.value = ''
+  try {
+    if (showAdd.value) {
+      // 处理新增
+      const { name, description } = data
+      const res = await axios.post('/api/asset-names', {
+        name: name.trim(),
+        description: description.trim() || null
+      })
+      if (res.data?.success) {
+        emitter.emit('notify', '添加成功', 'success')
+        await fetchNames()
+        emit('refresh')
+        showAdd.value = false
+      } else {
+        const errMsg = res.data?.message || '添加失败'
+        // 检查是否是重复名称错误
+        if (errMsg.includes('Duplicate entry') || errMsg.includes('uniq_name')) {
+          formError.value = '该资产名称已存在'
+        } else {
+          error.value = errMsg
+          emitter.emit('notify', errMsg, 'error')
+        }
+      }
+    } else if (showEdit.value) {
+      // 处理编辑
+      const { id, name, description } = data
+      const res = await axios.put(`/api/asset-names/${id}`, {
+        name: name.trim(),
+        description: description.trim() || null
+      })
+      if (res.data?.success) {
+        emitter.emit('notify', '保存成功', 'success')
+        await fetchNames()
+        emit('refresh')
+        showEdit.value = false
+      } else {
+        const errMsg = res.data?.message || '保存失败'
+        if (errMsg.includes('Duplicate entry') || errMsg.includes('uniq_name')) {
+          formError.value = '该资产名称已存在'
+        } else {
+          error.value = errMsg
+          emitter.emit('notify', errMsg, 'error')
+        }
+      }
+    }
+  } catch (err) {
+    console.error('操作失败:', err)
+    error.value = err.message || '操作失败'
+    emitter.emit('notify', error.value, 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 初始化加载数据
 fetchNames()
 
+// 监听显示状态变化
 watch(() => props.show, (newVal) => {
   if (newVal) {
-    // 模态框打开时，加载数据
     fetchNames()
   } else {
-    // 模态框关闭时，重置状态
     handleClose()
   }
+})
+
+// 过滤后的名称列表
+const filteredNameList = computed(() => {
+  if (!searchTerm.value) {
+    return names.value
+  }
+  return names.value.filter(item => 
+    item.name.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+    item.description?.toLowerCase().includes(searchTerm.value.toLowerCase())
+  )
 })
 </script>

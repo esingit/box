@@ -52,3 +52,30 @@
   display: flex;
   gap: var(--spacing-sm);
 }
+
+/* 金额单元格 */
+.amount-cell {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: var(--font-medium);
+}
+
+.amount-cell.positive {
+  color: var(--success);
+}
+
+.amount-cell.negative {
+  color: var(--error);
+}
+
+/* 表格响应式布局 */
+@media (max-width: 768px) {
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    min-width: 800px;
+  }
+}

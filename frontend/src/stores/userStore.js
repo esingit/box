@@ -6,9 +6,9 @@ const API_URL = '/api/user'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
-    token: localStorage.getItem('token') || null,
-    user: JSON.parse(localStorage.getItem('user')) || null,
-    isLoggedIn: !!localStorage.getItem('token'),
+    token: null,
+    user: null,
+    isLoggedIn: false,
   }),
 
   getters: {
@@ -26,6 +26,28 @@ export const useUserStore = defineStore('user', {
   },
 
   actions: {
+    async hydrate() {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      
+      if (token) {
+        this.token = token;
+        this.user = JSON.parse(userStr);
+        this.isLoggedIn = true;
+        
+        // 设置axios默认header
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        try {
+          // 验证token
+          await axios.get(`${API_URL}/verify-token`);
+        } catch (error) {
+          // token无效，清理状态
+          console.error('Token验证失败:', error);
+          this.logout(false);
+        }
+      }
+    },
     async register(userData) {
       try {
         const response = await axios.post('/api/user/register', userData)

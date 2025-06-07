@@ -149,6 +149,9 @@ instance.interceptors.response.use(
         isRefreshing = true
         
         try {
+          // 取消所有待处理的请求
+          cancelPendingRequests('登录已过期')
+          
           const newToken = await refreshToken()
           
           if (newToken) {
@@ -214,6 +217,13 @@ instance.interceptors.response.use(
 
       // 清理登录状态
       await userStore.logout(false) // 不主动清除UI状态
+      
+      // 取消所有待处理的请求
+      cancelPendingRequests('登录已过期')
+      
+      // 使用 nextTick 确保状态更新后再显示登录框
+      const { nextTick } = await import('vue')
+      await nextTick()
       
       const { useAuth } = await import('@/composables/useAuth')
       const { showLogin } = useAuth()

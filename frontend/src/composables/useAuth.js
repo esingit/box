@@ -30,24 +30,26 @@ export function useAuth() {
     return true;
   }
 
-  // 记录最后一次需要登录权限的操作
-  const lastRequiredAuthAction = ref(null);
+  // 记录最后一次需要登录权限的操作和消息
+  const pendingAuthAction = ref(null);
+  const pendingAuthMessage = ref(null);
   
   // 显示登录框
-  const showLogin = debounce((message, requiredAuthAction = null) => {
+  const showLogin = debounce((message, callback = null) => {
     if (!isShowingLoginModal.value) {
       isShowingLoginModal.value = true;
+      
+      // 保存消息和回调
+      pendingAuthMessage.value = message;
+      if (callback) {
+        pendingAuthAction.value = callback;
+      }
       
       // 确保消息显示
       if (message) {
         setTimeout(() => {
           emitter.emit('login-error', message);
         }, 100);
-      }
-      
-      // 记录需要登录权限的操作
-      if (requiredAuthAction) {
-        lastRequiredAuthAction.value = requiredAuthAction;
       }
       
       // 触发显示登录模态框的事件
@@ -100,6 +102,8 @@ export function useAuth() {
   return {
     isShowingLoginModal,
     isShowingRegisterModal,
+    pendingAuthAction,
+    pendingAuthMessage,
     showLogin,
     hideLogin,
     showRegister,

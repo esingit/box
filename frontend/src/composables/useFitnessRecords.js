@@ -22,11 +22,19 @@ export function useFitnessRecords() {
     try {
       const params = {
         page,
-        pageSize: size,
-        ...query
+        pageSize: size
       };
 
+      // 添加非空的查询参数
+      if (query.typeId) params.typeId = query.typeId;
+      if (query.startDate) params.startDate = query.startDate + 'T00:00:00';
+      if (query.endDate) params.endDate = query.endDate + 'T23:59:59';
+      if (query.remark) params.remark = query.remark.trim();
+
+      console.log('发送查询请求，参数：', params);
+
       const res = await axios.get('/api/fitness-record/list', { params });
+      console.log('查询响应：', res.data);
       
       if (res.data?.success) {
         const rawRecords = res.data.data?.records || [];
@@ -99,10 +107,15 @@ export function useFitnessRecords() {
   }
 
   function resetQuery() {
-    query.typeId = '';
-    query.startDate = '';
-    query.endDate = '';
-    query.remark = '';
+    // 重置所有查询条件
+    Object.assign(query, {
+      typeId: '',
+      startDate: '',
+      endDate: '',
+      remark: ''
+    });
+    console.log('重置查询条件：', query);
+    // 重置到第一页并重新查询
     fetchRecords(1);
   }
 

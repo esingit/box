@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import App from '@/App.vue'
 import router from '@/router'
 import { createPinia } from 'pinia'
+import { useUserStore } from '@/stores/userStore'
 
 import 'normalize.css'
 
@@ -18,7 +19,17 @@ import './assets/table.css'
 import './assets/toast.css'
 import './assets/pagination.css'
 
-const app = createApp(App)
-app.use(createPinia())
-app.use(router)
-app.mount('#app')
+async function initApp() {
+  const pinia = createPinia()
+  const app = createApp(App)
+  app.use(pinia)
+  app.use(router)
+
+  // 初始化store
+  const userStore = useUserStore()
+  await userStore.hydrate()
+
+  app.mount('#app')
+}
+
+initApp()

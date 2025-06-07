@@ -155,15 +155,21 @@ async function handleSubmit() {
       // 通知其他组件更新认证状态
       emitter.emit('auth-state-changed', true);
       
-      // 如果有待执行的操作，执行它
-      const { lastRequiredAuthAction } = useAuth();
-      if (lastRequiredAuthAction && lastRequiredAuthAction.value) {
-        await lastRequiredAuthAction.value();
-        lastRequiredAuthAction.value = null;
-      }
+      // 获取 useAuth 的状态
+      const { pendingAuthAction, pendingAuthMessage } = useAuth();
       
       emit('login-success');
       emit('close');
+      
+      // 如果有待执行的操作，执行它
+      if (pendingAuthAction.value) {
+        const callback = pendingAuthAction.value;
+        // 清空待执行操作
+        pendingAuthAction.value = null;
+        pendingAuthMessage.value = null;
+        // 执行回调
+        await callback();
+      }
     } else {
       error.value = res.message;
       // 检查是否需要显示验证码
