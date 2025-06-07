@@ -13,6 +13,7 @@ export const useAssetStore = defineStore('asset', () => {
 
   // 获取资产记录列表
   async function fetchRecords({ page = 1, pageSize = 10, typeId, startDate, endDate, remark }) {
+    loading.value = true
     try {
       const params = {
         page,
@@ -25,10 +26,7 @@ export const useAssetStore = defineStore('asset', () => {
       if (endDate) params.endDate = endDate + 'T23:59:59'
       if (remark) params.remark = remark.trim()
 
-      console.log('发送查询请求，参数：', params)
-
       const res = await axios.get('/api/asset-record/list', { params })
-      console.log('查询响应：', res.data)
       
       if (res.data?.success) {
         return {
@@ -38,12 +36,15 @@ export const useAssetStore = defineStore('asset', () => {
           size: res.data.data.size
         }
       } else {
-        throw new Error(res.data?.message || '获取资产记录失败')
+        emitter.emit('notify', res.data?.message || '获取资产记录失败', 'error')
+        return null
       }
     } catch (error) {
       console.error('获取资产记录失败:', error)
-      emitter.emit('notify', `获取资产记录失败: ${error.message || '未知错误'}`, 'error')
-      throw error
+      emitter.emit('notify', `获取记录失败: ${error.message || '未知错误'}`, 'error')
+      return null
+    } finally {
+      loading.value = false
     }
   }
 

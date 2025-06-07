@@ -1,0 +1,45 @@
+/* 操作按钮基础样式 */
+.action-btn {
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-full);
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+
+.action-btn:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
+
+/* 操作按钮组 */
+.operations {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+
+/* 编辑按钮 */
+.action-btn.edit:hover {
+  color: var(--text-primary);
+}
+
+/* 删除按钮 */
+.action-btn.delete:hover {
+  color: var(--error-color);
+  border-color: var(--error-color);
+  background-color: var(--bg-error);
+}

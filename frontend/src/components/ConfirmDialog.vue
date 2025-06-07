@@ -9,7 +9,7 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="confirm-message">{{ message }}</div>
+          <div class="confirm-message" style="white-space: pre-line;">{{ message }}</div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-text" @click="onCancel">

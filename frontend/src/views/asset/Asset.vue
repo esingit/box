@@ -102,13 +102,16 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { LucideWallet, LucideSearch, LucideRotateCcw } from 'lucide-vue-next'
 import { useAssetStore } from '@/stores/assetStore'
 import { useAuth } from '@/composables/useAuth'
+import emitter from '@/utils/eventBus.js'
 import PageHeader from '@/components/common/PageHeader.vue'
 import AssetList from '@/components/asset/AssetList.vue'
 import AssetModal from '@/components/asset/AssetModal.vue'
 import SearchPanel from '@/components/asset/SearchPanel.vue'
 
+// 外部依赖
 const assetStore = useAssetStore()
-const { isLoggedIn } = useAuth()
+const auth = useAuth()
+const isLoggedIn = computed(() => auth.isLoggedIn)
 
 // 图标
 const WalletIcon = LucideWallet
@@ -190,10 +193,13 @@ async function handleQuery() {
       page: current.value,
       pageSize: pageSize.value
     })
-    records.value = result.records
-    total.value = result.total
+    if (result) {
+      records.value = result.records || []
+      total.value = result.total || 0
+    }
   } catch (error) {
     console.error('获取记录失败：', error)
+    emitter.emit('notify', '获取记录失败', 'error')
   }
 }
 
@@ -272,8 +278,6 @@ function cancelEdit() {
 
 async function deleteRecord(idx) {
   const record = records.value[idx]
-  if (!confirm(`确定要删除这条记录吗？`)) return
-  
   try {
     await assetStore.deleteRecord(record.id)
     await handleQuery()
@@ -308,14 +312,33 @@ async function refreshAssetNames() {
 
 // 生命周期钩子
 onMounted(async () => {
-  if (isLoggedIn) {
+  if (!isLoggedIn.value) {
+    auth.showLogin('请先登录')
+    return
+  }
+  
+  try {
     await Promise.all([
       assetStore.fetchTypes(),
       assetStore.fetchUnits(),
       assetStore.fetchLocations(),
       assetStore.fetchAssetNames()
     ])
-    handleQuery()
+    await handleQuery()
+  } catch (error) {
+    // 如果是取消的请求，不显示错误提示
+    if (error.name === 'CanceledError') {
+      console.log('请求已取消:', error.message)
+      return
+    }
+    // 如果是未授权错误，重定向到登录
+    if (error.response?.status === 401) {
+      const { showLogin } = useAuth()
+      showLogin('登录已过期，请重新登录')
+      return
+    }
+    console.error('初始化数据失败:', error)
+    emitter.emit('notify', '加载数据失败：' + (error.message || '请刷新页面重试'), 'error')
   }
 })
 </script>

@@ -13,7 +13,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/user")
@@ -189,6 +191,29 @@ public class UserController {
         }
     }
 
+    @GetMapping("/verify-token")
+    public Result<Map<String, Object>> verifyToken(HttpServletRequest request) {
+        try {
+            String token = getTokenFromRequest(request);
+            if (token == null) {
+                return Result.error("Token不存在");
+            }
+            
+            boolean shouldRefresh = jwtTokenProvider.shouldRefreshToken(token);
+            if (jwtTokenProvider.validateToken(token)) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("valid", true);
+                response.put("shouldRefresh", shouldRefresh);
+                return Result.success(response);
+            }
+            return Result.error("Token无效");
+        } catch (JwtException e) {
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            return Result.error("验证过程发生错误");
+        }
+    }
+
     @PostMapping("/refresh-token")
     public Result<String> refreshToken(HttpServletRequest request) {
         String token = getTokenFromRequest(request);
@@ -198,45 +223,27 @@ public class UserController {
         }
         
         try {
-            if (jwtTokenProvider.isTokenExpired(token)) {
-                return Result.error("Token已过期，请重新登录");
+            // 验证旧token
+            if (!jwtTokenProvider.validateToken(token)) {
+                return Result.error("Token无效");
             }
             
-            if (jwtTokenProvider.shouldRefreshToken(token)) {
-                String newToken = jwtTokenProvider.refreshToken(token);
-                if (newToken != null) {
-                    return Result.success(newToken);
-                }
+            // 检查是否需要刷新
+            if (!jwtTokenProvider.shouldRefreshToken(token)) {
+                return Result.success(token); // 返回原token
             }
             
-            return Result.success(token);
-        } catch (Exception e) {
-            return Result.error("Token无效");
-        }
-    }
-    
-    private String getTokenFromRequest(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
-        }
-        return null;
-    }
-
-    @GetMapping("/verify-token")
-    public Result<Void> verifyToken(HttpServletRequest request) {
-        try {
-            String token = getTokenFromRequest(request);
-            if (token == null) {
-                return Result.error("Token不存在");
+            // 刷新token
+            String newToken = jwtTokenProvider.refreshToken(token);
+            if (newToken != null) {
+                return Result.success(newToken);
             }
             
-            if (jwtTokenProvider.validateToken(token)) {
-                return Result.success();
-            }
-            return Result.error("Token无效");
-        } catch (Exception e) {
+            return Result.error("Token刷新失败");
+        } catch (JwtException e) {
             return Result.error(e.getMessage());
+        } catch (Exception e) {
+            return Result.error("刷新过程发生错误");
         }
     }
 
@@ -248,13 +255,11 @@ public class UserController {
                 try {
                     // 验证 token
                     if (jwtTokenProvider.validateToken(token)) {
-                        // 获取用户名
+                        // 获取用户名并废止token
                         String username = jwtTokenProvider.getUsernameFromJWT(token);
-                        // 把当前 token 加入黑名单
-                        String blacklistKey = "token_blacklist:" + token;
-                        redisTemplate.opsForValue().set(blacklistKey, username, 24, TimeUnit.HOURS);
+                        jwtTokenProvider.invalidateToken(token);
                         
-                        // 可选：记录用户登出时间
+                        // 记录用户登出时间
                         String lastLogoutKey = "last_logout:" + username;
                         redisTemplate.opsForValue().set(lastLogoutKey, String.valueOf(System.currentTimeMillis()));
                         
@@ -265,12 +270,18 @@ public class UserController {
                     return Result.success();
                 }
             }
-            // 如果没有 token，也视为成功
             return Result.success();
         } catch (Exception e) {
-            // 记录错误日志但返回成功
             System.err.println("登出处理异常: " + e.getMessage());
-            return Result.success();
+            return Result.error("登出过程发生错误");
         }
+    }
+    
+    private String getTokenFromRequest(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 }

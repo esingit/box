@@ -31,10 +31,7 @@ export function useFitnessRecords() {
       if (query.endDate) params.endDate = query.endDate + 'T23:59:59';
       if (query.remark) params.remark = query.remark.trim();
 
-      console.log('发送查询请求，参数：', params);
-
       const res = await axios.get('/api/fitness-record/list', { params });
-      console.log('查询响应：', res.data);
       
       if (res.data?.success) {
         const rawRecords = res.data.data?.records || [];
@@ -43,11 +40,13 @@ export function useFitnessRecords() {
         current.value = Number(res.data.data?.current) || 1;
         pageSize.value = Number(res.data.data?.size) || pageSize.value;
       } else {
-        emitter.emit('notify', '获取数据失败: ' + (res.data?.message || '未知错误'), 'error');
+        emitter.emit('notify', res.data?.message || '获取健身记录失败', 'error');
       }
     } catch (err) {
       console.error('获取健身记录失败:', err);
-      emitter.emit('notify', '获取数据失败: ' + (err.message || '未知错误'), 'error');
+      emitter.emit('notify', '获取数据失败：' + (err.message || '未知错误'), 'error');
+      records.value = [];
+      total.value = 0;
     } finally {
       loading.value = false;
     }
@@ -61,13 +60,15 @@ export function useFitnessRecords() {
       });
 
       if (res.data?.success) {
-        await fetchRecords();
+        await fetchRecords(current.value);
         emitter.emit('notify', '添加成功', 'success');
         return true;
       }
+      emitter.emit('notify', res.data?.message || '添加失败', 'error');
       return false;
     } catch (err) {
-      emitter.emit('notify', '添加失败: ' + (err.message || '未知错误'), 'error');
+      console.error('添加健身记录失败:', err);
+      emitter.emit('notify', '添加失败：' + (err.message || '未知错误'), 'error');
       return false;
     }
   }
@@ -80,13 +81,15 @@ export function useFitnessRecords() {
       });
 
       if (res.data?.success) {
-        await fetchRecords();
+        await fetchRecords(current.value);
         emitter.emit('notify', '更新成功', 'success');
         return true;
       }
+      emitter.emit('notify', res.data?.message || '更新失败', 'error');
       return false;
     } catch (err) {
-      emitter.emit('notify', '更新失败: ' + (err.message || '未知错误'), 'error');
+      console.error('更新健身记录失败:', err);
+      emitter.emit('notify', '更新失败：' + (err.message || '未知错误'), 'error');
       return false;
     }
   }
@@ -95,32 +98,32 @@ export function useFitnessRecords() {
     try {
       const res = await axios.delete(`/api/fitness-record/delete/${id}`);
       if (res.data?.success) {
-        await fetchRecords();
+        await fetchRecords(current.value);
         emitter.emit('notify', '删除成功', 'success');
         return true;
       }
+      emitter.emit('notify', res.data?.message || '删除失败', 'error');
       return false;
     } catch (err) {
-      emitter.emit('notify', '删除失败: ' + (err.message || '未知错误'), 'error');
+      console.error('删除健身记录失败:', err);
+      emitter.emit('notify', '删除失败：' + (err.message || '未知错误'), 'error');
       return false;
     }
   }
 
   function resetQuery() {
-    // 重置所有查询条件
     Object.assign(query, {
       typeId: '',
       startDate: '',
       endDate: '',
       remark: ''
     });
-    console.log('重置查询条件：', query);
-    // 重置到第一页并重新查询
     fetchRecords(1);
   }
 
   function handlePageChange(page) {
-    fetchRecords(page, pageSize.value);
+    current.value = page;
+    fetchRecords(page);
   }
 
   function handlePageSizeChange(size) {

@@ -78,6 +78,10 @@
   --warning-color: #718096; /* 中灰色 */
   --info-color: #a0aec0;    /* 浅灰色 */
   
+  /* 背景状态颜色 */
+  --bg-error: rgba(245, 101, 101, 0.1);
+  --bg-hover: rgba(160, 174, 192, 0.1);
+  
   /* 字体 */
   --font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-size-xs: 12px;

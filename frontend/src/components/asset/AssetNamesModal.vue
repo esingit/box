@@ -57,7 +57,7 @@
               <AssetNamesTable 
                 :names="filteredNameList"
                 @edit="startEdit"
-                @delete="confirmDelete"
+                @delete="handleDelete"
               />
             </div>
             
@@ -85,9 +85,8 @@ import PaginationBar from '@/components/PaginationBar.vue'
 import ModalHeader from './ModalHeader.vue'
 import AssetNamesTable from './AssetNamesTable.vue'
 import AssetNameForm from './AssetNameForm.vue'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import emitter from '@/utils/eventBus.js'
 import axios from '@/utils/axios.js'
+import emitter from '@/utils/eventBus.js'
 
 // 防抖函数
 function debounce(fn, delay = 300) {
@@ -114,21 +113,16 @@ const loading = ref(false)
 const error = ref(null)
 const showAdd = ref(false)
 const showEdit = ref(false)
-const newName = ref('')
-const newDescription = ref('')
 const editingId = ref(null)
 const editingName = ref('')
 const editingDescription = ref('')
 const current = ref(1)
 const total = ref(0)
 const pageSize = ref(10)
-
-// 新增响应式变量
 const formError = ref('')
 
 // 处理关闭模态框
 function handleClose() {
-  // 重置所有状态
   resetState()
   emit('close')
 }
@@ -137,8 +131,6 @@ function resetState() {
   showAdd.value = false
   showEdit.value = false
   searchTerm.value = ''
-  newName.value = ''
-  newDescription.value = ''
   editingId.value = null
   editingName.value = ''
   editingDescription.value = ''
@@ -147,7 +139,7 @@ function resetState() {
 
 // 监听搜索词变化
 watch(searchTerm, debounce(() => {
-  fetchNames(1) // 搜索时重置到第一页
+  fetchNames(1)
 }, 300))
 
 // 获取资产名称列表
@@ -181,71 +173,12 @@ async function fetchNames(page = current.value) {
   }
 }
 
-// 添加资产名称
-async function addName() {
-  if (!newName.value.trim()) return
-  
-  loading.value = true
-  error.value = null
-  try {
-    const res = await axios.post('/api/asset-names', {
-      name: newName.value.trim(),
-      description: newDescription.value.trim() || null
-    })
-    if (res.data?.success) {
-      emitter.emit('notify', '添加成功', 'success')
-      await fetchNames()
-      emit('refresh')
-      newName.value = ''
-      newDescription.value = ''
-      showAdd.value = false
-    } else {
-      error.value = res.data?.message || '添加失败'
-      emitter.emit('notify', error.value, 'error')
-    }
-  } catch (error) {
-    console.error('添加资产名称失败:', error)
-    error.value = error.message || '添加失败'
-    emitter.emit('notify', error.value, 'error')
-  } finally {
-    loading.value = false
-  }
-}
-
 // 处理编辑
 function startEdit(name) {
   editingId.value = name.id
   editingName.value = name.name
   editingDescription.value = name.description || ''
   showEdit.value = true
-}
-
-async function saveEdit() {
-  if (!editingName.value.trim() || !editingId.value) return
-  
-  loading.value = true
-  error.value = null
-  try {
-    const res = await axios.put(`/api/asset-names/${editingId.value}`, {
-      name: editingName.value.trim(),
-      description: editingDescription.value.trim() || null
-    })
-    if (res.data?.success) {
-      emitter.emit('notify', '保存成功', 'success')
-      await fetchNames()
-      emit('refresh')
-      cancelEdit()
-    } else {
-      error.value = res.data?.message || '保存失败'
-      emitter.emit('notify', error.value, 'error')
-    }
-  } catch (error) {
-    console.error('更新资产名称失败:', error)
-    error.value = error.message || '保存失败'
-    emitter.emit('notify', error.value, 'error')
-  } finally {
-    loading.value = false
-  }
 }
 
 function cancelEdit() {
@@ -255,44 +188,8 @@ function cancelEdit() {
   showEdit.value = false
 }
 
-// 删除资产名称
-async function confirmDelete(name) {
-  emitter.emit('confirm', {
-    title: '删除确认',
-    message: `确定要删除资产名称"${name.name}"吗？`,
-    onConfirm: async () => {
-      loading.value = true
-      error.value = null
-      try {
-        const res = await axios.delete(`/api/asset-names/${name.id}`)
-        if (res.data?.success) {
-          emitter.emit('notify', '删除成功', 'success')
-          await fetchNames()
-          emit('refresh')
-        } else {
-          error.value = res.data?.message || '删除失败'
-          emitter.emit('notify', error.value, 'error')
-        }
-      } catch (error) {
-        console.error('删除资产名称失败:', error)
-        error.value = error.message || '删除失败'
-        emitter.emit('notify', error.value, 'error')
-      } finally {
-        loading.value = false
-      }
-    }
-  })
-}
-
 function showAddForm() {
   showAdd.value = true
-}
-
-function cancelAdd() {
-  showAdd.value = false
-  newName.value = ''
-  newDescription.value = ''
-  handleClose() // 调用 handleClose 完全关闭模态框
 }
 
 function handlePageChange(page) {
@@ -330,7 +227,6 @@ async function handleFormSubmit(data) {
         showAdd.value = false
       } else {
         const errMsg = res.data?.message || '添加失败'
-        // 检查是否是重复名称错误
         if (errMsg.includes('Duplicate entry') || errMsg.includes('uniq_name')) {
           formError.value = '该资产名称已存在'
         } else {
@@ -363,6 +259,29 @@ async function handleFormSubmit(data) {
   } catch (err) {
     console.error('操作失败:', err)
     error.value = err.message || '操作失败'
+    emitter.emit('notify', error.value, 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 处理删除
+async function handleDelete(name) {
+  loading.value = true
+  error.value = null
+  try {
+    const res = await axios.delete(`/api/asset-names/${name.id}`)
+    if (res.data?.success) {
+      emitter.emit('notify', '删除成功', 'success')
+      await fetchNames()
+      emit('refresh')
+    } else {
+      error.value = res.data?.message || '删除失败'
+      emitter.emit('notify', error.value, 'error')
+    }
+  } catch (error) {
+    console.error('删除资产名称失败:', error)
+    error.value = error.message || '删除失败'
     emitter.emit('notify', error.value, 'error')
   } finally {
     loading.value = false

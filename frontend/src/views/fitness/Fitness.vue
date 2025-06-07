@@ -130,19 +130,30 @@ watch([types, units], ([newTypes, newUnits]) => {
 
 // 生命周期钩子
 onMounted(async () => {
-  // 初始化数据
-  await Promise.all([
-    fetchMetaData(),
-    fetchRecords()
-  ]);
+  if (!isLoggedIn.value) {
+    const { showLogin } = useAuth()
+    showLogin('请先登录')
+    return
+  }
 
-  // 监听全局刷新事件
-  emitter.on('refresh-data', () => {
-    Promise.all([
+  try {
+    // 初始化数据
+    await Promise.all([
       fetchMetaData(),
       fetchRecords()
-    ]);
-  });
+    ])
+
+    // 监听全局刷新事件
+    emitter.on('refresh-data', () => {
+      Promise.all([
+        fetchMetaData(),
+        fetchRecords()
+      ])
+    })
+  } catch (error) {
+    console.error('初始化数据失败:', error)
+    emitter.emit('notify', '加载数据失败：' + (error.message || '请刷新页面重试'), 'error')
+  }
 });
 
 // 在组件销毁时移除事件监听
@@ -218,19 +229,22 @@ async function handleDelete(idx) {
   const record = records.value[idx];
   if (!record) return;
   
-  if (!checkAuthAndExecute(() => {
-    emitter.emit('confirm', {
-      title: '删除确认',
-      message: '确定要删除该记录吗？',
-      onConfirm: () => deleteRecord(record.id)
-    });
-  })) return;
+  // 先检查登录状态，如果未登录就显示登录弹窗
+  if (!isLoggedIn.value) {
+    const { showLogin } = useAuth();
+    showLogin('请先登录');
+    return;
+  }
 
-  emitter.emit('confirm', {
-    title: '删除确认',
-    message: '确定要删除该记录吗？',
-    onConfirm: () => deleteRecord(record.id)
-  });
+  try {
+    const success = await deleteRecord(record.id);
+    if (success) {
+      emitter.emit('notify', '删除成功', 'success');
+      await fetchRecords(); // 刷新列表
+    }
+  } catch (error) {
+    console.error('删除记录失败：', error);
+  }
 }
 
 function handleQuery() {

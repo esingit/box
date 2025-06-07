@@ -23,15 +23,13 @@
           <td class="remark-cell">
             <span :title="name.description">{{ name.description || '-' }}</span>
           </td>
-          <td>
-            <div class="operations">
-              <button class="action-btn" title="编辑" @click="$emit('edit', name)">
-                <LucidePencil :size="16" />
-              </button>
-              <button class="action-btn delete" title="删除" @click="$emit('delete', name)">
-                <LucideTrash2 :size="16" />
-              </button>
-            </div>
+          <td class="operations">
+            <RecordActions 
+              :record="name"
+              type="asset-name"
+              @edit="$emit('edit', name)"
+              @delete="$emit('delete', name)"
+            />
           </td>
         </tr>
       </tbody>
@@ -40,8 +38,8 @@
 </template>
 
 <script setup>
-import { LucidePencil, LucideTrash2 } from 'lucide-vue-next'
 import EmptyState from '@/components/common/EmptyState.vue'
+import RecordActions from '@/components/common/RecordActions.vue'
 
 defineProps({
   names: {

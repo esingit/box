@@ -28,6 +28,8 @@
           </td>
           <td class="operations">
             <RecordActions 
+              :record="record"
+              type="fitness"
               @edit="$emit('edit', idx)" 
               @delete="$emit('delete', idx)" 
             />
