@@ -4,6 +4,7 @@ import emitter from '@/utils/eventBus'
 
 // axios 配置
 const axiosConfig = {
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/',
   timeout: 15000, // 超时时间设置为 15 秒
   withCredentials: true, // 允许跨域请求携带 cookie
   // 请求重试配置
@@ -32,9 +33,37 @@ const axiosConfig = {
 // 创建 axios 实例
 const instance = axios.create(axiosConfig)
 
+// 用于存储正在进行的请求的Map
+const pendingRequests = new Map()
+
+// 生成请求的唯一key
+const generateRequestKey = (config) => {
+  const { url, method, params, data } = config
+  return [url, method, JSON.stringify(params), JSON.stringify(data)].join('&')
+}
+
 // 添加请求拦截器用于调试和认证
 instance.interceptors.request.use(
   config => {
+    // 为每个请求生成唯一的key
+    const requestKey = generateRequestKey(config)
+    
+    // 如果允许重复请求，跳过取消逻辑
+    if (!config.allowDuplicate) {
+      if (pendingRequests.has(requestKey)) {
+        const previousRequest = pendingRequests.get(requestKey)
+        previousRequest.cancel('取消重复请求')
+        pendingRequests.delete(requestKey)
+      }
+
+      // 创建取消令牌
+      const CancelToken = axios.CancelToken
+      const source = CancelToken.source()
+      config.cancelToken = source.token
+      pendingRequests.set(requestKey, source)
+    }
+    
+    // 添加认证头
     const token = localStorage.getItem('token')
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`
@@ -55,10 +84,19 @@ let waitingRequests = [];
 // 刷新 token 的函数
 const refreshToken = async () => {
   try {
-    const response = await axios.post('/api/user/refresh-token', null, {
+    const oldToken = localStorage.getItem('token')
+    if (!oldToken) {
+      return null
+    }
+    
+    const response = await instance.post('/api/user/refresh-token', null, {
+      headers: {
+        'Authorization': `Bearer ${oldToken}`
+      },
       skipAuthRetry: true // 防止无限循环
     })
-    if (response.data.success) {
+    
+    if (response.data?.success) {
       const newToken = response.data.data
       localStorage.setItem('token', newToken)
       return newToken
@@ -74,10 +112,24 @@ const refreshToken = async () => {
 instance.interceptors.response.use(
   // 处理正常响应
   response => {
+    // 请求完成后，清理URL
+    if (response.config) {
+      pendingRequests.delete(response.config.url);
+    }
     return response
   },
   // 处理错误响应
   async error => {
+    // 清理已完成的请求
+    if (error.config) {
+      pendingRequests.delete(error.config.url);
+    }
+
+    // 如果是取消的请求，直接返回
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
     const { config, response } = error
 
     // 如果响应不存在，说明是网络错误
@@ -86,10 +138,11 @@ instance.interceptors.response.use(
       return Promise.reject(error)
     }
     
-    // 如果返回 401 且不是登录或验证 token 请求
+    // 如果返回 401 且不是登录相关请求
     if (response.status === 401 && 
         !config.url.includes('/login') && 
         !config.url.includes('/verify-token') && 
+        !config.url.includes('/refresh-token') && 
         !config.skipAuthRetry) {
       
       if (!isRefreshing) {
@@ -118,10 +171,21 @@ instance.interceptors.response.use(
             reject(error)
           })
           
+          // 取消所有待处理的请求
+          cancelPendingRequests('登录已过期');
+          waitingRequests = [];
+          
           // 清理登录状态并显示登录框
           const userStore = useUserStore()
           await userStore.logout(false) // 不清除UI状态
-          emitter.emit('show-auth', 'login', 'token已过期，请重新登录')
+          
+          // 使用 nextTick 确保状态更新后再显示登录框
+          const { nextTick } = await import('vue')
+          const { useAuth } = await import('@/composables/useAuth')
+          
+          await nextTick()
+          const { showLogin } = useAuth()
+          showLogin('登录已过期，请重新登录')
         } finally {
           waitingRequests = []
           isRefreshing = false
@@ -151,8 +215,9 @@ instance.interceptors.response.use(
       // 清理登录状态
       await userStore.logout(false) // 不主动清除UI状态
       
-      // 显示登录框
-      emitter.emit('show-auth', 'login', '登录已过期，请重新登录')
+      const { useAuth } = await import('@/composables/useAuth')
+      const { showLogin } = useAuth()
+      showLogin('登录已过期，请重新登录')
       
       return Promise.reject(error)
     }

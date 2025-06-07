@@ -42,7 +42,7 @@ const props = defineProps({
   }
 });
 
-defineEmits(['page-change', 'page-size-change', 'edit', 'delete']);
+const emit = defineEmits(['page-change', 'page-size-change', 'edit', 'delete']);
 
 const totalPages = computed(() => Math.ceil(props.total / props.pageSize));
 const showPagination = computed(() => props.total > props.pageSize);

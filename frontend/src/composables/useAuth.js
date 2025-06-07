@@ -30,13 +30,31 @@ export function useAuth() {
     return true;
   }
 
+  // 记录最后一次需要登录权限的操作
+  const lastRequiredAuthAction = ref(null);
+  
   // 显示登录框
-  const showLogin = debounce((message) => {
+  const showLogin = debounce((message, requiredAuthAction = null) => {
     if (!isShowingLoginModal.value) {
       isShowingLoginModal.value = true;
+      
+      // 确保消息显示
       if (message) {
-        emitter.emit('login-error', message);
+        setTimeout(() => {
+          emitter.emit('login-error', message);
+        }, 100);
       }
+      
+      // 记录需要登录权限的操作
+      if (requiredAuthAction) {
+        lastRequiredAuthAction.value = requiredAuthAction;
+      }
+      
+      // 触发显示登录模态框的事件
+      emitter.emit('show-login-modal', message);
+      
+      // 通知其他组件更新状态
+      emitter.emit('auth-state-changed', false);
     }
   }, 300);
 

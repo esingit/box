@@ -15,7 +15,7 @@
   height: var(--btn-height-sm);
   padding: 0 var(--spacing-xs);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   cursor: pointer;

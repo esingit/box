@@ -10,8 +10,14 @@ export function useMetaData() {
   async function fetchMetaData() {
     try {
       const [typeRes, unitRes] = await Promise.all([
-        axios.get('/api/common-meta/by-type', { params: { typeCode: 'FITNESS_TYPE' } }),
-        axios.get('/api/common-meta/by-type', { params: { typeCode: 'UNIT' } })
+        axios.get('/api/common-meta/by-type', { 
+          params: { typeCode: 'FITNESS_TYPE' },
+          allowDuplicate: true // 允许重复请求
+        }),
+        axios.get('/api/common-meta/by-type', { 
+          params: { typeCode: 'UNIT' },
+          allowDuplicate: true // 允许重复请求
+        })
       ]);
 
       if (typeRes.data?.success) {
@@ -22,8 +28,10 @@ export function useMetaData() {
         units.value = unitRes.data.data || [];
       }
     } catch (err) {
-      console.error('获取元数据失败:', err);
-      emitter.emit('notify', '获取元数据失败，请稍后重试', 'error');
+      if (!axios.isCancel(err)) {
+        console.error('获取元数据失败:', err);
+        emitter.emit('notify', '获取元数据失败，请稍后重试', 'error');
+      }
     }
   }
 

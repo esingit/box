@@ -6,7 +6,7 @@
         <option v-for="type in types" 
                 :key="type.id" 
                 :value="type.id">
-          {{ type.name }}
+          {{ type.value1 }}
         </option>
       </select>
     </div>
@@ -26,7 +26,7 @@
         <option v-for="unit in units" 
                 :key="unit.id" 
                 :value="unit.id">
-          {{ unit.name }}
+          {{ unit.value1 }}
         </option>
       </select>
     </div>
@@ -66,7 +66,7 @@ const props = defineProps({
     default: () => [],
     validator: (value) => {
       return value.every(item => 
-        item && typeof item.id !== 'undefined' && typeof item.name === 'string'
+        item && typeof item.id !== 'undefined' && typeof item.value1 === 'string'
       );
     }
   },
@@ -75,7 +75,7 @@ const props = defineProps({
     default: () => [],
     validator: (value) => {
       return value.every(item => 
-        item && typeof item.id !== 'undefined' && typeof item.name === 'string'
+        item && typeof item.id !== 'undefined' && typeof item.value1 === 'string'
       );
     }
   },

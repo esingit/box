@@ -1,5 +1,5 @@
 <template>
-  <div class="flex gap-2">
+  <div class="operations">
     <button class="action-btn" @click="$emit('edit')" title="编辑">
       <LucidePencil :size="16" />
     </button>

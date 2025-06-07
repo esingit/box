@@ -106,3 +106,14 @@
   flex: 1;
   min-width: 0;
 }
+
+/* 按钮容器 */
+.form-btn-container {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.message-container {
+  margin-bottom: var(--spacing-lg);
+}

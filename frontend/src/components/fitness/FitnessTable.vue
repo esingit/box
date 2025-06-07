@@ -3,7 +3,7 @@
     <table class="table">
       <thead>
         <tr>
-          <th v-for="header in tableHeaders" :key="header.key" :class="header.class">
+          <th v-for="header in tableHeaders" :key="header.key">
             {{ header.label }}
           </th>
         </tr>

@@ -1,17 +1,22 @@
 <template>
   <aside class="sidebar" :class="{ 'collapsed': isCollapsed }">
     <div class="logo" @click="toggleSidebar">
-      <LucideBox class="logo-icon" :class="{ 'rotate': isRotating }" />
+      <LucideBox class="logo-icon" :class="{ 'animate-spin': isRotating }" :size="24" />
     </div>
     <nav class="menu">
-      <router-link to="/" class="menu-item" active-class="active">
-        <LucideHome class="icon" /> <span class="menu-text">首页</span>
-      </router-link>
-      <router-link to="/fitness" class="menu-item" active-class="active">
-        <LucideDumbbell class="icon" /> <span class="menu-text">健身</span>
-      </router-link>
-      <router-link to="/asset" class="menu-item" active-class="active">
-        <LucideWallet class="icon" /> <span class="menu-text">资产</span>
+      <router-link 
+        v-for="(item, index) in menuItems" 
+        :key="index"
+        :to="item.path" 
+        class="menu-item" 
+        :class="{ 'active': $route.path === item.path }"
+      >
+        <component 
+          :is="item.icon" 
+          class="menu-icon" 
+          :size="20"
+        />
+        <span class="menu-text">{{ item.title }}</span>
       </router-link>
     </nav>
   </aside>
@@ -27,6 +32,12 @@ const props = defineProps({
     default: false
   }
 })
+
+const menuItems = [
+  { path: '/', title: '首页', icon: LucideHome },
+  { path: '/fitness', title: '健身', icon: LucideDumbbell },
+  { path: '/asset', title: '资产', icon: LucideWallet }
+]
 
 const isRotating = ref(false)
 const isCollapsed = ref(false)

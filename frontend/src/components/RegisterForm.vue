@@ -20,9 +20,10 @@
             v-model="username"
             required
             autocomplete="username"
-            placeholder="请输入用户名"
+            placeholder="4-16位字母、数字或下划线"
             :disabled="isLoading"
           />
+          <small class="help-text">仅支持字母、数字和下划线，长度4-16位</small>
         </div>
 
         <div class="form-group">
@@ -36,9 +37,10 @@
             v-model="password"
             required
             autocomplete="new-password"
-            placeholder="请输入密码"
+            placeholder="8-20位字母数字组合"
             :disabled="isLoading"
           />
+          <small class="help-text">8-20位，必须包含字母和数字，可包含特殊字符(@$!%*#?&)</small>
         </div>
 
         <div v-if="showCaptcha" class="form-group">
@@ -143,9 +145,32 @@ async function refreshCaptcha() {
   await fetchCaptchaAndId()
 }
 
+function validateForm() {
+  // 用户名验证：4-16位字母、数字、下划线
+  const usernameRegex = /^[a-zA-Z0-9_]{4,16}$/;
+  if (!usernameRegex.test(username.value)) {
+    error.value = '用户名必须为4-16位字母、数字或下划线';
+    return false;
+  }
+  
+  // 密码验证：8-20位，必须包含字母和数字，可以包含特殊字符
+  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,20}$/;
+  if (!passwordRegex.test(password.value)) {
+    error.value = '密码必须为8-20位，包含字母和数字，可包含特殊字符(@$!%*#?&)';
+    return false;
+  }
+
+  return true;
+}
+
 async function submit() {
   error.value = null;
   success.value = null;
+
+  if (!validateForm()) {
+    return;
+  }
+
   isLoading.value = true;
   try {
     let payload = {

@@ -62,13 +62,15 @@
                   <label class="form-label">确认密码</label>
                   <input type="password" v-model="confirmPassword" class="input" required />
                 </div>
-                <div class="modal-footer">
-                  <div class="flex-grow">
-                    <p v-if="resetMsg" :class="['message', resetSuccess ? 'success-text' : 'error-text']">
-                      {{ resetMsg }}
-                    </p>
+                <div v-if="resetMsg" class="message-container">
+                  <p :class="['message', resetSuccess ? 'success-text' : 'error-text']">
+                    {{ resetMsg }}
+                  </p>
+                </div>
+                <div class="form-group">
+                  <div class="form-btn-container">
+                    <button class="btn btn-primary" type="submit">确认修改</button>
                   </div>
-                  <button class="btn btn-primary" type="submit">确认修改</button>
                 </div>
               </form>
             </div>
@@ -83,6 +85,7 @@
 import { ref, computed } from 'vue'
 import { LucideX, LucideUser, LucideLock } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/userStore'
+import axios from '@/utils/axios'
 
 const userStore = useUserStore()
 const user = computed(() => userStore.user)
@@ -131,30 +134,24 @@ async function handleReset() {
   }
 
   try {
-    const res = await fetch('/api/user/reset-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: user.value.username,
-        oldPassword: oldPassword.value,
-        newPassword: newPassword.value
-      })
+    const response = await axios.post('/api/user/reset-password', {
+      username: user.value.username,
+      oldPassword: oldPassword.value,
+      newPassword: newPassword.value
     })
-    const data = await res.json()
-    if (data.success) {
+    
+    if (response.data.success) {
       resetMsg.value = '密码重置成功！'
       resetSuccess.value = true
       oldPassword.value = ''
       newPassword.value = ''
       confirmPassword.value = ''
-      setTimeout(() => {
-        closeModal()
-      }, 1500)
     } else {
-      resetMsg.value = data.message || '重置失败'
+      resetMsg.value = response.data.message || '重置失败'
     }
-  } catch (e) {
-    resetMsg.value = '请求失败，请稍后再试'
+  } catch (error) {
+    console.error('密码重置失败:', error)
+    resetMsg.value = error.response?.data?.message || '请求失败，请稍后再试'
   }
 }
 

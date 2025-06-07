@@ -87,6 +87,8 @@ import {
   LucideLoader2 
 } from 'lucide-vue-next';
 import { useUserStore } from '../stores/userStore';
+import { useAuth } from '../composables/useAuth';
+import emitter from '../utils/eventBus';
 import axios from '../utils/axios';
 
 const emit = defineEmits(['close', 'login-success']);
@@ -150,6 +152,16 @@ async function handleSubmit() {
     const res = await userStore.login(loginData);
     
     if (res.success) {
+      // 通知其他组件更新认证状态
+      emitter.emit('auth-state-changed', true);
+      
+      // 如果有待执行的操作，执行它
+      const { lastRequiredAuthAction } = useAuth();
+      if (lastRequiredAuthAction && lastRequiredAuthAction.value) {
+        await lastRequiredAuthAction.value();
+        lastRequiredAuthAction.value = null;
+      }
+      
       emit('login-success');
       emit('close');
     } else {

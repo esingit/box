@@ -63,13 +63,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { LucideClipboardList } from 'lucide-vue-next';
+import { useAuth } from '@/composables/useAuth';
+import { useUserStore } from '@/stores/userStore';
 import emitter from '@/utils/eventBus.js';
 import { useMetaData } from '@/composables/useMetaData';
 import { useFitnessRecords } from '@/composables/useFitnessRecords';
 import { useFitnessForm } from '@/composables/useFitnessForm';
-import { useUserStore } from '@/stores/userStore';
 import FitnessModal from '@/components/fitness/FitnessModal.vue';
 import FitnessList from '@/components/fitness/FitnessList.vue';
 import PageHeader from '@/components/common/PageHeader.vue';
@@ -147,15 +148,39 @@ onUnmounted(() => {
 });
 
 // 事件处理函数
-function handleAdd() {
+// 保存操作类型和参数
+const pendingAction = ref(null);
+const pendingActionParams = ref(null);
+
+// 检查登录状态并执行操作
+function checkAuthAndExecute(action, params = null) {
   if (!isLoggedIn.value) {
-    emitter.emit('show-auth', 'login');
-    return;
+    pendingAction.value = action;
+    pendingActionParams.value = params;
+    const { showLogin } = useAuth();
+    showLogin('请先登录', () => {
+      if (pendingAction.value) {
+        const actionToExecute = pendingAction.value;
+        const actionParams = pendingActionParams.value;
+        pendingAction.value = null;
+        pendingActionParams.value = null;
+        actionToExecute(actionParams);
+      }
+    });
+    return false;
   }
-  showAddModal.value = true;
+  return true;
+}
+
+function handleAdd() {
+  if (checkAuthAndExecute(() => showAddModal.value = true)) {
+    showAddModal.value = true;
+  }
 }
 
 async function handleAddRecord() {
+  if (!checkAuthAndExecute(handleAddRecord)) return;
+  
   try {
     adding.value = true;
     if (await addRecord(form)) {
@@ -168,6 +193,8 @@ async function handleAddRecord() {
 }
 
 function editRecord(idx) {
+  if (!checkAuthAndExecute(() => editRecord(idx))) return;
+  
   const record = records.value[idx];
   if (record) {
     startEdit(idx, record);
@@ -175,6 +202,8 @@ function editRecord(idx) {
 }
 
 async function saveEdit() {
+  if (!checkAuthAndExecute(saveEdit)) return;
+  
   if (editingIdx.value !== null && editForm.finishTime) {
     const record = records.value[editingIdx.value];
     if (await updateRecord({ ...editForm, id: record.id })) {
@@ -186,6 +215,8 @@ async function saveEdit() {
 async function handleDelete(idx) {
   const record = records.value[idx];
   if (!record) return;
+  
+  if (!checkAuthAndExecute(() => handleDelete(idx))) return;
 
   emitter.emit('confirm', {
     title: '删除确认',

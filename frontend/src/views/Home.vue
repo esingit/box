@@ -1,9 +1,16 @@
 <template>
-  <div class="home-container">
-    <div class="home-content">
-      <h1>欢迎使用 Box</h1>
-      <LucideBox class="home-box-icon" :class="{ 'rotate': isRotating }" @click="rotateBox" :size="48" />
-      <p>您的个人管理助手</p>
+  <div class="container flex-center">
+    <div class="text-center">
+      <h1 class="page-title">欢迎使用 Box</h1>
+      <div class="flex-center">
+        <LucideBox 
+          class="title-icon cursor-pointer" 
+          :class="{ 'animate-spin': isRotating }" 
+          @click="rotateBox" 
+          :size="48" 
+        />
+      </div>
+      <p class="text-secondary" style="margin-top: var(--spacing-lg)">您的个人管理助手</p>
     </div>
   </div>
 </template>

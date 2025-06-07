@@ -79,7 +79,7 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    async logout(clearUI = true, router = null) {
+    async logout(clearUI = true) {
       try {
         // 只在主动登出时调用后端接口
         if (clearUI) {
@@ -106,11 +106,6 @@ export const useUserStore = defineStore('user', {
           this.user = null
           this.isLoggedIn = false
           localStorage.removeItem('user')
-          
-          // 只在主动登出时跳转到主页
-          if (router) {
-            router.push('/home')
-          }
         } else {
           // 当不清除UI状态时，只更新登录状态
           this.isLoggedIn = false

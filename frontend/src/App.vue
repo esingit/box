@@ -160,6 +160,11 @@ onMounted(() => {
       showRegister();
     }
   });
+  
+  // 监听登录模态框显示事件
+  emitter.on('show-login-modal', (message) => {
+    showLogin(message);
+  });
 
   // 初始化认证状态
   const initAuth = async () => {
@@ -182,5 +187,6 @@ onBeforeUnmount(() => {
   // 移除事件监听
   document.removeEventListener('mousedown', handleClickOutside);
   emitter.off('show-auth');
+  emitter.off('show-login-modal');
 });
 </script>
