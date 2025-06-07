@@ -3,7 +3,7 @@
     <div :class="['auth-form-modal', { 'show-captcha': showCaptcha }]" @click.stop>
       <div class="auth-form-header">
         <h2 class="auth-form-title">登录</h2>
-        <button class="auth-form-close btn-close" data-modal-close @click.stop="$emit('close')">×</button>
+        <button class="btn-close" data-modal-close @click.stop="$emit('close')">×</button>
       </div>
       <div class="auth-form-divider"></div>
       <div class="auth-form-inner">

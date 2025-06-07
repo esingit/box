@@ -3,7 +3,7 @@
     <div class="auth-form-modal">
       <div class="auth-form-header">
         <h2 class="auth-form-title">注册</h2>
-        <button class="auth-form-close" @click="$emit('close')">×</button>
+        <button class="btn-close" @click="$emit('close')">×</button>
       </div>
       <div class="auth-form-divider"></div>
       <div class="auth-form-inner">

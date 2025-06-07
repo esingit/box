@@ -97,17 +97,15 @@
 </template>
 
 <script setup>
-import '@/assets/base.css'
-import '@/assets/asset.css'
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { LucideWallet, LucideSearch, LucideRotateCcw } from 'lucide-vue-next'
-import emitter from '@/utils/eventBus.js'
-import axios from '@/utils/axios.js'
-import { formatAssetRecord } from '@/utils/commonMeta'
-import { useAssetStore } from '@/stores/assetStore'
-import { useUserStore } from '@/stores/userStore'
-import AssetModal from '@/components/asset/AssetModal.vue'
-import AssetList from '@/components/asset/AssetList.vue'
+import emitter from '../../utils/eventBus.js'
+import axios from '../../utils/axios.js'
+import { formatAssetRecord } from '../../utils/commonMeta'
+import { useAssetStore } from '../../stores/assetStore'
+import { useUserStore } from '../../stores/userStore'
+import AssetModal from '../../components/asset/AssetModal.vue'
+import AssetList from '../../components/asset/AssetList.vue'
 
 const assetStore = useAssetStore()
 const userStore = useUserStore()

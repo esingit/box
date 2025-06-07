@@ -146,12 +146,11 @@
 </template>
 
 <script setup>
-import '@/assets/asset.css'
 import { ref, watch, computed } from 'vue'
 import { LucideX, LucideCheck, LucideEdit2, LucideTrash2 } from 'lucide-vue-next'
-import PaginationBar from '@/components/PaginationBar.vue'
-import emitter from '@/utils/eventBus.js'
-import axios from '@/utils/axios.js'
+import PaginationBar from '../../components/PaginationBar.vue'
+import emitter from '../../utils/eventBus.js'
+import axios from '../../utils/axios.js'
 
 // 防抖函数
 function debounce(fn, delay = 300) {

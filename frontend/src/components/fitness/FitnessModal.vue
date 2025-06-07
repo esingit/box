@@ -1,50 +1,56 @@
 <template>
   <div v-if="show" class="modal-overlay" @click.self="$emit('cancel')">
     <div class="modal-container">
-      <div class="modal-header">
-        <h3 class="modal-title">{{ title }}</h3>
-        <button class="close-button" @click="$emit('cancel')">
-          <LucideX class="close-icon" />
-        </button>
-      </div>
+      <ModalHeader 
+        :title="title" 
+        @close="$emit('cancel')" 
+      />
+      
       <div class="modal-body">
-        <div class="input-group">
-          <label class="input-label">类型</label>
-          <select v-model="form.typeId" class="type-select select">
-            <option v-for="type in types" :key="type.id" :value="type.id">{{ type.value1 }}</option>
-          </select>
-        </div>
-        <div class="input-group">
-          <label class="input-label">数量</label>
-          <input v-model.number="form.count" type="number" min="0.01" step="0.01" class="count-input input" required placeholder="数量" />
-        </div>
-        <div class="input-group">
-          <label class="input-label">单位</label>
-          <select v-model="form.unitId" class="unit-select select">
-            <option v-for="unit in units" :key="unit.id" :value="unit.id">{{ unit.value1 }}</option>
-          </select>
-        </div>
-        <div class="input-group">
-          <label class="input-label">完成日期</label>
-          <input v-model="form.finishTime" type="date" class="date-input input" required />
-        </div>
-        <div class="input-group">
-          <label class="input-label">备注</label>
-          <input v-model="form.remark" type="text" class="remark-input input" :placeholder="remarkPlaceholder" />
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-primary" :disabled="loading" @click="$emit('submit')">{{ confirmText }}</button>
-        </div>
+        <FitnessForm 
+          ref="formRef"
+          :form="form"
+          :types="types"
+          :units="units"
+          :remark-placeholder="remarkPlaceholder"
+        />
+      </div>
+
+      <div class="modal-footer">
+        <button 
+          class="btn btn-secondary" 
+          @click="$emit('cancel')"
+        >
+          取消
+        </button>
+        <button 
+          class="btn btn-primary" 
+          :disabled="loading || !isFormValid" 
+          @click="handleSubmit"
+        >
+          {{ loading ? '处理中...' : confirmText }}
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { LucideX } from 'lucide-vue-next'
+import { ref, computed } from 'vue';
+import FitnessForm from './FitnessForm.vue';
+import ModalHeader from './ModalHeader.vue';
+
+const formRef = ref(null);
+
 const props = defineProps({
-  show: Boolean,
-  form: Object,
+  show: {
+    type: Boolean,
+    default: false
+  },
+  form: {
+    type: Object,
+    required: true
+  },
   types: {
     type: Array,
     default: () => []
@@ -53,10 +59,13 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
-  loading: Boolean,
+  loading: {
+    type: Boolean,
+    default: false
+  },
   title: {
     type: String,
-    default: '操作记录'
+    default: '记录'
   },
   confirmText: {
     type: String,
@@ -64,10 +73,91 @@ const props = defineProps({
   },
   remarkPlaceholder: {
     type: String,
-    default: '备注（可选）'
+    default: '备注'
   }
-})
-const emit = defineEmits(['submit', 'cancel'])
+});
+
+defineEmits(['submit', 'cancel']);
+
+const isFormValid = computed(() => {
+  return formRef.value?.isValid || false;
+});
+
+function handleSubmit() {
+  if (isFormValid.value && !props.loading) {
+    props.$emit('submit');
+  }
+}
 </script>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-container {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.modal-body {
+  padding: 1rem;
+}
+
+.modal-footer {
+  padding: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-top: 1px solid #eee;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  color: #333;
+}
+
+.btn-primary {
+  background-color: #0066cc;
+  border: 1px solid #0066cc;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #e4e4e4;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #0052a3;
+}
+</style>
 
 

@@ -16,25 +16,33 @@ const router = createRouter({
   routes,
 })
 
+// 记录是否已经显示登录框
+let isShowingLoginModal = false;
+
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   // 不需要登录的页面路径
   const publicPaths = ['/login', '/register', '/home']
   
   if (!userStore.isLoggedIn && !publicPaths.includes(to.path)) {
-    // 如果是直接访问需要登录的页面（不是从其他页面跳转来的）
+    // 如果是直接访问需要登录的页面，重定向到首页
     if (!from.name) {
-      // 重定向到首页并显示登录框
       next('/home')
     } else {
-      // 如果是从其他页面跳转，允许访问
       next()
     }
-    // 通知需要登录，设置延迟以确保组件已经挂载
-    setTimeout(() => {
-      emitter.emit('show-auth', 'login', '请先登录')
-    }, 100)
+    
+    // 避免重复显示登录框
+    if (!isShowingLoginModal) {
+      isShowingLoginModal = true;
+      // 设置延迟以确保组件已经挂载
+      setTimeout(() => {
+        emitter.emit('show-auth', 'login', '请先登录')
+      }, 100)
+    }
   } else {
+    // 如果已经登录或访问公共页面，重置标记
+    isShowingLoginModal = false;
     next()
   }
 })

@@ -1,22 +1,30 @@
 <template>
-  <div class="pagination-bar">
+  <div class="pagination">
     <button 
-      class="btn btn-white" 
+      class="page-btn" 
       :disabled="currentPage <= 1" 
       @click="handlePageChange(currentPage - 1)"
     >
       上一页
     </button>
-    <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
     <button 
-      class="btn btn-white" 
+      v-for="page in displayPages" 
+      :key="page" 
+      class="page-btn" 
+      :class="{ active: page === currentPage }"
+      @click="handlePageChange(page)"
+    >
+      {{ page }}
+    </button>
+    <button 
+      class="page-btn" 
       :disabled="currentPage >= totalPages || totalPages === 0" 
       @click="handlePageChange(currentPage + 1)"
     >
       下一页
     </button>
     <select 
-      class="page-size-select" 
+      class="page-btn" 
       :value="pageSize" 
       @change="$emit('page-size-change', Number($event.target.value))"
     >
@@ -49,6 +57,26 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['page-change', 'page-size-change'])
+
+// 计算要显示的页码
+const displayPages = computed(() => {
+  const pages = []
+  const maxDisplayPages = 5 // 最多显示5个页码
+  const half = Math.floor(maxDisplayPages / 2)
+  
+  let start = Math.max(1, currentPage.value - half)
+  let end = Math.min(totalPages.value, start + maxDisplayPages - 1)
+  
+  if (end - start + 1 < maxDisplayPages) {
+    start = Math.max(1, end - maxDisplayPages + 1)
+  }
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+  
+  return pages
+})
 
 // 计算总页数
 const totalPages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))

@@ -23,10 +23,10 @@
           <td>{{ formatDate(record.acquireTime) }}</td>
           <td>{{ record.remark }}</td>
           <td class="operations">
-            <button @click="$emit('edit', idx)" class="btn btn-white" title="编辑">
+            <button @click="$emit('edit', idx)" class="btn btn-primary" title="编辑">
               <LucideEdit size="18" style="vertical-align: middle;" />
             </button>
-            <button @click="$emit('delete', idx)" class="btn btn-red" title="删除">
+            <button @click="$emit('delete', idx)" class="btn btn-danger" title="删除">
               <LucideTrash2 size="18" style="vertical-align: middle;" />
             </button>
           </td>
