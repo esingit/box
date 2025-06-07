@@ -148,42 +148,139 @@ const editForm = reactive({...form})
 // 计算属性
 const records = ref([])
 
+const getLatestDateRecords = () => {
+  if (!records.value.length) {
+    console.log('没有记录数据')
+    return []
+  }
+  
+  // 1. 获取最新的登记日期
+  const latestDate = records.value.reduce((latest, record) => {
+    const recordDate = new Date(record.acquireTime)
+    return !latest || recordDate > latest ? recordDate : latest
+  }, null)
+
+  if (!latestDate) {
+    console.log('未找到最新日期')
+    return []
+  }
+
+  // 2. 筛选最新日期的记录
+  const latestDateStr = latestDate.toISOString().split('T')[0]
+  const filteredRecords = records.value.filter(record => record.acquireTime.startsWith(latestDateStr))
+  console.log('最新日期:', latestDateStr, '记录数:', filteredRecords.length)
+  return filteredRecords
+}
+
+const groupRecordsByType = (records) => {
+  console.log('开始按类型分组，记录数:', records.length)
+  const groups = {}
+  records.forEach(record => {
+    if (!record.typeId) {
+      console.log('记录缺少typeId:', record)
+      return
+    }
+    if (!groups[record.typeId]) {
+      const type = assetStore.types.find(t => t.id === record.typeId)
+      console.log('类型信息:', record.typeId, type)
+      groups[record.typeId] = {
+        type,
+        amount: 0
+      }
+    }
+    const amount = Number(record.amount || 0)
+    groups[record.typeId].amount += amount
+    console.log('累加金额:', record.typeId, amount, '=>', groups[record.typeId].amount)
+  })
+  console.log('分组结果:', groups)
+  return groups
+}
+
 const totalAssets = computed(() => {
-  return records.value.reduce((sum, record) => {
-    return record.amount > 0 ? sum + record.amount : sum
+  console.log('计算总资产...')
+  console.log('当前records:', records.value)
+  console.log('资产类型列表:', assetStore.types)
+  
+  const latestRecords = getLatestDateRecords()
+  if (!latestRecords.length) return 0
+
+  const groupedByType = groupRecordsByType(latestRecords)
+  
+  const total = Object.values(groupedByType).reduce((sum, group) => {
+    const isDebt = group.type?.typeCode === 'ASSET_LOCATION' && group.type?.key1 === 'DEBT'
+    const amount = !isDebt ? group.amount : 0
+    console.log('资产计算:', group.type?.typeName, isDebt ? '负债' : '资产', group.amount, '=>', amount)
+    return sum + amount
   }, 0)
+  
+  console.log('总资产计算结果:', total)
+  return total
 })
 
 const totalLiabilities = computed(() => {
-  return Math.abs(records.value.reduce((sum, record) => {
-    return record.amount < 0 ? sum + record.amount : sum
+  console.log('计算总负债...')
+  const latestRecords = getLatestDateRecords()
+  if (!latestRecords.length) return 0
+
+  const groupedByType = groupRecordsByType(latestRecords)
+
+  const total = Math.abs(Object.values(groupedByType).reduce((sum, group) => {
+    const isDebt = group.type?.typeCode === 'ASSET_LOCATION' && group.type?.key1 === 'DEBT'
+    const amount = isDebt ? group.amount : 0
+    console.log('负债计算:', group.type?.typeName, isDebt ? '负债' : '资产', group.amount, '=>', amount)
+    return sum + amount
   }, 0))
+  
+  console.log('总负债计算结果:', total)
+  return total
 })
 
-const netWorth = computed(() => totalAssets.value - totalLiabilities.value)
+const netWorth = computed(() => {
+  const assets = totalAssets.value
+  const liabilities = totalLiabilities.value
+  console.log('计算净资产:', assets, '-', liabilities, '=', assets - liabilities)
+  return assets - liabilities
+})
 
 // 变化率计算
+const calculateAmountsByDate = (dateStr, calculateDebt = false) => {
+  const dayRecords = records.value.filter(r => r.acquireTime.startsWith(dateStr))
+  const groupedByType = groupRecordsByType(dayRecords)
+  
+  return Object.values(groupedByType).reduce((sum, group) => {
+    const isDebt = group.type?.typeCode === 'ASSET_LOCATION' && group.type?.key1 === 'DEBT'
+    if (calculateDebt ? isDebt : !isDebt) {
+      return sum + group.amount
+    }
+    return sum
+  }, 0)
+}
+
 const assetsChange = computed(() => {
-  if (!records.value.length) return 0
-  const sorted = [...records.value]
-    .filter(r => r.amount > 0)
-    .sort((a, b) => new Date(b.acquireTime) - new Date(a.acquireTime))
-  const latest = sorted[0]?.amount || 0
-  const previous = sorted[1]?.amount || 0
-  return latest - previous
+  const uniqueDates = [...new Set(records.value.map(r => r.acquireTime.split('T')[0]))]
+    .sort((a, b) => new Date(b) - new Date(a))
+
+  if (uniqueDates.length < 2) return 0
+
+  const latestAssets = calculateAmountsByDate(uniqueDates[0], false)
+  const previousAssets = calculateAmountsByDate(uniqueDates[1], false)
+
+  return latestAssets - previousAssets
 })
 
 const liabilitiesChange = computed(() => {
-  if (!records.value.length) return 0
-  const sorted = [...records.value]
-    .filter(r => r.amount < 0)
-    .sort((a, b) => new Date(b.acquireTime) - new Date(a.acquireTime))
-  const latest = sorted[0]?.amount || 0
-  const previous = sorted[1]?.amount || 0
-  return latest - previous
+  const uniqueDates = [...new Set(records.value.map(r => r.acquireTime.split('T')[0]))]
+    .sort((a, b) => new Date(b) - new Date(a))
+
+  if (uniqueDates.length < 2) return 0
+
+  const latestLiabilities = calculateAmountsByDate(uniqueDates[0], true)
+  const previousLiabilities = calculateAmountsByDate(uniqueDates[1], true)
+
+  return latestLiabilities - previousLiabilities
 })
 
-const netWorthChange = computed(() => assetsChange.value + liabilitiesChange.value)
+const netWorthChange = computed(() => assetsChange.value - liabilitiesChange.value)
 
 // 方法
 async function handleQuery() {
@@ -194,6 +291,7 @@ async function handleQuery() {
       pageSize: pageSize.value
     })
     if (result) {
+      console.log('获取到记录:', result.records)
       records.value = result.records || []
       total.value = result.total || 0
     }
@@ -324,6 +422,7 @@ onMounted(async () => {
       assetStore.fetchLocations(),
       assetStore.fetchAssetNames()
     ])
+    console.log('类型列表:', assetStore.types)
     await handleQuery()
   } catch (error) {
     // 如果是取消的请求，不显示错误提示

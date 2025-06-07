@@ -245,16 +245,16 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                         record.getId(), record.getAssetTypeId(), amount,
                         type != null ? type.getValue1() : "未知");
 
-                String typeValue = type != null ? type.getValue1() : "未知";
-                // 严格匹配"负债"类型
-                if (type != null && "负债".equals(type.getValue1())) {
+                // 判断是否是负债类型（typeCode=ASSET_LOCATION 且 key1=DEBT）
+                boolean isDebt = type != null && "ASSET_LOCATION".equals(type.getTypeCode()) && "DEBT".equals(type.getKey1());
+                if (isDebt) {
                     totalLiabilities = totalLiabilities.add(amount);
                     log.info("计入负债 - 类型: {}, 金额: {}, 累计负债: {}",
-                            typeValue, amount, totalLiabilities);
+                            type.getTypeName(), amount, totalLiabilities);
                 } else {
                     totalAssets = totalAssets.add(amount);
                     log.info("计入资产 - 类型: {}, 金额: {}, 累计资产: {}",
-                            typeValue, amount, totalAssets);
+                            type.getTypeName(), amount, totalAssets);
                 }
             } catch (Exception e) {
                 log.error("处理资产记录时发生错误 - 记录ID: " + record.getId(), e);
@@ -280,14 +280,5 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                 .latestDate(latestDate)
                 .formattedDate(formattedDate)
                 .build();
-    }
-
-    // 判断资产类型是否为负债类型
-    private boolean isLiabilityType(Long assetTypeId) {
-        CommonMeta meta = commonMetaService.getById(assetTypeId);
-        if (meta != null && meta.getValue2() != null) {
-            return meta.getValue2().contains("负债");
-        }
-        return false;
     }
 }

@@ -209,7 +209,7 @@ function editRecord(idx) {
 }
 
 async function saveEdit() {
-  if (!editingIdx.value || !editForm.finishTime) return;
+  if (editingIdx.value === null || !editForm.finishTime) return;
   
   const record = records.value[editingIdx.value];
   if (!record) return;
