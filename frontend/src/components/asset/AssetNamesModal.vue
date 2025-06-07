@@ -1,56 +1,104 @@
 <template>
-  <div v-if="show" class="names-modal">
-    <div class="modal-content">
+  <div v-if="show" class="modal-overlay">
+    <div class="modal-content names-modal">
       <div class="modal-header">
-        <h3 class="modal-title">资产名称管理</h3>
-        <button class="close-button" @click="$emit('close')">
+        <h3 class="modal-title">资产名称维护</h3>
+        <button class="close-button" @click="handleClose">
           <LucideX class="close-icon" />
         </button>
       </div>
-      <div class="modal-controls">
-        <input
-          v-model="searchTerm"
-          type="text"
-          class="search-input"
-          placeholder="搜索资产名称..."
-        />
-        <button class="btn btn-black" @click="showAddForm">添加名称</button>
-      </div>
-      <div class="names-table-container">
-        <div v-if="loading" class="loading-overlay">
-          <span>加载中...</span>
+      
+      <!-- 搜索和操作栏 -->
+      <div class="toolbar">
+        <button v-if="!showAdd && !showEdit" class="btn btn-primary" @click="showAddForm">
+          <LucidePlus :size="16" class="btn-icon" />
+          新增
+        </button>
+        <div class="search-wrapper">
+          <input 
+            v-model="searchTerm" 
+            type="text" 
+            placeholder="搜索资产名称..."
+            class="search-input" 
+          />
         </div>
-        <div v-if="error" class="error-message">
+      </div>
+
+      <!-- 新增表单 -->
+      <div v-if="showAdd" class="add-form">
+        <div class="input-group">
+          <input 
+            v-model="newName" 
+            type="text" 
+            placeholder="输入资产名称"
+            class="form-input"
+          />
+          <input 
+            v-model="newDescription" 
+            type="text" 
+            placeholder="输入描述（可选）"
+            class="form-input"
+          />
+          <div class="form-actions">
+            <button class="btn btn-primary" @click="addName">确定</button>
+            <button class="btn btn-text" @click="cancelAdd">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 编辑表单 -->
+      <div v-if="showEdit" class="edit-form">
+        <div class="input-group">
+          <input 
+            v-model="editingName" 
+            type="text" 
+            placeholder="输入资产名称"
+            class="form-input"
+          />
+          <input 
+            v-model="editingDescription" 
+            type="text" 
+            placeholder="输入描述（可选）"
+            class="form-input"
+          />
+          <div class="form-actions">
+            <button class="btn btn-primary" @click="saveEdit">保存</button>
+            <button class="btn btn-text" @click="cancelEdit">取消</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 资产名称列表 -->
+      <div class="names-list">
+        <div v-if="loading" class="loading-state">
+          加载中...
+        </div>
+        <div v-else-if="error" class="error-state">
           {{ error }}
         </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>名称</th>
-              <th>描述</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="!loading && !names.length">
-              <td colspan="3" class="text-center">暂无数据</td>
-            </tr>
-            <tr v-for="name in names" :key="name.id">
-              <td>{{ name.name }}</td>
-              <td>{{ name.description || '-' }}</td>
-              <td class="operations">
-                <button class="btn btn-link" @click="startEdit(name)" title="编辑">
-                  <LucideEdit2 size="16" />
-                </button>
-                <button class="btn btn-link" @click="confirmDelete(name)" title="删除">
-                  <LucideTrash2 size="16" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div v-else-if="names.length === 0" class="empty-state">
+          暂无资产名称
+        </div>
+        <template v-else>
+          <div v-for="name in names" :key="name.id" class="name-item">
+            <div class="name-info">
+              <span class="name-text">{{ name.name }}</span>
+              <span v-if="name.description" class="name-desc">{{ name.description }}</span>
+            </div>
+            <div class="name-actions">
+              <button class="action-btn" @click="startEdit(name)" title="编辑">
+                <LucidePencil :size="16" />
+              </button>
+              <button class="action-btn delete" @click="confirmDelete(name)" title="删除">
+                <LucideTrash2 :size="16" />
+              </button>
+            </div>
+          </div>
+        </template>
       </div>
-      <div class="pagination-container">
+
+      <!-- 分页器 -->
+      <div class="pagination-wrapper">
         <PaginationBar
           :current="current"
           :total="total"
@@ -59,95 +107,13 @@
           @page-size-change="handlePageSizeChange"
         />
       </div>
-      <!-- 添加名称表单 -->
-      <div v-if="showAdd" class="add-form">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3 class="modal-title">添加资产名称</h3>
-            <button class="close-button" @click="cancelAdd">
-              <LucideX class="close-icon" />
-            </button>
-          </div>
-          <div class="form-content">
-            <div class="form-group">
-              <label>名称</label>
-              <input
-                v-model="newName"
-                type="text"
-                class="input"
-                placeholder="请输入资产名称"
-              />
-            </div>
-            <div class="form-group">
-              <label>描述</label>
-              <textarea
-                v-model="newDescription"
-                class="input textarea"
-                placeholder="请输入描述信息（可选）"
-                rows="3"
-              ></textarea>
-            </div>
-            <div class="form-actions">
-              <button class="btn btn-gray" @click="cancelAdd">取消</button>
-              <button
-                class="btn btn-black"
-                :disabled="!newName.trim()"
-                @click="addName"
-              >
-                确定
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- 编辑名称表单 -->
-      <div v-if="showEdit" class="edit-form">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3 class="modal-title">编辑资产名称</h3>
-            <button class="close-button" @click="cancelEdit">
-              <LucideX class="close-icon" />
-            </button>
-          </div>
-          <div class="form-content">
-            <div class="form-group">
-              <label>名称</label>
-              <input
-                v-model="editingName"
-                type="text"
-                class="input"
-                placeholder="请输入资产名称"
-              />
-            </div>
-            <div class="form-group">
-              <label>描述</label>
-              <textarea
-                v-model="editingDescription"
-                class="input textarea"
-                placeholder="请输入描述信息（可选）"
-                rows="3"
-              ></textarea>
-            </div>
-            <div class="form-actions">
-              <button class="btn btn-gray" @click="cancelEdit">取消</button>
-              <button
-                class="btn btn-black"
-                :disabled="!editingName.trim()"
-                @click="saveEdit"
-              >
-                保存
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { LucideX, LucideCheck, LucideEdit2, LucideTrash2 } from 'lucide-vue-next'
+import { LucideX, LucideCheck, LucideEdit2, LucideTrash2, LucidePencil, LucidePlus } from 'lucide-vue-next'
 import PaginationBar from '../../components/PaginationBar.vue'
 import emitter from '../../utils/eventBus.js'
 import axios from '../../utils/axios.js'
@@ -169,6 +135,22 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'refresh'])
+
+// 处理关闭模态框
+function handleClose() {
+  // 重置状态
+  showAdd.value = false
+  showEdit.value = false
+  searchTerm.value = ''
+  newName.value = ''
+  newDescription.value = ''
+  editingId.value = null
+  editingName.value = ''
+  editingDescription.value = ''
+  error.value = null
+  
+  emit('close')
+}
 
 const searchTerm = ref('')
 const names = ref([])
@@ -348,4 +330,14 @@ function handlePageSizeChange(size) {
 
 // 初始化加载数据
 fetchNames()
+
+watch(() => props.show, (newVal) => {
+  if (newVal) {
+    // 模态框打开时，加载数据
+    fetchNames()
+  } else {
+    // 模态框关闭时，重置状态
+    handleClose()
+  }
+})
 </script>

@@ -1,18 +1,19 @@
 <template>
-  <div class="fitness-query-bar">
-    <div class="query-fields query-bar-fields">
-      <select v-model="localQuery.typeId">
+  <div class="query-bar">
+    <div class="query-fields">
+      <select v-model="localQuery.typeId" class="input">
         <option value="">全部类型</option>
         <option v-for="type in types" :key="type.id" :value="type.id">
           {{ type.value1 }}
         </option>
       </select>
       
-      <input type="date" v-model="localQuery.startDate" />
-      <span class="to-text">至</span>
-      <input type="date" v-model="localQuery.endDate" />
+      <input type="date" v-model="localQuery.startDate" class="input" />
+      <span class="text-secondary">至</span>
+      <input type="date" v-model="localQuery.endDate" class="input" />
       
       <input 
+        class="input"
         v-model="localQuery.remark" 
         placeholder="备注关键词" 
         type="text" 
@@ -23,7 +24,7 @@
       <button class="btn btn-primary" title="查询" @click="search">
         <LucideSearch size="18" style="vertical-align: middle;" />
       </button>
-      <button class="btn btn-outline" title="重置" @click="reset">
+      <button class="btn btn-text" title="重置" @click="reset">
         <LucideRotateCcw size="18" style="vertical-align: middle;" />
       </button>
     </div>

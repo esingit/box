@@ -1,12 +1,12 @@
 <template>
   <transition name="fade">
-    <div v-if="visible" class="confirm-modal-overlay">
-      <div class="confirm-modal">
-        <div class="confirm-title">{{ title }}</div>
-        <div class="confirm-message">{{ message }}</div>
-        <div class="confirm-actions">
-          <button class="btn btn-black" @click="onConfirm">{{ confirmText || '确定' }}</button>
-          <button class="btn btn-gray" @click="onCancel">{{ cancelText || '取消' }}</button>
+    <div v-if="visible" class="modal-overlay">
+      <div class="modal-container">
+        <div class="modal-header">{{ title }}</div>
+        <div class="modal-body">{{ message }}</div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" @click="onConfirm">{{ confirmText || '确定' }}</button>
+          <button class="btn btn-text" @click="onCancel">{{ cancelText || '取消' }}</button>
         </div>
       </div>
     </div>

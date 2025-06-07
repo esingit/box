@@ -1,10 +1,10 @@
 <template>
-  <div class="empty-text">
-    <span class="empty-icon">📊</span>
-    <p>暂无健身记录</p>
+  <div class="empty-state">
+    <LucideClipboardList class="empty-icon" size="48" color="#666" />
+    <p class="empty-text">暂无记录</p>
   </div>
 </template>
 
 <script setup>
-// 当前组件不需要任何 props 或其他逻辑
+import { LucideClipboardList } from 'lucide-vue-next';
 </script>

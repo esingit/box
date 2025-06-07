@@ -10,7 +10,7 @@
       <main class="main-content">
         <!-- 页面顶部用户菜单 -->
         <div class="main-header">
-          <nav class="user-menu">
+          <nav class="user-menu-container">
             <!-- 登录后菜单 -->
             <UserMenuAuthenticated 
               v-if="isLoggedIn" 
@@ -38,11 +38,11 @@
     <!-- 全局弹窗组件 -->
     <GlobalModals 
       ref="profileRef"
-      :show-login="showLoginModal"
-      :show-register="showRegisterModal"
-      @login-close="handleLoginModalClose"
+      :show-login="isShowingLoginModal"
+      :show-register="isShowingRegisterModal"
+      @login-close="hideLogin"
       @login-success="handleLoginSuccess"
-      @register-close="showRegisterModal = false"
+      @register-close="hideRegister"
       @register-success="handleRegisterSuccess"
     />
     
@@ -53,23 +53,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useUserStore } from './stores/userStore';
 import { useRouter } from 'vue-router';
+import { useAuth, initializeAuth } from './composables/useAuth';
 import Sidebar from './components/Sidebar.vue';
 import Profile from './views/Profile.vue';
 import GlobalModals from './components/GlobalModals.vue';
 import Notification from './components/Notification.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
-import LoginForm from './components/LoginForm.vue';
-import RegisterForm from './components/RegisterForm.vue';
-import emitter from './utils/eventBus.js';
 import UserMenuAuthenticated from './components/user/UserMenuAuthenticated.vue';
 import UserMenuGuest from './components/user/UserMenuGuest.vue';
+import emitter from './utils/eventBus';
 
 // ===== 状态管理 =====
 const userStore = useUserStore();
 const router = useRouter();
+const {
+  isShowingLoginModal,
+  isShowingRegisterModal,
+  showLogin,
+  hideLogin,
+  showRegister,
+  hideRegister
+} = useAuth();
 
 // ===== 计算属性 =====
 const shouldShowSidebar = computed(() => 
@@ -81,53 +88,16 @@ const isLoggedIn = computed(() => userStore.isLoggedIn);
 const user = computed(() => userStore.user);
 const showMenu = ref(false);
 const profileRef = ref(null);
-const showLoginModal = ref(false);
-const showRegisterModal = ref(false);
-
-// ===== 常量 =====
-const publicPaths = ['/login', '/register', '/home']; // 公共路径列表
-
-// ===== 登录状态检查 =====
-/**
- * 检查是否需要显示登录框
- */
-const checkAndShowLoginModal = () => {
-  // 如果已经显示登录框，不重复检查
-  if (showLoginModal.value) return;
-
-  const currentPath = router.currentRoute.value.path;
-  // 如果是公共路径，不需要显示登录框
-  if (publicPaths.includes(currentPath)) return;
-  
-  // 只在页面刷新时检查登录状态
-  if (!isLoggedIn.value && !router.currentRoute.value.redirectedFrom) {
-    showLoginModal.value = true;
-  }
-};
-
-// 只在路由变化时检查登录状态，不再监听登录状态变化
-watch(() => router.currentRoute.value.path, () => {
-  nextTick(checkAndShowLoginModal);
-});
 
 // ===== 用户菜单相关函数 =====
-/**
- * 切换用户菜单显示状态
- */
 function toggleMenu() {
   showMenu.value = !showMenu.value;
 }
 
-/**
- * 关闭用户菜单
- */
 function closeMenu() {
   showMenu.value = false;
 }
 
-/**
- * 处理菜单外部点击事件
- */
 function handleClickOutside(event) {
   const menu = document.querySelector('.dropdown-menu');
   const btn = document.querySelector('.user-menu-btn');
@@ -143,62 +113,38 @@ function handleClickOutside(event) {
   }
 }
 
-/**
- * 打开用户资料设置
- */
 function openProfile() {
-  profileRef.value.openModal();
-  closeMenu();
+  if (profileRef.value?.openModal) {
+    profileRef.value.openModal();
+    closeMenu();
+  }
 }
 
-/**
- * 用户登出
- */
 async function logout() {
-  await userStore.logout();
-  router.push('/');
-  closeMenu();
-  emitter.emit('notify', '已成功注销', 'success');
+  try {
+    closeMenu(); // 先关闭菜单，提升用户体验
+    await userStore.logout(true, router);
+    emitter.emit('notify', '已成功注销', 'success');
+  } catch (error) {
+    console.error('注销失败:', error);
+    // 即使失败也要强制清理状态
+    await userStore.logout(true, router);
+    emitter.emit('notify', '注销过程遇到问题，但已清理登录状态', 'warning');
+  }
 }
 
 // ===== 认证相关函数 =====
-/**
- * 显示登录模态框
- */
-function showLogin() {
-  showLoginModal.value = true;
-}
-
-/**
- * 显示注册模态框
- */
-function showRegister() {
-  showRegisterModal.value = true;
-}
-
-/**
- * 处理登录模态框关闭
- */
-function handleLoginModalClose() {
-  showLoginModal.value = false;
-}
-
-/**
- * 处理登录成功
- */
 function handleLoginSuccess() {
   closeMenu();
-  showLoginModal.value = false;
+  hideLogin();
+  emitter.emit('login-success');
   emitter.emit('notify', '登录成功', 'success');
 }
 
-/**
- * 处理注册成功
- */
 function handleRegisterSuccess() {
-  showRegisterModal.value = false;
+  hideRegister();
   // 可选：注册成功后自动弹出登录弹窗
-  // showLoginModal.value = true;
+  // showLogin();
 }
 
 // ===== 生命周期钩子 =====
@@ -209,17 +155,27 @@ onMounted(() => {
   // 注册认证事件监听
   emitter.on('show-auth', (type, message) => {
     if (type === 'login') {
-      // 如果登录框已经显示，不再重复显示
-      if (!showLoginModal.value) {
-        showLoginModal.value = true;
-        if (message) {
-          emitter.emit('login-error', message);
-        }
-      }
-    } else if (type === 'register' && !showRegisterModal.value) {
-      showRegisterModal.value = true;
+      showLogin(message);
+    } else if (type === 'register') {
+      showRegister();
     }
   });
+
+  // 初始化认证状态
+  const initAuth = async () => {
+    try {
+      const success = await initializeAuth();
+      if (!success && userStore.isLoggedIn) {
+        // 如果初始化失败但状态显示已登录，清理登录状态
+        userStore.logout(false);
+      }
+    } catch (error) {
+      console.error('认证初始化失败:', error);
+      userStore.logout(false);
+    }
+  };
+  
+  initAuth();
 });
 
 onBeforeUnmount(() => {

@@ -1,7 +1,9 @@
 package com.box.login.filter;
 
 import io.jsonwebtoken.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -13,14 +15,17 @@ import javax.crypto.SecretKey;
 
 @Component
 public class JwtTokenProvider {
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+    
     @Value("${jwt.secret}")
     private String jwtSecret;
     
     // token 的过期时间 2小时
-    private final long jwtExpirationInMs = 5 * 60 * 1000; // 2小时
+    private final long jwtExpirationInMs = 2 * 60 * 1000; // 2小时
     
     // token 的刷新时间窗口 30分钟
-    private final long refreshWindowInMs = 1 * 60 * 1000; // 30分钟
+    private final long refreshWindowInMs = 60 * 1000; // 30分钟
 
     private SecretKey getSecretKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
@@ -51,6 +56,13 @@ public class JwtTokenProvider {
             if (authToken == null || authToken.trim().isEmpty()) {
                 throw new JwtException("Token is empty");
             }
+            
+            // 检查 token 是否在黑名单中
+            String blacklistKey = "token_blacklist:" + authToken;
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(blacklistKey))) {
+                throw new JwtException("Token已失效");
+            }
+            
             Jwts.parserBuilder().setSigningKey(getSecretKey()).build().parseClaimsJws(authToken);
             return true;
         } catch (ExpiredJwtException e) {

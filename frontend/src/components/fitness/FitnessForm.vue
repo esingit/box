@@ -1,5 +1,5 @@
 <template>
-  <form class="fitness-form">
+  <form>
     <div class="form-group">
       <label>类型：</label>
       <select v-model="form.typeId" class="form-control">
@@ -52,18 +52,32 @@
 <script setup>
 import { computed } from 'vue';
 
+// 定义表单项的类型
 const props = defineProps({
   form: {
     type: Object,
-    required: true
+    required: true,
+    validator: (value) => {
+      return value && typeof value === 'object';
+    }
   },
   types: {
     type: Array,
-    default: () => []
+    default: () => [],
+    validator: (value) => {
+      return value.every(item => 
+        item && typeof item.id !== 'undefined' && typeof item.name === 'string'
+      );
+    }
   },
   units: {
     type: Array,
-    default: () => []
+    default: () => [],
+    validator: (value) => {
+      return value.every(item => 
+        item && typeof item.id !== 'undefined' && typeof item.name === 'string'
+      );
+    }
   },
   remarkPlaceholder: {
     type: String,
@@ -71,60 +85,24 @@ const props = defineProps({
   }
 });
 
+// 表单字段验证
+const fieldValidation = computed(() => ({
+  typeId: Boolean(props.form.typeId),
+  count: props.form.count > 0,
+  unitId: Boolean(props.form.unitId),
+  finishTime: Boolean(props.form.finishTime)
+}));
+
+// 表单整体验证
 const isValid = computed(() => {
-  return props.form && 
-         props.form.typeId && 
-         props.form.count > 0 && 
-         props.form.unitId && 
-         props.form.finishTime;
+  if (!props.form) return false;
+  
+  return Object.values(fieldValidation.value).every(valid => valid);
 });
 
+// 对外暴露的接口
 defineExpose({
-  isValid
+  isValid,
+  fieldValidation
 });
 </script>
-
-<style scoped>
-.fitness-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-group label {
-  font-weight: 500;
-  color: #333;
-}
-
-.form-control {
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #0066cc;
-  box-shadow: 0 0 0 2px rgba(0,102,204,0.2);
-}
-
-select.form-control {
-  background-color: white;
-}
-
-input[type="number"].form-control {
-  width: 100%;
-}
-
-input[type="date"].form-control {
-  width: 100%;
-}
-</style>

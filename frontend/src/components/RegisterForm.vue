@@ -1,37 +1,79 @@
 <template>
-  <div class="auth-form-modal-overlay" @click.self="$emit('close')">
-    <div class="auth-form-modal">
-      <div class="auth-form-header">
-        <h2 class="auth-form-title">注册</h2>
-        <button class="btn-close" @click="$emit('close')">×</button>
+  <div class="modal-overlay" @click.self="$emit('close')">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">创建新账号</h3>
+        <button class="close-button" @click="$emit('close')">
+          <LucideX />
+        </button>
       </div>
-      <div class="auth-form-divider"></div>
-      <div class="auth-form-inner">
-        <form @submit.prevent="submit">
-          <div class="form-group">
-            <label>用户名</label>
-            <input v-model="username" required autocomplete="username" class="input" />
+
+      <form class="modal-body" @submit.prevent="submit">
+        <div class="form-group">
+          <label class="flex items-center">
+            <LucideUser :size="16" class="input-icon" />
+            用户名
+          </label>
+          <input
+            class="input"
+            type="text"
+            v-model="username"
+            required
+            autocomplete="username"
+            placeholder="请输入用户名"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="flex items-center">
+            <LucideLock :size="16" class="input-icon" />
+            密码
+          </label>
+          <input
+            class="input"
+            type="password"
+            v-model="password"
+            required
+            autocomplete="new-password"
+            placeholder="请输入密码"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div v-if="showCaptcha" class="form-group">
+          <label class="flex items-center">
+            <LucideShieldCheck :size="16" class="input-icon" />
+            验证码
+          </label>
+          <div class="flex gap-2">
+            <input 
+              class="input"
+              type="text"
+              v-model="captcha"
+              placeholder="请输入验证码"
+              :disabled="isLoading"
+              required
+            />
+            <img 
+              v-if="captchaUrl"
+              :src="captchaUrl"
+              @click="refreshCaptcha"
+              alt="验证码"
+              class="captcha-image"
+            />
           </div>
-          <div class="form-group">
-            <label>密码</label>
-            <input type="password" v-model="password" required autocomplete="new-password" class="input" />
-          </div>
-          <div class="form-group" v-if="showCaptcha">
-            <label>验证码</label>
-            <div class="captcha-container">
-              <input v-model="captcha" required class="input captcha-input" />
-              <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
-            </div>
-          </div>
-          <div class="form-submit">
-            <p v-if="error" class="error-msg">{{ error }}</p>
-            <p v-if="success" class="success-msg">{{ success }}</p>
-            <button type="submit" class="btn btn-black" :disabled="isLoading">
-              {{ isLoading ? '注册中...' : '注册' }}
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+
+        <p v-if="error" class="error-text">{{ error }}</p>
+        <p v-if="success" class="success-text">{{ success }}</p>
+
+        <button type="submit" class="btn btn-primary w-full" :disabled="isLoading">
+          <LucideUserPlus v-if="!isLoading" :size="16" class="btn-icon" />
+          <LucideLoader2 v-else :size="16" class="btn-icon animate-spin" />
+          {{ isLoading ? '注册中...' : '注册' }}
+        </button>
+      </form>
     </div>
   </div>
 </template>
@@ -40,7 +82,16 @@
 import { ref, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/userStore'
 import emitter from '@/utils/eventBus.js'
+import { 
+  LucideX,
+  LucideUser, 
+  LucideLock, 
+  LucideShieldCheck,
+  LucideUserPlus, 
+  LucideLoader2 
+} from 'lucide-vue-next'
 
+const emit = defineEmits(['close'])
 const username = ref('')
 const password = ref('')
 const captcha = ref('')
@@ -104,21 +155,20 @@ async function submit() {
       captchaId: showCaptcha.value ? captchaId.value : ""
     };
     const response = await userStore.register(payload);
-    console.log("后端注册响应:", response);
+    
     if (response.success) {
       success.value = response.message || '注册成功';
       emitter.emit('notify', '注册成功', 'success');
       showCaptcha.value = false;
       setTimeout(() => {
+        emit('close');
       }, 1000);
     } else {
-      console.log("准备设置错误信息，后端返回的 message:", response.message);
       if (response.message) {
         error.value = `${response.message}`;
       } else {
         error.value = '注册失败，请稍后重试';
       }
-      console.log("设置后的错误信息:", error.value);
 
       if (response.showCaptcha || (response.message && response.message.includes('验证码'))) {
         showCaptcha.value = true;

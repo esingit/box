@@ -1,24 +1,22 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click.self="closeModal">
-    <div class="modal-container user-settings-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title">设置</h2>
-          <button class="close-button" @click="closeModal">
-            <LucideX class="close-icon" />
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="sidebar-menu">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2 class="modal-title">设置</h2>
+        <button class="close-button" @click="closeModal">
+          <LucideX class="close-icon" />
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-content">
+          <div class="settings-menu">
             <nav class="menu-list">
               <button 
                 @click="activeTab = 'profile'"
                 :class="['menu-item', { active: activeTab === 'profile' }]"
               >
                 <div class="menu-item-content">
-                  <svg class="menu-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+                  <LucideUser class="menu-icon" :size="20" />
                   个人信息
                 </div>
               </button>
@@ -27,14 +25,13 @@
                 :class="['menu-item', { active: activeTab === 'security' }]"
               >
                 <div class="menu-item-content">
-                  <svg class="menu-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+                  <LucideLock class="menu-icon" :size="20" />
                   安全设置
                 </div>
               </button>
             </nav>
           </div>
+          
           <div class="content-area">
             <div v-if="activeTab === 'profile'" class="profile-panel">
               <div class="info-group">
@@ -50,25 +47,28 @@
                 <p class="info-value">{{ formatDateTime(user?.lastLoginTime) }}</p>
               </div>
             </div>
+
             <div v-if="activeTab === 'security'" class="security-panel">
               <form @submit.prevent="handleReset">
                 <div class="form-group">
                   <label class="form-label">旧密码</label>
-                  <input type="password" v-model="oldPassword" class="form-input" required />
+                  <input type="password" v-model="oldPassword" class="input" required />
                 </div>
                 <div class="form-group">
                   <label class="form-label">新密码</label>
-                  <input type="password" v-model="newPassword" class="form-input" required />
+                  <input type="password" v-model="newPassword" class="input" required />
                 </div>
                 <div class="form-group">
                   <label class="form-label">确认密码</label>
-                  <input type="password" v-model="confirmPassword" class="form-input" required />
+                  <input type="password" v-model="confirmPassword" class="input" required />
                 </div>
-                <div class="form-submit">
-                  <p v-if="resetMsg" :class="['message', resetSuccess ? 'success' : 'error']">
-                    {{ resetMsg }}
-                  </p>
-                  <button class="btn btn-black" type="submit">确认修改</button>
+                <div class="modal-footer">
+                  <div class="flex-grow">
+                    <p v-if="resetMsg" :class="['message', resetSuccess ? 'success-text' : 'error-text']">
+                      {{ resetMsg }}
+                    </p>
+                  </div>
+                  <button class="btn btn-primary" type="submit">确认修改</button>
                 </div>
               </form>
             </div>
@@ -81,7 +81,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { LucideX } from 'lucide-vue-next'
+import { LucideX, LucideUser, LucideLock } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/userStore'
 
 const userStore = useUserStore()

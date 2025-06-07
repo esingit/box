@@ -1,20 +1,50 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  margin: 20px 0;
-  background-color: #fff;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  text-align: left;
 }
+
 .table th,
 .table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--border-color);
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-primary);
 }
+
 .table th {
-  background-color: #f9fafb;
-  font-weight: 600;
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  white-space: nowrap;
+}
+
+.table td {
+  color: var(--text-primary);
+}
+
+.table tbody tr:hover {
+  background-color: var(--bg-hover);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 表格单元格类型 */
+.count-cell {
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+.remark-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 操作列 */
+.operations {
+  white-space: nowrap;
+  display: flex;
+  gap: var(--spacing-sm);
 }

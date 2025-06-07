@@ -41,17 +41,17 @@
         <input v-model="query.remark" placeholder="备注关键词" type="text" />
       </div>
       <div class="query-btns">
-        <button class="btn btn-white" title="查询" @click="handleQuery">
+        <button class="btn btn-primary" title="查询" @click="handleQuery">
           <LucideSearch size="18" style="vertical-align: middle;" />
         </button>
-        <button class="btn btn-gray" title="重置" @click="resetQuery">
+        <button class="btn btn-text" title="重置" @click="resetQuery">
           <LucideRotateCcw size="18" style="vertical-align: middle;" />
         </button>
       </div>
     </div>
-    <div class="button-group">
-      <button class="btn btn-black" @click="showModal">添加记录</button>
-      <button class="btn btn-white" @click="copyLastRecords">复制上回记录</button>
+    <div>
+      <button class="btn btn-primary" @click="showModal">添加记录</button>
+      <button class="btn btn-outline" @click="copyLastRecords">复制上回记录</button>
     </div>
     <AssetModal
       :show="showAddModal"
@@ -564,6 +564,20 @@ async function showModal() {
   }
 }
 
+// 添加刷新资产名称的处理函数
+async function refreshAssetNames() {
+  try {
+    await assetStore.fetchAssetNames()
+    // 同时刷新资产记录列表以显示更新后的名称
+    await fetchRecords()
+    emitter.emit('notify', '资产名称列表已更新', 'success')
+  } catch (error) {
+    console.error('刷新资产名称列表失败:', error)
+    emitter.emit('notify', '刷新资产名称列表失败', 'error')
+  }
+}
+
+// 取消模态框
 function cancelModal() {
   showAddModal.value = false
   // 重置表单
@@ -576,12 +590,6 @@ function cancelModal() {
     acquireTime: getTodayDate(),
     remark: ''
   })
-}
-
-// 添加刷新资产名称的处理函数
-async function refreshAssetNames() {
-  await assetStore.fetchAssetNames()
-  await fetchRecords() // 同时刷新资产记录列表以显示更新后的名称
 }
 </script>
 

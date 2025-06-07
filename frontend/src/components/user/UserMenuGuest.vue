@@ -1,19 +1,18 @@
 <template>
-  <div>
-    <button class="user-auth-link" @click="$emit('login')">
-      <LogIn :size="18" />
+  <div class="flex gap-2">
+    <button class="btn btn-primary" @click="$emit('login')">
+      <LucideLogIn :size="16" class="btn-icon" />
       登录
     </button>
-    <span class="auth-separator">|</span>
-    <button class="user-auth-link" @click="$emit('register')">
-      <UserPlus :size="18" />
+    <button class="btn btn-primary" @click="$emit('register')">
+      <LucideUserPlus :size="16" class="btn-icon" />
       注册
     </button>
   </div>
 </template>
 
 <script setup>
-import { LogIn, UserPlus } from 'lucide-vue-next';
+import { LucideLogIn, LucideUserPlus } from 'lucide-vue-next';
 
 defineEmits(['login', 'register']);
 </script>

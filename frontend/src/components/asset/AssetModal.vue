@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="edit-modal">
+  <div v-if="show" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">{{ title }}</h3>
@@ -89,9 +89,9 @@
         <input id="remark" v-model="form.remark" type="text" class="remark-input input" :placeholder="remarkPlaceholder" />
       </div>
       <div class="modal-actions">
-        <button class="btn btn-gray" @click="$emit('cancel')">取消</button>
+        <button class="btn btn-test" @click="$emit('cancel')">取消</button>
         <button
-          class="btn btn-black"
+          class="btn btn-primary"
           :disabled="loading || !isFormValid"
           @click="$emit('submit')"
         >
@@ -102,15 +102,15 @@
   </div>
   <AssetNamesModal
     v-if="showNamesModal"
-    :show="true"
-    @close="showNamesModal = false"
+    :show="showNamesModal"
+    @close="handleNamesModalClose"
     @refresh="handleNamesModalRefresh"
   />
 </template>
 
 <script setup>
 import { LucideX, LucideSettings } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AssetNamesModal from './AssetNamesModal.vue'
 
 const props = defineProps({
@@ -192,8 +192,19 @@ function handleNamesModalRefresh() {
 }
 
 function handleMaintainClick() {
-  console.log('Maintain button clicked') // 添加调试日志
   showNamesModal.value = true
 }
+
+function handleNamesModalClose() {
+  showNamesModal.value = false
+}
+
+// 监听父组件的 show 属性变化
+watch(() => props.show, (newVal) => {
+  if (!newVal) {
+    // 当父模态框关闭时，确保子模态框也关闭
+    showNamesModal.value = false
+  }
+})
 </script>
 

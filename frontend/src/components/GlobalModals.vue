@@ -32,6 +32,6 @@ defineEmits(['login-close', 'login-success', 'register-close', 'register-success
 const profileRef = ref(null);
 
 defineExpose({
-  profileRef
+  openModal: () => profileRef.value?.openModal()
 });
 </script>

@@ -1,6 +1,6 @@
 <template>
-  <div class="table-wrapper">
-    <table class="data-table">
+  <div>
+    <table class="table">
       <thead>
         <tr>
           <th v-for="header in tableHeaders" :key="header.key" :class="header.class">

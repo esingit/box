@@ -7,6 +7,7 @@ import com.box.login.dto.ResetPasswordRequest;
 import com.box.login.entity.User;
 import com.box.login.service.UserService;
 import com.box.login.filter.JwtTokenProvider;
+import io.jsonwebtoken.JwtException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -220,5 +221,56 @@ public class UserController {
             return bearerToken.substring(7);
         }
         return null;
+    }
+
+    @GetMapping("/verify-token")
+    public Result<Void> verifyToken(HttpServletRequest request) {
+        try {
+            String token = getTokenFromRequest(request);
+            if (token == null) {
+                return Result.error("Token不存在");
+            }
+            
+            if (jwtTokenProvider.validateToken(token)) {
+                return Result.success();
+            }
+            return Result.error("Token无效");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/logout")
+    public Result<Void> logout(HttpServletRequest request) {
+        try {
+            String token = getTokenFromRequest(request);
+            if (token != null) {
+                try {
+                    // 验证 token
+                    if (jwtTokenProvider.validateToken(token)) {
+                        // 获取用户名
+                        String username = jwtTokenProvider.getUsernameFromJWT(token);
+                        // 把当前 token 加入黑名单
+                        String blacklistKey = "token_blacklist:" + token;
+                        redisTemplate.opsForValue().set(blacklistKey, username, 24, TimeUnit.HOURS);
+                        
+                        // 可选：记录用户登出时间
+                        String lastLogoutKey = "last_logout:" + username;
+                        redisTemplate.opsForValue().set(lastLogoutKey, String.valueOf(System.currentTimeMillis()));
+                        
+                        return Result.success();
+                    }
+                } catch (JwtException e) {
+                    // token 已失效或过期，直接返回成功
+                    return Result.success();
+                }
+            }
+            // 如果没有 token，也视为成功
+            return Result.success();
+        } catch (Exception e) {
+            // 记录错误日志但返回成功
+            System.err.println("登出处理异常: " + e.getMessage());
+            return Result.success();
+        }
     }
 }

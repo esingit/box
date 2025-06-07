@@ -55,5 +55,3 @@ function handleDelete(idx) {
   emit('delete', idx);
 }
 </script>
-
-

@@ -1,161 +1,233 @@
 <template>
-  <div class="auth-form-modal-overlay" @click.self="$emit('close')" @mousedown.stop>
-    <div :class="['auth-form-modal', { 'show-captcha': showCaptcha }]" @click.stop>
-      <div class="auth-form-header">
-        <h2 class="auth-form-title">登录</h2>
-        <button class="btn-close" data-modal-close @click.stop="$emit('close')">×</button>
+  <div class="modal-overlay" @click.self="$emit('close')">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">欢迎回来</h3>
+        <button class="close-button" @click="$emit('close')">
+          <LucideX />
+        </button>
       </div>
-      <div class="auth-form-divider"></div>
-      <div class="auth-form-inner">
-        <form @submit.prevent="submit">
-          <div class="form-group">
-            <label>用户名</label>
-            <input v-model="username" required autocomplete="username" />
+
+      <form class="modal-body" @submit.prevent="handleSubmit">
+        <div class="form-group">
+          <label class="flex items-center">
+            <LucideUser :size="16" class="input-icon" />
+            用户名
+          </label>
+          <input 
+            class="input"
+            type="text" 
+            v-model="form.username" 
+            placeholder="请输入用户名"
+            :disabled="loading"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="flex items-center">
+            <LucideLock :size="16" class="input-icon" />
+            密码
+          </label>
+          <input 
+            class="input"
+            type="password" 
+            v-model="form.password" 
+            placeholder="请输入密码"
+            :disabled="loading"
+            required
+          >
+        </div>
+
+        <div v-if="showCaptcha" class="form-group">
+          <label class="flex items-center">
+            <LucideShieldCheck :size="16" class="input-icon" />
+            验证码
+          </label>
+          <div class="captcha-group">
+            <input 
+              class="input"
+              type="text" 
+              v-model="form.captcha"
+              placeholder="请输入验证码"
+              :disabled="loading"
+              required
+            >
+            <img 
+              v-if="captchaUrl" 
+              :src="captchaUrl" 
+              @click="refreshCaptcha"
+              @error="handleImageError"
+              alt="验证码"
+              class="captcha-image"
+            >
           </div>
-          <div class="form-group">
-            <label>密码</label>
-            <input type="password" v-model="password" required autocomplete="current-password" />
-          </div>
-          <div class="form-group" v-if="showCaptcha">
-            <label>验证码</label>
-            <div class="captcha-container">
-              <input v-model="captcha" required class="captcha-input" />
-              <img :src="captchaUrl" @click="refreshCaptcha" class="captcha-image" alt="验证码" />
-            </div>
-          </div>
-          <div class="form-submit">
-            <p v-if="error" class="error-msg">{{ error }}</p>
-            <button type="submit" class="btn btn-black" :disabled="isLoading">
-              {{ isLoading ? '登录中...' : '登录' }}
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+
+        <p v-if="error" class="error-text">{{ error }}</p>
+
+        <button type="submit" class="btn btn-primary w-full" :disabled="loading">
+          <LucideLogIn v-if="!loading" :size="16" class="btn-icon" />
+          <LucideLoader2 v-else :size="16" class="btn-icon animate-spin" />
+          {{ loading ? '登录中...' : '登录' }}
+        </button>
+      </form>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { useUserStore } from '@/stores/userStore'
-import emitter from '@/utils/eventBus.js'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted, watch } from 'vue';
+import { 
+  LucideX, 
+  LucideUser, 
+  LucideLock, 
+  LucideShieldCheck, 
+  LucideLogIn, 
+  LucideLoader2 
+} from 'lucide-vue-next';
+import { useUserStore } from '../stores/userStore';
+import axios from '../utils/axios';
 
-const emit = defineEmits(['close', 'login-success'])
+const emit = defineEmits(['close', 'login-success']);
 
-const username = ref('')
-const password = ref('')
-const error = ref(null)
-const isLoading = ref(false)
-const userStore = useUserStore()
-const router = useRouter()
-
-// 监听错误消息
-onMounted(() => {
-  emitter.on('login-error', (message) => {
-    error.value = message;
-  });
-});
-
-onUnmounted(() => {
-  emitter.off('login-error');
-});
-
-// Remove handleClose function as we're using direct emit now
-
-const captcha = ref('')
-const captchaId = ref('')
-const captchaUrl = ref('')
+const userStore = useUserStore();
+const loading = ref(false);
+const error = ref('');
 const showCaptcha = ref(false);
-async function fetchCaptchaAndId() {
-  try {
-    const response = await fetch('/api/captcha')
-    const data = await response.json()
-    
-    if (data.captchaImage) {
-      captchaUrl.value = `data:image/png;base64,${data.captchaImage}`;
-    } else if (data.captchaUrl) {
-      const imagePath = data.captchaUrl.startsWith('/') ? data.captchaUrl : `/${data.captchaUrl}`;
-      captchaUrl.value = `/api${imagePath}`; 
-    } else {
-      captchaUrl.value = ''; 
-    }
-    captchaId.value = data.captchaId
+const captchaUrl = ref('');
+const captchaId = ref('');
 
-  } catch (error) {
-    console.error('获取验证码异常:', error)
-    captchaUrl.value = '';
-  }
-}
+const form = reactive({
+  username: '',
+  password: '',
+  captcha: '',
+});
 
+// 处理验证码图片加载失败
+const handleImageError = async (e) => {
+  console.error('验证码图片加载失败');
+  error.value = '验证码加载失败，正在重试...';
+  await refreshCaptcha();
+};
+
+// 监听验证码状态变化
 watch(showCaptcha, async (newValue) => {
   if (newValue) {
-    error.value = null;
-    if (!captchaUrl.value) {
-      await fetchCaptchaAndId();
-    }
+    error.value = '';
+    await refreshCaptcha(); // 每次显示验证码时都刷新
   } else {
-    captcha.value = '';
+    form.captcha = '';
     captchaId.value = '';
     captchaUrl.value = '';
   }
 });
 
-async function refreshCaptcha() {
-  error.value = null;
-  await fetchCaptchaAndId();
-}
+// 移除初始化检查验证码，改为在登录失败时检查
 
-async function submit() {
-  error.value = null;
-  isLoading.value = true;
+async function handleSubmit() {
+  if (loading.value) return;
+  
+  error.value = '';
+  loading.value = true;
+  
   try {
-    let payload = {
-      username: username.value,
-      password: password.value,
+    const loginData = {
+      username: form.username,
+      password: form.password
     };
+    
     if (showCaptcha.value) {
-      if (!captcha.value) {
+      if (!form.captcha) {
         error.value = '请输入验证码';
-        isLoading.value = false;
+        loading.value = false;
         return;
       }
-      payload.captchaId = captchaId.value;
-      payload.captcha = captcha.value;
+      loginData.captcha = form.captcha;
+      loginData.captchaId = captchaId.value;
     }
-    const response = await userStore.login(payload);
-    if (response.success) {
-      // 发送登录成功事件，并传递新的 token
-      emitter.emit('loginSuccess', response.token);
-      // 发送数据刷新事件
-      emitter.emit('refresh-data');
-      // 关闭登录弹窗
-      emit('close');
+    
+    const res = await userStore.login(loginData);
+    
+    if (res.success) {
       emit('login-success');
-      // 清空表单
-      showCaptcha.value = false;
-      username.value = '';
-      password.value = '';
-      captcha.value = '';
-      captchaUrl.value = '';
-      error.value = null;
+      emit('close');
     } else {
-      error.value = response.message || '用户名或密码错误';
-      if (response.showCaptcha) {
-         showCaptcha.value = true;
-         await fetchCaptchaAndId();
-         captcha.value = '';
-      } else {
-         showCaptcha.value = false;
+      error.value = res.message;
+      // 检查是否需要显示验证码
+      if (res.needCaptcha || 
+          res.message?.includes('验证码') || 
+          res.code === 'NEED_CAPTCHA' ||
+          (res.message && res.message.toLowerCase().includes('captcha'))) {
+        showCaptcha.value = true;
+        await refreshCaptcha();
+        form.captcha = '';
       }
     }
   } catch (err) {
-    error.value = err.message || '登录失败，请稍后重试';
-    if (showCaptcha.value) {
-        await fetchCaptchaAndId();
+    console.error('登录失败:', err);
+    const errorResponse = err.response?.data;
+    
+    // 处理错误响应
+    if (errorResponse) {
+      error.value = errorResponse.message || '登录失败，请重试';
+      if (errorResponse.needCaptcha || 
+          errorResponse.message?.includes('验证码') ||
+          errorResponse.code === 'NEED_CAPTCHA') {
+        showCaptcha.value = true;
+        await refreshCaptcha();
+        form.captcha = '';
+      }
+    } else {
+      error.value = err.message || '登录失败，请重试';
     }
   } finally {
-    isLoading.value = false;
+    loading.value = false;
+  }
+}
+
+async function refreshCaptcha() {
+  try {
+    console.log('开始获取验证码...');
+    const res = await axios.get('/api/captcha');
+    console.log('验证码原始响应:', res);
+
+    // 检查响应状态
+    if (!res || !res.data) {
+      throw new Error('验证码接口返回数据为空');
+    }
+
+    console.log('验证码响应数据:', res.data);
+
+    // 获取验证码数据
+    const responseData = res.data;
+    
+    if (!responseData.captchaId || !responseData.captchaUrl) {
+      throw new Error('验证码数据格式不正确');
+    }
+
+    // 设置验证码URL和ID
+    captchaUrl.value = `/api${responseData.captchaUrl}`;
+    captchaId.value = responseData.captchaId;
+    console.log('验证码URL已设置:', captchaUrl.value);
+    console.log('验证码ID已设置:', captchaId.value);
+
+  } catch (err) {
+    console.error('获取验证码详细错误:', err);
+    // 检查是否是网络错误
+    if (err.code === 'ECONNABORTED' || !navigator.onLine) {
+      error.value = '网络连接失败，请检查网络后重试';
+    } else if (err.response) {
+      // 服务器返回错误
+      error.value = err.response.data?.message || '服务器错误，请稍后重试';
+    } else {
+      // 其他错误
+      error.value = err.message || '获取验证码失败，请刷新重试';
+    }
+    
+    // 清理验证码状态
+    captchaUrl.value = '';
+    captchaId.value = '';
   }
 }
 </script>

@@ -32,7 +32,7 @@
         每页{{ size }}条
       </option>
     </select>
-    <span class="total-count">共 {{ total }} 条</span>
+    <span class="text-secondary">共 {{ total }} 条</span>
   </div>
 </template>
 
