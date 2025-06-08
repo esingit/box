@@ -13,7 +13,7 @@
         </div>
         <div class="stats-actions" v-if="!loading">
           <button 
-            class="btn btn-icon" 
+            class="btn btn-icon btn-text" 
             :class="{ 'animate-spin': retrying }"
             @click="fetchStatsWithRetry"
             :title="retrying ? '正在重试...' : '刷新统计数据'"
