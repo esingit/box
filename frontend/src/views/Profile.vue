@@ -128,6 +128,13 @@ async function handleReset() {
   resetMsg.value = ''
   resetSuccess.value = false
   
+  // 新增：新密码格式校验，和注册一致
+  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,20}$/;
+  if (!passwordRegex.test(newPassword.value)) {
+    resetMsg.value = '密码必须为8-20位，包含字母和数字';
+    return;
+  }
+
   if (newPassword.value !== confirmPassword.value) {
     resetMsg.value = '两次新密码输入不一致！'
     return

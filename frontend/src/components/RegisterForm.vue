@@ -156,7 +156,7 @@ function validateForm() {
   // 密码验证：8-20位，必须包含字母和数字，可以包含特殊字符
   const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,20}$/;
   if (!passwordRegex.test(password.value)) {
-    error.value = '密码必须为8-20位，包含字母和数字，可包含特殊字符(@$!%*#?&)';
+    error.value = '密码必须为8-20位，包含字母和数字';
     return false;
   }
 
