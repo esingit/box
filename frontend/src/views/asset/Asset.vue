@@ -7,28 +7,55 @@
 
     <!-- 资产概览卡片 -->
     <div class="stats-container">
+      <div class="stats-header">
+        <div class="stats-date" v-if="!loading && stats.formattedDate">
+          {{ stats.formattedDate }}统计
+        </div>
+        <div class="stats-actions" v-if="!loading">
+          <button 
+            class="btn btn-icon" 
+            :class="{ 'animate-spin': retrying }"
+            @click="fetchStatsWithRetry"
+            :title="retrying ? '正在重试...' : '刷新统计数据'"
+          >
+            <LucideRefreshCw :size="16" />
+          </button>
+        </div>
+      </div>
+
       <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">总资产</div>
-          <div class="stat-value positive">{{ formatAmount(totalAssets) }}</div>
-          <div class="stat-change" :class="assetsChange > 0 ? 'positive' : assetsChange < 0 ? 'negative' : ''">
-            {{ getChangePrefix(assetsChange) }}{{ formatAmount(assetsChange) }}
+        <!-- 加载中显示骨架屏 -->
+        <template v-if="loading">
+          <SkeletonCard v-for="i in 3" :key="i" />
+        </template>
+        <template v-else>
+          <div class="stat-card">
+            <div class="stat-label">总资产</div>
+            <div class="stat-value positive">{{ formatAmount(stats.totalAssets) }}</div>
+            <div class="stat-change" :class="stats.assetsChange > 0 ? 'positive' : stats.assetsChange < 0 ? 'negative' : ''">
+              {{ getChangePrefix(stats.assetsChange) }}{{ formatAmount(stats.assetsChange) }}
+            </div>
           </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">总负债</div>
-          <div class="stat-value negative">{{ formatAmount(totalLiabilities) }}</div>
-          <div class="stat-change" :class="liabilitiesChange > 0 ? 'negative' : liabilitiesChange < 0 ? 'positive' : ''">
-            {{ getChangePrefix(liabilitiesChange) }}{{ formatAmount(liabilitiesChange) }}
+          <div class="stat-card">
+            <div class="stat-label">总负债</div>
+            <div class="stat-value negative">{{ formatAmount(stats.totalLiabilities) }}</div>
+            <div class="stat-change" :class="stats.liabilitiesChange > 0 ? 'negative' : stats.liabilitiesChange < 0 ? 'positive' : ''">
+              {{ getChangePrefix(stats.liabilitiesChange) }}{{ formatAmount(stats.liabilitiesChange) }}
+            </div>
           </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">净资产</div>
-          <div class="stat-value" :class="netWorth > 0 ? 'positive' : 'negative'">{{ formatAmount(netWorth) }}</div>
-          <div class="stat-change" :class="netWorthChange > 0 ? 'positive' : netWorthChange < 0 ? 'negative' : ''">
-            {{ getChangePrefix(netWorthChange) }}{{ formatAmount(netWorthChange) }}
+          <div class="stat-card">
+            <div class="stat-label">净资产</div>
+            <div class="stat-value" :class="netWorth > 0 ? 'positive' : 'negative'">{{ formatAmount(netWorth) }}</div>
+            <div class="stat-change" :class="netWorthChange > 0 ? 'positive' : netWorthChange < 0 ? 'negative' : ''">
+              {{ getChangePrefix(netWorthChange) }}{{ formatAmount(netWorthChange) }}
+            </div>
           </div>
-        </div>
+        </template>
+      </div>
+      
+      <!-- 重试状态提示 -->
+      <div v-if="retrying" class="retry-hint">
+        正在重试 ({{ retryCount }}/{{ maxRetries }})...
       </div>
     </div>
 
@@ -49,6 +76,7 @@
 
     <!-- 记录列表 -->
     <AssetList
+      v-if="!loading"
       :records="records"
       :current="current"
       :total="total"
@@ -58,6 +86,11 @@
       @page-change="handlePageChange"
       @page-size-change="handlePageSizeChange"
     />
+
+    <!-- 加载中骨架屏 -->
+    <div v-else>
+      <SkeletonCard v-for="n in pageSize" :key="n" class="skeleton-card" />
+    </div>
 
     <!-- 添加记录弹窗 -->
     <AssetModal
@@ -99,7 +132,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { LucideWallet, LucideSearch, LucideRotateCcw } from 'lucide-vue-next'
+import { LucideWallet, LucideSearch, LucideRotateCcw, LucideRefreshCw } from 'lucide-vue-next'
 import { useAssetStore } from '@/stores/assetStore'
 import { useAuth } from '@/composables/useAuth'
 import emitter from '@/utils/eventBus.js'
@@ -107,6 +140,8 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import AssetList from '@/components/asset/AssetList.vue'
 import AssetModal from '@/components/asset/AssetModal.vue'
 import SearchPanel from '@/components/asset/SearchPanel.vue'
+import SkeletonCard from '@/components/common/SkeletonCard.vue'
+import axios from '@/utils/axios'
 
 // 外部依赖
 const assetStore = useAssetStore()
@@ -120,9 +155,59 @@ const WalletIcon = LucideWallet
 const showAddModal = ref(false)
 const editingIdx = ref(null)
 const adding = ref(false)
+const loading = ref(false)
 const current = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const records = ref([])
+
+// 统一的数据刷新函数
+async function refreshData(options = {}) {
+  const { showLoading = true, retryStats = false } = options
+  
+  try {
+    if (showLoading) {
+      loading.value = true
+    }
+    
+    // 并行获取数据
+    const [recordsResult, statsSuccess] = await Promise.all([
+      assetStore.fetchRecords({
+        ...query,
+        page: current.value,
+        pageSize: pageSize.value
+      }),
+      retryStats ? fetchStatsWithRetry() : fetchStats()
+    ])
+    
+    if (recordsResult) {
+      records.value = recordsResult.records || []
+      total.value = recordsResult.total || 0
+    }
+    
+  } catch (error) {
+    console.error('获取数据失败：', error)
+    emitter.emit('notify', '获取数据失败', 'error')
+  } finally {
+    if (showLoading) {
+      loading.value = false
+    }
+  }
+}
+
+// 资产统计数据
+const stats = ref({
+  totalAssets: 0,
+  totalLiabilities: 0,
+  assetsChange: 0,
+  liabilitiesChange: 0,
+  latestDate: '',
+  formattedDate: ''
+})
+
+// 计算净资产和净值变化
+const netWorth = computed(() => stats.value.totalAssets - stats.value.totalLiabilities)
+const netWorthChange = computed(() => stats.value.assetsChange - stats.value.liabilitiesChange)
 
 // 查询条件
 const query = reactive({
@@ -145,160 +230,99 @@ const form = reactive({
 
 const editForm = reactive({...form})
 
-// 计算属性
-const records = ref([])
+// 重试相关状态
+const retrying = ref(false)
+const retryCount = ref(0)
+const maxRetries = 3
+const retryDelay = 1000 // 1秒后重试
 
-const getLatestDateRecords = () => {
-  if (!records.value.length) {
-    console.log('没有记录数据')
-    return []
+// 延迟函数
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+// 带重试的获取资产统计
+async function fetchStatsWithRetry() {
+  retryCount.value = 0
+  return tryFetchStats()
+}
+
+// 重试逻辑
+async function tryFetchStats() {
+  try {
+    loading.value = true
+    retrying.value = retryCount.value > 0
+    const res = await axios.get('/api/asset-record/latest-stats')
+    if (res.data?.success) {
+      stats.value = res.data.data
+      retryCount.value = 0
+      retrying.value = false
+      return true
+    } else {
+      throw new Error(res.data?.message || '获取资产统计失败')
+    }
+  } catch (error) {
+    if (error.name === 'CanceledError') {
+      console.log('请求已取消:', error.message)
+      return false
+    }
+
+    if (error.response?.status === 401) {
+      const { showLogin } = useAuth()
+      showLogin('登录已过期，请重新登录')
+      return false
+    }
+
+    console.error('获取资产统计失败:', error)
+    
+    // 处理重试逻辑
+    if (retryCount.value < maxRetries) {
+      retryCount.value++
+      await delay(retryDelay * retryCount.value)
+      return tryFetchStats()
+    }
+
+    emitter.emit('notify', `获取资产统计失败: ${error.message || '未知错误'}`, 'error')
+    return false
+  } finally {
+    if (retryCount.value === 0) {
+      loading.value = false
+      retrying.value = false
+    }
   }
-  
-  // 1. 获取最新的登记日期
-  const latestDate = records.value.reduce((latest, record) => {
-    const recordDate = new Date(record.acquireTime)
-    return !latest || recordDate > latest ? recordDate : latest
-  }, null)
+}
 
-  if (!latestDate) {
-    console.log('未找到最新日期')
-    return []
+// 获取资产统计
+async function fetchStats() {
+  try {
+    const res = await axios.get('/api/asset-record/latest-stats')
+    if (res.data?.success) {
+      stats.value = res.data.data
+      return true
+    } else {
+      console.error('获取资产统计失败:', res.data)
+      emitter.emit('notify', res.data?.message || '获取资产统计失败', 'error')
+      return false
+    }
+  } catch (error) {
+    if (error.name === 'CanceledError') {
+      console.log('请求已取消:', error.message)
+      return false
+    }
+    if (error.response?.status === 401) {
+      const { showLogin } = useAuth()
+      showLogin('登录已过期，请重新登录')
+      return false
+    }
+    console.error('获取资产统计失败:', error)
+    emitter.emit('notify', error.message || '获取资产统计失败', 'error')
+    return false
   }
-
-  // 2. 筛选最新日期的记录
-  const latestDateStr = latestDate.toISOString().split('T')[0]
-  const filteredRecords = records.value.filter(record => record.acquireTime.startsWith(latestDateStr))
-  console.log('最新日期:', latestDateStr, '记录数:', filteredRecords.length)
-  return filteredRecords
 }
-
-const groupRecordsByType = (records) => {
-  console.log('开始按类型分组，记录数:', records.length)
-  const groups = {}
-  records.forEach(record => {
-    if (!record.typeId) {
-      console.log('记录缺少typeId:', record)
-      return
-    }
-    if (!groups[record.typeId]) {
-      const type = assetStore.types.find(t => t.id === record.typeId)
-      console.log('类型信息:', record.typeId, type)
-      groups[record.typeId] = {
-        type,
-        amount: 0
-      }
-    }
-    const amount = Number(record.amount || 0)
-    groups[record.typeId].amount += amount
-    console.log('累加金额:', record.typeId, amount, '=>', groups[record.typeId].amount)
-  })
-  console.log('分组结果:', groups)
-  return groups
-}
-
-const totalAssets = computed(() => {
-  console.log('计算总资产...')
-  console.log('当前records:', records.value)
-  console.log('资产类型列表:', assetStore.types)
-  
-  const latestRecords = getLatestDateRecords()
-  if (!latestRecords.length) return 0
-
-  const groupedByType = groupRecordsByType(latestRecords)
-  
-  const total = Object.values(groupedByType).reduce((sum, group) => {
-    const isDebt = group.type?.typeCode === 'ASSET_LOCATION' && group.type?.key1 === 'DEBT'
-    const amount = !isDebt ? group.amount : 0
-    console.log('资产计算:', group.type?.typeName, isDebt ? '负债' : '资产', group.amount, '=>', amount)
-    return sum + amount
-  }, 0)
-  
-  console.log('总资产计算结果:', total)
-  return total
-})
-
-const totalLiabilities = computed(() => {
-  console.log('计算总负债...')
-  const latestRecords = getLatestDateRecords()
-  if (!latestRecords.length) return 0
-
-  const groupedByType = groupRecordsByType(latestRecords)
-
-  const total = Math.abs(Object.values(groupedByType).reduce((sum, group) => {
-    const isDebt = group.type?.typeCode === 'ASSET_LOCATION' && group.type?.key1 === 'DEBT'
-    const amount = isDebt ? group.amount : 0
-    console.log('负债计算:', group.type?.typeName, isDebt ? '负债' : '资产', group.amount, '=>', amount)
-    return sum + amount
-  }, 0))
-  
-  console.log('总负债计算结果:', total)
-  return total
-})
-
-const netWorth = computed(() => {
-  const assets = totalAssets.value
-  const liabilities = totalLiabilities.value
-  console.log('计算净资产:', assets, '-', liabilities, '=', assets - liabilities)
-  return assets - liabilities
-})
-
-// 变化率计算
-const calculateAmountsByDate = (dateStr, calculateDebt = false) => {
-  const dayRecords = records.value.filter(r => r.acquireTime.startsWith(dateStr))
-  const groupedByType = groupRecordsByType(dayRecords)
-  
-  return Object.values(groupedByType).reduce((sum, group) => {
-    const isDebt = group.type?.typeCode === 'ASSET_LOCATION' && group.type?.key1 === 'DEBT'
-    if (calculateDebt ? isDebt : !isDebt) {
-      return sum + group.amount
-    }
-    return sum
-  }, 0)
-}
-
-const assetsChange = computed(() => {
-  const uniqueDates = [...new Set(records.value.map(r => r.acquireTime.split('T')[0]))]
-    .sort((a, b) => new Date(b) - new Date(a))
-
-  if (uniqueDates.length < 2) return 0
-
-  const latestAssets = calculateAmountsByDate(uniqueDates[0], false)
-  const previousAssets = calculateAmountsByDate(uniqueDates[1], false)
-
-  return latestAssets - previousAssets
-})
-
-const liabilitiesChange = computed(() => {
-  const uniqueDates = [...new Set(records.value.map(r => r.acquireTime.split('T')[0]))]
-    .sort((a, b) => new Date(b) - new Date(a))
-
-  if (uniqueDates.length < 2) return 0
-
-  const latestLiabilities = calculateAmountsByDate(uniqueDates[0], true)
-  const previousLiabilities = calculateAmountsByDate(uniqueDates[1], true)
-
-  return latestLiabilities - previousLiabilities
-})
-
-const netWorthChange = computed(() => assetsChange.value - liabilitiesChange.value)
 
 // 方法
 async function handleQuery() {
-  try {
-    const result = await assetStore.fetchRecords({
-      ...query,
-      page: current.value,
-      pageSize: pageSize.value
-    })
-    if (result) {
-      console.log('获取到记录:', result.records)
-      records.value = result.records || []
-      total.value = result.total || 0
-    }
-  } catch (error) {
-    console.error('获取记录失败：', error)
-    emitter.emit('notify', '获取记录失败', 'error')
-  }
+  await refreshData()
 }
 
 function resetQuery() {
@@ -329,6 +353,9 @@ function cancelModal() {
 }
 
 function formatAmount(amount) {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return '0.00'
+  }
   return new Intl.NumberFormat('zh-CN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
@@ -344,7 +371,7 @@ async function handleAddRecord(formData) {
     adding.value = true
     await assetStore.addRecord(formData)
     showAddModal.value = false
-    await handleQuery()
+    await refreshData({ retryStats: true })
   } catch (error) {
     console.error('添加记录失败：', error)
   } finally {
@@ -364,7 +391,7 @@ async function saveEdit(formData) {
       ...formData
     })
     editingIdx.value = null
-    await handleQuery()
+    await refreshData({ retryStats: true })
   } catch (error) {
     console.error('更新记录失败：', error)
   }
@@ -378,7 +405,7 @@ async function deleteRecord(idx) {
   const record = records.value[idx]
   try {
     await assetStore.deleteRecord(record.id)
-    await handleQuery()
+    await refreshData({ retryStats: true })
   } catch (error) {
     console.error('删除记录失败：', error)
   }
@@ -387,7 +414,7 @@ async function deleteRecord(idx) {
 async function copyLastRecords() {
   try {
     await assetStore.copyLastRecords()
-    await handleQuery()
+    await refreshData({ retryStats: true })
   } catch (error) {
     console.error('复制上回记录失败：', error)
   }
@@ -395,13 +422,13 @@ async function copyLastRecords() {
 
 function handlePageChange(page) {
   current.value = page
-  handleQuery()
+  refreshData()
 }
 
 function handlePageSizeChange(size) {
   pageSize.value = size
   current.value = 1
-  handleQuery()
+  refreshData()
 }
 
 async function refreshAssetNames() {
@@ -420,20 +447,17 @@ onMounted(async () => {
       assetStore.fetchTypes(),
       assetStore.fetchUnits(),
       assetStore.fetchLocations(),
-      assetStore.fetchAssetNames()
+      assetStore.fetchAssetNames(),
     ])
     console.log('类型列表:', assetStore.types)
-    await handleQuery()
+    await refreshData({ retryStats: true })
   } catch (error) {
-    // 如果是取消的请求，不显示错误提示
     if (error.name === 'CanceledError') {
       console.log('请求已取消:', error.message)
       return
     }
-    // 如果是未授权错误，重定向到登录
     if (error.response?.status === 401) {
-      const { showLogin } = useAuth()
-      showLogin('登录已过期，请重新登录')
+      auth.showLogin('登录已过期，请重新登录')
       return
     }
     console.error('初始化数据失败:', error)
@@ -441,4 +465,6 @@ onMounted(async () => {
   }
 })
 </script>
+
+
 

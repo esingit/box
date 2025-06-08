@@ -9,21 +9,40 @@ const cache = new Map()
  * @returns {Promise<{typeName: string, value1: string}|null>} 返回对应的CommonMeta数据
  */
 export async function getCommonMetaById(id) {
-    if (!id) return null
+    if (!id) {
+        console.debug('getCommonMetaById: ID为空')
+        return null
+    }
     
     // 检查缓存
     if (cache.has(id)) {
+        console.debug(`getCommonMetaById: 从缓存获取到ID ${id} 的数据:`, cache.get(id))
         return cache.get(id)
     }
 
     try {
-        const res = await axios.get(`/api/common-meta/by-id/${id}`)
+        console.debug(`getCommonMetaById: 正在从服务器获取ID ${id} 的数据...`)
+        const res = await axios.get(`/api/common-meta/by-id/${id}`, {
+            // 设置取消请求的标识符
+            signal: AbortSignal.timeout(5000), // 5秒超时
+            // 允许重复请求
+            allowDuplicate: true
+        })
+        
         if (res.data?.success) {
-            cache.set(id, res.data.data)
-            return res.data.data
+            console.debug(`getCommonMetaById: 成功获取ID ${id} 的数据:`, res.data.data)
+            if (res.data.data) {
+                cache.set(id, res.data.data)
+                return res.data.data
+            }
         }
+        console.debug(`getCommonMetaById: 获取ID ${id} 的数据失败，服务器返回:`, res.data)
         return null
     } catch (error) {
+        if (axios.isCancel(error)) {
+            console.debug(`getCommonMetaById: 请求已取消 [ID=${id}]`)
+            return null
+        }
         console.error('获取CommonMeta数据失败:', error)
         return null
     }
@@ -33,6 +52,7 @@ export async function getCommonMetaById(id) {
  * 清除缓存数据
  */
 export function clearCommonMetaCache() {
+    console.debug('clearCommonMetaCache: 正在清除缓存...')
     cache.clear()
 }
 
@@ -63,7 +83,13 @@ export async function formatFitnessRecord(record) {
  * @returns {Promise<Object>} 格式化后的记录
  */
 export async function formatAssetRecord(record) {
-    if (!record) return record
+    if (!record) {
+        console.debug('formatAssetRecord: 记录为空')
+        return record
+    }
+
+    console.debug('formatAssetRecord: 开始格式化记录:', record)
+    console.debug('formatAssetRecord: 货币单位ID:', record.unitId)
 
     const [typeData, unitData, locationData] = await Promise.all([
         getCommonMetaById(record.assetTypeId),
@@ -71,10 +97,19 @@ export async function formatAssetRecord(record) {
         getCommonMetaById(record.assetLocationId)
     ])
 
-    return {
+    console.debug('formatAssetRecord: 获取到的元数据:', {
+        typeData,
+        unitData,
+        locationData
+    })
+
+    const formattedRecord = {
         ...record,
         assetTypeValue: typeData?.value1 || '-',
         unitValue: unitData?.value1 || '-',
         locationValue: locationData?.value1 || '-'
     }
+
+    console.debug('formatAssetRecord: 格式化后的记录:', formattedRecord)
+    return formattedRecord
 }

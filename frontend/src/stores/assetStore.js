@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import axios from '@/utils/axios'
 import emitter from '@/utils/eventBus'
+import { formatAssetRecord, clearCommonMetaCache } from '@/utils/commonMeta'
 
 export const useAssetStore = defineStore('asset', () => {
   // 状态
@@ -26,21 +27,31 @@ export const useAssetStore = defineStore('asset', () => {
       if (endDate) params.endDate = endDate + 'T23:59:59'
       if (remark) params.remark = remark.trim()
 
+      console.debug('fetchRecords: 开始获取资产记录，参数:', params)
       const res = await axios.get('/api/asset-record/list', { params })
       
       if (res.data?.success) {
+        const rawRecords = res.data.data.records || []
+        console.debug('fetchRecords: 获取到原始记录:', rawRecords)
+
+        // Promise.all 并行处理所有记录
+        console.debug('fetchRecords: 开始格式化记录...')
+        const records = await Promise.all(rawRecords.map(record => formatAssetRecord(record)))
+        console.debug('fetchRecords: 格式化完成，结果:', records)
+
         return {
-          records: res.data.data.records || [],
+          records,
           total: res.data.data.total,
           current: res.data.data.current,
           size: res.data.data.size
         }
       } else {
+        console.error('fetchRecords: 获取失败，服务器返回:', res.data)
         emitter.emit('notify', res.data?.message || '获取资产记录失败', 'error')
         return null
       }
     } catch (error) {
-      console.error('获取资产记录失败:', error)
+      console.error('fetchRecords: 获取资产记录失败:', error)
       emitter.emit('notify', `获取记录失败: ${error.message || '未知错误'}`, 'error')
       return null
     } finally {
@@ -85,14 +96,24 @@ export const useAssetStore = defineStore('asset', () => {
   // 获取货币单位列表
   async function fetchUnits() {
     try {
+      console.debug('fetchUnits: 开始获取货币单位列表...')
       const res = await axios.get('/api/common-meta/by-type', {
         params: { typeCode: 'UNIT' }
       })
+      console.debug('fetchUnits: 收到服务器响应:', res.data)
+      
       if (res.data?.success) {
         units.value = res.data.data || []
+        console.debug('fetchUnits: 货币单位列表已更新:', units.value)
+        
+        // 清除元数据缓存，确保下次获取记录时能拿到最新的单位信息
+        clearCommonMetaCache()
+      } else {
+        console.error('fetchUnits: 获取失败，服务器返回:', res.data)
+        emitter.emit('notify', '获取货币单位列表失败', 'error')
       }
     } catch (error) {
-      console.error('获取货币单位列表失败:', error)
+      console.error('fetchUnits: 获取货币单位列表失败:', error)
       emitter.emit('notify', '获取货币单位列表失败', 'error')
     }
   }

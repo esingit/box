@@ -18,7 +18,6 @@ import './assets/modal.css'
 import './assets/table.css'
 import './assets/toast.css'
 import './assets/pagination.css'
-import './assets/actions.css'
 
 async function initApp() {
   const pinia = createPinia()

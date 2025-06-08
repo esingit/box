@@ -1,4 +1,8 @@
 :root {
+  /* 骨架屏相关 */
+  --bg-skeleton: #f0f0f0;
+  --bg-skeleton-highlight: #f8f8f8;
+  
   /* 主题色 */
   --primary: #2c3e50;
   --primary-hover: #34495e;
@@ -161,4 +165,27 @@
   --input-height-sm: 36px;
   --btn-height: 40px;
   --btn-height-sm: 32px;
+  
+  /* 按钮相关颜色 */
+  --btn-primary-bg: #1a1a1a;
+  --btn-primary-text: #ffffff;
+  --btn-primary-border: #1a1a1a;
+  --btn-primary-hover-bg: #454545;
+  --btn-primary-hover-border: #666666;
+  
+  --btn-text-color: #666666;
+  --btn-text-hover-bg: #f5f5f5;
+  --btn-text-hover-border: #999999;
+  --btn-text-border: #e0e0e0;
+  
+  --btn-danger-bg: #dc2626;
+  --btn-danger-text: #ffffff;
+  --btn-danger-border: #dc2626;
+  --btn-danger-hover-bg: #b91c1c;
+  --btn-danger-hover-border: #991b1b;
+  
+  --btn-outline-border: #4b5563;
+  --btn-outline-text: #4b5563;
+  --btn-outline-hover-bg: #4b5563;
+  --btn-outline-hover-text: #ffffff;
 }

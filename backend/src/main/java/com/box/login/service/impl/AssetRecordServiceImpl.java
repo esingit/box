@@ -19,6 +19,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -223,47 +225,86 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         String latestDate = dateResult.get("date_only").toString();
         log.debug("找到最新记录日期: {}", latestDate);
 
-        // 2. 查询该日期的资产和负债总额
-        QueryWrapper<AssetRecord> statsWrapper = new QueryWrapper<>();
-        statsWrapper.eq("create_user", createUser)
+        // 2. 获取最新日期的资产记录，按类型分组统计
+        QueryWrapper<AssetRecord> latestWrapper = new QueryWrapper<>();
+        latestWrapper.eq("create_user", createUser)
                 .eq("deleted", 0)
                 .apply("DATE(acquire_time) = STR_TO_DATE({0}, '%Y-%m-%d')", latestDate);
 
-        List<AssetRecord> records = assetRecordMapper.selectList(statsWrapper);
+        List<AssetRecord> latestRecords = assetRecordMapper.selectList(latestWrapper);
 
-        // 3. 计算资产和负债
+        // 3. 获取上一个日期的资产记录，用于计算变化率
+        QueryWrapper<AssetRecord> previousWrapper = new QueryWrapper<>();
+        previousWrapper.select("DATE(acquire_time) as date_only")
+                .eq("create_user", createUser)
+                .eq("deleted", 0)
+                .lt("DATE(acquire_time)", latestDate)
+                .orderByDesc("acquire_time")
+                .last("LIMIT 1");
+
+        String previousDate = assetRecordMapper.selectMaps(previousWrapper).stream()
+                .findFirst()
+                .map(m -> m.get("date_only").toString())
+                .orElse(null);
+
+        List<AssetRecord> previousRecords = new ArrayList<>();
+        if (previousDate != null) {
+            QueryWrapper<AssetRecord> prevRecordsWrapper = new QueryWrapper<>();
+            prevRecordsWrapper.eq("create_user", createUser)
+                    .eq("deleted", 0)
+                    .apply("DATE(acquire_time) = STR_TO_DATE({0}, '%Y-%m-%d')", previousDate);
+            previousRecords = assetRecordMapper.selectList(prevRecordsWrapper);
+        }
+
+        // 4. 计算最新日期的资产和负债总额
         BigDecimal totalAssets = BigDecimal.ZERO;
         BigDecimal totalLiabilities = BigDecimal.ZERO;
+        Map<Long, BigDecimal> typeAmounts = new HashMap<>();
 
-        for (AssetRecord record : records) {
-            // 根据资产类型的 value1 字段判断是否为负债
-            try {
-                CommonMeta type = commonMetaService.getById(record.getAssetTypeId());
-                BigDecimal amount = record.getAmount();
-
-                log.info("处理记录 - ID: {}, 类型ID: {}, 金额: {}, 类型名称: {}",
-                        record.getId(), record.getAssetTypeId(), amount,
-                        type != null ? type.getValue1() : "未知");
-
-                // 判断是否是负债类型（typeCode=ASSET_LOCATION 且 key1=DEBT）
-                boolean isDebt = type != null && "ASSET_LOCATION".equals(type.getTypeCode()) && "DEBT".equals(type.getKey1());
-                if (isDebt) {
-                    totalLiabilities = totalLiabilities.add(amount);
-                    log.info("计入负债 - 类型: {}, 金额: {}, 累计负债: {}",
-                            type.getTypeName(), amount, totalLiabilities);
-                } else {
-                    totalAssets = totalAssets.add(amount);
-                    log.info("计入资产 - 类型: {}, 金额: {}, 累计资产: {}",
-                            type.getTypeName(), amount, totalAssets);
-                }
-            } catch (Exception e) {
-                log.error("处理资产记录时发生错误 - 记录ID: " + record.getId(), e);
-                // 如果无法确定类型，保守起见计入资产
-                totalAssets = totalAssets.add(record.getAmount());
+        for (AssetRecord record : latestRecords) {
+            CommonMeta type = commonMetaService.getById(record.getAssetTypeId());
+            if (type != null) {
+                // 按类型累加金额
+                typeAmounts.merge(record.getAssetTypeId(), record.getAmount(), BigDecimal::add);
             }
         }
 
-        log.info("计算完成 - 总资产: {}, 总负债: {}", totalAssets, totalLiabilities);
+        // 5. 按类型统计资产和负债
+        for (Map.Entry<Long, BigDecimal> entry : typeAmounts.entrySet()) {
+            CommonMeta type = commonMetaService.getById(entry.getKey());
+            if (type != null && "ASSET_TYPE".equals(type.getTypeCode()) && "DEBT".equals(type.getKey1())) {
+                totalLiabilities = totalLiabilities.add(entry.getValue());
+            } else {
+                totalAssets = totalAssets.add(entry.getValue());
+            }
+        }
+
+        // 6. 计算变化率
+        BigDecimal previousAssets = BigDecimal.ZERO;
+        BigDecimal previousLiabilities = BigDecimal.ZERO;
+        Map<Long, BigDecimal> prevTypeAmounts = new HashMap<>();
+
+        for (AssetRecord record : previousRecords) {
+            CommonMeta type = commonMetaService.getById(record.getAssetTypeId());
+            if (type != null) {
+                // 按类型累加金额
+                prevTypeAmounts.merge(record.getAssetTypeId(), record.getAmount(), BigDecimal::add);
+            }
+        }
+
+        // 7. 按类型统计前一天的资产和负债
+        for (Map.Entry<Long, BigDecimal> entry : prevTypeAmounts.entrySet()) {
+            CommonMeta type = commonMetaService.getById(entry.getKey());
+            if (type != null && "ASSET_TYPE".equals(type.getTypeCode()) && "DEBT".equals(type.getKey1())) {
+                previousLiabilities = previousLiabilities.add(entry.getValue());
+            } else {
+                previousAssets = previousAssets.add(entry.getValue());
+            }
+        }
+
+        // 8. 计算变化额
+        BigDecimal assetsChange = totalAssets.subtract(previousAssets);
+        BigDecimal liabilitiesChange = totalLiabilities.subtract(previousLiabilities);
 
         // 格式化日期显示
         String formattedDate;
@@ -274,11 +315,16 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             formattedDate = latestDate;
         }
 
+        log.info("计算完成 - 总资产: {}, 总负债: {}, 资产变化: {}, 负债变化: {}",
+                totalAssets, totalLiabilities, assetsChange, liabilitiesChange);
+
         return AssetStatsDTO.builder()
                 .totalAssets(totalAssets.doubleValue())
                 .totalLiabilities(totalLiabilities.doubleValue())
                 .latestDate(latestDate)
                 .formattedDate(formattedDate)
+                .assetsChange(assetsChange.doubleValue())
+                .liabilitiesChange(liabilitiesChange.doubleValue())
                 .build();
     }
 }

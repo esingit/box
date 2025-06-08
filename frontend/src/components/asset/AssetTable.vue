@@ -22,9 +22,8 @@
           <td>{{ record.assetName }}</td>
           <td>{{ record.assetTypeValue }}</td>
           <td :class="['amount-cell', record.amount > 0 ? 'positive' : 'negative']">
-            {{ formatAmount(record.amount) }}
+            {{ formatAmount(record.amount) }} {{ record.unitValue }}
           </td>
-          <td>{{ record.unitValue }}</td>
           <td>{{ record.locationValue }}</td>
           <td>{{ formatDate(record.acquireTime) }}</td>
           <td class="remark-cell">
@@ -51,7 +50,8 @@ import RecordActions from '@/components/common/RecordActions.vue'
 const props = defineProps({
   records: {
     type: Array,
-    required: true
+    required: true,
+    default: () => []
   }
 })
 
@@ -61,7 +61,6 @@ const tableHeaders = [
   { key: 'assetName', label: '资产名称' },
   { key: 'assetType', label: '类型' },
   { key: 'amount', label: '金额' },
-  { key: 'unit', label: '货币单位' },
   { key: 'location', label: '位置' },
   { key: 'time', label: '时间' },
   { key: 'remark', label: '备注' },
@@ -69,10 +68,11 @@ const tableHeaders = [
 ]
 
 function formatAmount(amount) {
-  return new Intl.NumberFormat('zh-CN', {
+  const formatted = new Intl.NumberFormat('zh-CN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  }).format(amount)
+  }).format(Math.abs(amount))
+  return (amount < 0 ? '-' : '') + formatted
 }
 
 function formatDate(dateStr) {

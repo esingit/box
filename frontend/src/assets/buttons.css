@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: center;
   padding: 8px 16px;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
   font-weight: var(--font-medium);
   transition: var(--transition);
@@ -15,48 +15,68 @@
 
 .btn-icon {
   opacity: 0.8;
+  transition: all var(--transition);
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  padding: 6px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.btn-icon:hover {
+  opacity: 1;
+  transform: scale(1.05);
+  border-color: var(--border-hover);
+  background-color: var(--bg-hover);
 }
 
 .btn-primary {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  border-color: var(--border-primary);
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-border);
 }
 
 .btn-primary:hover {
-  background-color: var(--bg-hover);
-  border-color: var(--border-hover);
+  background-color: var(--btn-primary-hover-bg);
+  border-color: var(--btn-primary-hover-border);
 }
 
 .btn-text {
   background: transparent;
-  color: var(--text-secondary);
-  border-color: var(--border-primary);
+  color: var(--btn-text-color);
+  border-color: var(--btn-text-border);
 }
 
 .btn-text:hover {
-  background-color: var(--bg-hover);
-  border-color: var(--border-hover);
+  background-color: var(--btn-text-hover-bg);
+  border-color: var(--btn-text-hover-border);
 }
 
 .btn-danger {
-  background-color: var(--error-color);
-  color: var(--text-light);
+  background-color: var(--btn-danger-bg);
+  color: var(--btn-danger-text);
+  border-color: var(--btn-danger-border);
 }
 
 .btn-danger:hover {
-  background-color: var(--error-color);
-  opacity: 0.9;
+  background-color: var(--btn-danger-hover-bg);
+  border-color: var(--btn-danger-hover-border);
 }
 
 .btn-outline {
   background-color: transparent;
-  border-color: var(--border-primary);
-  color: var(--text-primary);
+  border-color: var(--btn-outline-border);
+  color: var(--btn-outline-text);
 }
 
 .btn-outline:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--btn-outline-hover-bg);
+  color: var(--btn-outline-hover-text);
+  border-color: var(--btn-outline-hover-bg);
 }
 
 .btn[disabled] {
