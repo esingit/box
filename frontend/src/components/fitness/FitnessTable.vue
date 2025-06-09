@@ -1,5 +1,5 @@
 <template>
-  <div class="table-container">
+  <div class="table-wrapper">
     <table class="table">
       <thead>
         <tr>
@@ -19,14 +19,14 @@
           </td>
         </tr>
         <tr v-for="(record, idx) in records" :key="record.id || idx">
-          <td>{{ record.typeValue }}</td>
-          <td class="count-cell">{{ record.count }}</td>
-          <td>{{ record.unitValue }}</td>
-          <td>{{ formatDate(record.finishTime) }}</td>
-          <td class="remark-cell">
+          <td class="cell-text">{{ record.typeValue }}</td>
+          <td class="cell-number">{{ record.count }}</td>
+          <td class="cell-text">{{ record.unitValue }}</td>
+          <td class="cell-date">{{ formatDate(record.finishTime) }}</td>
+          <td class="cell-remark">
             <span :title="record.remark">{{ record.remark || '-' }}</span>
           </td>
-          <td class="operations">
+          <td class="cell-actions">
             <RecordActions 
               :record="record"
               type="fitness"
@@ -54,12 +54,12 @@ defineProps({
 defineEmits(['edit', 'delete']);
 
 const tableHeaders = [
-  { key: 'type', label: '类型' },
-  { key: 'count', label: '数量', class: 'count-cell' },
-  { key: 'unit', label: '单位' },
-  { key: 'date', label: '日期' },
-  { key: 'remark', label: '备注', class: 'remark-cell' },
-  { key: 'actions', label: '操作', class: 'operations' }
+  { key: 'type', label: '类型', class: 'cell-text' },
+  { key: 'count', label: '数量', class: 'cell-number' },
+  { key: 'unit', label: '单位', class: 'cell-text' },
+  { key: 'date', label: '日期', class: 'cell-date' },
+  { key: 'remark', label: '备注', class: 'cell-remark' },
+  { key: 'actions', label: '操作', class: 'cell-actions' }
 ];
 
 function formatDate(dateString) {

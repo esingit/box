@@ -1,9 +1,9 @@
 <template>
-  <div>
+  <div class="table-wrapper">
     <table class="table">
       <thead>
         <tr>
-          <th v-for="header in tableHeaders" :key="header.key">
+          <th v-for="header in tableHeaders" :key="header.key" :class="header.class">
             {{ header.label }}
           </th>
         </tr>
@@ -19,17 +19,17 @@
           </td>
         </tr>
         <tr v-for="(record, idx) in records" :key="record.id || idx">
-          <td>{{ record.assetName }}</td>
-          <td>{{ record.assetTypeValue }}</td>
-          <td :class="['amount-cell', record.amount > 0 ? 'positive' : 'negative']">
+          <td class="cell-text">{{ record.assetName }}</td>
+          <td class="cell-text">{{ record.assetTypeValue }}</td>
+          <td class="cell-number">
             {{ formatAmount(record.amount) }} {{ record.unitValue }}
           </td>
-          <td>{{ record.locationValue }}</td>
-          <td>{{ formatDate(record.acquireTime) }}</td>
-          <td class="remark-cell">
+          <td class="cell-text">{{ record.locationValue }}</td>
+          <td class="cell-date">{{ formatDate(record.acquireTime) }}</td>
+          <td class="cell-remark">
             <span :title="record.remark">{{ record.remark || '-' }}</span>
           </td>
-          <td class="operations">
+          <td class="cell-actions">
             <RecordActions 
               :record="record"
               type="asset"
@@ -58,13 +58,13 @@ const props = defineProps({
 defineEmits(['edit', 'delete'])
 
 const tableHeaders = [
-  { key: 'assetName', label: '资产名称' },
-  { key: 'assetType', label: '类型' },
-  { key: 'amount', label: '金额' },
-  { key: 'location', label: '位置' },
-  { key: 'time', label: '时间' },
-  { key: 'remark', label: '备注' },
-  { key: 'operations', label: '操作' }
+  { key: 'assetName', label: '资产名称', class: 'cell-text' },
+  { key: 'assetType', label: '类型', class: 'cell-text' },
+  { key: 'amount', label: '金额', class: 'cell-number' },
+  { key: 'location', label: '位置', class: 'cell-text' },
+  { key: 'time', label: '时间', class: 'cell-date' },
+  { key: 'remark', label: '备注', class: 'cell-remark' },
+  { key: 'operations', label: '操作', class: 'cell-actions' }
 ]
 
 function formatAmount(amount) {

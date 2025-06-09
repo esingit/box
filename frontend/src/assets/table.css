@@ -1,3 +1,9 @@
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .table {
   width: 100%;
   border-collapse: separate;
@@ -5,52 +11,101 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  font-size: var(--font-size-sm);
+  table-layout: fixed; /* 固定布局 */
+}
+
+/* 表头背景色 */
+.table th {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .table th,
 .table td {
-  padding: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 1px solid var(--border-primary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.table th {
-  font-weight: var(--font-medium);
-  color: var(--text-primary);
-  background-color: var(--bg-secondary);
-  white-space: nowrap;
+/* 类型列（首个cell-text）左对齐 */
+.table th.cell-text:first-child,
+.table td.cell-text:first-child {
+  text-align: left;
+  width: 15%;
+}
+
+/* 数字列右对齐 */
+.table th.cell-number,
+.table td.cell-number {
+  width: 10%;
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+/* 其他列（单位、日期、备注、操作）居中 */
+.table th.cell-text:not(:first-child),
+.table td.cell-text:not(:first-child),
+.table th.cell-date,
+.table td.cell-date,
+.table th.cell-remark,
+.table td.cell-remark,
+.table th.cell-actions,
+.table td.cell-actions {
   text-align: center;
 }
 
-.table td {
-  color: var(--text-primary);
+/* 其他列固定宽度 */
+.table th.cell-text:not(:first-child),
+.table td.cell-text:not(:first-child) {
+  width: 15%;
 }
 
+.table th.cell-date,
+.table td.cell-date {
+  width: 15%;
+}
+
+.table th.cell-remark,
+.table td.cell-remark {
+  width: 30%;
+  max-width: 300px;
+}
+
+.table th.cell-actions,
+.table td.cell-actions {
+  width: 10%;
+  white-space: nowrap;
+  padding-right: var(--spacing-lg);
+}
+
+/* RecordActions 内部按钮横向排列及间距 */
+.cell-actions .operations {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+/* 备注文字溢出处理 */
+.cell-remark span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 交互效果 */
 .table tbody tr:hover {
   background-color: var(--bg-hover);
 }
 
 .table tbody tr:last-child td {
   border-bottom: none;
-}
-
-/* 表格单元格类型 */
-.count-cell {
-  text-align: right;
-  font-family: var(--font-mono);
-}
-
-.remark-cell {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 操作列 */
-.operations {
-  white-space: nowrap;
-  display: flex;
-  gap: var(--spacing-sm);
 }
 
 /* 金额单元格 */
@@ -70,7 +125,7 @@
 
 /* 表格响应式布局 */
 @media (max-width: 768px) {
-  .table-responsive {
+  .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
