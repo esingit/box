@@ -7,24 +7,27 @@
       />
 
       <div class="modal-body">
-        <!-- 工具栏 -->
-        <div class="query-bar">
-          <div class="query-fields">
+        <!-- 搜索工具栏 -->
+        <div class="search-toolbar">
+          <div class="search-wrapper">
             <input
               v-model="searchTerm"
               type="text"
               class="input search-input"
-              placeholder="搜索资产名称..."
-              @input="handleSearch"
+              placeholder="搜索资产名称"
             />
+            <div v-if="searchTerm" class="clear-icon" @click="clearSearch">
+              <LucideX :size="18" />
+            </div>
           </div>
-          <div class="query-btns">
+          <div class="search-actions">
             <button 
               v-if="!showAdd && !showEdit" 
               class="btn btn-primary" 
+              title="新增资产名称"
               @click="showAddForm"
             >
-              <LucidePlus class="btn-icon" :size="16" />
+              <LucidePlus class="btn-icon" :size="18" />
               <span>新增</span>
             </button>
           </div>
@@ -79,7 +82,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { LucidePlus } from 'lucide-vue-next'
+import { LucidePlus, LucideSearch, LucideX } from 'lucide-vue-next'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
 import ModalHeader from './ModalHeader.vue'
@@ -171,6 +174,12 @@ async function fetchNames(page = current.value) {
   } finally {
     loading.value = false
   }
+}
+
+// 清除搜索
+function clearSearch() {
+  searchTerm.value = ''
+  fetchNames(1)
 }
 
 // 处理编辑

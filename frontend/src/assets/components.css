@@ -410,3 +410,73 @@
 .control-action {
   flex-shrink: 0;
 }
+
+/* 搜索组件 */
+.search-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.search-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon,
+.clear-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--text-tertiary);
+  z-index: 1;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.search-icon {
+  left: var(--spacing-md);
+  pointer-events: none;
+}
+
+.clear-icon {
+  right: var(--spacing-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.clear-icon:hover {
+  color: var(--text-secondary);
+}
+
+.search-input {
+  width: 100%;
+  height: var(--input-height);
+  padding-left: calc(var(--spacing-md) * 2 + 18px);
+  padding-right: calc(var(--spacing-md) * 2 + 18px);
+  border-radius: var(--radius-lg);
+}
+
+.search-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+  height: var(--input-height);
+}
+
+.search-actions .btn {
+  height: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
