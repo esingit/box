@@ -40,7 +40,7 @@
             placeholder="8-20位字母数字组合"
             :disabled="isLoading"
           />
-          <small class="help-text">8-20位，必须包含字母和数字，可包含特殊字符(@$!%*#?&)</small>
+          <small class="help-text">8-20位，必须包含字母和数字</small>
         </div>
 
         <div v-if="showCaptcha" class="form-group">

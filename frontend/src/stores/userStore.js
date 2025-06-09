@@ -115,31 +115,23 @@ export const useUserStore = defineStore('user', {
             // 即使后端请求失败，也继续清理前端状态
           }
         }
-
+        
         // 清除 token
         localStorage.removeItem('token')
         this.token = null
-        
-        // 清除 axios 默认 header
-        delete axios.defaults.headers.common['Authorization']
-        
-        // 只有在主动登出时才清除完整的UI状态
-        if (clearUI) {
-          this.user = null
-          this.isLoggedIn = false
-          localStorage.removeItem('user')
-        } else {
-          // 当不清除UI状态时，只更新登录状态
-          this.isLoggedIn = false
-        }
-      } catch (error) {
-        console.error('登出过程发生错误:', error)
-        // 确保即使发生错误，也清理登录状态
-        this.token = null
+        // 清除用户数据
+        localStorage.removeItem('user')
+        this.user = null
+        // 更新登录状态
         this.isLoggedIn = false
-        if (clearUI) {
-          this.user = null
-        }
+        // 清除 axios 默认 header
+        axios.defaults.headers.common['Authorization'] = ''
+        
+        // 使用 router 进行页面跳转
+        const router = useRouter()
+        await router.push('/home')
+      } catch (error) {
+        console.error('注销过程发生错误:', error)
       }
     },
 
