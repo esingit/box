@@ -26,7 +26,11 @@ export function useFitnessForm(types, units) {
 
   // 重置表单
   function resetForm(formData) {
-    Object.assign(formData, initialFormState);
+    if (!formData) {
+      console.warn('重置表单时收到空的表单对象');
+      return;
+    }
+    Object.assign(formData, { ...initialFormState });
     if (types.value.length > 0) formData.typeId = types.value[0].id;
     if (units.value.length > 0) formData.unitId = units.value[0].id;
     formData.finishTime = getTodayDate();

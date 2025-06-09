@@ -123,7 +123,6 @@ import { useFitnessRecords } from '@/composables/useFitnessRecords';
 import { useFitnessForm } from '@/composables/useFitnessForm';
 import FitnessModal from '@/components/fitness/FitnessModal.vue';
 import FitnessList from '@/components/fitness/FitnessList.vue';
-import PageHeader from '@/components/common/PageHeader.vue';
 import SearchPanel from '@/components/fitness/SearchPanel.vue';
 import SkeletonCard from '@/components/common/SkeletonCard.vue';
 
@@ -181,11 +180,30 @@ watch([types, units], ([newTypes, newUnits]) => {
 }, { immediate: true });
 
 // 检查登录状态并执行操作
-function checkAuthAndExecute(action) {
+async function checkAuthAndExecute(action) {
+  console.log('检查登录状态:', isLoggedIn.value);
+  
   if (!isLoggedIn.value) {
-    const { showLogin } = useAuth();
-    showLogin('请先登录', () => action());
+    console.log('用户未登录，显示登录框');
+    const auth = useAuth();
+    auth.showLogin('请先登录', async () => {
+      console.log('登录成功，准备执行回调操作');
+      try {
+        await action();
+      } catch (error) {
+        console.error('执行操作时出错:', error);
+        emitter.emit('notify', '操作执行失败，请重试', 'error');
+      }
+    });
     return false;
+  }
+  
+  console.log('用户已登录，直接执行操作');
+  try {
+    await action();
+  } catch (error) {
+    console.error('执行操作时出错:', error);
+    emitter.emit('notify', '操作执行失败，请重试', 'error');
   }
   return true;
 }
@@ -219,10 +237,13 @@ onMounted(async () => {
 
 // 事件处理函数
 function handleAdd() {
-  if (!checkAuthAndExecute(() => { 
+  console.log('点击添加按钮');
+  if (!checkAuthAndExecute(async () => { 
+    console.log('执行添加操作');
     resetForm();
     showAddModal.value = true;
   })) return;
+  console.log('添加操作执行完成');
 }
 
 async function handleAddRecord() {

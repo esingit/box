@@ -152,24 +152,31 @@ async function handleSubmit() {
     const res = await userStore.login(loginData);
     
     if (res.success) {
+      console.log('登录成功，准备执行回调');
       // 通知其他组件更新认证状态
       emitter.emit('auth-state-changed', true);
       
-      // 获取 useAuth 的状态
-      const { pendingAuthAction, pendingAuthMessage } = useAuth();
+      const auth = useAuth();
+      const callback = auth.pendingAuthAction.value;
       
+      // 先关闭登录框和发出成功事件
       emit('login-success');
       emit('close');
       
       // 如果有待执行的操作，执行它
-      if (pendingAuthAction.value) {
-        const callback = pendingAuthAction.value;
-        // 清空待执行操作
-        pendingAuthAction.value = null;
-        pendingAuthMessage.value = null;
-        // 执行回调
-        await callback();
+      if (typeof callback === 'function') {
+        try {
+          console.log('正在执行登录后的回调操作...');
+          await callback();
+        } catch (error) {
+          console.error('执行登录后回调时出错:', error);
+          emitter.emit('notify', '操作执行失败，请重试', 'error');
+        }
       }
+      
+      // 清空待执行操作
+      auth.pendingAuthAction.value = null;
+      auth.pendingAuthMessage.value = null;
     } else {
       error.value = res.message;
       // 检查是否需要显示验证码

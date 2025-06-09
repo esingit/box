@@ -85,9 +85,15 @@ export function useAuth() {
       
       // 保存消息和回调（先设置回调，再显示模态框）
       pendingAuthMessage.value = message;
-      if (typeof callback === 'function') {
+      if (callback !== null && callback !== undefined) {
         console.log('设置登录后的回调函数');
-        pendingAuthAction.value = callback;
+        pendingAuthAction.value = () => {
+          try {
+            callback();
+          } catch (error) {
+            console.error('执行回调函数时出错:', error);
+          }
+        };
       } else {
         console.log('无回调函数需要设置');
         pendingAuthAction.value = null;
