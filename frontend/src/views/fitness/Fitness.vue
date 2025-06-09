@@ -1,40 +1,84 @@
 <template>
   <div class="page-container">
-    <div class="page-header">
-      <!-- 页面标题 -->
-      <PageHeader title="健身" :icon="LucideDumbbell" />
-    </div>
-    
-    <!-- 查询区域 -->
-    <SearchPanel
-      :query="query"
-      :types="types"
-      @update:query="val => { 
-        Object.assign(query, val);
-        console.log('Fitness - 查询条件已更新：', query);
-      }"
-      @search="handleQuery"
-      @reset="resetQuery"
-    />
-    
-    <!-- 操作按钮区域 -->
-    <div class="action-bar">
-      <button class="btn btn-primary" @click="handleAdd">
-        添加记录
-      </button>
+    <!-- 健身统计概览 -->
+    <div class="card">
+      <div class="card-header flex-between">
+        <h3 class="card-title">健身记录统计</h3>
+        <div class="card-actions">
+          <button 
+            class="btn btn-icon btn-text" 
+            @click="refreshData"
+            title="刷新数据"
+          >
+            <LucideRefreshCw class="btn-icon-md" />
+          </button>
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <template v-if="loading">
+          <SkeletonCard v-for="i in 3" :key="i" class="stat-card" />
+        </template>
+        <template v-else>
+          <div class="stat-card">
+            <h4 class="stat-label">本月运动</h4>
+            <div class="stat-value">{{ stats.monthlyCount || 0 }}次</div>
+            <div class="stat-info">过去30天</div>
+          </div>
+          <div class="stat-card">
+            <h4 class="stat-label">连续运动</h4>
+            <div class="stat-value">{{ stats.streakDays || 0 }}天</div>
+            <div class="stat-info">当前连续</div>
+          </div>
+          <div class="stat-card">
+            <h4 class="stat-label">累计运动</h4>
+            <div class="stat-value">{{ stats.totalCount || 0 }}次</div>
+            <div class="stat-info">总计记录</div>
+          </div>
+        </template>
+      </div>
     </div>
 
-    <!-- 记录列表 -->
-    <FitnessList
-      :records="records"
-      :current="current"
-      :total="total"
-      :page-size="pageSize"
-      @edit="editRecord"
-      @delete="handleDelete"
-      @page-change="handlePageChange"
-      @page-size-change="handlePageSizeChange"
-    />
+    <!-- 搜索和操作区域 -->
+    <div class="content-section">
+      <SearchPanel
+        :query="query"
+        :types="types"
+        @update:query="val => { 
+          Object.assign(query, val);
+          console.log('Fitness - 查询条件已更新：', query);
+        }"
+        @search="handleQuery"
+        @reset="resetQuery"
+      />
+      
+      <div class="action-bar content-action">
+        <button class="btn btn-primary" @click="handleAdd">
+          <LucidePlus class="btn-icon-sm" />
+          添加记录
+        </button>
+      </div>
+    </div>
+
+    <!-- 记录列表区域 -->
+    <div class="content-section">
+      <FitnessList
+        v-if="!loading"
+        :records="records"
+        :current="current"
+        :total="total"
+        :page-size="pageSize"
+        @edit="editRecord"
+        @delete="handleDelete"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageSizeChange"
+      />
+
+      <!-- 加载中骨架屏 -->
+      <div v-else class="skeleton-list">
+        <SkeletonCard v-for="n in pageSize" :key="n" />
+      </div>
+    </div>
 
     <!-- 添加记录弹窗 -->
     <FitnessModal
@@ -70,7 +114,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { LucideDumbbell } from 'lucide-vue-next';
+import { LucideDumbbell, LucidePlus, LucideRefreshCw } from 'lucide-vue-next';
 import { useAuth } from '@/composables/useAuth';
 import { useUserStore } from '@/stores/userStore';
 import emitter from '@/utils/eventBus.js';
@@ -81,10 +125,18 @@ import FitnessModal from '@/components/fitness/FitnessModal.vue';
 import FitnessList from '@/components/fitness/FitnessList.vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import SearchPanel from '@/components/fitness/SearchPanel.vue';
+import SkeletonCard from '@/components/common/SkeletonCard.vue';
 
 // Store
 const userStore = useUserStore();
 const isLoggedIn = computed(() => userStore.isLoggedIn);
+
+// 统计数据
+const stats = ref({
+  monthlyCount: 0,
+  streakDays: 0,
+  totalCount: 0
+});
 
 // 组合式函数
 const { types, units, fetchMetaData } = useMetaData();
@@ -128,52 +180,49 @@ watch([types, units], ([newTypes, newUnits]) => {
   }
 }, { immediate: true });
 
-// 生命周期钩子
-onMounted(async () => {
+// 检查登录状态并执行操作
+function checkAuthAndExecute(action) {
   if (!isLoggedIn.value) {
-    const { showLogin } = useAuth()
-    showLogin('请先登录')
-    return
+    const { showLogin } = useAuth();
+    showLogin('请先登录', () => action());
+    return false;
   }
+  return true;
+}
 
+// 刷新数据
+async function refreshData() {
   try {
-    // 初始化数据
+    loading.value = true;
     await Promise.all([
       fetchMetaData(),
       fetchRecords()
-    ])
-
-    // 监听全局刷新事件
-    emitter.on('refresh-data', () => {
-      Promise.all([
-        fetchMetaData(),
-        fetchRecords()
-      ])
-    })
+    ]);
   } catch (error) {
-    console.error('初始化数据失败:', error)
-    emitter.emit('notify', '加载数据失败：' + (error.message || '请刷新页面重试'), 'error')
+    console.error('刷新数据失败:', error);
+    emitter.emit('notify', '刷新失败：' + (error.message || '请稍后重试'), 'error');
+  } finally {
+    loading.value = false;
   }
+}
+
+// 生命周期钩子
+onMounted(async () => {
+  if (!isLoggedIn.value) {
+    const { showLogin } = useAuth();
+    showLogin('请先登录');
+    return;
+  }
+  
+  await refreshData();
 });
 
-// 在组件销毁时移除事件监听
-onUnmounted(() => {
-  emitter.off('refresh-data');
-});
-
-// 事件处理函数  // 检查登录状态并执行操作
-  function checkAuthAndExecute(action) {
-    if (!isLoggedIn.value) {
-      const { showLogin } = useAuth();
-      showLogin('请先登录', () => action());
-      return false;
-    }
-    return true;
-  }
-
+// 事件处理函数
 function handleAdd() {
-  if (!checkAuthAndExecute(() => { showAddModal.value = true; })) return;
-  showAddModal.value = true;
+  if (!checkAuthAndExecute(() => { 
+    resetForm();
+    showAddModal.value = true;
+  })) return;
 }
 
 async function handleAddRecord() {
@@ -188,24 +237,11 @@ async function handleAddRecord() {
       adding.value = false;
     }
   })) return;
-  
-  try {
-    adding.value = true;
-    if (await addRecord(form)) {
-      closeAddModal();
-      emitter.emit('notify', '添加成功', 'success');
-    }
-  } finally {
-    adding.value = false;
-  }
 }
 
 function editRecord(idx) {
   const record = records.value[idx];
-  if (!record) return;
-  
-  if (!checkAuthAndExecute(() => startEdit(idx, record))) return;
-  startEdit(idx, record);
+  if (!record || !checkAuthAndExecute(() => startEdit(idx, record))) return;
 }
 
 async function saveEdit() {
@@ -215,44 +251,43 @@ async function saveEdit() {
   if (!record) return;
   
   if (!checkAuthAndExecute(async () => {
-    if (await updateRecord({ ...editForm, id: record.id })) {
-      cancelEdit();
+    try {
+      if (await updateRecord({ ...editForm, id: record.id })) {
+        cancelEdit();
+        emitter.emit('notify', '更新成功', 'success');
+      }
+    } catch (error) {
+      emitter.emit('notify', '更新失败：' + (error.message || '请重试'), 'error');
     }
   })) return;
-  
-  if (await updateRecord({ ...editForm, id: record.id })) {
-    cancelEdit();
-  }
 }
 
 async function handleDelete(idx) {
   const record = records.value[idx];
-  if (!record) return;
-  
-  // 先检查登录状态，如果未登录就显示登录弹窗
-  if (!isLoggedIn.value) {
-    const { showLogin } = useAuth();
-    showLogin('请先登录');
-    return;
-  }
-
-  try {
-    const success = await deleteRecord(record.id);
-    if (success) {
-      emitter.emit('notify', '删除成功', 'success');
-      await fetchRecords(); // 刷新列表
+  if (!record || !checkAuthAndExecute(async () => {
+    try {
+      const success = await deleteRecord(record.id);
+      if (success) {
+        emitter.emit('notify', '删除成功', 'success');
+        await fetchRecords();
+      }
+    } catch (error) {
+      console.error('删除记录失败：', error);
+      emitter.emit('notify', '删除失败：' + (error.message || '请重试'), 'error');
     }
-  } catch (error) {
-    console.error('删除记录失败：', error);
-  }
+  })) return;
 }
 
 function handleQuery() {
-  // 确保使用最新的查询条件
   const currentQuery = { ...query };
   console.log('执行查询，当前查询条件：', currentQuery);
   if (Object.values(currentQuery).some(val => val !== '')) {
-    fetchRecords(1); // 重置到第一页并使用当前查询条件进行搜索
+    fetchRecords(1);
   }
 }
+
+// 清理工作
+onUnmounted(() => {
+  emitter.off('refresh-data');
+});
 </script>

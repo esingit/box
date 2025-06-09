@@ -1,5 +1,5 @@
 <template>
-  <div class="table-wrapper">
+  <div class="data-table">
     <table class="table">
       <thead>
         <tr>
@@ -18,13 +18,16 @@
             />
           </td>
         </tr>
-        <tr v-for="(record, idx) in records" :key="record.id || idx">
+        <tr v-for="(record, idx) in records" :key="record.id || idx" class="table-row">
           <td class="cell-text">{{ record.typeValue }}</td>
           <td class="cell-number">{{ record.count }}</td>
           <td class="cell-text">{{ record.unitValue }}</td>
           <td class="cell-date">{{ formatDate(record.finishTime) }}</td>
           <td class="cell-remark">
-            <span :title="record.remark">{{ record.remark || '-' }}</span>
+            <span v-if="record.remark" class="remark-text" :title="record.remark">
+              {{ record.remark }}
+            </span>
+            <span v-else class="text-muted">-</span>
           </td>
           <td class="cell-actions">
             <RecordActions 

@@ -112,3 +112,32 @@
   margin: 0 auto;
   padding: var(--spacing-xl);
 }
+
+/* 内容区域 */
+.content-section {
+  margin-top: var(--spacing-xl);
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-primary);
+}
+
+.content-action {
+  margin: var(--spacing-xl);
+}
+
+/* 布局工具类 */
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.text-center {
+  text-align: center;
+}

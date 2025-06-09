@@ -33,7 +33,7 @@
           </div>
         </div>
 
-        <!-- 资产名称表单弹窗 -->
+        <!-- 资产名称表单 -->
         <AssetNameForm
           v-if="showAdd || showEdit"
           :show="showAdd || showEdit"
@@ -48,23 +48,19 @@
         />
 
         <!-- 列表区域 -->
-        <div v-else class="content-container">
-          <div v-if="loading" class="empty-container">
-            <EmptyState
-              message="加载中..."
-              icon="Loader"
-            />
+        <div v-else class="content-section">
+          <div v-if="loading" class="skeleton-list">
+            <SkeletonCard v-for="n in 5" :key="n" />
           </div>
           <template v-else>
-            <div class="table-wrapper">
+            <div class="card">
               <AssetNamesTable 
                 :names="filteredNameList"
                 @edit="startEdit"
                 @delete="handleDelete"
               />
             </div>
-            
-            <div class="pagination-container mt-4">
+            <div v-if="total > pageSize" class="pagination-wrapper">
               <PaginationBar
                 :current="current"
                 :total="total"

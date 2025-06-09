@@ -1,52 +1,51 @@
 <template>
   <div class="page-container">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <PageHeader title="资产" :icon="WalletIcon" />
-    </div>
-
     <!-- 资产概览卡片 -->
-    <div class="stats-container">
-      <div class="stats-header">
-        <div class="stats-date" v-if="!loading && stats.formattedDate">
+    <div class="card">
+      <div class="card-header flex-between">
+        <h3 class="card-title" v-if="!loading && stats.formattedDate">
           {{ stats.formattedDate }}统计
-        </div>
-        <div class="stats-actions" v-if="!loading">
+        </h3>
+        <div class="card-actions" v-if="!loading">
           <button 
             class="btn btn-icon btn-text" 
             :class="{ 'animate-spin': retrying }"
             @click="fetchStatsWithRetry"
             :title="retrying ? '正在重试...' : '刷新统计数据'"
           >
-            <LucideRefreshCw :size="16" />
+            <LucideRefreshCw class="btn-icon-md" />
           </button>
         </div>
       </div>
 
-      <div class="stats-grid">
-        <!-- 加载中显示骨架屏 -->
+      <div class="card-grid">
         <template v-if="loading">
-          <SkeletonCard v-for="i in 3" :key="i" />
+          <SkeletonCard v-for="i in 3" :key="i" class="stat-card" />
         </template>
         <template v-else>
-          <div class="stat-card">
-            <div class="stat-label">总资产</div>
+          <!-- 总资产卡片 -->
+          <div class="stat-card" :title="'总资产 ' + formatAmount(stats.totalAssets)">
+            <h4 class="stat-label">总资产</h4>
             <div class="stat-value positive">{{ formatAmount(stats.totalAssets) }}</div>
-            <div class="stat-change" :class="stats.assetsChange > 0 ? 'positive' : stats.assetsChange < 0 ? 'negative' : ''">
+            <div class="stat-change" :class="getChangeClass(stats.assetsChange)">
               {{ getChangePrefix(stats.assetsChange) }}{{ formatAmount(stats.assetsChange) }}
             </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">总负债</div>
+          
+          <!-- 总负债卡片 -->
+          <div class="stat-card" :title="'总负债 ' + formatAmount(stats.totalLiabilities)">
+            <h4 class="stat-label">总负债</h4>
             <div class="stat-value negative">{{ formatAmount(stats.totalLiabilities) }}</div>
-            <div class="stat-change" :class="stats.liabilitiesChange > 0 ? 'negative' : stats.liabilitiesChange < 0 ? 'positive' : ''">
+            <div class="stat-change" :class="getChangeClass(stats.liabilitiesChange, true)">
               {{ getChangePrefix(stats.liabilitiesChange) }}{{ formatAmount(stats.liabilitiesChange) }}
             </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">净资产</div>
+          
+          <!-- 净资产卡片 -->
+          <div class="stat-card" :title="'净资产 ' + formatAmount(netWorth)">
+            <h4 class="stat-label">净资产</h4>
             <div class="stat-value" :class="netWorth > 0 ? 'positive' : 'negative'">{{ formatAmount(netWorth) }}</div>
-            <div class="stat-change" :class="netWorthChange > 0 ? 'positive' : netWorthChange < 0 ? 'negative' : ''">
+            <div class="stat-change" :class="getChangeClass(netWorthChange)">
               {{ getChangePrefix(netWorthChange) }}{{ formatAmount(netWorthChange) }}
             </div>
           </div>
@@ -54,45 +53,54 @@
       </div>
       
       <!-- 重试状态提示 -->
-      <div v-if="retrying" class="retry-hint">
+      <div v-if="retrying" class="hint-text text-center">
         正在重试 ({{ retryCount }}/{{ maxRetries }})...
       </div>
     </div>
 
-    <!-- 搜索面板 -->
-    <SearchPanel
-      :query="query"
-      :types="assetStore.types"
-      :locations="assetStore.locations"
-      :asset-names="assetStore.assetNames"
-      @update:query="val => Object.assign(query, val)"
-      @search="handleQuery"
-      @reset="resetQuery"
-      @refresh-names="refreshAssetNames"
-    />
+    <!-- 搜索和操作区域 -->
+    <div class="content-section">
+      <SearchPanel
+        :query="query"
+        :types="assetStore.types"
+        :locations="assetStore.locations"
+        :asset-names="assetStore.assetNames"
+        @update:query="val => Object.assign(query, val)"
+        @search="handleQuery"
+        @reset="resetQuery"
+        @refresh-names="refreshAssetNames"
+      />
 
-    <!-- 操作按钮区域 -->
-    <div class="action-bar">
-      <button class="btn btn-primary" @click="showModal">添加记录</button>
-      <button class="btn btn-outline" @click="copyLastRecords">复制上回记录</button>
+      <div class="action-bar content-action">
+        <button class="btn btn-primary" @click="showModal">
+          <LucidePlus class="btn-icon-sm" />
+          添加记录
+        </button>
+        <button class="btn btn-outline" @click="copyLastRecords">
+          <LucideCopy class="btn-icon-sm" />
+          复制上回记录
+        </button>
+      </div>
     </div>
 
-    <!-- 记录列表 -->
-    <AssetList
-      v-if="!loading"
-      :records="records"
-      :current="current"
-      :total="total"
-      :page-size="pageSize"
-      @edit="editRecord"
-      @delete="deleteRecord"
-      @page-change="handlePageChange"
-      @page-size-change="handlePageSizeChange"
-    />
+    <!-- 记录列表区域 -->
+    <div class="content-section">
+      <AssetList
+        v-if="!loading"
+        :records="records"
+        :current="current"
+        :total="total"
+        :page-size="pageSize"
+        @edit="editRecord"
+        @delete="deleteRecord"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageSizeChange"
+      />
 
-    <!-- 加载中骨架屏 -->
-    <div v-else>
-      <SkeletonCard v-for="n in pageSize" :key="n" class="skeleton-card" />
+      <!-- 加载中骨架屏 -->
+      <div v-else class="skeleton-list">
+        <SkeletonCard v-for="n in pageSize" :key="n" />
+      </div>
     </div>
 
     <!-- 添加记录弹窗 -->
@@ -135,7 +143,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { LucideWallet, LucideSearch, LucideRotateCcw, LucideRefreshCw } from 'lucide-vue-next'
+import { LucideWallet, LucideSearch, LucideRotateCcw, LucideRefreshCw, LucidePlus, LucideCopy } from 'lucide-vue-next'
 import { useAssetStore } from '@/stores/assetStore'
 import { useAuth } from '@/composables/useAuth'
 import emitter from '@/utils/eventBus.js'
@@ -166,24 +174,34 @@ const records = ref([])
 
 // 统一的数据刷新函数
 async function refreshData(options = {}) {
-  const { showLoading = true, retryStats = false } = options
+  const { showLoading = true, retryStats = false, refreshTable = true, refreshStats = true } = options
   
   try {
     if (showLoading) {
       loading.value = true
     }
     
-    // 并行获取数据
-    const [recordsResult, statsSuccess] = await Promise.all([
-      assetStore.fetchRecords({
+    const promises = []
+    
+    // 根据需要添加相应的请求到并行任务中
+    if (refreshTable) {
+      promises.push(assetStore.fetchRecords({
         ...query,
         page: current.value,
         pageSize: pageSize.value
-      }),
-      retryStats ? fetchStatsWithRetry() : fetchStats()
-    ])
+      }))
+    }
     
-    if (recordsResult) {
+    if (refreshStats) {
+      promises.push(retryStats ? fetchStatsWithRetry() : fetchStats())
+    }
+    
+    // 并行执行请求
+    const results = await Promise.all(promises)
+    
+    // 处理表格数据结果
+    if (refreshTable && results[0]) {
+      const recordsResult = results[0]
       records.value = recordsResult.records || []
       total.value = recordsResult.total || 0
     }
@@ -327,7 +345,7 @@ async function fetchStats() {
 
 // 方法
 async function handleQuery() {
-  await refreshData()
+  await refreshData({ refreshStats: false })
 }
 
 function resetQuery() {
@@ -373,6 +391,14 @@ function formatAmount(amount) {
 
 function getChangePrefix(change) {
   return change > 0 ? '+' : ''
+}
+
+// 根据变化值获取样式类
+function getChangeClass(change, isLiability = false) {
+  if (isLiability) {
+    return change > 0 ? 'negative' : change < 0 ? 'positive' : ''
+  }
+  return change > 0 ? 'positive' : change < 0 ? 'negative' : ''
 }
 
 async function handleAddRecord(formData) {

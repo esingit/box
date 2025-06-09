@@ -1,0 +1,15 @@
+/* 状态颜色 */
+.positive {
+  color: var(--success-color);
+}
+
+.negative {
+  color: var(--error-color);
+}
+
+/* 提示文本 */
+.hint-text {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin: var(--spacing-md) 0;
+}

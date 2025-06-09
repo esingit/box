@@ -6,18 +6,25 @@ import { useUserStore } from '@/stores/userStore'
 
 import 'normalize.css'
 
-// 主题变量和基础样式
+// 主题和基础样式
 import './assets/theme.css'
 import './assets/base.css'
+
+// 布局
 import './assets/layout.css'
-import './assets/forms.css'
+
+// 组件样式
 import './assets/components.css'
 import './assets/buttons.css'
 import './assets/inputs.css'
+import './assets/forms.css'
 import './assets/modal.css'
 import './assets/table.css'
 import './assets/toast.css'
 import './assets/pagination.css'
+
+// 工具类
+import './assets/utilities.css'
 
 async function initApp() {
   const pinia = createPinia()
