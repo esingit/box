@@ -13,8 +13,9 @@ public interface AssetRecordService {
     void addRecord(AssetRecord record);
     void updateRecord(AssetRecord record);
     void deleteRecord(Long id);
-    IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, Long typeId, String remark,
-                                           String startDate, String endDate, String createUser);
+    IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, Long assetNameId, Long locationId, 
+                                           Long typeId, String remark, String startDate, String endDate, 
+                                           String createUser);
     void copyLastRecords(boolean force);
     AssetStatsDTO getLatestStats(String createUser, Integer offset);
 }

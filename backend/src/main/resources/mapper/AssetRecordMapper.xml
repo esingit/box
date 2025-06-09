@@ -54,6 +54,12 @@
         LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'CURRENCY'
         LEFT JOIN common_meta location_meta ON ar.asset_location_id = location_meta.id AND location_meta.type_code = 'ASSET_LOCATION'
         <where>
+            <if test="assetNameId != null">
+                AND ar.asset_name_id = #{assetNameId}
+            </if>
+            <if test="locationId != null">
+                AND ar.asset_location_id = #{locationId}
+            </if>
             <if test="typeId != null">
                 AND ar.asset_type_id = #{typeId}
             </if>
