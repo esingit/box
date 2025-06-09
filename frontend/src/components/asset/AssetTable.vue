@@ -1,5 +1,5 @@
 <template>
-  <div class="table-wrapper">
+  <div class="data-table">
     <table class="table">
       <thead>
         <tr>
@@ -18,16 +18,22 @@
             />
           </td>
         </tr>
-        <tr v-for="(record, idx) in records" :key="record.id || idx">
+        <tr v-for="(record, idx) in records" :key="record.id || idx" class="table-row">
           <td class="cell-text">{{ record.assetName }}</td>
           <td class="cell-text">{{ record.assetTypeValue }}</td>
           <td class="cell-number">
-            {{ formatAmount(record.amount) }} {{ record.unitValue }}
+            <span :class="{ 'negative': record.amount < 0 }">
+              {{ formatAmount(record.amount) }}
+            </span>
+            {{ record.unitValue }}
           </td>
           <td class="cell-text">{{ record.locationValue }}</td>
           <td class="cell-date">{{ formatDate(record.acquireTime) }}</td>
           <td class="cell-remark">
-            <span :title="record.remark">{{ record.remark || '-' }}</span>
+            <span v-if="record.remark" class="remark-text" :title="record.remark">
+              {{ record.remark }}
+            </span>
+            <span v-else class="text-muted">-</span>
           </td>
           <td class="cell-actions">
             <RecordActions 
@@ -47,7 +53,7 @@
 import EmptyState from '@/components/common/EmptyState.vue'
 import RecordActions from '@/components/common/RecordActions.vue'
 
-const props = defineProps({
+defineProps({
   records: {
     type: Array,
     required: true,
@@ -64,10 +70,11 @@ const tableHeaders = [
   { key: 'location', label: '位置', class: 'cell-text' },
   { key: 'time', label: '时间', class: 'cell-date' },
   { key: 'remark', label: '备注', class: 'cell-remark' },
-  { key: 'operations', label: '操作', class: 'cell-actions' }
+  { key: 'actions', label: '操作', class: 'cell-actions' }
 ]
 
 function formatAmount(amount) {
+  if (!amount) return '0.00'
   const formatted = new Intl.NumberFormat('zh-CN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
@@ -77,6 +84,6 @@ function formatAmount(amount) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('zh-CN')
+  return dateStr.slice(0, 10)
 }
 </script>

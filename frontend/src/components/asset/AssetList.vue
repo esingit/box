@@ -8,8 +8,9 @@
       />
     </div>
 
-    <div class="pagination-wrapper">
+    <div class="pagination-container">
       <PaginationBar
+        v-if="total > 0"
         :current="current"
         :total="total"
         :page-size="pageSize"
@@ -22,9 +23,9 @@
 
 <script setup>
 import AssetTable from './AssetTable.vue'
-import PaginationBar from '@/components/PaginationBar.vue'
+import PaginationBar from 'components/common/PaginationBar.vue'
 
-const props = defineProps({
+defineProps({
   records: {
     type: Array,
     required: true

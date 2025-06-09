@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/views/Home.vue'
 import Fitness from '@/views/fitness/Fitness.vue'
+import Asset from '@/views/asset/Asset.vue'
 import { useUserStore } from '@/stores/userStore'
 import { useAuth } from '@/composables/useAuth'
 import emitter from '@/utils/eventBus'
@@ -9,7 +10,7 @@ const routes = [
   { path: '/', redirect: '/home' },  // 将根路径重定向到主页
   { path: '/home', component: Home },
   { path: '/fitness', component: Fitness },
-  { path: '/asset', component: () => import('@/views/asset/Asset.vue') },
+  { path: '/asset', component: Asset },
 ]
 
 const router = createRouter({

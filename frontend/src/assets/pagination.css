@@ -1,8 +1,10 @@
+/* 分页组件样式 */
 .pagination {
   display: flex;
   gap: var(--spacing-xs);
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
+  margin: var(--spacing-xl) 0;
   font-size: var(--font-size-sm);
 }
 
@@ -40,11 +42,50 @@
   pointer-events: none;
 }
 
+/* 每页条数选择器 */
+.page-size-select {
+  min-width: 100px;
+  height: var(--btn-height-sm);
+  padding: 0 var(--spacing-sm);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.page-size-select:hover {
+  border-color: var(--border-hover);
+}
+
+.page-size-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* 总数信息 */
+.pagination-info {
+  color: var(--text-secondary);
+  margin-left: var(--spacing-md);
+}
+
 /* 分页容器 */
 .pagination-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--spacing-md);
-  min-height: 48px; /* 确保分页区域有固定的最小高度 */
+  justify-content: flex-end;
+  padding: 0 var(--spacing-lg);
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .pagination {
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+  
+  .page-size-select {
+    min-width: 80px;
+  }
 }

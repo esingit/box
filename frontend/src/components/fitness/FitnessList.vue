@@ -1,6 +1,6 @@
 <template>
-  <div class="data-list-container">
-    <div class="data-list-content">
+  <div class="list-component">
+    <div class="table-container">
       <FitnessTable 
         :records="records"
         @edit="handleEdit"
@@ -8,11 +8,12 @@
       />
     </div>
     
-    <div class="pagination-wrapper">
+    <div class="pagination-container">
       <PaginationBar
+        v-if="total > 0"
         :current="current"
         :total="total"
-        :pageSize="pageSize"
+        :page-size="pageSize"
         @page-change="$emit('page-change', $event)"
         @page-size-change="$emit('page-size-change', $event)"
       />
@@ -21,11 +22,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
 import FitnessTable from './FitnessTable.vue';
-import PaginationBar from '@/components/PaginationBar.vue';
+import PaginationBar from 'components/common/PaginationBar.vue';
 
-const props = defineProps({
+defineProps({
   records: {
     type: Array,
     required: true
@@ -45,9 +45,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['page-change', 'page-size-change', 'edit', 'delete']);
-
-const totalPages = computed(() => Math.ceil(props.total / props.pageSize));
-const showPagination = computed(() => props.total > props.pageSize);
 
 function handleEdit(idx) {
   emit('edit', idx);

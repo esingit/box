@@ -8,7 +8,6 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   overflow: hidden;
   font-size: var(--font-size-sm);
@@ -104,10 +103,6 @@
   background-color: var(--bg-hover);
 }
 
-.table tbody tr:last-child td {
-  border-bottom: none;
-}
-
 /* 金额单元格 */
 .amount-cell {
   text-align: right;
@@ -132,5 +127,35 @@
 
   .table {
     min-width: 800px;
+  }
+}
+
+/* 列表组件样式 */
+.list-component {
+  background-color: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 确保最后一行不显示底部边框 */
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .table {
+    min-width: 800px;
+  }
+  
+  .list-component {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
   }
 }

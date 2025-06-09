@@ -48,28 +48,28 @@
         />
 
         <!-- 列表区域 -->
-        <div v-else class="data-list-container">
-          <div class="data-list-content">
-            <div v-if="loading" class="skeleton-list">
-              <SkeletonCard v-for="n in 5" :key="n" />
-            </div>
-            <template v-else>
+        <div v-else class="content-section">
+          <div v-if="loading" class="skeleton-list">
+            <SkeletonCard v-for="n in 5" :key="n" />
+          </div>
+          <template v-else>
+            <div class="card">
               <AssetNamesTable 
                 :names="filteredNameList"
                 @edit="startEdit"
                 @delete="handleDelete"
               />
-            </template>
-          </div>
-          <div class="pagination-wrapper">
-            <PaginationBar
-              :current="current"
-              :total="total"
-              :page-size="pageSize"
-              @page-change="handlePageChange"
-              @page-size-change="handlePageSizeChange"
-            />
-          </div>
+            </div>
+            <div v-if="total > pageSize" class="pagination-wrapper">
+              <PaginationBar
+                :current="current"
+                :total="total"
+                :page-size="pageSize"
+                @page-change="handlePageChange"
+                @page-size-change="handlePageSizeChange"
+              />
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -79,8 +79,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { LucidePlus, LucideSearch, LucideX } from 'lucide-vue-next'
-import EmptyState from '@/components/common/EmptyState.vue'
-import PaginationBar from '@/components/PaginationBar.vue'
+import PaginationBar from 'components/common/PaginationBar.vue'
 import ModalHeader from './ModalHeader.vue'
 import AssetNamesTable from './AssetNamesTable.vue'
 import AssetNameForm from './AssetNameForm.vue'

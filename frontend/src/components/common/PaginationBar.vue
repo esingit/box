@@ -7,6 +7,7 @@
     >
       上一页
     </button>
+    
     <button 
       v-for="page in displayPages" 
       :key="page" 
@@ -16,6 +17,7 @@
     >
       {{ page }}
     </button>
+    
     <button 
       class="page-btn" 
       :disabled="currentPage >= totalPages || totalPages === 0" 
@@ -23,8 +25,9 @@
     >
       下一页
     </button>
+    
     <select 
-      class="page-btn" 
+      class="page-size-select" 
       :value="pageSize" 
       @change="$emit('page-size-change', Number($event.target.value))"
     >
@@ -32,7 +35,8 @@
         每页{{ size }}条
       </option>
     </select>
-    <span class="text-secondary">共 {{ total }} 条</span>
+    
+    <span class="pagination-info">共 {{ total }} 条</span>
   </div>
 </template>
 
