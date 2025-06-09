@@ -38,37 +38,38 @@
           v-if="showAdd || showEdit"
           :show="showAdd || showEdit"
           :loading="loading"
+          :form-error="formError"
           :edit-data="showEdit ? {
             id: editingId,
             name: editingName,
             description: editingDescription
           } : null"
-          @close="() => showAdd ? (showAdd = false) : (showEdit = false)"
+          @close="() => {
+            formError = ''
+            showAdd ? (showAdd = false) : (showEdit = false)
+          }"
           @submit="handleFormSubmit"
+          @update:form-error="val => formError = val"
         />
 
         <!-- 列表区域 -->
         <div v-else class="content-section">
-          <div v-if="loading" class="skeleton-list">
-            <SkeletonCard v-for="n in 5" :key="n" />
-          </div>
+          <template v-if="loading">
+            <div class="skeleton-list">
+              <SkeletonCard v-for="n in 5" :key="n" />
+            </div>
+          </template>
           <template v-else>
-            <div class="card">
-              <AssetNamesTable 
-                :names="filteredNameList"
-                @edit="startEdit"
-                @delete="handleDelete"
-              />
-            </div>
-            <div v-if="total > pageSize" class="pagination-wrapper">
-              <PaginationBar
-                :current="current"
-                :total="total"
-                :page-size="pageSize"
-                @page-change="handlePageChange"
-                @page-size-change="handlePageSizeChange"
-              />
-            </div>
+            <AssetNamesList
+              :names="filteredNameList"
+              :current="current"
+              :total="total"
+              :page-size="pageSize"
+              @edit="startEdit"
+              @delete="handleDelete"
+              @page-change="handlePageChange"
+              @page-size-change="handlePageSizeChange"
+            />
           </template>
         </div>
       </div>
@@ -78,11 +79,11 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { LucidePlus, LucideSearch, LucideX } from 'lucide-vue-next'
-import PaginationBar from 'components/common/PaginationBar.vue'
+import { LucidePlus, LucideX } from 'lucide-vue-next'
 import ModalHeader from './ModalHeader.vue'
-import AssetNamesTable from './AssetNamesTable.vue'
+import AssetNamesList from './AssetNamesList.vue'
 import AssetNameForm from './AssetNameForm.vue'
+import SkeletonCard from '@/components/common/SkeletonCard.vue'
 import axios from '@/utils/axios.js'
 import emitter from '@/utils/eventBus.js'
 
@@ -115,8 +116,8 @@ const editingId = ref(null)
 const editingName = ref('')
 const editingDescription = ref('')
 const current = ref(1)
-const total = ref(0)
 const pageSize = ref(10)
+const total = ref(0)
 const formError = ref('')
 
 // 处理关闭模态框
@@ -196,20 +197,26 @@ function showAddForm() {
   showAdd.value = true
 }
 
+// 分页相关
+const filteredNameList = computed(() => {
+  const start = (current.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return names.value.slice(start, end)
+})
+
+// 更新总数
+watch(names, (newList) => {
+  total.value = newList.length
+})
+
+// 处理分页变化
 function handlePageChange(page) {
-  const maxPage = Math.ceil(total.value / pageSize.value)
-  const validPage = Math.min(Math.max(1, page), maxPage)
-  if (validPage !== page) {
-    emitter.emit('notify', '页码超出范围', 'warning')
-  }
-  fetchNames(validPage)
+  current.value = page
 }
 
 function handlePageSizeChange(size) {
   pageSize.value = size
-  const maxPage = Math.ceil(total.value / size)
-  const validPage = Math.min(current.value, maxPage)
-  fetchNames(validPage)
+  current.value = 1
 }
 
 // 处理表单提交
@@ -302,16 +309,5 @@ watch(() => props.show, (newVal) => {
   } else {
     handleClose()
   }
-})
-
-// 过滤后的名称列表
-const filteredNameList = computed(() => {
-  if (!searchTerm.value) {
-    return names.value
-  }
-  return names.value.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-    item.description?.toLowerCase().includes(searchTerm.value.toLowerCase())
-  )
 })
 </script>
