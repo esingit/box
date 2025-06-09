@@ -13,7 +13,7 @@ export const useAssetStore = defineStore('asset', () => {
   const loading = ref(false)
 
   // 获取资产记录列表
-  async function fetchRecords({ page = 1, pageSize = 10, typeId, startDate, endDate, remark }) {
+  async function fetchRecords({ page = 1, pageSize = 10, assetNameId, locationId, typeId, startDate, endDate, remark }) {
     loading.value = true
     try {
       const params = {
@@ -22,6 +22,8 @@ export const useAssetStore = defineStore('asset', () => {
       }
 
       // 添加非空的查询参数
+      if (assetNameId) params.assetNameId = assetNameId
+      if (locationId) params.locationId = locationId
       if (typeId) params.typeId = typeId
       if (startDate) params.startDate = startDate + 'T00:00:00'
       if (endDate) params.endDate = endDate + 'T23:59:59'

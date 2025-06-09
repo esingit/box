@@ -1,32 +1,40 @@
 <template>
-  <div class="query-bar">
-    <div class="query-fields">
-      <select v-model="localQuery.typeId" class="input">
-        <option value="">全部类型</option>
-        <option v-for="type in types" :key="type.id" :value="type.id">
-          {{ type.value1 }}
-        </option>
-      </select>
-      
-      <input type="date" v-model="localQuery.startDate" class="input" />
-      <span class="text-secondary">至</span>
-      <input type="date" v-model="localQuery.endDate" class="input" />
-      
-      <input 
-        class="input"
-        v-model="localQuery.remark" 
-        placeholder="备注关键词" 
-        type="text" 
-      />
-    </div>
-    
-    <div class="query-btns">
-      <button class="btn btn-primary" title="查询" @click="search">
-        <LucideSearch size="18" style="vertical-align: middle;" />
-      </button>
-      <button class="btn btn-text" title="重置" @click="reset">
-        <LucideRotateCcw size="18" style="vertical-align: middle;" />
-      </button>
+  <div class="search-panel" style="background-color: var(--bg-secondary)">
+    <div class="flex justify-between gap-4">
+      <div class="flex-grow">
+        <div class="form-group">
+          <div class="control-group">
+            <select v-model="localQuery.typeId" class="input control-select">
+              <option value="">全部类型</option>
+              <option v-for="type in types" :key="type.id" :value="type.id">
+                {{ type.value1 }}
+              </option>
+            </select>
+
+            <div class="date-range">
+              <input type="date" v-model="localQuery.startDate" class="input" />
+              <span class="date-separator">至</span>
+              <input type="date" v-model="localQuery.endDate" class="input" />
+            </div>
+
+            <input 
+              class="input control-input"
+              v-model="localQuery.remark" 
+              placeholder="备注关键词" 
+              type="text" 
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="search-actions flex items-center gap-2">
+        <button class="btn btn-icon btn-primary" title="查询" @click="search">
+          <LucideSearch />
+        </button>
+        <button class="btn btn-icon btn-text" title="重置" @click="reset">
+          <LucideRotateCcw />
+        </button>
+      </div>
     </div>
   </div>
 </template>

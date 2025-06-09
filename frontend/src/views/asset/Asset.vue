@@ -63,9 +63,12 @@
     <SearchPanel
       :query="query"
       :types="assetStore.types"
+      :locations="assetStore.locations"
+      :asset-names="assetStore.assetNames"
       @update:query="val => Object.assign(query, val)"
       @search="handleQuery"
       @reset="resetQuery"
+      @refresh-names="refreshAssetNames"
     />
 
     <!-- 操作按钮区域 -->
@@ -211,6 +214,8 @@ const netWorthChange = computed(() => stats.value.assetsChange - stats.value.lia
 
 // 查询条件
 const query = reactive({
+  assetNameId: '',
+  locationId: '',
   typeId: '',
   startDate: '',
   endDate: '',
@@ -327,6 +332,8 @@ async function handleQuery() {
 
 function resetQuery() {
   Object.assign(query, {
+    assetNameId: '',
+    locationId: '',
     typeId: '',
     startDate: '',
     endDate: '',

@@ -4,10 +4,10 @@
       <div class="flex-grow">
         <div class="form-group">
           <div class="control-group">
-            <select v-model="localQuery.assetName" class="input control-select">
+            <select v-model="localQuery.assetNameId" class="input control-select">
               <option value="">资产名称</option>
-              <option v-for="name in assetNames" :key="name" :value="name">
-                {{ name }}
+              <option v-for="name in assetNames" :key="name.id" :value="name.id">
+                {{ name.name }}
               </option>
             </select>
 
@@ -18,10 +18,10 @@
               </option>
             </select>
 
-            <select v-model="localQuery.location" class="input control-select">
+            <select v-model="localQuery.locationId" class="input control-select">
               <option value="">资产位置</option>
-              <option v-for="location in locations" :key="location" :value="location">
-                {{ location }}
+              <option v-for="location in locations" :key="location.id" :value="location.id">
+                {{ location.value1 }}
               </option>
             </select>
           </div>
@@ -93,18 +93,18 @@ const emit = defineEmits(['update:query', 'search', 'reset']);
 const isExpanded = ref(false);
 
 const localQuery = reactive({
-  assetName: props.query.assetName || '',
+  assetNameId: props.query.assetNameId || '',
   typeId: props.query.typeId || '',
-  location: props.query.location || '',
+  locationId: props.query.locationId || '',
   startDate: props.query.startDate || '',
   endDate: props.query.endDate || '',
   remark: props.query.remark || ''
 });
 
 watch(() => props.query, (newQuery) => {
-  localQuery.assetName = newQuery.assetName || '';
+  localQuery.assetNameId = newQuery.assetNameId || '';
   localQuery.typeId = newQuery.typeId || '';
-  localQuery.location = newQuery.location || '';
+  localQuery.locationId = newQuery.locationId || '';
   localQuery.startDate = newQuery.startDate || '';
   localQuery.endDate = newQuery.endDate || '';
   localQuery.remark = newQuery.remark || '';
