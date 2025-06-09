@@ -158,7 +158,7 @@
   /* 布局 */
   --sidebar-width: 160px;
   --sidebar-collapsed-width: 56px;
-  --header-height: 64px;
+  --header-height: 56px;
   
   /* 组件特定 */
   --input-height: 44px;
