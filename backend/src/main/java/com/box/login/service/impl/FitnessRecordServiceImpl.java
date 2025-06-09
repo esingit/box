@@ -1,8 +1,10 @@
 package com.box.login.service.impl;
 
 import com.box.login.dto.FitnessRecordDTO;
+import com.box.login.dto.FitnessStatsDTO;
 import com.box.login.entity.FitnessRecord;
 import com.box.login.mapper.FitnessRecordMapper;
+import com.box.login.mapper.FitnessStatsMapper;
 import com.box.login.service.FitnessRecordService;
 import com.box.login.config.UserContextHolder;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -21,6 +23,9 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
 
     @Autowired
     private FitnessRecordMapper fitnessRecordMapper;
+    
+    @Autowired
+    private FitnessStatsMapper fitnessStatsMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -87,5 +92,15 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
             typeId, remark, startDate, endDate, createUser, page.getCurrent(), page.getSize()
         );
         return fitnessRecordMapper.selectPageWithMeta(page, typeId, remark, startDate, endDate, createUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public FitnessStatsDTO getStats(String createUser) {
+        FitnessStatsDTO stats = new FitnessStatsDTO();
+        stats.setMonthlyCount(fitnessStatsMapper.getMonthlyCount(createUser));
+        stats.setStreakDays(fitnessStatsMapper.getStreakDays(createUser));
+        stats.setTotalCount(fitnessStatsMapper.getTotalCount(createUser));
+        return stats;
     }
 }

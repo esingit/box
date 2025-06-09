@@ -135,9 +135,7 @@ const stats = ref({
   monthlyCount: 0,
   streakDays: 0,
   totalCount: 0
-});
-
-// 组合式函数
+});  // 组合式函数
 const { types, units, fetchMetaData } = useMetaData();
 const {
   records,
@@ -152,7 +150,8 @@ const {
   deleteRecord,
   resetQuery,
   handlePageChange,
-  handlePageSizeChange
+  handlePageSizeChange,
+  fetchStats
 } = useFitnessRecords();
 
 const {
@@ -212,10 +211,15 @@ async function checkAuthAndExecute(action) {
 async function refreshData() {
   try {
     loading.value = true;
-    await Promise.all([
+    const [metaData, recordsData, statsData] = await Promise.all([
       fetchMetaData(),
-      fetchRecords()
+      fetchRecords(),
+      fetchStats()
     ]);
+    
+    if (statsData) {
+      stats.value = statsData;
+    }
   } catch (error) {
     console.error('刷新数据失败:', error);
     emitter.emit('notify', '刷新失败：' + (error.message || '请稍后重试'), 'error');
@@ -253,6 +257,11 @@ async function handleAddRecord() {
       if (await addRecord(form)) {
         closeAddModal();
         emitter.emit('notify', '添加成功', 'success');
+        // 更新统计数据
+        const statsData = await fetchStats();
+        if (statsData) {
+          stats.value = statsData;
+        }
       }
     } finally {
       adding.value = false;
@@ -276,6 +285,11 @@ async function saveEdit() {
       if (await updateRecord({ ...editForm, id: record.id })) {
         cancelEdit();
         emitter.emit('notify', '更新成功', 'success');
+        // 更新统计数据
+        const statsData = await fetchStats();
+        if (statsData) {
+          stats.value = statsData;
+        }
       }
     } catch (error) {
       emitter.emit('notify', '更新失败：' + (error.message || '请重试'), 'error');
@@ -291,6 +305,11 @@ async function handleDelete(idx) {
       if (success) {
         emitter.emit('notify', '删除成功', 'success');
         await fetchRecords();
+        // 更新统计数据
+        const statsData = await fetchStats();
+        if (statsData) {
+          stats.value = statsData;
+        }
       }
     } catch (error) {
       console.error('删除记录失败：', error);

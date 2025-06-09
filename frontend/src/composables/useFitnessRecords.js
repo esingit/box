@@ -111,6 +111,21 @@ export function useFitnessRecords() {
     }
   }
 
+  async function fetchStats() {
+    try {
+      const res = await axios.get('/api/fitness-record/stats');
+      if (res.data?.success) {
+        return res.data.data;
+      }
+      emitter.emit('notify', res.data?.message || '获取统计数据失败', 'error');
+      return null;
+    } catch (err) {
+      console.error('获取统计数据失败:', err);
+      emitter.emit('notify', '获取统计数据失败：' + (err.message || '未知错误'), 'error');
+      return null;
+    }
+  }
+
   function resetQuery() {
     Object.assign(query, {
       typeId: '',
@@ -144,6 +159,7 @@ export function useFitnessRecords() {
     deleteRecord,
     resetQuery,
     handlePageChange,
-    handlePageSizeChange
+    handlePageSizeChange,
+    fetchStats
   };
 }

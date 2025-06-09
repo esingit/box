@@ -1,6 +1,7 @@
 package com.box.login.controller;
 
 import com.box.login.dto.FitnessRecordDTO;
+import com.box.login.dto.FitnessStatsDTO;
 import com.box.login.entity.FitnessRecord;
 import com.box.login.service.FitnessRecordService;
 import com.box.login.dto.ApiResponse;
@@ -54,5 +55,14 @@ public class FitnessRecordController {
     public ApiResponse<Void> deleteRecord(@PathVariable Long id) {
         fitnessRecordService.deleteRecord(id);
         return ApiResponse.success();
+    }
+
+    @GetMapping("/stats")
+    public ApiResponse<FitnessStatsDTO> getStats() {
+        log.debug("获取健身统计数据");
+        String currentUser = UserContextHolder.getCurrentUsername();
+        log.debug("当前用户: {}", currentUser);
+        FitnessStatsDTO stats = fitnessRecordService.getStats(currentUser);
+        return ApiResponse.success(stats);
     }
 }
