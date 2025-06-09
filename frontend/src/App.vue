@@ -57,6 +57,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useUserStore } from './stores/userStore';
 import { useRouter } from 'vue-router';
 import { useAuth, initializeAuth } from './composables/useAuth';
+import { useLogout } from '@/composables/useLogout';
 import Sidebar from './components/Sidebar.vue';
 import Profile from './views/Profile.vue';
 import GlobalModals from './components/GlobalModals.vue';
@@ -121,16 +122,9 @@ function openProfile() {
 }
 
 async function logout() {
-  try {
-    closeMenu(); // 先关闭菜单，提升用户体验
-    await userStore.logout(true, router);
-    emitter.emit('notify', '已成功注销', 'success');
-  } catch (error) {
-    console.error('注销失败:', error);
-    // 即使失败也要强制清理状态
-    await userStore.logout(true, router);
-    emitter.emit('notify', '注销过程遇到问题，但已清理登录状态', 'warning');
-  }
+  closeMenu(); // 先关闭菜单，提升用户体验
+  const { handleLogout } = useLogout();
+  await handleLogout(true);
 }
 
 // ===== 认证相关函数 =====
