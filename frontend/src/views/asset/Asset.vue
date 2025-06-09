@@ -131,7 +131,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { LucideWallet, LucideSearch, LucideRotateCcw, LucideRefreshCw } from 'lucide-vue-next'
 import { useAssetStore } from '@/stores/assetStore'
 import { useAuth } from '@/composables/useAuth'
@@ -219,11 +219,11 @@ const query = reactive({
 
 // 表单数据
 const form = reactive({
-  assetName: '',
-  typeId: '',
+  assetNameId: '',
+  assetTypeId: '',
   amount: '',
   unitId: '',
-  locationId: '',
+  assetLocationId: '',
   acquireTime: new Date().toISOString().split('T')[0],
   remark: ''
 })
@@ -341,12 +341,14 @@ function showModal() {
 
 function cancelModal() {
   showAddModal.value = false
+  const financeType = assetStore.types.find(type => type.key1 === 'FINANCE')
+  const cnyUnit = assetStore.units.find(unit => unit.key1 === 'CNY')
   Object.assign(form, {
-    assetName: '',
-    typeId: '',
+    assetNameId: '',
+    assetTypeId: financeType?.id || assetStore.types[0]?.id || '',
     amount: '',
-    unitId: '',
-    locationId: '',
+    unitId: cnyUnit?.id || assetStore.units[0]?.id || '',
+    assetLocationId: assetStore.locations[0]?.id || '',
     acquireTime: new Date().toISOString().split('T')[0],
     remark: ''
   })
@@ -434,6 +436,23 @@ function handlePageSizeChange(size) {
 async function refreshAssetNames() {
   await assetStore.fetchAssetNames()
 }
+
+// 监听元数据变化，设置默认值
+watch([() => assetStore.types, () => assetStore.units, () => assetStore.locations], ([newTypes, newUnits, newLocations]) => {
+  if (newTypes?.length > 0 && !form.assetTypeId) {
+    // 默认选择理财类型
+    const financeType = newTypes.find(type => type.key1 === 'FINANCE')
+    form.assetTypeId = financeType?.id || newTypes[0].id
+  }
+  if (newUnits?.length > 0 && !form.unitId) {
+    // 默认选择人民币单位
+    const cnyUnit = newUnits.find(unit => unit.key1 === 'CNY')
+    form.unitId = cnyUnit?.id || newUnits[0].id
+  }
+  if (newLocations?.length > 0 && !form.assetLocationId) {
+    form.assetLocationId = newLocations[0].id
+  }
+}, { immediate: true })
 
 // 生命周期钩子
 onMounted(async () => {

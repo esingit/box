@@ -1,12 +1,14 @@
 <template>
-  <div class="fitness-list-component">
-    <FitnessTable 
-      :records="records"
-      @edit="handleEdit"
-      @delete="handleDelete"
-    />
+  <div class="list-container">
+    <div class="table-responsive">
+      <FitnessTable 
+        :records="records"
+        @edit="handleEdit"
+        @delete="handleDelete"
+      />
+    </div>
     
-    <div class="pagination-container">
+    <div v-if="showPagination" class="pagination-container">
       <PaginationBar
         :current="current"
         :total="total"

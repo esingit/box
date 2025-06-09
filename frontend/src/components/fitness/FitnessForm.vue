@@ -1,8 +1,12 @@
 <template>
   <form>
     <div class="form-group">
-      <label>类型：</label>
-      <select v-model="form.typeId" class="form-control">
+      <label class="input-label">
+        类型
+        <span class="required">*</span>
+      </label>
+      <select v-model="form.typeId" class="select" required>
+        <option value="">请选择类型</option>
         <option v-for="type in types" 
                 :key="type.id" 
                 :value="type.id">
@@ -12,17 +16,25 @@
     </div>
 
     <div class="form-group">
-      <label>数量：</label>
+      <label class="input-label">
+        数量
+        <span class="required">*</span>
+      </label>
       <input type="number" 
              v-model.number="form.count" 
              min="1" 
-             class="form-control" 
+             class="input" 
+             required
              placeholder="请输入数量" />
     </div>
 
     <div class="form-group">
-      <label>单位：</label>
-      <select v-model="form.unitId" class="form-control">
+      <label class="input-label">
+        单位
+        <span class="required">*</span>
+      </label>
+      <select v-model="form.unitId" class="select" required>
+        <option value="">请选择单位</option>
         <option v-for="unit in units" 
                 :key="unit.id" 
                 :value="unit.id">
@@ -32,18 +44,21 @@
     </div>
 
     <div class="form-group">
-      <label>完成日期：</label>
+      <label class="input-label">
+        完成日期
+        <span class="required">*</span>
+      </label>
       <input type="date" 
              v-model="form.finishTime" 
-             class="form-control" 
+             class="input" 
              required />
     </div>
 
     <div class="form-group">
-      <label>备注：</label>
+      <label class="input-label">备注</label>
       <input type="text" 
              v-model="form.remark" 
-             class="form-control" 
+             class="input" 
              :placeholder="remarkPlaceholder" />
     </div>
   </form>
