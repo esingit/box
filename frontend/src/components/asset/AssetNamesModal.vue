@@ -48,28 +48,28 @@
         />
 
         <!-- 列表区域 -->
-        <div v-else class="content-section">
-          <div v-if="loading" class="skeleton-list">
-            <SkeletonCard v-for="n in 5" :key="n" />
-          </div>
-          <template v-else>
-            <div class="card">
+        <div v-else class="data-list-container">
+          <div class="data-list-content">
+            <div v-if="loading" class="skeleton-list">
+              <SkeletonCard v-for="n in 5" :key="n" />
+            </div>
+            <template v-else>
               <AssetNamesTable 
                 :names="filteredNameList"
                 @edit="startEdit"
                 @delete="handleDelete"
               />
-            </div>
-            <div v-if="total > pageSize" class="pagination-wrapper">
-              <PaginationBar
-                :current="current"
-                :total="total"
-                :page-size="pageSize"
-                @page-change="handlePageChange"
-                @page-size-change="handlePageSizeChange"
-              />
-            </div>
-          </template>
+            </template>
+          </div>
+          <div class="pagination-wrapper">
+            <PaginationBar
+              :current="current"
+              :total="total"
+              :page-size="pageSize"
+              @page-change="handlePageChange"
+              @page-size-change="handlePageSizeChange"
+            />
+          </div>
         </div>
       </div>
     </div>

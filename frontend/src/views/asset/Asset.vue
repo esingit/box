@@ -84,22 +84,24 @@
     </div>
 
     <!-- 记录列表区域 -->
-    <div class="content-section">
-      <AssetList
-        v-if="!loading"
-        :records="records"
-        :current="current"
-        :total="total"
-        :page-size="pageSize"
-        @edit="editRecord"
-        @delete="deleteRecord"
-        @page-change="handlePageChange"
-        @page-size-change="handlePageSizeChange"
-      />
+    <div class="content-section data-list-container">
+      <div class="data-list-content">
+        <AssetList
+          v-if="!loading"
+          :records="records"
+          :current="current"
+          :total="total"
+          :page-size="pageSize"
+          @edit="editRecord"
+          @delete="deleteRecord"
+          @page-change="handlePageChange"
+          @page-size-change="handlePageSizeChange"
+        />
 
-      <!-- 加载中骨架屏 -->
-      <div v-else class="skeleton-list">
-        <SkeletonCard v-for="n in pageSize" :key="n" />
+        <!-- 加载中骨架屏 -->
+        <div v-else class="skeleton-list">
+          <SkeletonCard v-for="n in pageSize" :key="n" />
+        </div>
       </div>
     </div>
 

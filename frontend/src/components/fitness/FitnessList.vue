@@ -1,6 +1,6 @@
 <template>
-  <div class="list-container">
-    <div class="table-responsive">
+  <div class="data-list-container">
+    <div class="data-list-content">
       <FitnessTable 
         :records="records"
         @edit="handleEdit"
@@ -8,7 +8,7 @@
       />
     </div>
     
-    <div v-if="showPagination" class="pagination-container">
+    <div class="pagination-wrapper">
       <PaginationBar
         :current="current"
         :total="total"

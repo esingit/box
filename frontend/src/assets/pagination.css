@@ -3,7 +3,6 @@
   gap: var(--spacing-xs);
   justify-content: center;
   align-items: center;
-  margin: var(--spacing-xl) 0;
   font-size: var(--font-size-sm);
 }
 
@@ -45,5 +44,7 @@
 .pagination-container {
   display: flex;
   justify-content: center;
-  margin-top: var(--spacing-xl);
+  align-items: center;
+  gap: var(--spacing-md);
+  min-height: 48px; /* 确保分页区域有固定的最小高度 */
 }
