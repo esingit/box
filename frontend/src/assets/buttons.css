@@ -14,19 +14,12 @@
 }
 
 .btn-icon {
-  opacity: 0.8;
-  background: transparent;
   padding: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 32px;
   min-height: 32px;
-}
-
-.btn-icon:hover {
-  opacity: 1;
-  background: transparent;
 }
 
 .btn-primary {
@@ -93,17 +86,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-color: var(--btn-text-border);
 }
 
 .action-btn:hover {
-  background-color: var(--bg-hover);
-  border-color: var(--border-hover);
-  color: var(--text-primary);
-}
-
-.action-btn.delete:hover {
-  color: var(--error-color);
-  border-color: var(--error-color);
+  color: var(--btn-text-color);
+  background-color: var(--btn-text-hover-bg);
+  border-color: var(--btn-text-hover-border);
 }
 
 .close-button {

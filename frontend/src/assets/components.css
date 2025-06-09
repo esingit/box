@@ -392,3 +392,21 @@
     transform: rotate(360deg);
   }
 }
+
+/* 表单控件组 */
+.control-group {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  width: 100%;
+}
+
+.control-select,
+.control-input {
+  flex: 1;
+  min-width: 0; /* 防止flex子项溢出 */
+}
+
+.control-action {
+  flex-shrink: 0;
+}

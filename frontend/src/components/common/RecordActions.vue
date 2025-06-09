@@ -1,9 +1,9 @@
 <template>
   <div class="operations">
-    <button class="action-btn edit" @click="$emit('edit')" title="编辑">
+    <button class="action-btn" @click="$emit('edit')" title="编辑">
       <LucidePencil :size="20" />
     </button>
-    <button class="action-btn delete" @click="handleDelete" title="删除">
+    <button class="action-btn" @click="handleDelete" title="删除">
       <LucideTrash2 :size="20" />
     </button>
   </div>

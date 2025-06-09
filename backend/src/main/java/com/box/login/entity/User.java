@@ -28,7 +28,6 @@ public class User extends BaseEntity {
 
     private String phone; // 手机号
 
-    @TableField("last_login_time")
     private LocalDateTime lastLoginTime; // 最后登录时间
 
     }

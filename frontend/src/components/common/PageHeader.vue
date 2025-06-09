@@ -1,6 +1,6 @@
 <template>
   <div class="page-title">
-    <component :is="icon" class="title-icon" color="#222" size="24" />
+    <component :is="icon" class="title-icon" :size="24" />
     <span>{{ title }}</span>
   </div>
 </template>

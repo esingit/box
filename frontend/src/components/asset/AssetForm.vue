@@ -5,16 +5,16 @@
         资产名称
         <span class="required">*</span>
       </label>
-      <div class="asset-name-controls">
-        <select id="assetName" v-model="form.assetNameId" class="asset-name-select select" required>
+      <div class="control-group">
+        <select id="assetName" v-model="form.assetNameId" class="control-select select" required>
           <option value="">请选择资产名称</option>
           <option v-for="name in assetNames" :key="name.id" :value="name.id">
             {{ name.name }}
           </option>
         </select>
-        <button class="btn btn-primary maintain-btn" @click.prevent="$emit('maintain')">
+        <button class="btn btn-outline control-action" @click.prevent="$emit('maintain')">
           <LucideSettings size="16" class="btn-icon" />
-          资产名称维护
+          维护
         </button>
       </div>
     </div>

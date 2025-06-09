@@ -39,10 +39,6 @@
                 <p class="info-value">{{ user?.username }}</p>
               </div>
               <div class="info-group">
-                <label class="info-label">邮箱</label>
-                <p class="info-value">{{ user?.email || 'N/A' }}</p>
-              </div>
-              <div class="info-group">
                 <label class="info-label">上次登录时间</label>
                 <p class="info-value">{{ formatDateTime(user?.lastLoginTime) }}</p>
               </div>
@@ -56,11 +52,15 @@
                 </div>
                 <div class="form-group">
                   <label class="form-label">新密码</label>
-                  <input type="password" v-model="newPassword" class="input" required />
+                  <input type="password" v-model="newPassword" class="input" required 
+                         autocomplete="new-password"
+                         placeholder="8-20位字母数字组合"/>
                 </div>
                 <div class="form-group">
                   <label class="form-label">确认密码</label>
-                  <input type="password" v-model="confirmPassword" class="input" required />
+                  <input type="password" v-model="confirmPassword" class="input" required 
+                         autocomplete="new-password"
+                         placeholder="再次确认新密码"/>
                 </div>
                 <div v-if="resetMsg" class="message-container">
                   <p :class="['message', resetSuccess ? 'success-text' : 'error-text']">

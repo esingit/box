@@ -4,65 +4,63 @@
       <div class="modal-header">
         <h3 class="modal-title">创建新账号</h3>
         <button class="close-button" @click="$emit('close')">
-          <LucideX />
+          <LucideX/>
         </button>
       </div>
 
       <form class="modal-body" @submit.prevent="submit">
         <div class="form-group">
           <label class="flex items-center">
-            <LucideUser :size="16" class="input-icon" />
+            <LucideUser :size="16" class="input-icon"/>
             用户名
           </label>
           <input
-            class="input"
-            type="text"
-            v-model="username"
-            required
-            autocomplete="username"
-            placeholder="4-16位字母、数字或下划线"
-            :disabled="isLoading"
+              class="input"
+              type="text"
+              v-model="username"
+              required
+              autocomplete="username"
+              placeholder="4-16位字母、数字或下划线"
+              :disabled="isLoading"
           />
-          <small class="help-text">仅支持字母、数字和下划线，长度4-16位</small>
         </div>
 
         <div class="form-group">
           <label class="flex items-center">
-            <LucideLock :size="16" class="input-icon" />
+            <LucideLock :size="16" class="input-icon"/>
             密码
           </label>
           <input
-            class="input"
-            type="password"
-            v-model="password"
-            required
-            autocomplete="new-password"
-            placeholder="8-20位字母数字组合"
-            :disabled="isLoading"
+              class="input"
+              type="password"
+              v-model="password"
+              required
+              autocomplete="new-password"
+              placeholder="8-20位字母数字组合"
+              :disabled="isLoading"
           />
-          <small class="help-text">8-20位，必须包含字母和数字</small>
         </div>
 
         <div v-if="showCaptcha" class="form-group">
           <label class="flex items-center">
-            <LucideShieldCheck :size="16" class="input-icon" />
+            <LucideShieldCheck :size="16" class="input-icon"/>
             验证码
           </label>
           <div class="flex gap-2">
-            <input 
-              class="input"
-              type="text"
-              v-model="captcha"
-              placeholder="请输入验证码"
-              :disabled="isLoading"
-              required
+            <input
+                class="input"
+                type="text"
+                v-model="captcha"
+                placeholder="请输入验证码"
+                :disabled="isLoading"
+                required
             />
-            <img 
-              v-if="captchaUrl"
-              :src="captchaUrl"
-              @click="refreshCaptcha"
-              alt="验证码"
-              class="captcha-image"
+            <img
+                v-if="captchaUrl"
+                :src="captchaUrl"
+                @click="refreshCaptcha"
+                alt="验证码"
+                class="captcha-image"
             />
           </div>
         </div>
@@ -71,8 +69,8 @@
         <p v-if="success" class="success-text">{{ success }}</p>
 
         <button type="submit" class="btn btn-primary w-full" :disabled="isLoading">
-          <LucideUserPlus v-if="!isLoading" :size="16" class="btn-icon" />
-          <LucideLoader2 v-else :size="16" class="btn-icon animate-spin" />
+          <LucideUserPlus v-if="!isLoading" :size="16" class="btn-icon"/>
+          <LucideLoader2 v-else :size="16" class="btn-icon animate-spin"/>
           {{ isLoading ? '注册中...' : '注册' }}
         </button>
       </form>
@@ -81,16 +79,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
-import { useUserStore } from '@/stores/userStore'
+import {ref, onMounted, watch} from 'vue'
+import {useUserStore} from '@/stores/userStore'
 import emitter from '@/utils/eventBus.js'
-import { 
+import {
   LucideX,
-  LucideUser, 
-  LucideLock, 
+  LucideUser,
+  LucideLock,
   LucideShieldCheck,
-  LucideUserPlus, 
-  LucideLoader2 
+  LucideUserPlus,
+  LucideLoader2
 } from 'lucide-vue-next'
 
 const emit = defineEmits(['close'])
@@ -152,7 +150,7 @@ function validateForm() {
     error.value = '用户名必须为4-16位字母、数字或下划线';
     return false;
   }
-  
+
   // 密码验证：8-20位，必须包含字母和数字，可以包含特殊字符
   const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,20}$/;
   if (!passwordRegex.test(password.value)) {
@@ -180,7 +178,7 @@ async function submit() {
       captchaId: showCaptcha.value ? captchaId.value : ""
     };
     const response = await userStore.register(payload);
-    
+
     if (response.success) {
       success.value = response.message || '注册成功';
       emitter.emit('notify', '注册成功', 'success');
