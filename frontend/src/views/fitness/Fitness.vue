@@ -303,7 +303,7 @@ function handleQuery() {
   const currentQuery = { ...query };
   // 只要点击查询就给出提示，无论条件是否为空
   fetchRecords(1).then(() => {
-    if (total.value === 0) {
+    if (Number(total.value) === 0) {
       emitter.emit('notify', { message: '未找到匹配的记录', type: 'info' });
     } else {
       emitter.emit('notify', { message: `查询到 ${total.value} 条记录`, type: 'success' });

@@ -351,7 +351,7 @@ async function handleQuery() {
   loading.value = true
   try {
     await refreshData({ refreshStats: false })
-    if (total.value === 0) {
+    if (Number(total.value) === 0) {
       emitter.emit('notify', { message: '未找到匹配的记录', type: 'info' })
     } else {
       emitter.emit('notify', { message: `查询到 ${total.value} 条记录`, type: 'success' })

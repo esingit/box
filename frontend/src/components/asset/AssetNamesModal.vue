@@ -161,7 +161,7 @@ async function fetchNames(page = current.value) {
       pageSize.value = data.size || 10
       // 查询提示
       if (searchTerm.value) {
-        if (total.value === 0) {
+        if (Number(total.value) === 0) {
           emitter.emit('notify', { message: '未找到匹配的资产名称', type: 'info' })
         } else {
           emitter.emit('notify', { message: `查询到 ${total.value} 条资产名称`, type: 'success' })
