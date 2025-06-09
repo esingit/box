@@ -12,4 +12,7 @@ emitter.once = function(type, handler) {
   return () => emitter.off(type, wrappedHandler)
 }
 
+// 如果没有监听 notify 事件，消息不会弹出。
+emitter.on('notify', () => {})
+
 export default emitter

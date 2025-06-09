@@ -159,6 +159,14 @@ async function fetchNames(page = current.value) {
       total.value = data.total || 0
       current.value = data.current || 1
       pageSize.value = data.size || 10
+      // 查询提示
+      if (searchTerm.value) {
+        if (total.value === 0) {
+          emitter.emit('notify', { message: '未找到匹配的资产名称', type: 'info' })
+        } else {
+          emitter.emit('notify', { message: `查询到 ${total.value} 条资产名称`, type: 'success' })
+        }
+      }
     } else {
       error.value = res.data?.message || '获取资产名称列表失败'
       emitter.emit('notify', error.value, 'error')

@@ -204,11 +204,14 @@ async function refreshData(options = {}) {
       const recordsResult = results[0]
       records.value = recordsResult.records || []
       total.value = recordsResult.total || 0
+      return { success: true, total: total.value }
     }
+    return { success: false }
     
   } catch (error) {
     console.error('获取数据失败：', error)
     emitter.emit('notify', '获取数据失败', 'error')
+    return { success: false, error }
   } finally {
     if (showLoading) {
       loading.value = false
@@ -345,7 +348,19 @@ async function fetchStats() {
 
 // 方法
 async function handleQuery() {
-  await refreshData({ refreshStats: false })
+  loading.value = true
+  try {
+    await refreshData({ refreshStats: false })
+    if (total.value === 0) {
+      emitter.emit('notify', { message: '未找到匹配的记录', type: 'info' })
+    } else {
+      emitter.emit('notify', { message: `查询到 ${total.value} 条记录`, type: 'success' })
+    }
+  } catch (error) {
+    emitter.emit('notify', { message: '查询失败：' + (error.message || '未知错误'), type: 'error' })
+  } finally {
+    loading.value = false
+  }
 }
 
 function resetQuery() {
@@ -517,6 +532,5 @@ onMounted(async () => {
   }
 })
 </script>
-
 
 
