@@ -112,6 +112,32 @@ export const useUserStore = defineStore('user', {
       })
     },
 
+    async logout(callAPI = true) {
+      if (callAPI) {
+        try {
+          await this.callLogoutAPI()
+        } catch (error) {
+          console.error('登出API调用失败:', error)
+        }
+      }
+      
+      // 清理本地存储
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      
+      // 清理状态
+      this.token = null
+      this.user = null
+      this.isLoggedIn = false
+      
+      // 清理 axios header
+      this.clearAuthHeader()
+      
+      // 重定向到登录页
+      const router = useRouter()
+      router.push('/login')
+    },
+
     formatLastLoginTime() {
       if (this.user?.lastLoginTime) {
         try {

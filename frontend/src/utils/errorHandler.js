@@ -3,12 +3,14 @@ import { axiosConfig } from './axiosConfig'
 import axios from './axios'
 import { tokenService } from './tokenService'
 import { cancelPendingRequests } from './requestManager'
+import { useUserStore } from '@/stores/userStore'
 
 export class ErrorHandler {
-  static async handleAuthError(error, userStore) {
+  static async handleAuthError(error) {
     tokenService.isRefreshing = false
     tokenService.clearWaitingQueue()
     
+    const userStore = useUserStore()
     await userStore.logout(false)
     cancelPendingRequests('登录已过期')
     
@@ -22,7 +24,7 @@ export class ErrorHandler {
     return Promise.reject(error)
   }
 
-  static async handle401Error(error, config, userStore) {
+  static async handle401Error(error, config) {
     if (config.url.includes('/logout')) {
       return Promise.resolve({ data: { success: true } })
     }

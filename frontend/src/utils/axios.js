@@ -79,7 +79,7 @@ instance.interceptors.response.use(
     
     // 处理不同类型的错误
     if (response.status === 401) {
-      return ErrorHandler.handle401Error(error, config, userStore)
+      return ErrorHandler.handle401Error(error, config)
     }
 
     // 处理其他错误
