@@ -128,14 +128,15 @@ import SkeletonCard from '@/components/common/SkeletonCard.vue';
 
 // Store
 const userStore = useUserStore();
-const isLoggedIn = computed(() => userStore.isLoggedIn);
 
 // 统计数据
 const stats = ref({
   monthlyCount: 0,
   streakDays: 0,
   totalCount: 0
-});  // 组合式函数
+});  
+
+// 组合式函数
 const { types, units, fetchMetaData } = useMetaData();
 const {
   records,
@@ -178,35 +179,6 @@ watch([types, units], ([newTypes, newUnits]) => {
   }
 }, { immediate: true });
 
-// 检查登录状态并执行操作
-async function checkAuthAndExecute(action) {
-  console.log('检查登录状态:', isLoggedIn.value);
-  
-  if (!isLoggedIn.value) {
-    console.log('用户未登录，显示登录框');
-    const auth = useAuth();
-    auth.showLogin('请先登录', async () => {
-      console.log('登录成功，准备执行回调操作');
-      try {
-        await action();
-      } catch (error) {
-        console.error('执行操作时出错:', error);
-        emitter.emit('notify', '操作执行失败，请重试', 'error');
-      }
-    });
-    return false;
-  }
-  
-  console.log('用户已登录，直接执行操作');
-  try {
-    await action();
-  } catch (error) {
-    console.error('执行操作时出错:', error);
-    emitter.emit('notify', '操作执行失败，请重试', 'error');
-  }
-  return true;
-}
-
 // 刷新数据
 async function refreshData() {
   try {
@@ -229,49 +201,36 @@ async function refreshData() {
 }
 
 // 生命周期钩子
-onMounted(async () => {
-  if (!isLoggedIn.value) {
-    const { showLogin } = useAuth();
-    showLogin('请先登录');
-    return;
-  }
-  
-  await refreshData();
-});
+onMounted(refreshData);
 
 // 事件处理函数
 function handleAdd() {
-  console.log('点击添加按钮');
-  if (!checkAuthAndExecute(async () => { 
-    console.log('执行添加操作');
-    resetForm();
-    showAddModal.value = true;
-  })) return;
-  console.log('添加操作执行完成');
+  resetForm();
+  showAddModal.value = true;
 }
 
 async function handleAddRecord() {
-  if (!checkAuthAndExecute(async () => {
-    try {
-      adding.value = true;
-      if (await addRecord(form)) {
-        closeAddModal();
-        emitter.emit('notify', '添加成功', 'success');
-        // 更新统计数据
-        const statsData = await fetchStats();
-        if (statsData) {
-          stats.value = statsData;
-        }
+  try {
+    adding.value = true;
+    if (await addRecord(form)) {
+      closeAddModal();
+      emitter.emit('notify', '添加成功', 'success');
+      // 更新统计数据
+      const statsData = await fetchStats();
+      if (statsData) {
+        stats.value = statsData;
       }
-    } finally {
-      adding.value = false;
     }
-  })) return;
+  } finally {
+    adding.value = false;
+  }
 }
 
 function editRecord(idx) {
   const record = records.value[idx];
-  if (!record || !checkAuthAndExecute(() => startEdit(idx, record))) return;
+  if (record) {
+    startEdit(idx, record);
+  }
 }
 
 async function saveEdit() {
@@ -280,46 +239,43 @@ async function saveEdit() {
   const record = records.value[editingIdx.value];
   if (!record) return;
   
-  if (!checkAuthAndExecute(async () => {
-    try {
-      if (await updateRecord({ ...editForm, id: record.id })) {
-        cancelEdit();
-        emitter.emit('notify', '更新成功', 'success');
-        // 更新统计数据
-        const statsData = await fetchStats();
-        if (statsData) {
-          stats.value = statsData;
-        }
+  try {
+    if (await updateRecord({ ...editForm, id: record.id })) {
+      cancelEdit();
+      emitter.emit('notify', '更新成功', 'success');
+      // 更新统计数据
+      const statsData = await fetchStats();
+      if (statsData) {
+        stats.value = statsData;
       }
-    } catch (error) {
-      emitter.emit('notify', '更新失败：' + (error.message || '请重试'), 'error');
     }
-  })) return;
+  } catch (error) {
+    emitter.emit('notify', '更新失败：' + (error.message || '请重试'), 'error');
+  }
 }
 
 async function handleDelete(idx) {
   const record = records.value[idx];
-  if (!record || !checkAuthAndExecute(async () => {
-    try {
-      const success = await deleteRecord(record.id);
-      if (success) {
-        emitter.emit('notify', '删除成功', 'success');
-        await fetchRecords();
-        // 更新统计数据
-        const statsData = await fetchStats();
-        if (statsData) {
-          stats.value = statsData;
-        }
+  if (!record) return;
+  
+  try {
+    const success = await deleteRecord(record.id);
+    if (success) {
+      emitter.emit('notify', '删除成功', 'success');
+      await fetchRecords();
+      // 更新统计数据
+      const statsData = await fetchStats();
+      if (statsData) {
+        stats.value = statsData;
       }
-    } catch (error) {
-      console.error('删除记录失败：', error);
-      emitter.emit('notify', '删除失败：' + (error.message || '请重试'), 'error');
     }
-  })) return;
+  } catch (error) {
+    console.error('删除记录失败：', error);
+    emitter.emit('notify', '删除失败：' + (error.message || '请重试'), 'error');
+  }
 }
 
 function handleQuery() {
-  const currentQuery = { ...query };
   // 只要点击查询就给出提示，无论条件是否为空
   fetchRecords(1).then(() => {
     if (Number(total.value) === 0) {

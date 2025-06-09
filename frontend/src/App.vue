@@ -160,21 +160,11 @@ onMounted(() => {
     showLogin(message);
   });
 
-  // 初始化认证状态
-  const initAuth = async () => {
-    try {
-      const success = await initializeAuth();
-      if (!success && userStore.isLoggedIn) {
-        // 如果初始化失败但状态显示已登录，清理登录状态
-        userStore.logout(false);
-      }
-    } catch (error) {
-      console.error('认证初始化失败:', error);
-      userStore.logout(false);
-    }
-  };
-  
-  initAuth();
+  // 简化认证初始化
+  initializeAuth().catch(error => {
+    console.error('认证初始化失败:', error)
+    userStore.logout(false)
+  })
 });
 
 onBeforeUnmount(() => {

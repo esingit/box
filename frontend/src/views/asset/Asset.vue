@@ -157,7 +157,6 @@ import axios from '@/utils/axios'
 // 外部依赖
 const assetStore = useAssetStore()
 const auth = useAuth()
-const isLoggedIn = computed(() => auth.isLoggedIn)
 
 // 图标
 const WalletIcon = LucideWallet
@@ -293,22 +292,8 @@ async function tryFetchStats() {
       return false
     }
 
-    if (error.response?.status === 401) {
-      const { showLogin } = useAuth()
-      showLogin('登录已过期，请重新登录')
-      return false
-    }
-
     console.error('获取资产统计失败:', error)
-    
-    // 处理重试逻辑
-    if (retryCount.value < maxRetries) {
-      retryCount.value++
-      await delay(retryDelay * retryCount.value)
-      return tryFetchStats()
-    }
-
-    emitter.emit('notify', `获取资产统计失败: ${error.message || '未知错误'}`, 'error')
+    emitter.emit('notify', error.message || '获取资产统计失败', 'error')
     return false
   } finally {
     if (retryCount.value === 0) {
@@ -333,11 +318,6 @@ async function fetchStats() {
   } catch (error) {
     if (error.name === 'CanceledError') {
       console.log('请求已取消:', error.message)
-      return false
-    }
-    if (error.response?.status === 401) {
-      const { showLogin } = useAuth()
-      showLogin('登录已过期，请重新登录')
       return false
     }
     console.error('获取资产统计失败:', error)
@@ -504,11 +484,6 @@ watch([() => assetStore.types, () => assetStore.units, () => assetStore.location
 
 // 生命周期钩子
 onMounted(async () => {
-  if (!isLoggedIn.value) {
-    auth.showLogin('请先登录')
-    return
-  }
-  
   try {
     await Promise.all([
       assetStore.fetchTypes(),
@@ -521,10 +496,6 @@ onMounted(async () => {
   } catch (error) {
     if (error.name === 'CanceledError') {
       console.log('请求已取消:', error.message)
-      return
-    }
-    if (error.response?.status === 401) {
-      auth.showLogin('登录已过期，请重新登录')
       return
     }
     console.error('初始化数据失败:', error)

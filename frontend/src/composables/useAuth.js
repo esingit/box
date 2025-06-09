@@ -3,7 +3,6 @@ import { useUserStore } from '../stores/userStore';
 import emitter from '../utils/eventBus';
 
 const API_URL = '/api/user';
-const TOKEN_CHECK_INTERVAL = 300000; // 每5分钟检查一次token状态
 
 export function useAuth() {
   const userStore = useUserStore();
@@ -15,7 +14,7 @@ export function useAuth() {
   
   const isLoggedIn = computed(() => userStore.isLoggedIn);
   
-  // 检查并刷新token状态
+  // 检查并刷新token状态，使用统一的验证方法
   async function checkTokenStatus() {
     try {
       const token = localStorage.getItem('token');
@@ -23,23 +22,9 @@ export function useAuth() {
         await userStore.logout(false);
         return false;
       }
-
-      const axios = (await import('../utils/axios')).default;
-      const response = await axios.get(`${API_URL}/verify-token`);
       
-      if (response.data.success) {
-        // 如果token接近过期，尝试刷新
-        if (response.data.shouldRefresh) {
-          const refreshResult = await axios.post(`${API_URL}/refresh-token`);
-          if (refreshResult.data.success) {
-            const newToken = refreshResult.data.data;
-            localStorage.setItem('token', newToken);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-          }
-        }
-        return true;
-      }
-      return false;
+      // 使用 userStore 的统一验证方法
+      return await userStore.verifyToken();
     } catch (error) {
       console.error('Token验证失败:', error);
       await userStore.logout(false);
@@ -47,30 +32,49 @@ export function useAuth() {
     }
   }
 
-  // 启动定期检查token
+  // 启动动态token检查
   function startTokenCheck() {
     if (tokenCheckTimer.value) {
-      clearInterval(tokenCheckTimer.value);
+      clearTimeout(tokenCheckTimer.value);
     }
-    tokenCheckTimer.value = setInterval(checkTokenStatus, TOKEN_CHECK_INTERVAL);
+    
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        // 解析token以获取过期时间
+        const tokenData = JSON.parse(atob(token.split('.')[1]));
+        const expirationTime = tokenData.exp * 1000;
+        const currentTime = Date.now();
+        const timeUntilExpiry = expirationTime - currentTime;
+        const refreshThreshold = 10 * 60 * 1000; // 10分钟阈值
+        
+        // 计算下次检查时间，为了性能考虑，最小间隔设为1分钟
+        const nextCheckTime = Math.max(60000, Math.min(timeUntilExpiry - refreshThreshold, 300000));
+        
+        // 设置定时器
+        tokenCheckTimer.value = setTimeout(async () => {
+          const isValid = await checkTokenStatus();
+          if (isValid) {
+            startTokenCheck(); // 重新安排下次检查
+          }
+        }, nextCheckTime);
+      } catch (error) {
+        console.error('Token解析失败:', error);
+        userStore.logout(false);
+      }
+    }
   }
 
   // 停止token检查
   function stopTokenCheck() {
     if (tokenCheckTimer.value) {
-      clearInterval(tokenCheckTimer.value);
+      clearTimeout(tokenCheckTimer.value);
       tokenCheckTimer.value = null;
     }
   }
   
-  // 检查登录状态
+  // 检查登录状态并启动token检查
   async function checkAuthState() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      await userStore.logout(false);
-      return false;
-    }
-    
     const isValid = await checkTokenStatus();
     if (isValid) {
       startTokenCheck();
@@ -85,9 +89,15 @@ export function useAuth() {
       
       // 保存消息和回调（先设置回调，再显示模态框）
       pendingAuthMessage.value = message;
-      if (typeof callback === 'function') {
+      if (callback !== null && callback !== undefined) {
         console.log('设置登录后的回调函数');
-        pendingAuthAction.value = callback;
+        pendingAuthAction.value = () => {
+          try {
+            callback();
+          } catch (error) {
+            console.error('执行回调函数时出错:', error);
+          }
+        };
       } else {
         console.log('无回调函数需要设置');
         pendingAuthAction.value = null;
@@ -131,11 +141,7 @@ export function useAuth() {
 
   // 初始化认证状态
   async function initAuth() {
-    const isValid = await checkAuthState();
-    if (isValid) {
-      startTokenCheck();
-    }
-    return isValid;
+    return await checkAuthState();
   }
 
   // 组件卸载时清理

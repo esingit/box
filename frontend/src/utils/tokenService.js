@@ -17,35 +17,24 @@ class TokenService {
 
   async refreshToken() {
     try {
-      const oldToken = this.getToken()
-      if (!oldToken) {
-        throw new Error('No token found')
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      const { useUserStore } = await import('@/stores/userStore');
+      const userStore = useUserStore();
+
+      // 使用统一的token验证方法
+      if (await userStore.verifyToken()) {
+        // verifyToken 已经处理了刷新逻辑
+        return this.getToken(); // 返回可能已经更新的token
       }
       
-      const verifyResponse = await axios.get('/api/user/verify-token', {
-        headers: { Authorization: `Bearer ${oldToken}` },
-        skipAuthRetry: true
-      })
-      
-      if (verifyResponse.data.success && verifyResponse.data.shouldRefresh) {
-        const response = await axios.post('/api/user/refresh-token', null, {
-          headers: { Authorization: `Bearer ${oldToken}` },
-          skipAuthRetry: true
-        })
-        
-        if (response.data?.success) {
-          const newToken = response.data.data
-          this.setToken(newToken)
-          return newToken
-        }
-      } else if (verifyResponse.data.success) {
-        return oldToken
-      }
-      
-      throw new Error('Token refresh failed')
+      throw new Error('Token refresh failed');
     } catch (error) {
-      console.error('刷新token失败:', error)
-      throw error
+      console.error('刷新token失败:', error);
+      throw error;
     }
   }
 

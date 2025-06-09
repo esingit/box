@@ -26,6 +26,30 @@ export const useUserStore = defineStore('user', {
   },
 
   actions: {
+    async verifyToken() {
+      try {
+        const response = await axios.get(`${API_URL}/verify-token`);
+        if (response.data.success) {
+          // 如果后端表示token需要刷新，则触发刷新
+          if (response.data.data?.shouldRefresh) {
+            const refreshResult = await axios.post(`${API_URL}/refresh-token`);
+            if (refreshResult.data.success) {
+              const newToken = refreshResult.data.data;
+              this.token = newToken;
+              localStorage.setItem('token', newToken);
+              axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+            }
+          }
+          return true;
+        }
+        throw new Error(response.data.message || 'Token验证失败');
+      } catch (error) {
+        console.error('Token验证失败:', error);
+        await this.logout(false);
+        return false;
+      }
+    },
+
     async hydrate() {
       const token = localStorage.getItem('token');
       const userStr = localStorage.getItem('user');
@@ -38,15 +62,10 @@ export const useUserStore = defineStore('user', {
         // 设置axios默认header
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        try {
-          // 验证token
-          await axios.get(`${API_URL}/verify-token`);
-        } catch (error) {
-          // token无效，清理状态
-          console.error('Token验证失败:', error);
-          this.logout(false);
-        }
+        // 使用统一的验证方法
+        return await this.verifyToken();
       }
+      return false;
     },
     async register(userData) {
       try {
