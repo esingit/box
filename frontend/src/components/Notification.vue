@@ -1,8 +1,8 @@
 <template>
   <div class="toast-container">
     <transition name="fade">
-      <div v-if="visible" :class="['toast', `toast-${type}`, 'flex-center']">
-        {{ message }}
+      <div v-if="visible" :class="['toast', `toast-${type}`]">
+        <span class="text-ellipsis">{{ message }}</span>
       </div>
     </transition>
   </div>

@@ -1,6 +1,6 @@
 .toast-container {
   position: fixed;
-  top: 3%;
+  top: 4%;
   left: 53%;
   transform: translate(-50%, -50%);
   z-index: var(--z-tooltip);
@@ -21,6 +21,7 @@
   transition: var(--transition);
   display: flex;
   align-items: center;
+  justify-content: center;
   text-align: center;
   gap: var(--spacing-md);
   pointer-events: auto;
