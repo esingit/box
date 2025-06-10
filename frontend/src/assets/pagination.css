@@ -2,7 +2,7 @@
 .pagination {
   display: flex;
   gap: var(--spacing-xs);
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
   margin: var(--spacing-xl) 0;
   font-size: var(--font-size-sm);
@@ -74,7 +74,7 @@
 /* 分页容器 */
 .pagination-container {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   padding: 0 var(--spacing-lg);
 }
 
