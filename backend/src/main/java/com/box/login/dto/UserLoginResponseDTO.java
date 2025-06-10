@@ -10,7 +10,6 @@ public class UserLoginResponseDTO {
     private String token;
     private String username;
     private String email;
-    @TableField("last_login_time")
     private LocalDateTime lastLoginTime;
 
     public UserLoginResponseDTO(String token, String username, String email, LocalDateTime lastLoginTime) {
