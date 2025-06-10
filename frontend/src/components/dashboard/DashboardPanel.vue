@@ -99,7 +99,7 @@
 </template>
 
 <script setup>
-import {ref, computed, onMounted} from 'vue';
+import {ref, computed, onMounted, watchEffect} from 'vue';
 import {useRouter} from 'vue-router';
 import {Line} from 'vue-chartjs';
 import {useMetaData} from '@/composables/useMetaData';
@@ -144,7 +144,7 @@ const assetNames = ref([]);
 
 const filteredAssetNames = computed(() => {
   if (!selectedAssetType.value) return [];
-  return assetNames.value.filter(name => name.typeId === selectedAssetType.value);
+  return assetNames.value.filter(name => Number(name.typeId) === Number(selectedAssetType.value));
 });
 
 // 格式化金额
@@ -358,9 +358,25 @@ const verifyUserAuth = async () => {
   return true;
 };
 
+// 获取资产名称
+const fetchAssetNames = async () => {
+  try {
+    const response = await axios.get('/api/asset-names/by-type', {
+      params: { typeId: selectedAssetType.value }
+    });
+    if (response.data?.success) {
+      assetNames.value = response.data.data || [];
+    }
+  } catch (error) {
+    console.error('获取资产名称失败:', error);
+    assetError.value = '获取资产名称失败，请稍后重试';
+  }
+};
+
 // 处理资产类型变化
 async function handleAssetTypeChange() {
   selectedAssetName.value = '';
+  await fetchAssetNames();
   await fetchAssetData();
 }
 
@@ -379,11 +395,8 @@ onMounted(async () => {
         fetchAssetData()
       ]);
 
-      // 获取资产类型和名称
-      const [typesRes, namesRes] = await Promise.all([
-        axios.get('/api/common-meta/by-type', { params: { typeCode: 'ASSET_TYPE' }}),
-        axios.get('/api/asset-names/all')
-      ]);
+      // 获取资产类型
+      const typesRes = await axios.get('/api/common-meta/by-type', { params: { typeCode: 'ASSET_TYPE' }});
       
       if (typesRes.data?.success) {
         assetTypes.value = typesRes.data.data || [];
@@ -391,11 +404,9 @@ onMounted(async () => {
         const financeType = assetTypes.value.find(type => type.key1 === 'FINANCE');
         if (financeType) {
           selectedAssetType.value = financeType.id;
+          // 根据选中的类型获取资产名称
+          await fetchAssetNames();
         }
-      }
-      
-      if (namesRes.data?.success) {
-        assetNames.value = namesRes.data.data || [];
       }
       
       await fetchAssetData();
