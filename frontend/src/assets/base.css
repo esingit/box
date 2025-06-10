@@ -69,20 +69,6 @@ body {
   cursor: pointer;
 }
 
-/* 动画类 */
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* 文本颜色类 */
 .error-text {
   color: var(--error);
@@ -96,15 +82,11 @@ body {
   font-size: var(--font-size-sm);
 }
 
-/* 表单组件 */
-.form-group {
-  margin-bottom: var(--spacing-lg);
+/* 工具类 */
+.mt-lg {
+  margin-top: var(--spacing-lg);
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: var(--spacing-xs);
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-medium);
+.mb-lg {
+  margin-bottom: var(--spacing-lg);
 }

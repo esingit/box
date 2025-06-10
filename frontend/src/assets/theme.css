@@ -26,21 +26,14 @@
   --border-hover: #a3a3a3;
 
   /* 功能色 */
-  --success: var(--success-color);
-  --error: var(--error-color);
-  --warning: var(--warning-color);
-  --info: var(--info-color);
-  
-  --color-primary: #4F46E5;
-  --color-primary-light: rgba(79, 70, 229, 0.2);
-  --color-success: #059669;
-  --color-success-light: rgba(5, 150, 105, 0.2);
-  --color-error: #DC2626;
-  --color-error-light: rgba(220, 38, 38, 0.2);
-  --color-warning: #D97706;
-  --color-warning-light: rgba(217, 119, 6, 0.2);
-  --color-info: #3B82F6;
-  --color-info-light: rgba(59, 130, 246, 0.2);
+  --success: #059669;
+  --success-light: rgba(5, 150, 105, 0.2);
+  --error: #DC2626;
+  --error-light: rgba(220, 38, 38, 0.2);
+  --warning: #D97706;
+  --warning-light: rgba(217, 119, 6, 0.2);
+  --info: #3B82F6;
+  --info-light: rgba(59, 130, 246, 0.2);
   
   /* 主题变量 - ChatGPT 风格 */
   --font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
