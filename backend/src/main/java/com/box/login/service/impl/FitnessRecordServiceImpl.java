@@ -99,8 +99,12 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
     public FitnessStatsDTO getStats(String createUser) {
         FitnessStatsDTO stats = new FitnessStatsDTO();
         stats.setMonthlyCount(fitnessStatsMapper.getMonthlyCount(createUser));
-        stats.setStreakDays(fitnessStatsMapper.getStreakDays(createUser));
+        stats.setLastWorkoutDays(fitnessStatsMapper.getLastWorkoutDays(createUser));
         stats.setTotalCount(fitnessStatsMapper.getTotalCount(createUser));
+        stats.setWeeklyCount(fitnessStatsMapper.getWeeklyCount(createUser));
+        stats.setNextWorkoutDay(fitnessStatsMapper.getNextWorkoutDay(createUser));
+        stats.setCarbsIntake(fitnessStatsMapper.getCarbsIntake(createUser));
+        stats.setProteinIntake(fitnessStatsMapper.getProteinIntake(createUser));
         return stats;
     }
 }

@@ -6,11 +6,81 @@ import org.apache.ibatis.annotations.Select;
 
 @Mapper
 public interface FitnessStatsMapper {
-    @Select("SELECT COUNT(*) FROM fitness_record WHERE create_user = #{createUser} AND finish_time >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)")
+    @Select("""
+        SELECT COUNT(*) 
+        FROM fitness_record fr
+        LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser} 
+        AND fr.finish_time >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+        AND cm.type_code = 'FITNESS_TYPE'
+        AND cm.key2 = 'EXERCISE'
+    """)
     Integer getMonthlyCount(@Param("createUser") String createUser);
 
-    @Select("SELECT COUNT(*) FROM fitness_record WHERE create_user = #{createUser}")
+    @Select("""
+        SELECT COUNT(*) 
+        FROM fitness_record fr
+        LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+        AND cm.type_code = 'FITNESS_TYPE'
+        AND cm.key2 = 'EXERCISE'
+    """)
     Integer getTotalCount(@Param("createUser") String createUser);
+    
+    @Select("""
+        SELECT COUNT(DISTINCT DATE(fr.finish_time))
+        FROM fitness_record fr
+        LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser} 
+        AND YEARWEEK(fr.finish_time) = YEARWEEK(NOW())
+        AND cm.type_code = 'FITNESS_TYPE'
+        AND cm.key2 = 'EXERCISE'
+    """)
+    Integer getWeeklyCount(@Param("createUser") String createUser);
+
+    @Select("""
+        SELECT COALESCE(SUM(fr.count), 0)
+        FROM fitness_record fr
+        LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+        AND DATE(fr.finish_time) = CURRENT_DATE
+        AND cm.type_code = 'FITNESS_TYPE'
+        AND cm.key2 = 'INTAKE'
+        AND cm.key1 = 'CARBOHYDRATE'
+    """)
+    Integer getCarbsIntake(@Param("createUser") String createUser);
+
+    @Select("""
+        SELECT COALESCE(SUM(fr.count), 0)
+        FROM fitness_record fr
+        LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+        AND DATE(fr.finish_time) = CURRENT_DATE
+        AND cm.type_code = 'FITNESS_TYPE'
+        AND cm.key2 = 'INTAKE'
+        AND cm.key1 = 'PROTEIN'
+    """)
+    Integer getProteinIntake(@Param("createUser") String createUser);
+
+    @Select("""
+        SELECT DATEDIFF(CURRENT_DATE, MAX(DATE(fr.finish_time))) 
+        FROM fitness_record fr
+        LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+        AND cm.type_code = 'FITNESS_TYPE'
+        AND cm.key2 = 'EXERCISE'
+    """)
+    Integer getLastWorkoutDays(@Param("createUser") String createUser);
+
+    @Select("""
+        SELECT DATE_FORMAT(DATE_ADD(MAX(DATE(fr.finish_time)), INTERVAL 3 DAY), '%m月%d日') 
+        FROM fitness_record fr
+        LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+        AND cm.type_code = 'FITNESS_TYPE'
+        AND cm.key2 = 'EXERCISE'
+    """)
+    String getNextWorkoutDay(@Param("createUser") String createUser);
 
     @Select("""
         WITH RECURSIVE days AS (

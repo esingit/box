@@ -204,19 +204,6 @@
   flex: 1;
 }
 
-/* 列表组件 */
-.list-component {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-}
-
-/* 表格容器组件 */
-.table-container {
-  background: var(--bg-primary);
-  margin-bottom: var(--spacing-xl);
-}
-
 /* 统计卡片容器 */
 .stats-container {
   margin-bottom: var(--spacing-xl);

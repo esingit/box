@@ -23,17 +23,17 @@
           <div class="stat-card">
             <h4 class="stat-label">本月运动</h4>
             <div class="stat-value">{{ stats.monthlyCount || 0 }}次</div>
-            <div class="stat-info">过去30天</div>
+            <div class="stat-info">本周运动{{ stats.weeklyCount || 0 }}次</div>
           </div>
           <div class="stat-card">
-            <h4 class="stat-label">连续运动</h4>
-            <div class="stat-value">{{ stats.streakDays || 0 }}天</div>
-            <div class="stat-info">当前连续</div>
+            <h4 class="stat-label">上次运动</h4>
+            <div class="stat-value">{{ stats.lastWorkoutDays || 0 }}天前</div>
+            <div class="stat-info">下次运动日{{ stats.nextWorkoutDay || '-' }}</div>
           </div>
           <div class="stat-card">
-            <h4 class="stat-label">累计运动</h4>
-            <div class="stat-value">{{ stats.totalCount || 0 }}次</div>
-            <div class="stat-info">总计记录</div>
+            <h4 class="stat-label">今日蛋白</h4>
+            <div class="stat-value">{{ stats.proteinIntake || 0 }}克</div>
+            <div class="stat-info">今日碳水{{ stats.carbsIntake || 0 }}克</div>
           </div>
         </template>
       </div>
@@ -131,8 +131,12 @@ const userStore = useUserStore();
 // 统计数据
 const stats = ref({
   monthlyCount: 0,
-  streakDays: 0,
-  totalCount: 0
+  lastWorkoutDays: 0,
+  totalCount: 0,
+  weeklyCount: 0,
+  nextWorkoutDay: '-',
+  carbsIntake: 0,
+  proteinIntake: 0
 });  
 
 // 组合式函数
