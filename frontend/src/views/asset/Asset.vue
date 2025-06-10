@@ -76,7 +76,7 @@
           <LucidePlus class="btn-icon-sm" />
           添加记录
         </button>
-        <button class="btn btn-outline" @click="copyLastRecords">
+        <button class="btn btn-outline" @click="onCopyClick">
           <LucideCopy class="btn-icon-sm" />
           复制上回记录
         </button>
@@ -169,6 +169,7 @@ const current = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const records = ref([])
+const showCopyConfirm = ref(false)
 
 // 统一的数据刷新函数
 async function refreshData(options = {}) {
@@ -440,13 +441,44 @@ async function deleteRecord(idx) {
   }
 }
 
-async function copyLastRecords() {
+async function copyLastRecords(force = false) {
   try {
-    await assetStore.copyLastRecords()
+    await assetStore.copyLastRecords(force)
     await refreshData({ retryStats: true })
   } catch (error) {
-    console.error('复制上回记录失败：', error)
+    // 错误处理逻辑在下方onCopyClick中实现
   }
+}
+
+function onCopyClick() {
+  emitter.emit('confirm', {
+    title: '复制确认',
+    message: '是否复制上回记录？',
+    confirmText: '复制',
+    cancelText: '取消',
+    type: 'primary',
+    onConfirm: () => {
+      assetStore.copyLastRecords().then(() => {
+        refreshData({ retryStats: true })
+      }).catch(error => {
+        const msg = error?.message || ''
+        if (msg.includes('今日已有记录') || msg.includes('强制模式')) {
+          emitter.emit('confirm', {
+            title: '覆盖确认',
+            message: '今日已有记录，是否强制复制并覆盖今日所有记录？',
+            confirmText: '覆盖',
+            cancelText: '取消',
+            type: 'primary',
+            onConfirm: () => copyLastRecords(true)
+          })
+        } else if (msg.includes('没有找到可以复制的历史记录')) {
+          emitter.emit('notify', '没有可复制的历史记录', 'info')
+        } else {
+          emitter.emit('notify', `复制失败: ${msg || '未知错误'}`, 'error')
+        }
+      })
+    }
+  })
 }
 
 function handlePageChange(page) {

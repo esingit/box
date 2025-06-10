@@ -136,9 +136,9 @@ export const useAssetStore = defineStore('asset', () => {
   }
 
   // 复制上次记录
-  async function copyLastRecords() {
+  async function copyLastRecords(force = false) {
     try {
-      const res = await axios.post('/api/asset-record/copy-last')
+      const res = await axios.post('/api/asset-record/copy-last' + (force ? '?force=true' : ''))
       if (res.data?.success) {
         emitter.emit('notify', '复制成功', 'success')
       } else {
