@@ -11,15 +11,15 @@
             {{ fitnessError }}
           </div>
           <div class="control-group mb-lg">
-            <select 
-              v-model="selectedFitnessType" 
-              class="form-select com-type-select"
+            <select
+                v-model="selectedFitnessType"
+                class="form-select"
             >
               <option value="" disabled>请选择健身类型</option>
               <option
-                v-for="type in metaTypes"
-                :key="type.key1"
-                :value="type.key1"
+                  v-for="type in metaTypes"
+                  :key="type.key1"
+                  :value="type.key1"
               >
                 {{ type.value1 }}
               </option>
@@ -27,18 +27,18 @@
           </div>
           <div class="chart-wrapper">
             <Line
-              v-if="fitnessChartData"
-              :data="fitnessChartData"
-              :options="chartOptions"
+                v-if="fitnessChartData"
+                :data="fitnessChartData"
+                :options="chartOptions"
             />
             <div v-else-if="!fitnessError" class="empty-state">
               <span class="empty-text">请选择健身类型查看统计数据</span>
-              <p class="empty-description">选择健身类型后将显示相关的统计图表</p>
+              <p class="empty-description">暂无健身统计数据</p>
             </div>
           </div>
         </div>
       </section>
-      
+
       <!-- 资产统计卡片 -->
       <section class="card stat-component animate-fade">
         <header class="card-header">
@@ -48,48 +48,46 @@
           <div v-if="assetError" class="alert alert-error animate-slide-up">
             {{ assetError }}
           </div>
-          <div class="chart-wrapper">
-            <Line
-              v-if="assetChartData"
-              :data="assetChartData"
-              :options="chartOptions"
-            />
-            <div v-else-if="!assetError" class="empty-state">
-              <span class="empty-text">暂无资产统计数据</span>
-              <p class="empty-description">资产数据将在这里以图表形式展示</p>
-            </div>
-          </div>
           <div class="control-group mb-lg">
-            <div class="control-group">
-              <select 
-                v-model="selectedAssetType" 
-                class="input form-select"
+            <select
+                v-model="selectedAssetType"
+                class="form-select"
                 @change="handleAssetTypeChange"
-              >
-                <option value="" disabled>资产类型</option>
-                <option
+            >
+              <option value="" disabled>请选择资产类型</option>
+              <option
                   v-for="type in assetTypes"
                   :key="type.id"
                   :value="type.id"
-                >
-                  {{ type.value1 }}
-                </option>
-              </select>
-              <select 
-                v-if="selectedAssetType"
-                v-model="selectedAssetName" 
-                class="input form-select"
-                @change="handleAssetNameChange"
               >
-                <option value="">全部资产名称</option>
-                <option
+                {{ type.value1 }}
+              </option>
+            </select>
+            <select
+                v-if="selectedAssetType"
+                v-model="selectedAssetName"
+                class="form-select"
+                @change="handleAssetNameChange"
+            >
+              <option value="">全部资产名称</option>
+              <option
                   v-for="name in filteredAssetNames"
                   :key="name.id"
                   :value="name.id"
-                >
-                  {{ name.name }}
-                </option>
-              </select>
+              >
+                {{ name.name }}
+              </option>
+            </select>
+          </div>
+          <div class="chart-wrapper">
+            <Line
+                v-if="assetChartData"
+                :data="assetChartData"
+                :options="chartOptions"
+            />
+            <div v-else-if="!assetError" class="empty-state">
+              <span class="empty-text">请选择资产类型查看统计数据</span>
+              <p class="empty-description">暂无资产统计数据</p>
             </div>
           </div>
         </div>
@@ -99,19 +97,19 @@
 </template>
 
 <script setup>
-import {ref, computed, onMounted, watchEffect} from 'vue';
+import {computed, onMounted, ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {Line} from 'vue-chartjs';
 import {useMetaData} from '@/composables/useMetaData';
 import {
-  Chart as ChartJS,
   CategoryScale,
+  Chart as ChartJS,
+  Legend,
   LinearScale,
-  PointElement,
   LineElement,
+  PointElement,
   Title,
-  Tooltip,
-  Legend
+  Tooltip
 } from 'chart.js';
 import axios from '@/utils/axios';
 import {useUserStore} from '@/stores/userStore';
@@ -129,7 +127,7 @@ ChartJS.register(
 
 const userStore = useUserStore();
 const router = useRouter();
-const { types: metaTypes, fetchMetaData } = useMetaData();
+const {types: metaTypes, fetchMetaData} = useMetaData();
 const selectedFitnessType = ref('PUSH_UP'); // 默认选择俯卧撑
 const fitnessData = ref([]);
 const assetData = ref([]);
@@ -143,8 +141,11 @@ const assetTypes = ref([]);
 const assetNames = ref([]);
 
 const filteredAssetNames = computed(() => {
-  if (!selectedAssetType.value) return [];
-  return assetNames.value.filter(name => Number(name.typeId) === Number(selectedAssetType.value));
+  if (!Array.isArray(assetNames.value)) {
+    console.debug('资产名称不是数组:', assetNames.value);
+    return [];
+  }
+  return assetNames.value;
 });
 
 // 格式化金额
@@ -210,21 +211,21 @@ const fitnessChartData = computed(() => {
   if (!fitnessData.value.length || !metaTypes.value.length) return null;
 
   // 获取所有日期
-  const dates = [...new Set(fitnessData.value.map(item => 
-    item.finishTime.split('T')[0]
+  const dates = [...new Set(fitnessData.value.map(item =>
+      item.finishTime.split('T')[0]
   ))].sort();
-  
+
   // 只显示选中类型的数据
   const selectedType = metaTypes.value.find(type => type.key1 === selectedFitnessType.value);
   if (!selectedType) return null;
 
-  const typeData = fitnessData.value.filter(item => 
-    item.typeId === selectedType.id && item.count > 0
+  const typeData = fitnessData.value.filter(item =>
+      item.typeId === selectedType.id && item.count > 0
   );
-  
+
   // 如果没有数据，返回null
   if (typeData.length === 0) return null;
-  
+
   const dataByDate = dates.map(date => {
     const record = typeData.find(item => item.finishTime.split('T')[0] === date);
     return record ? Number(record.count) : 0;
@@ -326,7 +327,7 @@ const fetchAssetData = async () => {
     if (selectedAssetName.value) {
       params.assetNameId = selectedAssetName.value;
     }
-    const response = await axios.get('/api/asset/statistics', { params });
+    const response = await axios.get('/api/asset/statistics', {params});
     if (response.data?.length > 0) {
       assetData.value = response.data;
     } else {
@@ -361,15 +362,41 @@ const verifyUserAuth = async () => {
 // 获取资产名称
 const fetchAssetNames = async () => {
   try {
-    const response = await axios.get('/api/asset-names/by-type', {
-      params: { typeId: selectedAssetType.value }
+    // 确保有选择资产类型
+    if (!selectedAssetType.value) {
+      console.debug('未选择资产类型，不获取资产名称');
+      assetNames.value = [];
+      return;
+    }
+
+    console.debug('开始获取资产名称，类型ID:', selectedAssetType.value);
+    const response = await axios.get('/api/asset-names/all', {
+      params: {
+        assetTypeId: selectedAssetType.value
+      }
     });
-    if (response.data?.success) {
-      assetNames.value = response.data.data || [];
+    
+    console.debug('资产名称API响应:', response.data);
+    if (response.data?.success && Array.isArray(response.data.data)) {
+      assetNames.value = response.data.data;
+      console.debug('成功获取资产名称列表:', {
+        count: assetNames.value.length,
+        names: assetNames.value.map(n => ({ id: n.id, name: n.name }))
+      });
+    } else {
+      console.warn('资产名称数据格式不正确:', response.data);
+      assetNames.value = [];
     }
   } catch (error) {
     console.error('获取资产名称失败:', error);
+    if (error.response) {
+      console.error('错误响应:', {
+        status: error.response.status,
+        data: error.response.data
+      });
+    }
     assetError.value = '获取资产名称失败，请稍后重试';
+    assetNames.value = [];
   }
 };
 
@@ -396,8 +423,8 @@ onMounted(async () => {
       ]);
 
       // 获取资产类型
-      const typesRes = await axios.get('/api/common-meta/by-type', { params: { typeCode: 'ASSET_TYPE' }});
-      
+      const typesRes = await axios.get('/api/common-meta/by-type', {params: {typeCode: 'ASSET_TYPE'}});
+
       if (typesRes.data?.success) {
         assetTypes.value = typesRes.data.data || [];
         // 默认选择理财类型
@@ -408,7 +435,7 @@ onMounted(async () => {
           await fetchAssetNames();
         }
       }
-      
+
       await fetchAssetData();
     } catch (error) {
       console.error('初始化数据失败:', error);
@@ -417,43 +444,6 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
-.ml-md {
-  margin-left: 1rem;
-}
-
-.control-group {
-  display: flex;
-  gap: var(--spacing-md);
-  align-items: center;
-}
-
-.form-select {
-  flex: 1;
-  min-width: 160px;
-  margin: 0;
-}
-
-.input {
-  appearance: none;
-  background-color: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--color-text);
-  font-size: 0.9rem;
-  padding: 0.5rem 2rem 0.5rem 0.75rem;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 0.5rem center;
-  background-repeat: no-repeat;
-  background-size: 1.5em 1.5em;
-}
-
-.form-select:focus {
-  border-color: var(--color-primary);
-  outline: none;
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-</style>
 
 
 

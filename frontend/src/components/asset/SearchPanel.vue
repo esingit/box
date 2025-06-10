@@ -5,21 +5,21 @@
         <div class="form-group">
           <div class="control-group">
             <select v-model="localQuery.assetNameId" class="form-select">
-              <option value="">资产名称</option>
+              <option value="">全部资产名称</option>
               <option v-for="name in assetNames" :key="name.id" :value="name.id">
                 {{ name.name }}
               </option>
             </select>
 
             <select v-model="localQuery.typeId" class="form-select">
-              <option value="">资产类型</option>
+              <option value="">全部资产类型</option>
               <option v-for="type in types" :key="type.id" :value="type.id">
                 {{ type.value1 }}
               </option>
             </select>
 
             <select v-model="localQuery.locationId" class="form-select">
-              <option value="">资产位置</option>
+              <option value="">全部资产位置</option>
               <option v-for="location in locations" :key="location.id" :value="location.id">
                 {{ location.value1 }}
               </option>
