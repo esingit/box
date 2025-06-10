@@ -140,3 +140,12 @@
 .text-center {
   text-align: center;
 }
+
+/* Dashboard 布局 */
+.dashboard-wrapper {
+  width: 100%;
+  max-width: 100%;
+  height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+}

@@ -80,12 +80,18 @@
         ORDER BY ar.acquire_time DESC
     </select>
 
-    <select id="getStatistics" resultType="java.util.Map">
+    <select id="getStatistics" resultType="java.util.HashMap">
         SELECT 
             DATE_FORMAT(ar.acquire_time, '%Y-%m-%d') as date,
-            SUM(ar.amount) as totalAmount
+            SUM(CASE 
+                WHEN unit_meta.value1 = 'CNY' THEN ar.amount
+                WHEN unit_meta.value1 = 'USD' THEN ar.amount * 7.2  -- 假设汇率
+                ELSE ar.amount
+            END) as totalAmount
         FROM 
             asset_record ar
+        LEFT JOIN 
+            common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.deleted = 0
         WHERE 
             ar.create_user = #{userId}
             AND ar.deleted = 0

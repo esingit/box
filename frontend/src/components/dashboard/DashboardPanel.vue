@@ -1,34 +1,61 @@
 <template>
-  <div class="dashboard-panel mt-8">
-    <div class="grid grid-cols-2 gap-6">
-      <div class="chart-container p-4 bg-white rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-4">健身统计</h2>
-        <div class="mb-4">
-          <select v-model="selectedFitnessType" class="form-select w-full p-2 border rounded">
-            <option value="" disabled>请选择健身类型</option>
-            <option
-                v-for="type in fitnessTypes"
-                :key="type.value"
-                :value="type.value"
-            >
-              {{ type.label }}
-            </option>
-          </select>
+  <div class="dashboard-container">
+    <div class="dashboard-grid">
+      <!-- 健身统计卡片 -->
+      <section class="dashboard-card">
+        <header class="card-header">
+          <h2 class="card-title">健身统计</h2>
+        </header>
+        <div class="card-body">
+          <div v-if="fitnessError" class="alert alert-error">
+            {{ fitnessError }}
+          </div>
+          <div class="select-container">
+            <select v-model="selectedFitnessType" class="form-select">
+              <option value="" disabled>请选择健身类型</option>
+              <option
+                  v-for="type in fitnessTypes"
+                  :key="type.value"
+                  :value="type.value"
+              >
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+          <div class="chart-container">
+            <Line
+                v-if="fitnessChartData"
+                :data="fitnessChartData"
+                :options="chartOptions"
+            />
+            <div v-else-if="!fitnessError" class="empty-state">
+              <span class="empty-text">请选择健身类型查看统计数据</span>
+            </div>
+          </div>
         </div>
-        <Line
-            v-if="fitnessChartData"
-            :data="fitnessChartData"
-            :options="chartOptions"
-        />
-      </div>
-      <div class="chart-container p-4 bg-white rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-4">资产统计</h2>
-        <Line
-            v-if="assetChartData"
-            :data="assetChartData"
-            :options="chartOptions"
-        />
-      </div>
+      </section>
+      
+      <!-- 资产统计卡片 -->
+      <section class="dashboard-card">
+        <header class="card-header">
+          <h2 class="card-title">资产统计</h2>
+        </header>
+        <div class="card-body">
+          <div v-if="assetError" class="alert alert-error">
+            {{ assetError }}
+          </div>
+          <div class="chart-container">
+            <Line
+                v-if="assetChartData"
+                :data="assetChartData"
+                :options="chartOptions"
+            />
+            <div v-else-if="!assetError" class="empty-state">
+              <span class="empty-text">暂无资产统计数据</span>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -64,6 +91,8 @@ const userStore = useUserStore();
 const selectedFitnessType = ref('');
 const fitnessData = ref([]);
 const assetData = ref([]);
+const fitnessError = ref('');
+const assetError = ref('');
 
 // 健身类型选项
 const fitnessTypes = [
@@ -92,13 +121,17 @@ const fitnessChartData = computed(() => {
       item.type === selectedFitnessType.value
   );
 
+  if (filteredData.length === 0) {
+    return null;
+  }
+
   return {
     labels: filteredData.map(item => item.date),
     datasets: [{
       label: fitnessTypes.find(t => t.value === selectedFitnessType.value)?.label || '',
       data: filteredData.map(item => item.value),
-      borderColor: '#4F46E5',
-      backgroundColor: '#4F46E533',
+      borderColor: 'var(--color-primary)',
+      backgroundColor: 'var(--color-primary-light)',
       tension: 0.4
     }]
   };
@@ -113,8 +146,8 @@ const assetChartData = computed(() => {
     datasets: [{
       label: '总资产',
       data: assetData.value.map(item => item.totalAmount),
-      borderColor: '#059669',
-      backgroundColor: '#05966933',
+      borderColor: 'var(--color-success)',
+      backgroundColor: 'var(--color-success-light)',
       tension: 0.4
     }]
   };
@@ -123,26 +156,37 @@ const assetChartData = computed(() => {
 // 获取健身数据
 const fetchFitnessData = async () => {
   try {
+    fitnessError.value = '';
     const response = await axios.get('/api/fitness/statistics');
     fitnessData.value = response.data;
+    if (fitnessData.value.length > 0) {
+      // 默认选择第一个有数据的类型
+      const availableTypes = [...new Set(fitnessData.value.map(item => item.type))];
+      if (availableTypes.length > 0) {
+        selectedFitnessType.value = availableTypes[0];
+      }
+    }
   } catch (error) {
     console.error('获取健身数据失败:', error);
+    fitnessError.value = '获取健身数据失败，请稍后重试';
   }
 };
 
 // 获取资产数据
 const fetchAssetData = async () => {
   try {
+    assetError.value = '';
     const response = await axios.get('/api/asset/statistics');
     assetData.value = response.data;
   } catch (error) {
     console.error('获取资产数据失败:', error);
+    assetError.value = '获取资产数据失败，请稍后重试';
   }
 };
 
 // 组件挂载时获取数据
 onMounted(async () => {
-  if (userStore.isAuthenticated) {
+  if (userStore.isLoggedIn) {
     await Promise.all([
       fetchFitnessData(),
       fetchAssetData()
@@ -151,8 +195,4 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
-.chart-container {
-  height: 400px;
-}
-</style>
+
