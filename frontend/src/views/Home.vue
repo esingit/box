@@ -1,16 +1,17 @@
 <template>
-  <div class="container flex-center">
-    <div class="dashboard-wrapper">
-      <div class="flex items-center justify-center mb-xl"
-          @click="rotateBox">
-        <LucideBox
-            class="title-icon cursor-pointer mr-2"
-            :class="{ 'animate-spin': isRotating }"
+  <div class="page-container">
+    <div class="content-wrapper flex-center">
+      <div class="text-center animate-fade">
+        <div class="logo" @click="rotateBox">
+          <LucideBox
+            class="logo-icon"
+            :class="{ 'rotate': isRotating }"
             :size="40"
-        />
-        <h1 class="page-title">BOX</h1>
+          />
+          <h1 class="page-title ml-2">BOX</h1>
+        </div>
       </div>
-      <DashboardPanel v-if="userStore.isLoggedIn"/>
+        <DashboardPanel v-if="userStore.isLoggedIn"/>
     </div>
   </div>
 </template>
