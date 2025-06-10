@@ -1,61 +1,69 @@
 <template>
-  <div class="dashboard-container">
-    <div class="dashboard-grid">
-      <!-- 健身统计卡片 -->
-      <section class="dashboard-card">
-        <header class="card-header">
-          <h2 class="card-title">健身统计</h2>
-        </header>
-        <div class="card-body">
-          <div v-if="fitnessError" class="alert alert-error">
-            {{ fitnessError }}
-          </div>
-          <div class="select-container">
-            <select v-model="selectedFitnessType" class="form-select">
-              <option value="" disabled>请选择健身类型</option>
-              <option
+  <div class="page-container">
+    <div class="stats-container">
+      <div class="stats-grid">
+        <!-- 健身统计卡片 -->
+        <section class="card stat-component animate-fade">
+          <header class="card-header">
+            <h2 class="card-title">健身统计</h2>
+          </header>
+          <div class="card-body">
+            <div v-if="fitnessError" class="alert alert-error animate-slide-up">
+              {{ fitnessError }}
+            </div>
+            <div class="control-group mb-lg">
+              <select 
+                v-model="selectedFitnessType" 
+                class="form-select"
+                :class="{ 'w-full': true }"
+              >
+                <option value="" disabled>请选择健身类型</option>
+                <option
                   v-for="type in fitnessTypes"
                   :key="type.value"
                   :value="type.value"
-              >
-                {{ type.label }}
-              </option>
-            </select>
-          </div>
-          <div class="chart-container">
-            <Line
+                >
+                  {{ type.label }}
+                </option>
+              </select>
+            </div>
+            <div class="chart-container">
+              <Line
                 v-if="fitnessChartData"
                 :data="fitnessChartData"
                 :options="chartOptions"
-            />
-            <div v-else-if="!fitnessError" class="empty-state">
-              <span class="empty-text">请选择健身类型查看统计数据</span>
+              />
+              <div v-else-if="!fitnessError" class="empty-state">
+                <span class="empty-text">请选择健身类型查看统计数据</span>
+                <p class="empty-description">选择健身类型后将显示相关的统计图表</p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-      
-      <!-- 资产统计卡片 -->
-      <section class="dashboard-card">
-        <header class="card-header">
-          <h2 class="card-title">资产统计</h2>
-        </header>
-        <div class="card-body">
-          <div v-if="assetError" class="alert alert-error">
-            {{ assetError }}
-          </div>
-          <div class="chart-container">
-            <Line
+        </section>
+        
+        <!-- 资产统计卡片 -->
+        <section class="card stat-component animate-fade">
+          <header class="card-header">
+            <h2 class="card-title">资产统计</h2>
+          </header>
+          <div class="card-body">
+            <div v-if="assetError" class="alert alert-error animate-slide-up">
+              {{ assetError }}
+            </div>
+            <div class="chart-container">
+              <Line
                 v-if="assetChartData"
                 :data="assetChartData"
                 :options="chartOptions"
-            />
-            <div v-else-if="!assetError" class="empty-state">
-              <span class="empty-text">暂无资产统计数据</span>
+              />
+              <div v-else-if="!assetError" class="empty-state">
+                <span class="empty-text">暂无资产统计数据</span>
+                <p class="empty-description">资产数据将在这里以图表形式展示</p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   </div>
 </template>
