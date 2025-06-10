@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -270,37 +269,6 @@ public class JwtTokenProvider {
             } catch (Exception e) {
                 logger.error("禁用Token时发生错误: {}", e.getMessage());
             }
-        }
-    }
-
-    private void addToBlacklist(String token) {
-        String blacklistKey = REDIS_KEY_PREFIX_BLACKLIST + token;
-        redisTemplate.opsForValue().set(blacklistKey, "1", blacklistExpirationInMs, TimeUnit.MILLISECONDS);
-    }
-
-    private void removeFromActiveTokens(String token) {
-        try {
-            String username = getUsernameFromJWT(token);
-            String activeTokenKey = REDIS_KEY_PREFIX_ACTIVE_TOKEN + username + ":" + token;
-            redisTemplate.delete(activeTokenKey);
-        } catch (Exception e) {
-            logger.warn("从活跃token集合移除失败", e);
-        }
-    }
-
-    public void invalidateAllUserTokens(String username) {
-        try {
-            String pattern = REDIS_KEY_PREFIX_ACTIVE_TOKEN + username + ":*";
-            Set<String> keys = redisTemplate.keys(pattern);
-            if (keys != null) {
-                for (String key : keys) {
-                    String token = key.substring(key.lastIndexOf(":") + 1);
-                    invalidateToken(token);
-                }
-            }
-        } catch (Exception e) {
-            logger.error("废止用户所有token失败", e);
-            throw new JwtException("无法废止用户Token");
         }
     }
 }
