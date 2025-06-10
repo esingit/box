@@ -4,7 +4,7 @@
       <div class="flex-grow">
         <div class="form-group">
           <div class="control-group">
-            <select v-model="localQuery.typeId" class="input control-select">
+            <select v-model="localQuery.typeId" class="input form-select">
               <option value="">全部类型</option>
               <option v-for="type in types" :key="type.id" :value="type.id">
                 {{ type.value1 }}

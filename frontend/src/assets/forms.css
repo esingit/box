@@ -134,6 +134,8 @@
   background-position: right 0.75rem center;
   background-size: 1rem;
   padding-right: 2.5rem;
+  flex: 1;
+  min-width: 0; /* 防止flex子项溢出 */
 }
 
 .form-select:hover {

@@ -13,7 +13,7 @@
           <div class="control-group mb-lg">
             <select 
               v-model="selectedFitnessType" 
-              class="form-select fitness-type-select"
+              class="form-select com-type-select"
             >
               <option value="" disabled>请选择健身类型</option>
               <option
@@ -63,7 +63,7 @@
             <div class="control-group">
               <select 
                 v-model="selectedAssetType" 
-                class="input control-select"
+                class="input form-select"
                 @change="handleAssetTypeChange"
               >
                 <option value="" disabled>资产类型</option>
@@ -78,7 +78,7 @@
               <select 
                 v-if="selectedAssetType"
                 v-model="selectedAssetName" 
-                class="input control-select"
+                class="input form-select"
                 @change="handleAssetNameChange"
               >
                 <option value="">全部资产名称</option>
@@ -428,7 +428,7 @@ onMounted(async () => {
   align-items: center;
 }
 
-.control-select {
+.form-select {
   flex: 1;
   min-width: 160px;
   margin: 0;
