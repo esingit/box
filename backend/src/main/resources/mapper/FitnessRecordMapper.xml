@@ -50,4 +50,21 @@
         </where>
         ORDER BY fr.finish_time DESC
     </select>
+
+    <select id="getStatistics" resultType="java.util.Map">
+        SELECT 
+            DATE_FORMAT(fr.finish_time, '%Y-%m-%d') as date,
+            type_meta.value1 as type,
+            fr.count as value
+        FROM 
+            fitness_record fr
+        LEFT JOIN 
+            common_meta type_meta ON fr.type_id = type_meta.id
+        WHERE 
+            fr.create_user = #{userId}
+            AND fr.deleted = 0
+            AND fr.finish_time &gt;= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ORDER BY 
+            fr.finish_time ASC
+    </select>
 </mapper>

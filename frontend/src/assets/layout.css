@@ -19,7 +19,7 @@
 .main-header {
   display: flex;
   justify-content: flex-end;
-  padding: var(--spacing-md) var(--spacing-xl);
+  padding: var(--spacing-xs) var(--spacing-xl);
   border-bottom: 1px solid var(--border-primary);
 }
 
@@ -55,7 +55,6 @@
 
 /* 菜单 */
 .menu {
-  padding: var(--spacing-md) 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;

@@ -1,11 +1,11 @@
 <template>
-  <div class="flex gap-2">
-    <button class="btn btn-text" @click="$emit('login')">
-      <LucideLogIn :size="16" class="btn-icon" />
+  <div class="user-menu-container flex gap-1">
+    <button class="user-menu-btn h-14 px-2" @click="$emit('login')">
+      <LucideLogIn :size="18" class="btn-icon mr-1" />
       登录
     </button>
-    <button class="btn btn-text" @click="$emit('register')">
-      <LucideUserPlus :size="16" class="btn-icon" />
+    <button class="user-menu-btn h-14 px-2" @click="$emit('register')">
+      <LucideUserPlus :size="18" class="btn-icon mr-1" />
       注册
     </button>
   </div>

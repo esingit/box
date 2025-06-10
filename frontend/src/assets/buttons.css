@@ -18,8 +18,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  min-height: 32px;
+  min-width: var(--spacing-8);
+  min-height: var(--spacing-8);
 }
 
 .btn-primary {

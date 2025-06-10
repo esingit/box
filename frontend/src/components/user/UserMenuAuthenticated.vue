@@ -1,7 +1,8 @@
 <template>
   <div class="user-menu-container">
-    <button class="user-menu-btn" @click="$emit('toggle')">
-      <LucideUser :size="18" /> {{ username }}
+    <button class="user-menu-btn h-14 px-2" @click="$emit('toggle')">
+      <LucideUser :size="18" class="btn-icon mr-1" />
+      {{ username }}
     </button>
     <div v-if="showMenu" class="dropdown-menu">
       <button class="dropdown-item" @click="$emit('open-profile')">
