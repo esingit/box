@@ -17,11 +17,11 @@
             >
               <option value="" disabled>请选择健身类型</option>
               <option
-                v-for="type in fitnessTypes"
-                :key="type.value"
-                :value="type.value"
+                v-for="type in metaTypes"
+                :key="type.key1"
+                :value="type.key1"
               >
-                {{ type.label }}
+                {{ type.value1 }}
               </option>
             </select>
           </div>
@@ -67,7 +67,9 @@
 
 <script setup>
 import {ref, computed, onMounted} from 'vue';
+import {useRouter} from 'vue-router';
 import {Line} from 'vue-chartjs';
+import {useMetaData} from '@/composables/useMetaData';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -93,19 +95,13 @@ ChartJS.register(
 );
 
 const userStore = useUserStore();
-const selectedFitnessType = ref('');
+const router = useRouter();
+const { types: metaTypes, fetchMetaData } = useMetaData();
+const selectedFitnessType = ref('PUSH_UP'); // 默认选择俯卧撑
 const fitnessData = ref([]);
 const assetData = ref([]);
 const fitnessError = ref('');
 const assetError = ref('');
-
-// 健身类型选项
-const fitnessTypes = [
-  {label: '跑步', value: 'running'},
-  {label: '游泳', value: 'swimming'},
-  {label: '骑行', value: 'cycling'},
-  {label: '健身', value: 'workout'}
-];
 
 // 图表配置
 const chartOptions = {
@@ -114,30 +110,69 @@ const chartOptions = {
   plugins: {
     legend: {
       position: 'top',
+    },
+    tooltip: {
+      mode: 'index',
+      intersect: false
+    }
+  },
+  scales: {
+    x: {
+      title: {
+        display: true,
+        text: '日期'
+      },
+      grid: {
+        color: 'rgba(0, 0, 0, 0.1)'
+      }
+    },
+    y: {
+      title: {
+        display: true,
+        text: '数量'
+      },
+      beginAtZero: true,
+      grid: {
+        color: 'rgba(0, 0, 0, 0.1)'
+      }
     }
   }
 };
 
 // 健身数据图表
 const fitnessChartData = computed(() => {
-  if (!fitnessData.value.length || !selectedFitnessType.value) return null;
+  if (!fitnessData.value.length || !metaTypes.value.length) return null;
 
-  const filteredData = fitnessData.value.filter(item =>
-      item.type === selectedFitnessType.value
+  // 获取所有日期
+  const dates = [...new Set(fitnessData.value.map(item => 
+    item.finishTime.split('T')[0]
+  ))].sort();
+  
+  // 只显示选中类型的数据
+  const selectedType = metaTypes.value.find(type => type.key1 === selectedFitnessType.value);
+  if (!selectedType) return null;
+
+  const typeData = fitnessData.value.filter(item => 
+    item.typeId === selectedType.id && item.count > 0
   );
-
-  if (filteredData.length === 0) {
-    return null;
-  }
+  
+  // 如果没有数据，返回null
+  if (typeData.length === 0) return null;
+  
+  const dataByDate = dates.map(date => {
+    const record = typeData.find(item => item.finishTime.split('T')[0] === date);
+    return record ? Number(record.count) : 0;
+  });
 
   return {
-    labels: filteredData.map(item => item.date),
+    labels: dates,
     datasets: [{
-      label: fitnessTypes.find(t => t.value === selectedFitnessType.value)?.label || '',
-      data: filteredData.map(item => item.value),
+      label: selectedType.value1,
+      data: dataByDate,
       borderColor: 'var(--color-primary)',
       backgroundColor: 'var(--color-primary-light)',
-      tension: 0.4
+      tension: 0.4,
+      fill: false
     }]
   };
 });
@@ -162,14 +197,18 @@ const assetChartData = computed(() => {
 const fetchFitnessData = async () => {
   try {
     fitnessError.value = '';
-    const response = await axios.get('/api/fitness/statistics');
-    fitnessData.value = response.data;
-    if (fitnessData.value.length > 0) {
-      // 默认选择第一个有数据的类型
-      const availableTypes = [...new Set(fitnessData.value.map(item => item.type))];
-      if (availableTypes.length > 0) {
-        selectedFitnessType.value = availableTypes[0];
+    const response = await axios.get('/api/fitness-record/list', {
+      params: {
+        page: 1,
+        pageSize: 999, // 获取足够多的记录以支持统计
+        startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0], // 一个月前
+        endDate: new Date().toISOString().split('T')[0] // 今天
       }
+    });
+    if (response.data?.success && response.data.data?.records) {
+      fitnessData.value = response.data.data.records;
+    } else {
+      fitnessData.value = [];
     }
   } catch (error) {
     console.error('获取健身数据失败:', error);
@@ -189,13 +228,38 @@ const fetchAssetData = async () => {
   }
 };
 
+// 获取健身类型元数据
+const fetchFitnessTypes = async () => {
+  try {
+    await fetchMetaData();
+  } catch (error) {
+    console.error('获取健身类型失败:', error);
+    fitnessError.value = '获取健身类型失败，请稍后重试';
+  }
+};
+
+// 验证用户身份
+const verifyUserAuth = async () => {
+  if (!userStore.isLoggedIn || !userStore.token) {
+    console.debug('用户未登录，跳转到登录页面');
+    router.push('/login');
+    return false;
+  }
+  return true;
+};
+
 // 组件挂载时获取数据
 onMounted(async () => {
-  if (userStore.isLoggedIn) {
-    await Promise.all([
-      fetchFitnessData(),
-      fetchAssetData()
-    ]);
+  if (await verifyUserAuth()) {
+    try {
+      await fetchFitnessTypes(); // 首先获取健身类型元数据
+      await Promise.all([
+        fetchFitnessData(),
+        fetchAssetData()
+      ]);
+    } catch (error) {
+      console.error('初始化数据失败:', error);
+    }
   }
 });
 </script>
