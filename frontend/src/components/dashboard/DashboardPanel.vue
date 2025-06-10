@@ -320,21 +320,42 @@ const fetchAssetData = async () => {
     assetError.value = '';
     assetData.value = [];
 
+    // 构建请求参数
     const params = {};
+    // 总是发送资产类型ID，即使没有选择具体的资产名称
     if (selectedAssetType.value) {
       params.assetTypeId = selectedAssetType.value;
+      console.debug('获取资产统计数据，类型ID:', selectedAssetType.value);
     }
-    if (selectedAssetName.value) {
+    // 只有在选择了具体资产名称时才发送
+    if (selectedAssetName.value && selectedAssetName.value !== '') {
       params.assetNameId = selectedAssetName.value;
+      console.debug('获取资产统计数据，名称ID:', selectedAssetName.value);
     }
+
+    // 请求统计数据
+    console.debug('发送统计请求，参数:', params);
     const response = await axios.get('/api/asset/statistics', {params});
-    if (response.data?.length > 0) {
+    console.debug('资产统计数据响应:', response.data);
+    
+    if (Array.isArray(response.data) && response.data.length > 0) {
       assetData.value = response.data;
+      console.debug('成功获取资产统计数据:', {
+        count: assetData.value.length,
+        dates: [...new Set(assetData.value.map(item => item.date))].sort()
+      });
     } else {
+      console.warn('没有找到资产统计数据');
       assetError.value = selectedAssetType.value ? '暂无相关资产数据' : '请选择资产类型查看统计';
     }
   } catch (error) {
     console.error('获取资产数据失败:', error);
+    if (error.response) {
+      console.error('错误响应:', {
+        status: error.response.status,
+        data: error.response.data
+      });
+    }
     assetError.value = '获取资产数据失败，请稍后重试';
   }
 };
@@ -402,13 +423,19 @@ const fetchAssetNames = async () => {
 
 // 处理资产类型变化
 async function handleAssetTypeChange() {
+  console.debug('资产类型变更为:', selectedAssetType.value);
+  // 清空已选择的资产名称
   selectedAssetName.value = '';
+  // 获取新类型下的资产名称列表
   await fetchAssetNames();
+  // 获取该类型下所有资产的统计数据
   await fetchAssetData();
 }
 
 // 处理资产名称变化
 async function handleAssetNameChange() {
+  console.debug('资产名称变更为:', selectedAssetName.value);
+  // 获取选中资产名称的统计数据
   await fetchAssetData();
 }
 
@@ -430,13 +457,14 @@ onMounted(async () => {
         // 默认选择理财类型
         const financeType = assetTypes.value.find(type => type.key1 === 'FINANCE');
         if (financeType) {
+          console.debug('设置默认资产类型:', financeType);
           selectedAssetType.value = financeType.id;
-          // 根据选中的类型获取资产名称
+          // 获取资产名称，但不选择具体名称
           await fetchAssetNames();
+          // 获取该类型下所有资产的统计数据
+          await fetchAssetData();
         }
       }
-
-      await fetchAssetData();
     } catch (error) {
       console.error('初始化数据失败:', error);
     }
