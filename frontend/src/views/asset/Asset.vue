@@ -142,12 +142,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { LucideWallet, LucideSearch, LucideRotateCcw, LucideRefreshCw, LucidePlus, LucideCopy } from 'lucide-vue-next'
-import { useAssetStore } from '@/stores/assetStore'
-import { useAuth } from '@/composables/useAuth'
+import {computed, onMounted, reactive, ref, watch} from 'vue'
+import {LucideCopy, LucidePlus, LucideRefreshCw, LucideWallet} from 'lucide-vue-next'
+import {useAssetStore} from '@/stores/assetStore'
+import {useAuth} from '@/composables/useAuth'
 import emitter from '@/utils/eventBus.js'
-import PageHeader from '@/components/common/PageHeader.vue'
 import AssetList from '@/components/asset/AssetList.vue'
 import AssetModal from '@/components/asset/AssetModal.vue'
 import SearchPanel from '@/components/asset/SearchPanel.vue'

@@ -113,14 +113,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { LucideDumbbell, LucidePlus, LucideRefreshCw } from 'lucide-vue-next';
-import { useAuth } from '@/composables/useAuth';
-import { useUserStore } from '@/stores/userStore';
+import {onMounted, onUnmounted, ref, watch} from 'vue';
+import {LucidePlus, LucideRefreshCw} from 'lucide-vue-next';
+import {useUserStore} from '@/stores/userStore';
 import emitter from '@/utils/eventBus.js';
-import { useMetaData } from '@/composables/useMetaData';
-import { useFitnessRecords } from '@/composables/useFitnessRecords';
-import { useFitnessForm } from '@/composables/useFitnessForm';
+import {useMetaData} from '@/composables/useMetaData';
+import {useFitnessRecords} from '@/composables/useFitnessRecords';
+import {useFitnessForm} from '@/composables/useFitnessForm';
 import FitnessModal from '@/components/fitness/FitnessModal.vue';
 import FitnessList from '@/components/fitness/FitnessList.vue';
 import SearchPanel from '@/components/fitness/SearchPanel.vue';

@@ -53,13 +53,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useUserStore } from './stores/userStore';
-import { useRouter } from 'vue-router';
-import { useAuth, initializeAuth } from './composables/useAuth';
-import { useLogout } from '@/composables/useLogout';
+import {computed, onBeforeUnmount, onMounted, ref} from 'vue';
+import {useUserStore} from './stores/userStore';
+import {useRouter} from 'vue-router';
+import {initializeAuth, useAuth} from './composables/useAuth';
+import {useLogout} from '@/composables/useLogout';
 import Sidebar from './components/Sidebar.vue';
-import Profile from './views/Profile.vue';
 import GlobalModals from './components/GlobalModals.vue';
 import Notification from './components/Notification.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
