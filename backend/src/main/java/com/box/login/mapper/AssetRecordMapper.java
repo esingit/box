@@ -2,13 +2,13 @@ package com.box.login.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.box.login.dto.AssetDetailDTO;
 import com.box.login.dto.AssetRecordDTO;
 import com.box.login.entity.AssetRecord;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 资产记录Mapper接口
@@ -24,5 +24,5 @@ public interface AssetRecordMapper extends BaseMapper<AssetRecord> {
                                              @Param("endDate") String endDate,
                                              @Param("createUser") String createUser);
 
-    List<Map<String, Object>> getStatistics(@Param("userId") String userId);
+    List<AssetDetailDTO> getDetailedStatistics(@Param("userId") String userId, @Param("assetTypeId") Long assetTypeId, @Param("assetNameId") Long assetNameId);
 }

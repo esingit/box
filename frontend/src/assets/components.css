@@ -591,6 +591,35 @@
   width: 100%;
 }
 
+/* 图表组件 */
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 300px; /* 设置合适的固定高度 */
+  margin: var(--spacing-md) 0;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-primary);
+}
+
+.stat-component {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.stat-component .card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.stat-component .chart-wrapper {
+  flex: 1;
+  min-height: 0; /* 确保图表容器不会溢出 */
+}
+
 /* 警告提示 */
 .alert {
   padding: var(--spacing-md) var(--spacing-lg);
@@ -602,4 +631,29 @@
   background-color: var(--color-danger-light);
   color: var(--color-danger);
   border: 1px solid var(--color-danger);
+}
+
+/* 健身统计选择器 */
+/* 健身类型选择器 */
+.fitness-type-select {
+  width: 200px;
+  flex-shrink: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  transition: border-color var(--transition);
+  margin-right: auto;
+}
+
+.fitness-type-select:hover {
+  border-color: var(--border-hover);
+}
+
+.fitness-type-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
 }

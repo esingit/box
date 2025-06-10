@@ -1,11 +1,13 @@
 package com.box.login.controller;
 
+import com.box.login.dto.AssetDetailDTO;
 import com.box.login.service.AssetService;
 import com.box.login.service.FitnessService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -27,7 +29,9 @@ public class StatisticsController {
     }
 
     @GetMapping("/asset/statistics")
-    public ResponseEntity<List<Map<String, Object>>> getAssetStatistics() {
-        return ResponseEntity.ok(assetService.getStatistics());
+    public ResponseEntity<List<AssetDetailDTO>> getAssetStatistics(
+            @RequestParam(required = false) Long assetTypeId,
+            @RequestParam(required = false) Long assetNameId) {
+        return ResponseEntity.ok(assetService.getDetailedStatistics(assetTypeId, assetNameId));
     }
 }

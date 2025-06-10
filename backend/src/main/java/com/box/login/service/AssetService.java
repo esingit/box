@@ -1,8 +1,8 @@
 package com.box.login.service;
 
+import com.box.login.dto.AssetDetailDTO;
 import java.util.List;
-import java.util.Map;
 
 public interface AssetService {
-    List<Map<String, Object>> getStatistics();
+    List<AssetDetailDTO> getDetailedStatistics(Long assetTypeId, Long assetNameId);
 }

@@ -80,24 +80,40 @@
         ORDER BY ar.acquire_time DESC
     </select>
 
-    <select id="getStatistics" resultType="java.util.HashMap">
-        SELECT 
+    <select id="getDetailedStatistics" resultType="com.box.login.dto.AssetDetailDTO">
+        SELECT
             DATE_FORMAT(ar.acquire_time, '%Y-%m-%d') as date,
-            SUM(CASE 
+            ar.asset_type_id as assetTypeId,
+            type_meta.value1 as assetTypeName,
+            ar.asset_name_id as assetNameId,
+            an.name as assetName,
+            SUM(CASE
                 WHEN unit_meta.value1 = 'CNY' THEN ar.amount
-                WHEN unit_meta.value1 = 'USD' THEN ar.amount * 7.2  -- 假设汇率
+                WHEN unit_meta.value1 = 'USD' THEN ar.amount * 7.2  -- 假设汇率 1 USD = 7.2 CNY
                 ELSE ar.amount
-            END) as totalAmount
+            END) as amount
         FROM 
             asset_record ar
-        LEFT JOIN 
-            common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.deleted = 0
+            LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE' AND type_meta.deleted = 0
+            LEFT JOIN asset_name an ON ar.asset_name_id = an.id AND an.deleted = 0
+            LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'CURRENCY' AND unit_meta.deleted = 0
         WHERE 
             ar.create_user = #{userId}
             AND ar.deleted = 0
-            AND ar.acquire_time &gt;= DATE_SUB(CURDATE(), INTERVAL 30 DAY)        GROUP BY 
-            DATE_FORMAT(ar.acquire_time, '%Y-%m-%d')
+            AND ar.acquire_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            <if test="assetTypeId != null">
+                AND ar.asset_type_id = #{assetTypeId}
+            </if>
+            <if test="assetNameId != null">
+                AND ar.asset_name_id = #{assetNameId}
+            </if>
+        GROUP BY 
+            DATE_FORMAT(ar.acquire_time, '%Y-%m-%d'),
+            ar.asset_type_id,
+            ar.asset_name_id
         ORDER BY
-            date ASC
+            date ASC,
+            type_meta.value1 ASC,
+            an.name ASC
     </select>
 </mapper>
