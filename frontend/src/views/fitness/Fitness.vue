@@ -22,18 +22,29 @@
         <template v-else>
           <div class="stat-card">
             <h4 class="stat-label">本月运动</h4>
-            <div class="stat-value">{{ stats.monthlyCount || 0 }}次</div>
-            <div class="stat-info">本周运动{{ stats.weeklyCount || 0 }}次</div>
+            <div class="stat-value text-primary">{{ stats.monthlyCount || 0 }}次</div>
+            <div class="hint-text">本周运动{{ stats.weeklyCount || 0 }}次</div>
           </div>
           <div class="stat-card">
             <h4 class="stat-label">上次运动</h4>
-            <div class="stat-value">{{ stats.lastWorkoutDays || 0 }}天前</div>
-            <div class="stat-info">下次运动日{{ stats.nextWorkoutDay || '-' }}</div>
+            <div :class="['stat-value', {'text-error': isWorkoutOverdue}]">{{ stats.lastWorkoutDays || 0 }}天前</div>
+            <div class="hint-text">下次运动日{{ stats.nextWorkoutDay || '-' }}</div>
           </div>
           <div class="stat-card">
             <h4 class="stat-label">今日蛋白</h4>
-            <div class="stat-value">{{ stats.proteinIntake || 0 }}克</div>
-            <div class="stat-info">今日碳水{{ stats.carbsIntake || 0 }}克</div>
+            <div :class="['stat-value', {'text-success': stats.proteinIntake >= 120}]">
+              {{ stats.proteinIntake || 0 }}克
+              <span class="hint-text" :class="{'text-error': stats.proteinIntake < 120}">
+                {{ stats.proteinIntake >= 120 ? '✓' : `差${120 - (stats.proteinIntake || 0)}克` }}
+              </span>
+            </div>
+            <div class="hint-text">
+              今日碳水{{ stats.carbsIntake || 0 }}克
+              <span v-if="stats.carbsIntake < 130" class="text-error">
+                差{{ 130 - (stats.carbsIntake || 0) }}克
+              </span>
+              <span v-else class="text-success">✓</span>
+            </div>
           </div>
         </template>
       </div>
@@ -113,7 +124,7 @@
 </template>
 
 <script setup>
-import {onMounted, onUnmounted, ref, watch} from 'vue';
+import {onMounted, onUnmounted, ref, watch, computed} from 'vue';
 import {LucidePlus, LucideRefreshCw} from 'lucide-vue-next';
 import {useUserStore} from '@/stores/userStore';
 import emitter from '@/utils/eventBus.js';
@@ -291,8 +302,17 @@ function handleQuery() {
   });
 }
 
+// 计算属性：判断是否已超过运动日期但今天没有运动记录
+const isWorkoutOverdue = computed(() => {
+  if (!stats.value.nextWorkoutDay || stats.value.nextWorkoutDay === '-') return false;
+  const today = new Date().toISOString().split('T')[0];
+  return stats.value.nextWorkoutDay === today && stats.value.lastWorkoutDays > 0;
+});
+
 // 清理工作
 onUnmounted(() => {
   emitter.off('refresh-data');
 });
 </script>
+
+
