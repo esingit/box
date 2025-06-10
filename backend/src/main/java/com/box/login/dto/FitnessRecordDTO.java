@@ -4,9 +4,6 @@ import com.box.login.entity.FitnessRecord;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class FitnessRecordDTO extends FitnessRecord {

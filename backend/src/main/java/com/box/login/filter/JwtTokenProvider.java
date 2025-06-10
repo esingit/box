@@ -1,19 +1,17 @@
 package com.box.login.filter;
 
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
-import io.jsonwebtoken.security.Keys;
-
-import javax.crypto.SecretKey;
 
 @Component
 public class JwtTokenProvider {
