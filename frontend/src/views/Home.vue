@@ -1,14 +1,14 @@
 <template>
   <div class="container flex-center">
     <div class="text-center">
-      <h1 class="page-title">欢迎使用 Box</h1>
-      <div class="flex-center">
+      <div class="flex items-center justify-center">
         <LucideBox 
-          class="title-icon cursor-pointer" 
+          class="title-icon cursor-pointer mr-2" 
           :class="{ 'animate-spin': isRotating }" 
           @click="rotateBox" 
-          :size="48" 
+          :size="40" 
         />
+        <h1 class="page-title">BOX</h1>
       </div>
     </div>
   </div>

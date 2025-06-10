@@ -4,7 +4,7 @@
     <div class="card">
       <div class="card-header flex-between">
         <h3 class="card-title" v-if="!loading && stats.formattedDate">
-          {{ stats.formattedDate }}统计
+          {{ stats.formattedDate }}资产记录统计
         </h3>
         <div class="card-actions" v-if="!loading">
           <button 
