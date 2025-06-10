@@ -479,6 +479,7 @@
 }
 
 .card-header {
+  background-color: var(--bg-secondary);
   padding: var(--spacing-lg);
   border-bottom: 1px solid var(--border-primary);
 }
