@@ -231,8 +231,14 @@ const fitnessChartData = computed(() => {
     return record ? Number(record.count) : 0;
   });
 
+  // 格式化日期，只显示月和日
+  const formattedDates = dates.map(date => {
+    const dateObj = new Date(date);
+    return `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+  });
+
   return {
-    labels: dates,
+    labels: formattedDates, // 使用格式化后的日期
     datasets: [{
       label: selectedType.value1,
       data: dataByDate,
@@ -248,35 +254,51 @@ const fitnessChartData = computed(() => {
 const assetChartData = computed(() => {
   if (!assetData.value.length) return null;
 
-  // 按资产名称或类型分组数据
-  const groupedData = {};
+  // 获取所有日期
   const dates = [...new Set(assetData.value.map(item => item.date))].sort();
-
-  assetData.value.forEach(item => {
-    // 如果选择了具体资产名称，则按名称分组，否则按类型分组
-    const key = selectedAssetName.value ? item.assetName : item.assetTypeName;
-    if (!groupedData[key]) {
-      groupedData[key] = {
-        label: key,
-        data: {},
-        typeId: item.assetTypeId
-      };
+  
+  // 按资产名称分组数据
+  const groupedData = {};
+  
+  // 如果选择了具体资产名称，则只显示该资产名称的数据
+  // 否则，按资产名称分组显示所有数据
+  if (selectedAssetName.value) {
+    // 找到选中的资产名称
+    const selectedName = assetNames.value.find(name => name.id === selectedAssetName.value);
+    if (selectedName) {
+      const nameData = assetData.value.filter(item => item.assetNameId === selectedAssetName.value);
+      
+      if (nameData.length > 0) {
+        groupedData[selectedName.name] = {
+          label: selectedName.name,
+          data: {}
+        };
+        
+        // 填充日期数据
+        nameData.forEach(item => {
+          groupedData[selectedName.name].data[item.date] = item.amount;
+        });
+      }
     }
-    groupedData[key].data[item.date] = item.amount;
-  });
+  } else {
+    // 未选择具体资产名称时，按日期汇总所有理财资产的总额
+    groupedData['理财总额'] = {
+      label: '理财总额',
+      data: {}
+    };
+    
+    // 按日期汇总金额
+    dates.forEach(date => {
+      const dayTotal = assetData.value
+        .filter(item => item.date === date)
+        .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+      
+      groupedData['理财总额'].data[date] = dayTotal;
+    });
+  }
 
   // 创建数据集
-  const sortedKeys = Object.keys(groupedData).sort((a, b) => {
-    // 首先按类型ID排序，然后按名称排序
-    const typeIdA = groupedData[a].typeId;
-    const typeIdB = groupedData[b].typeId;
-    if (typeIdA === typeIdB) {
-      return a.localeCompare(b);
-    }
-    return typeIdA - typeIdB;
-  });
-
-  const datasets = sortedKeys.map((key, index) => ({
+  const datasets = Object.keys(groupedData).map((key, index) => ({
     label: groupedData[key].label,
     data: dates.map(date => groupedData[key].data[date] || 0),
     borderColor: `hsl(${index * 137.5}, 70%, 50%)`,
@@ -285,34 +307,17 @@ const assetChartData = computed(() => {
     fill: false
   }));
 
+  // 格式化日期，只显示月和日
+  const formattedDates = dates.map(date => {
+    const dateObj = new Date(date);
+    return `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+  });
+
   return {
-    labels: dates,
+    labels: formattedDates,
     datasets
   };
 });
-
-// 获取健身数据
-const fetchFitnessData = async () => {
-  try {
-    fitnessError.value = '';
-    const response = await axios.get('/api/fitness-record/list', {
-      params: {
-        page: 1,
-        pageSize: 999, // 获取足够多的记录以支持统计
-        startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0], // 一个月前
-        endDate: new Date().toISOString().split('T')[0] // 今天
-      }
-    });
-    if (response.data?.success && response.data.data?.records) {
-      fitnessData.value = response.data.data.records;
-    } else {
-      fitnessData.value = [];
-    }
-  } catch (error) {
-    console.error('获取健身数据失败:', error);
-    fitnessError.value = '获取健身数据失败，请稍后重试';
-  }
-};
 
 // 获取资产数据
 const fetchAssetData = async () => {
@@ -322,7 +327,7 @@ const fetchAssetData = async () => {
 
     // 构建请求参数
     const params = {};
-    // 总是发送资产类型ID，即使没有选择具体的资产名称
+    // 总是发送资产类型ID，默认为理财类型
     if (selectedAssetType.value) {
       params.assetTypeId = selectedAssetType.value;
       console.debug('获取资产统计数据，类型ID:', selectedAssetType.value);
@@ -357,6 +362,34 @@ const fetchAssetData = async () => {
       });
     }
     assetError.value = '获取资产数据失败，请稍后重试';
+  }
+};
+
+// 获取健身数据
+const fetchFitnessData = async () => {
+  try {
+    fitnessError.value = '';
+    // 设置日期范围为最近31天
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30); // 31天（今天+过去30天）
+    
+    const response = await axios.get('/api/fitness-record/list', {
+      params: {
+        page: 1,
+        pageSize: 999, // 获取足够多的记录以支持统计
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      }
+    });
+    if (response.data?.success && response.data.data?.records) {
+      fitnessData.value = response.data.data.records;
+    } else {
+      fitnessData.value = [];
+    }
+  } catch (error) {
+    console.error('获取健身数据失败:', error);
+    fitnessError.value = '获取健身数据失败，请稍后重试';
   }
 };
 
@@ -444,10 +477,7 @@ onMounted(async () => {
   if (await verifyUserAuth()) {
     try {
       await fetchFitnessTypes(); // 首先获取健身类型元数据
-      await Promise.all([
-        fetchFitnessData(),
-        fetchAssetData()
-      ]);
+      await fetchFitnessData();
 
       // 获取资产类型
       const typesRes = await axios.get('/api/common-meta/by-type', {params: {typeCode: 'ASSET_TYPE'}});
