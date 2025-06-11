@@ -32,16 +32,16 @@
           </div>
           <div class="stat-card">
             <h4 class="stat-label">今日蛋白</h4>
-            <div :class="['stat-value', {'text-success': stats.proteinIntake >= 120}]">
+            <div :class="['stat-value', {'text-success': stats.proteinIntake >= 80}]">
               {{ stats.proteinIntake || 0 }}克
-              <span class="hint-text" :class="{'text-error': stats.proteinIntake < 120}">
-                {{ stats.proteinIntake >= 120 ? '✓' : `差${120 - (stats.proteinIntake || 0)}克` }}
+              <span class="hint-text" :class="{'text-error': stats.proteinIntake < 80}">
+                {{ stats.proteinIntake >= 80 ? '✓' : `差${80 - (stats.proteinIntake || 0)}克` }}
               </span>
             </div>
             <div class="hint-text">
               今日碳水{{ stats.carbsIntake || 0 }}克
-              <span v-if="stats.carbsIntake < 130" class="text-error">
-                差{{ 130 - (stats.carbsIntake || 0) }}克
+              <span v-if="stats.carbsIntake < 120" class="text-error">
+                差{{ 120 - (stats.carbsIntake || 0) }}克
               </span>
               <span v-else class="text-success">✓</span>
             </div>
