@@ -242,8 +242,10 @@ const fitnessChartData = computed(() => {
     datasets: [{
       label: selectedType.value1,
       data: dataByDate,
-      borderColor: 'var(--color-primary)',
-      backgroundColor: 'var(--color-primary-light)',
+      borderColor: '#8e8ea0',
+      backgroundColor: '#acacbe',
+      pointRadius: 3,
+      pointBackgroundColor: '#999',
       tension: 0.4,
       fill: false
     }]
@@ -301,8 +303,10 @@ const assetChartData = computed(() => {
   const datasets = Object.keys(groupedData).map((key, index) => ({
     label: groupedData[key].label,
     data: dates.map(date => groupedData[key].data[date] || 0),
-    borderColor: `hsl(${index * 137.5}, 70%, 50%)`,
-    backgroundColor: `hsla(${index * 137.5}, 70%, 50%, 0.1)`,
+    borderColor: '#8e8ea0',
+    backgroundColor: '#acacbe',
+    pointRadius: 3,
+    pointBackgroundColor: '#999',
     tension: 0.4,
     fill: false
   }));
