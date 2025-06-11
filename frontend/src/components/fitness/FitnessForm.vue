@@ -5,7 +5,7 @@
         类型
         <span class="required">*</span>
       </label>
-      <select v-model="form.typeId" class="select" required>
+      <select v-model="form.typeId" class="select form-select" required>
         <option value="">请选择类型</option>
         <option v-for="type in types" 
                 :key="type.id" 
@@ -33,7 +33,7 @@
         单位
         <span class="required">*</span>
       </label>
-      <select v-model="form.unitId" class="select" required>
+      <select v-model="form.unitId" class="select form-select" required>
         <option value="">请选择单位</option>
         <option v-for="unit in units" 
                 :key="unit.id" 

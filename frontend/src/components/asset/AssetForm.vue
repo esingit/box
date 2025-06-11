@@ -6,7 +6,7 @@
         <span class="required">*</span>
       </label>
       <div class="control-group">
-        <select id="assetName" v-model="form.assetNameId" class="form-select select" required>
+        <select id="assetName" v-model="form.assetNameId" class="select form-select" required>
           <option value="">请选择资产名称</option>
           <option v-for="name in assetNames" :key="name.id" :value="name.id">
             {{ name.name }}
@@ -24,7 +24,7 @@
         资产分类
         <span class="required">*</span>
       </label>
-      <select id="assetType" v-model="form.assetTypeId" class="form-select select" required>
+      <select id="assetType" v-model="form.assetTypeId" class="select form-select" required>
         <option value="">请选择资产分类</option>
         <option v-for="type in types" :key="type.id" :value="type.id">
           {{ type.value1 }}
@@ -37,7 +37,7 @@
         资产位置
         <span class="required">*</span>
       </label>
-      <select id="location" v-model="form.assetLocationId" class="form-select select" required>
+      <select id="location" v-model="form.assetLocationId" class="select form-select" required>
         <option value="">请选择资产位置</option>
         <option v-for="location in locations" :key="location.id" :value="location.id">
           {{ location.value1 }}

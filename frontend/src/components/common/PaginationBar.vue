@@ -27,7 +27,7 @@
     </button>
     
     <select 
-      class="page-size-select" 
+      class="form-select" 
       :value="pageSize" 
       @change="$emit('page-size-change', Number($event.target.value))"
     >
