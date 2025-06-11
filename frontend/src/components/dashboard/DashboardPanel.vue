@@ -171,7 +171,22 @@ const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { position: 'top' },
+    legend: { 
+      labels: {
+      position: 'top',
+      generateLabels: (chart) => {
+          return chart.data.datasets.map((dataset, i) => ({
+            text: dataset.label,
+            fillStyle: 'rgba(0, 0, 0, 0)',
+            strokeStyle: '#d1d5db',
+            lineWidth: 1,
+            hidden: !chart.getDatasetMeta(i).visible,
+            index: i,
+            datasetIndex: i
+          }));
+        }
+        }
+     },
     tooltip: {
       mode: 'index',
       intersect: false,
@@ -189,6 +204,7 @@ const chartOptions = {
     y: { title: { display: true, text: '金额（人民币）' }, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.1)' } }
   }
 };
+
 
 // 健身数据图表
 const fitnessChartData = computed(() => {
