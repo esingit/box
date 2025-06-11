@@ -7,33 +7,39 @@
           <h2 class="card-title">健身统计</h2>
         </header>
         <div class="card-body">
-          <div v-if="fitnessError" class="alert alert-error animate-slide-up">
-            {{ fitnessError }}
-          </div>
           <div class="control-group mb-lg">
             <select
-                v-model="selectedFitnessType"
-                class="form-select"
+              v-model="selectedFitnessType"
+              class="form-select"
+              @change="handleFitnessTypeChange"
             >
               <option value="" disabled>请选择健身类型</option>
               <option
-                  v-for="type in metaTypes"
-                  :key="type.key1"
-                  :value="type.key1"
+                v-for="type in metaTypes"
+                :key="type.key1"
+                :value="type.key1"
               >
                 {{ type.value1 }}
               </option>
             </select>
           </div>
+
           <div class="chart-wrapper">
+            <!-- 错误状态 -->
+            <div v-if="fitnessError" class="empty-state error">
+              <span class="empty-text">{{ getEmptyTitle('健身', fitnessError) }}</span>
+              <p class="empty-description">{{ getEmptyDescription('健身') }}</p>
+            </div>
+            <!-- 有数据 -->
             <Line
-                v-if="fitnessChartData"
-                :data="fitnessChartData"
-                :options="chartOptions"
+              v-else-if="fitnessChartData"
+              :data="fitnessChartData"
+              :options="chartOptions"
             />
-            <div v-else-if="!fitnessError" class="empty-state">
-              <span class="empty-text">请选择健身类型查看统计数据</span>
-              <p class="empty-description">暂无健身统计数据</p>
+            <!-- 无数据 -->
+            <div v-else class="empty-state">
+              <span class="empty-text">{{ getEmptyTitle('健身') }}</span>
+              <p class="empty-description">{{ getEmptyDescription('健身') }}</p>
             </div>
           </div>
         </div>
@@ -45,49 +51,54 @@
           <h2 class="card-title">资产统计</h2>
         </header>
         <div class="card-body">
-          <div v-if="assetError" class="alert alert-error animate-slide-up">
-            {{ assetError }}
-          </div>
           <div class="control-group mb-lg">
             <select
-                v-model="selectedAssetType"
-                class="form-select"
-                @change="handleAssetTypeChange"
+              v-model="selectedAssetType"
+              class="form-select"
+              @change="handleAssetTypeChange"
             >
               <option value="" disabled>请选择资产类型</option>
               <option
-                  v-for="type in assetTypes"
-                  :key="type.id"
-                  :value="type.id"
+                v-for="type in assetTypes"
+                :key="type.id"
+                :value="type.id"
               >
                 {{ type.value1 }}
               </option>
             </select>
             <select
-                v-if="selectedAssetType"
-                v-model="selectedAssetName"
-                class="form-select"
-                @change="handleAssetNameChange"
+              v-if="selectedAssetType"
+              v-model="selectedAssetName"
+              class="form-select"
+              @change="handleAssetNameChange"
             >
               <option value="">全部资产名称</option>
               <option
-                  v-for="name in filteredAssetNames"
-                  :key="name.id"
-                  :value="name.id"
+                v-for="name in filteredAssetNames"
+                :key="name.id"
+                :value="name.id"
               >
                 {{ name.name }}
               </option>
             </select>
           </div>
+
           <div class="chart-wrapper">
+            <!-- 错误状态 -->
+            <div v-if="assetError" class="empty-state error">
+              <span class="empty-text">{{ getEmptyTitle('资产', assetError) }}</span>
+              <p class="empty-description">{{ getEmptyDescription('资产') }}</p>
+            </div>
+            <!-- 有数据 -->
             <Line
-                v-if="assetChartData"
-                :data="assetChartData"
-                :options="chartOptions"
+              v-else-if="assetChartData"
+              :data="assetChartData"
+              :options="chartOptions"
             />
-            <div v-else-if="!assetError" class="empty-state">
-              <span class="empty-text">请选择资产类型查看统计数据</span>
-              <p class="empty-description">暂无资产统计数据</p>
+            <!-- 无数据 -->
+            <div v-else class="empty-state">
+              <span class="empty-text">{{ getEmptyTitle('资产') }}</span>
+              <p class="empty-description">{{ getEmptyDescription('资产') }}</p>
             </div>
           </div>
         </div>
@@ -97,10 +108,10 @@
 </template>
 
 <script setup>
-import {computed, onMounted, ref} from 'vue';
-import {useRouter} from 'vue-router';
-import {Line} from 'vue-chartjs';
-import {useMetaData} from '@/composables/useMetaData';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { Line } from 'vue-chartjs';
+import { useMetaData } from '@/composables/useMetaData';
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -112,43 +123,41 @@ import {
   Tooltip
 } from 'chart.js';
 import axios from '@/utils/axios';
-import {useUserStore} from '@/stores/userStore';
+import { useUserStore } from '@/stores/userStore';
 
-// 注册 Chart.js 组件
 ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
 );
 
 const userStore = useUserStore();
 const router = useRouter();
-const {types: metaTypes, fetchMetaData} = useMetaData();
-const selectedFitnessType = ref('PUSH_UP'); // 默认选择俯卧撑
+const { types: metaTypes, fetchMetaData } = useMetaData();
+const selectedFitnessType = ref('PUSH_UP');
 const fitnessData = ref([]);
 const assetData = ref([]);
 const fitnessError = ref('');
 const assetError = ref('');
-
-// 资产类型和名称相关的状态
 const selectedAssetType = ref('');
 const selectedAssetName = ref('');
 const assetTypes = ref([]);
 const assetNames = ref([]);
 
-const filteredAssetNames = computed(() => {
-  if (!Array.isArray(assetNames.value)) {
-    console.debug('资产名称不是数组:', assetNames.value);
-    return [];
-  }
-  return assetNames.value;
-});
+const filteredAssetNames = computed(() => Array.isArray(assetNames.value) ? assetNames.value : []);
 
-// 格式化金额
+// 通用空状态提示函数
+function getEmptyTitle(type, errorMessage = '') {
+  return errorMessage || `请选择${type}类型查看统计数据`;
+}
+function getEmptyDescription(type) {
+  return `暂无相关${type}统计数据`;
+}
+
 function formatAmount(value) {
   if (value == null) return '-';
   return new Intl.NumberFormat('zh-CN', {
@@ -158,51 +167,26 @@ function formatAmount(value) {
   }).format(value);
 }
 
-// 图表配置
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: {
-      position: 'top'
-    },
+    legend: { position: 'top' },
     tooltip: {
       mode: 'index',
       intersect: false,
       callbacks: {
-        label: (context) => {
-          let label = context.dataset.label || '';
-          if (label) {
-            label += ': ';
-          }
-          if (context.parsed.y !== null) {
-            label += `￥${formatAmount(context.parsed.y)}`;
-          }
+        label: context => {
+          let label = context.dataset.label ? context.dataset.label + ': ' : '';
+          if (context.parsed.y != null) label += `￥${formatAmount(context.parsed.y)}`;
           return label;
         }
       }
     }
   },
   scales: {
-    x: {
-      title: {
-        display: true,
-        text: '日期'
-      },
-      grid: {
-        color: 'rgba(0, 0, 0, 0.1)'
-      }
-    },
-    y: {
-      title: {
-        display: true,
-        text: '金额（人民币）'
-      },
-      beginAtZero: true,
-      grid: {
-        color: 'rgba(0, 0, 0, 0.1)'
-      }
-    }
+    x: { title: { display: true, text: '日期' }, grid: { color: 'rgba(0,0,0,0.1)' } },
+    y: { title: { display: true, text: '金额（人民币）' }, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.1)' } }
   }
 };
 
@@ -256,10 +240,10 @@ const assetChartData = computed(() => {
 
   // 获取所有日期
   const dates = [...new Set(assetData.value.map(item => item.date))].sort();
-  
+
   // 按资产名称分组数据
   const groupedData = {};
-  
+
   // 如果选择了具体资产名称，则只显示该资产名称的数据
   // 否则，按资产名称分组显示所有数据
   if (selectedAssetName.value) {
@@ -267,13 +251,13 @@ const assetChartData = computed(() => {
     const selectedName = assetNames.value.find(name => name.id === selectedAssetName.value);
     if (selectedName) {
       const nameData = assetData.value.filter(item => item.assetNameId === selectedAssetName.value);
-      
+
       if (nameData.length > 0) {
         groupedData[selectedName.name] = {
           label: selectedName.name,
           data: {}
         };
-        
+
         // 填充日期数据
         nameData.forEach(item => {
           groupedData[selectedName.name].data[item.date] = item.amount;
@@ -286,13 +270,13 @@ const assetChartData = computed(() => {
       label: '理财总额',
       data: {}
     };
-    
+
     // 按日期汇总金额
     dates.forEach(date => {
       const dayTotal = assetData.value
-        .filter(item => item.date === date)
-        .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-      
+          .filter(item => item.date === date)
+          .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
       groupedData['理财总额'].data[date] = dayTotal;
     });
   }
@@ -342,16 +326,13 @@ const fetchAssetData = async () => {
     console.debug('发送统计请求，参数:', params);
     const response = await axios.get('/api/asset/statistics', {params});
     console.debug('资产统计数据响应:', response.data);
-    
+
     if (Array.isArray(response.data) && response.data.length > 0) {
       assetData.value = response.data;
       console.debug('成功获取资产统计数据:', {
         count: assetData.value.length,
         dates: [...new Set(assetData.value.map(item => item.date))].sort()
       });
-    } else {
-      console.warn('没有找到资产统计数据');
-      assetError.value = selectedAssetType.value ? '暂无相关资产数据' : '请选择资产类型查看统计';
     }
   } catch (error) {
     console.error('获取资产数据失败:', error);
@@ -369,26 +350,46 @@ const fetchAssetData = async () => {
 const fetchFitnessData = async () => {
   try {
     fitnessError.value = '';
+    fitnessData.value = [];
+    
     // 设置日期范围为最近31天
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - 30); // 31天（今天+过去30天）
+
+    // 构建请求参数
+    const params = {
+      page: 1,
+      pageSize: 999, // 获取足够多的记录以支持统计
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
     
-    const response = await axios.get('/api/fitness-record/list', {
-      params: {
-        page: 1,
-        pageSize: 999, // 获取足够多的记录以支持统计
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0]
-      }
-    });
-    if (response.data?.success && response.data.data?.records) {
+    // 如果选择了健身类型，添加到参数中
+    if (selectedFitnessType.value) {
+      params.fitnessType = selectedFitnessType.value;
+      console.debug('获取健身统计数据，类型:', selectedFitnessType.value);
+    }
+
+    console.debug('发送健身统计请求，参数:', params);
+    const response = await axios.get('/api/fitness-record/list', { params });
+    console.debug('健身统计数据响应:', response.data);
+
+    if (response.data?.success && response.data.data?.records && response.data.data.records.length > 0) {
       fitnessData.value = response.data.data.records;
-    } else {
-      fitnessData.value = [];
+      console.debug('成功获取健身统计数据:', {
+        count: fitnessData.value.length,
+        dates: [...new Set(fitnessData.value.map(item => item.date))].sort()
+      });
     }
   } catch (error) {
     console.error('获取健身数据失败:', error);
+    if (error.response) {
+      console.error('错误响应:', {
+        status: error.response.status,
+        data: error.response.data
+      });
+    }
     fitnessError.value = '获取健身数据失败，请稍后重试';
   }
 };
@@ -429,13 +430,13 @@ const fetchAssetNames = async () => {
         assetTypeId: selectedAssetType.value
       }
     });
-    
+
     console.debug('资产名称API响应:', response.data);
     if (response.data?.success && Array.isArray(response.data.data)) {
       assetNames.value = response.data.data;
       console.debug('成功获取资产名称列表:', {
         count: assetNames.value.length,
-        names: assetNames.value.map(n => ({ id: n.id, name: n.name }))
+        names: assetNames.value.map(n => ({id: n.id, name: n.name}))
       });
     } else {
       console.warn('资产名称数据格式不正确:', response.data);
@@ -470,6 +471,13 @@ async function handleAssetNameChange() {
   console.debug('资产名称变更为:', selectedAssetName.value);
   // 获取选中资产名称的统计数据
   await fetchAssetData();
+}
+
+// 处理健身类型变化
+async function handleFitnessTypeChange() {
+  console.debug('健身类型变更为:', selectedFitnessType.value);
+  // 获取新类型下的健身统计数据
+  await fetchFitnessData();
 }
 
 // 组件挂载时获取数据
