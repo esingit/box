@@ -1,6 +1,6 @@
 <template>
   <div class="search-panel" style="background-color: var(--bg-sub)">
-    <div class="flex justify-between gap-4">
+    <div class="u-flex u-justify-between">
       <div class="flex-grow">
         <div class="form-group">
           <div class="control-group">
@@ -27,7 +27,7 @@
         </div>
       </div>
 
-      <div class="search-actions flex items-center gap-2">
+      <div class="search-actions u-flex u-items-center">
         <button class="btn btn-icon btn-primary" title="查询" @click="search">
           <LucideSearch />
         </button>

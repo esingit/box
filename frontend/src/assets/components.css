@@ -196,11 +196,6 @@
   min-width: 0;
 }
 
-.profile-panel,
-.security-panel {
-  max-width: 360px;
-}
-
 .info-group {
   margin-bottom: var(--space-lg);
 }

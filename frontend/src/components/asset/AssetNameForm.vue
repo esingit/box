@@ -9,8 +9,9 @@
       <div class="modal-body">
         <form @submit.prevent="handleSubmit" class="form">
           <div class="form-group">
-            <label class="form-label required">
+            <label class="form-label">
               资产名称
+              <span class="required">*</span>
             </label>
             <input 
               v-model="formData.name"

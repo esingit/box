@@ -10,7 +10,7 @@
 
       <form class="modal-body" @submit.prevent="handleSubmit">
         <div class="form-group">
-          <label class="flex items-center">
+          <label class="u-flex u-items-center">
             <LucideUser :size="16" class="input-icon" />
             用户名
           </label>
@@ -25,7 +25,7 @@
         </div>
 
         <div class="form-group">
-          <label class="flex items-center">
+          <label class="u-flex u-items-center">
             <LucideLock :size="16" class="input-icon" />
             密码
           </label>
@@ -40,7 +40,7 @@
         </div>
 
         <div v-if="showCaptcha" class="form-group">
-          <label class="flex items-center">
+          <label class="u-flex u-items-center">
             <LucideShieldCheck :size="16" class="input-icon" />
             验证码
           </label>
@@ -64,9 +64,9 @@
           </div>
         </div>
 
-        <p v-if="error" class="error-text">{{ error }}</p>
+        <p v-if="error" class="text-error">{{ error }}</p>
 
-        <button type="submit" class="btn btn-primary w-full" :disabled="loading">
+        <button type="submit" class="btn btn-primary u-w-full" :disabled="loading">
           <LucideLogIn v-if="!loading" :size="16" class="btn-icon" />
           <LucideLoader2 v-else :size="16" class="btn-icon animate-spin" />
           {{ loading ? '登录中...' : '登录' }}

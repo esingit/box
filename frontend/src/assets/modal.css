@@ -17,7 +17,7 @@
   border-radius: var(--radius-xxl);
   box-shadow: var(--shadow-xl);
   width: 100%;
-  max-width: 630px;
+  max-width: 700px;
   display: flex;
   flex-direction: column;
 }

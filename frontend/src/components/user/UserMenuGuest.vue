@@ -1,5 +1,5 @@
 <template>
-  <div class="user-menu-container flex items-center">
+  <div class="user-menu-container u-flex u-items-center">
     <button class="user-menu-btn" @click="$emit('login')">
       <LucideLogIn class="btn-icon" />
       登录

@@ -10,7 +10,7 @@
 
       <form class="modal-body" @submit.prevent="submit">
         <div class="form-group">
-          <label class="flex items-center">
+          <label class="u-flex u-items-center">
             <LucideUser :size="16" class="input-icon"/>
             用户名
           </label>
@@ -26,7 +26,7 @@
         </div>
 
         <div class="form-group">
-          <label class="flex items-center">
+          <label class="u-flex u-items-center">
             <LucideLock :size="16" class="input-icon"/>
             密码
           </label>
@@ -42,11 +42,11 @@
         </div>
 
         <div v-if="showCaptcha" class="form-group">
-          <label class="flex items-center">
+          <label class="u-flex u-items-center">
             <LucideShieldCheck :size="16" class="input-icon"/>
             验证码
           </label>
-          <div class="flex gap-2">
+          <div class="u-flex gap-2">
             <input
                 class="input"
                 type="text"
@@ -65,10 +65,10 @@
           </div>
         </div>
 
-        <p v-if="error" class="error-text">{{ error }}</p>
-        <p v-if="success" class="success-text">{{ success }}</p>
+        <p v-if="error" class="text-error">{{ error }}</p>
+        <p v-if="success" class="text-success">{{ success }}</p>
 
-        <button type="submit" class="btn btn-primary w-full" :disabled="isLoading">
+        <button type="submit" class="btn btn-primary u-w-full" :disabled="isLoading">
           <LucideUserPlus v-if="!isLoading" :size="16" class="btn-icon"/>
           <LucideLoader2 v-else :size="16" class="btn-icon animate-spin"/>
           {{ isLoading ? '注册中...' : '注册' }}

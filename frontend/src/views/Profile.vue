@@ -33,7 +33,7 @@
           </div>
           
           <div class="content-area">
-            <div v-if="activeTab === 'profile'" class="profile-panel">
+            <div v-if="activeTab === 'profile'">
               <div class="info-group">
                 <label class="info-label">用户名</label>
                 <p class="info-value">{{ user?.username }}</p>
@@ -45,7 +45,7 @@
               </div>
             </div>
 
-            <div v-if="activeTab === 'security'" class="security-panel">
+            <div v-if="activeTab === 'security'">
               <form @submit.prevent="handleReset">
                 <div class="form-group">
                   <label class="form-label">旧密码</label>
@@ -64,7 +64,7 @@
                          placeholder="再次确认新密码"/>
                 </div>
                 <div v-if="resetMsg" class="message-container">
-                  <p :class="['message', resetSuccess ? 'success-text' : 'error-text']">
+                  <p :class="['message', resetSuccess ? 'text-success' : 'text-error']">
                     {{ resetMsg }}
                   </p>
                 </div>

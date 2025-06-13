@@ -65,8 +65,8 @@ import RecordActions from '@/components/common/RecordActions.vue'
 
 // 默认列宽
 const DEFAULT_COLUMN_WIDTHS = {
-  name: 200,          // 资产名称
-  description: 300,   // 描述
+  name: 400,          // 资产名称
+  description: 100,   // 描述
   actions: 100        // 操作
 }
 

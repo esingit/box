@@ -1,4 +1,4 @@
-/* 基础样式重置 */
+/* === 重置样式 === */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -6,8 +6,6 @@
 }
 
 body {
-  margin: 0;
-  padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', sans-serif;
   background-color: var(--bg-main);
   color: var(--text-main);
@@ -16,77 +14,33 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 布局容器 */
-.container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
+/* === 位置 === */
 
-/* 辅助类 */
-.hidden {
-  display: none !important;
-}
+.u-flex { display: flex; }
+.u-u-text-center { text-align: center; }
+.u-items-center { align-items: center; }
+.u-justify-center { justify-content: center; }
+.u-justify-between { justify-content: space-between; }
 
-.text-center {
-  text-align: center;
-}
+/* === 长度 === */
 
-.flex {
-  display: flex;
-}
+.u-full-width { width: 100%; }
+.u-gap-sm { gap: 8px; }
+.u-gap-md { gap: 16px; }
 
-.flex-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* === 状态文本 === */
 
-.items-center {
-  align-items: center;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.gap-2 {
-  gap: 8px;
-}
-
-.gap-4 {
-  gap: 16px;
-}
-
-/* 宽度类 */
-.w-full {
-  width: 100%;
-}
-
-/* 工具类 */
-.cursor-pointer {
-  cursor: pointer;
-}
-
-/* 文本颜色类 */
-.error-text {
+.text-error {
   color: var(--error);
   margin-bottom: var(--space-md);
   font-size: var(--font-sm);
 }
 
-.success-text {
+.text-success {
   color: var(--success);
   margin-bottom: var(--space-md);
   font-size: var(--font-sm);
 }
 
-/* 工具类 */
-.mt-lg {
-  margin-top: var(--space-lg);
-}
 
-.mb-lg {
-  margin-bottom: var(--space-lg);
-}
+

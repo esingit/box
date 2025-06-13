@@ -138,10 +138,6 @@
   align-items: center;
 }
 
-.text-center {
-  text-align: center;
-}
-
 /* Dashboard 布局 */
 .dashboard-wrapper {
   width: 100%;
