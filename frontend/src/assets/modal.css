@@ -9,11 +9,11 @@
   align-items: center;
   justify-content: center;
   z-index: var(--z-modal);
-  padding: var(--spacing-md);
+  padding: var(--space-md);
 }
 
 .modal-container {
-  background-color: var(--bg-primary);
+  background-color: var(--bg-main);
   border-radius: var(--radius-xxl);
   box-shadow: var(--shadow-xl);
   width: 100%;
@@ -26,19 +26,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-lg) var(--spacing-xl);
-  border-bottom: 1px solid var(--border-primary);
+  padding: var(--space-lg) var(--space-xl);
+  border-bottom: 1px solid var(--border-main);
   flex-shrink: 0;
 }
 
 .modal-title {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-lg);
   font-weight: var(--font-medium);
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
 .modal-body {
-  padding: var(--spacing-xl);
+  padding: var(--space-xl);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -47,8 +47,8 @@
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg) var(--spacing-xl);
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-xl);
 }
 
 .fade-enter-active,

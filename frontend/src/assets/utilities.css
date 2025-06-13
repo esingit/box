@@ -17,9 +17,9 @@
 
 /* 提示文本 */
 .hint-text {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  margin: var(--spacing-md) 0;
+  color: var(--text-sub);
+  font-size: var(--font-sm);
+  margin: var(--space-md) 0;
 }
 
 /* 文本溢出处理 */

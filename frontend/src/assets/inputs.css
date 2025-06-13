@@ -1,20 +1,20 @@
 .input,
 .textarea {
   width: 100%;
-  height: var(--input-height);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--border-primary);
+  height: var(--input-h);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-main);
   border-radius: var(--radius-xl);
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  background-color: var(--bg-primary);
+  font-size: var(--font-sm);
+  color: var(--text-main);
+  background-color: var(--bg-main);
   transition: var(--transition);
 }
 
 .input::placeholder,
 .select::placeholder,
 .textarea::placeholder {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 }
 
 .input:hover,
@@ -31,15 +31,15 @@
 .input:disabled,
 .select:disabled,
 .textarea:disabled {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-primary);
-  color: var(--text-secondary);
+  background-color: var(--bg-sub);
+  border-color: var(--border-main);
+  color: var(--text-sub);
   cursor: not-allowed;
 }
 
 .input-icon {
-  color: var(--text-tertiary);
-  margin-right: var(--spacing-xs);
+  color: var(--text-muted);
+  margin-right: var(--space-xs);
 }
 
 /* 搜索框样式已移至 components.css */
@@ -47,8 +47,8 @@
 /* 验证码图片样式 */
 .captcha-image {
   width: auto;
-  height: var(--input-height);
-  border: 1px solid var(--border-primary);
+  height: var(--input-h);
+  border: 1px solid var(--border-main);
   border-radius: var(--radius-xl);
   cursor: pointer;
   object-fit: contain;

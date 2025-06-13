@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :theme-overrides="naiveBlackWhiteTheme">
+  <n-config-provider :theme-overrides="theme">
     <div :class="['app-container']" id="app">
       <!-- 侧边栏 -->
       <Sidebar v-if="shouldShowSidebar" :isLoggedIn="isLoggedIn" />
@@ -63,7 +63,10 @@ import UserMenuGuest from './components/user/UserMenuGuest.vue'
 import emitter from './utils/eventBus'
 
 // 这里引入你提取的主题配置文件
-import { naiveBlackWhiteTheme } from './naiveTheme'
+import {createDynamicNaiveTheme} from './naiveTheme'
+
+// 主题
+const theme = ref({})
 
 // 状态管理
 const userStore = useUserStore()
@@ -145,6 +148,7 @@ onMounted(() => {
     console.error('认证初始化失败:', error)
     userStore.logout(false)
   })
+  theme.value = createDynamicNaiveTheme()
 })
 
 onBeforeUnmount(() => {

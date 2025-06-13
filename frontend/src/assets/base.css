@@ -9,8 +9,8 @@ body {
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--bg-main);
+  color: var(--text-main);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -72,21 +72,21 @@ body {
 /* 文本颜色类 */
 .error-text {
   color: var(--error);
-  margin-bottom: var(--spacing-md);
-  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-md);
+  font-size: var(--font-sm);
 }
 
 .success-text {
   color: var(--success);
-  margin-bottom: var(--spacing-md);
-  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-md);
+  font-size: var(--font-sm);
 }
 
 /* 工具类 */
 .mt-lg {
-  margin-top: var(--spacing-lg);
+  margin-top: var(--space-lg);
 }
 
 .mb-lg {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--space-lg);
 }

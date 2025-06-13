@@ -3,7 +3,7 @@
   width: 100%;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--border-main);
 }
 
 /* 表格容器 */
@@ -12,14 +12,14 @@
   height: 480px; /* 固定高度 */
   overflow: auto;
   position: relative;
-  background: var(--bg-primary);
+  background: var(--bg-main);
 }
 
 /* 列表组件 */
 .list-component {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--space-lg);
 }
 
 /* 表格基础样式 */
@@ -27,7 +27,7 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-sm);
   table-layout: fixed;
 }
 
@@ -36,15 +36,15 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-sub);
 }
 
 .table th {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
+  background-color: var(--bg-sub);
+  color: var(--text-main);
   font-weight: var(--font-medium);
-  border-bottom: 2px solid var(--border-primary);
-  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 2px solid var(--border-main);
+  padding: var(--space-md) var(--space-lg);
   white-space: nowrap;
   position: relative;
   user-select: none;
@@ -62,8 +62,8 @@
 
 .table th,
 .table td {
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--border-primary);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border-main);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -81,7 +81,7 @@
 .table td.cell-number {
   width: 15%;
   text-align: right;
-  font-family: var(--font-mono);
+  font-family: var(--font-md);
 }
 
 /* 其他列（单位、日期、备注、操作）居中 */
@@ -117,14 +117,14 @@
 .table td.cell-actions {
   width: 10%;
   white-space: nowrap;
-  padding-right: var(--spacing-lg);
+  padding-right: var(--space-lg);
 }
 
 /* RecordActions 内部按钮横向排列及间距 */
 .cell-actions .operations {
   display: flex;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: var(--space-sm);
 }
 
 /* 备注文字溢出处理 */
@@ -143,7 +143,7 @@
 /* 金额单元格 */
 .amount-cell {
   text-align: right;
-  font-family: var(--font-mono);
+  font-family: var(--font-md);
   font-weight: var(--font-medium);
 }
 
@@ -174,7 +174,7 @@
 
 /* 列表组件样式 */
 .list-component {
-  background-color: var(--bg-primary);
+  background-color: var(--bg-main);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
@@ -184,12 +184,12 @@
   display: none;  /* 默认隐藏 */
   position: fixed; /* 使用 fixed 定位以避免滚动问题 */
   z-index: 9999;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-sub);
+  color: var(--text-main);
+  padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-primary);
-  font-size: var(--font-size-sm);
+  border: 1px solid var(--border-main);
+  font-size: var(--font-sm);
   line-height: 1.4;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   min-width: 80px;

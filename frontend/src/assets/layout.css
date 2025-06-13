@@ -19,30 +19,31 @@
 .main-header {
   display: flex;
   justify-content: flex-end;
-  padding: var(--spacing-xs) var(--spacing-xl);
-  border-bottom: 1px solid var(--border-primary);
+  padding: var(--space-xs) var(--space-xl);
+  border-bottom: 1px solid var(--border-main);
 }
 
 /* 侧边栏 */
 .sidebar {
-  width: var(--sidebar-width);
-  background-color: var(--bg-primary);
-  border-right: 1px solid var(--border-primary);
+  width: var(--sidebar-w);
+  background-color: var(--bg-main);
+  border-right: 1px solid var(--border-main);
   transition: width var(--transition);
   display: flex;
   flex-direction: column;
 }
 
 .sidebar.collapsed {
-  width: var(--sidebar-collapsed-width);
+  width: var(--sidebar-collapsed-w);
 }
 
 .logo {
-  height: var(--header-height);
+  height: var(--menu-h);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  margin: var(--space-xs) var(--space-md);
 }
 
 .logo-icon {
@@ -69,23 +70,23 @@
 .menu-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  height: var(--header-height);
-  padding: 0 var(--spacing-lg);
-  color: var(--text-secondary);
+  gap: var(--space-md);
+  height: var(--menu-h);
+  padding: 0 var(--space-lg);
+  color: var(--text-sub);
   text-decoration: none;
   transition: all var(--transition);
   white-space: nowrap;
 }
 
 .menu-item:hover {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
+  background-color: var(--bg-sub);
+  color: var(--text-main);
 }
 
 .menu-item.active {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
+  background-color: var(--bg-sub);
+  color: var(--text-main);
   font-weight: var(--font-medium);
 }
 
@@ -109,19 +110,19 @@
 .page-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: var(--spacing-xl);
+  padding: var(--space-xl);
 }
 
 /* 内容区域 */
 .content-section {
-  margin-top: var(--spacing-xl);
-  background: var(--bg-primary);
+  margin-top: var(--space-xl);
+  background: var(--bg-main);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--border-main);
 }
 
 .content-action {
-  margin: var(--spacing-xl);
+  margin: var(--space-xl);
 }
 
 /* 布局工具类 */
@@ -146,8 +147,8 @@
   width: 100%;
   max-width: 100%;
   flex-direction: column;
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--border-main);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  margin: var(--spacing-lg);
+  padding: var(--space-lg);
+  margin: var(--space-lg);
 }

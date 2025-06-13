@@ -1,6 +1,6 @@
 /* 表单布局 */
 .form-group {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--space-lg);
   display: flex;
   flex-direction: column;
 }
@@ -12,19 +12,19 @@
 .form-label {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-sm);
-  color: var(--text-primary);
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+  color: var(--text-main);
   font-weight: var(--font-medium);
   flex-shrink: 0;
 }
 
 .form-control {
   width: 100%;
-  padding: var(--spacing-sm);
-  border: 1px solid var(--border-primary);
+  padding: var(--space-sm);
+  border: 1px solid var(--border-main);
   border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-sm);
   transition: var(--transition);
 }
 
@@ -38,19 +38,19 @@
 }
 
 .form-submit {
-  margin-top: var(--spacing-xl);
+  margin-top: var(--space-xl);
 }
 
 .form-actions {
   display: flex;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-lg);
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
 }
 
 /* 表单消息 */
 .form-message {
-  margin-top: var(--spacing-3);
-  font-size: var(--text-sm);
+  margin-top: var(--space-md);
+  font-size: var(--font-sm);
 }
 
 .message-error {
@@ -63,14 +63,14 @@
 
 /* 必填标记 */
 .required {
-  color: var(--error-color);
+  color: var(--error);
   margin-left: 2px;
 }
 
 /* 验证码输入框组 */
 .captcha-input-group {
   display: flex;
-  gap: var(--spacing-3);
+  gap: var(--space-md);
 }
 
 .captcha-input {
@@ -78,7 +78,7 @@
 }
 
 .captcha-image {
-  height: var(--input-height);
+  height: var(--input-h);
   border-radius: var(--radius-md);
   cursor: pointer;
 }
@@ -87,17 +87,17 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--space-md);
 }
 
 .login-form .form-buttons {
-  margin-top: var(--spacing-lg);
+  margin-top: var(--space-lg);
   flex-shrink: 0;
 }
 
 .captcha-group {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: var(--space-sm);
   align-items: stretch;
 }
 
@@ -114,18 +114,18 @@
 }
 
 .message-container {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--space-lg);
 }
 
 /* Select 控件 */
 .form-select {
   width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--border-primary);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-main);
   border-radius: var(--radius-full);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-size: var(--font-sm);
   transition: var(--transition);
   cursor: pointer;
   appearance: none;
@@ -144,17 +144,16 @@
 
 .form-select:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
+  border-color: var(--bg-main);
 }
 
 .form-select:disabled {
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-sub);
   cursor: not-allowed;
 }
 
 /* Select 选项 */
 .form-select option {
-  padding: var(--spacing-sm) var(--spacing-md);
-  color: var(--text-primary);
+  padding: var(--space-sm) var(--space-md);
+  color: var(--text-main);
 }
