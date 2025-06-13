@@ -96,12 +96,12 @@ import RecordActions from '@/components/common/RecordActions.vue'
 
 // 默认列宽
 const DEFAULT_COLUMN_WIDTHS = {
-  assetName: 250,    // 资产名称
+  assetName: 400,    // 资产名称
   assetType: 100,    // 类型
-  amount: 120,       // 金额
+  amount: 150,       // 金额
   location: 100,     // 位置
-  time: 100,         // 时间
-  remark: 200,       // 备注
+  time: 120,         // 时间
+  remark: 100,       // 备注
   actions: 100       // 操作
 }
 
