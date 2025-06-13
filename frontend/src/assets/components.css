@@ -21,7 +21,6 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  margin-bottom: var(--spacing-xl);
 }
 
 .title-icon {
@@ -101,9 +100,6 @@
   border: none;
   background: transparent;
   color: var(--text-primary);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: var(--transition);
 }
 
 .user-menu-btn:hover {
