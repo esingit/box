@@ -98,7 +98,7 @@ const chartOptions = {
   },
   scales: {
     x: {title: {display: true, text: '日期'}, grid: {color: 'rgba(0,0,0,0.1)'}},
-    y: {title: {display: true, text: '金额（人民币）'}, beginAtZero: true, grid: {color: 'rgba(0,0,0,0.1)'}}
+    y: {title: {display: true, text: '金额'}, beginAtZero: true, grid: {color: 'rgba(0,0,0,0.1)'}}
   }
 };
 
@@ -125,7 +125,7 @@ const assetChartData = computed(() => {
           .filter(item => item.date === date)
           .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     });
-    groupedMap.set('理财总额', totalMap);
+    groupedMap.set('总额', totalMap);
   }
 
   const datasets = [...groupedMap.entries()].map(([label, data]) => ({
