@@ -16,11 +16,11 @@
         </select>
         <button
             type="button"
-            class="btn btn-outline control-action"
+            class="btn btn-primary control-action"
             @click.prevent="emitMaintain"
         >
           <LucideSettings size="16" class="btn-icon" />
-          维护
+          名称管理
         </button>
       </div>
     </div>
