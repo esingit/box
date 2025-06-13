@@ -38,6 +38,7 @@
                 <label class="info-label">用户名</label>
                 <p class="info-value">{{ user?.username }}</p>
               </div>
+              <hr class="info-divider" />
               <div class="info-group">
                 <label class="info-label">上次登录时间</label>
                 <p class="info-value">{{ formatDateTime(user?.lastLoginTime) }}</p>

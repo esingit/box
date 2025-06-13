@@ -9,6 +9,13 @@
   border-radius: var(--radius-sm);
 }
 
+/* 通用横向分割线 divider-vertical */
+.info-divider {
+  border: none;
+  border-top: 1px solid var(--btn-text-border);
+  margin: 12px 0;
+}
+
 /* 页面标题 */
 .page-title {
   display: flex;
