@@ -70,6 +70,5 @@ export function useFitnessForm(types, units) {
     startEdit,
     cancelEdit,
     closeAddModal,
-    getTodayDate
   };
 }

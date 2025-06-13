@@ -231,6 +231,5 @@ export const useAssetStore = defineStore('asset', () => {
     deleteRecord,
     addRecord,
     updateRecord,
-    initData
   }
 })

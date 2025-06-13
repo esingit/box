@@ -53,7 +53,7 @@
       </div>
       
       <!-- 重试状态提示 -->
-      <div v-if="retrying" class="text-hint u-text-center">
+      <div v-if="retrying" class="text-hint">
         正在重试 ({{ retryCount }}/{{ maxRetries }})...
       </div>
     </div>

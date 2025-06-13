@@ -15,21 +15,5 @@ body {
 }
 
 /* === 位置 === */
-
 .u-flex { display: flex; }
-.u-u-text-center { text-align: center; }
 .u-items-center { align-items: center; }
-
-
-/* === 长度 === */
-
-.u-full-width { width: 100%; }
-.u-gap-sm { gap: 8px; }
-.u-gap-md { gap: 16px; }
-
-/* === 状态文本 === */
-
-
-
-
-

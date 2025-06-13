@@ -2,8 +2,6 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/userStore'
 import emitter from '../utils/eventBus'
 
-const API_URL = '/api/user'
-
 export function useLogout() {
   const router = useRouter()
   const userStore = useUserStore()
