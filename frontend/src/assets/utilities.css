@@ -16,10 +16,22 @@
 }
 
 /* 提示文本 */
-.hint-text {
+.text-hint {
   color: var(--text-sub);
+  margin-bottom: var(--space-md);
   font-size: var(--font-sm);
-  margin: var(--space-md) 0;
+}
+
+.text-error {
+   color: var(--error);
+   margin-bottom: var(--space-md);
+   font-size: var(--font-sm);
+ }
+
+.text-success {
+  color: var(--success);
+  margin-bottom: var(--space-md);
+  font-size: var(--font-sm);
 }
 
 /* 文本溢出处理 */

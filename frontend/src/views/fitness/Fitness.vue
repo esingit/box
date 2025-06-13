@@ -23,13 +23,13 @@
           <div class="stat-card">
             <h4 class="stat-label">本月运动</h4>
             <div class="stat-value text-primary">{{ stats.monthlyCount || 0 }}次</div>
-            <div class="hint-text">本周运动{{ stats.weeklyCount || 0 }}次</div>
+            <div class="u-flex-center">本周运动{{ stats.weeklyCount || 0 }}次</div>
           </div>
           <div class="stat-card">
             <h4 class="stat-label">上次运动</h4>
             <div :class="['stat-value', {'text-error': isWorkoutOverdue}]">{{ stats.lastWorkoutDays || 0 }}天前</div>
             <div
-                class="hint-text"
+                class="text-hint"
                 :style="{ color: isNextWorkoutOverdue ? 'var(--error)' : '' }"
             >
               下次运动日{{ stats.nextWorkoutDay || '-' }}
@@ -40,13 +40,13 @@
             <div :class="['stat-value', {'text-success': stats.proteinIntake >= 80}]">
               {{ stats.proteinIntake || 0 }}克
               <span
-                  class="hint-text"
+                  class="text-hint"
                   :style="{ color: stats.proteinIntake < 80 ? 'var(--warning)' : 'var(--success)' }"
               >
                 {{ stats.proteinIntake >= 80 ? '✓' : `差${80 - (stats.proteinIntake || 0)}克` }}
               </span>
             </div>
-            <div class="hint-text">
+            <div class="text-hint">
               今日碳水{{ stats.carbsIntake || 0 }}克
               <span v-if="stats.carbsIntake < 120" class="text-warning">
                 差{{ 120 - (stats.carbsIntake || 0) }}克

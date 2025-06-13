@@ -372,13 +372,6 @@
   gap: var(--space-sm);
 }
 
-.retry-hint {
-  text-align: center;
-  color: var(--text-sub);
-  margin-top: var(--space-sm);
-  font-size: var(--font-sm);
-}
-
 /* 动画效果 */
 .animate-spin {
   animation: spin 1s linear infinite;

@@ -1,6 +1,6 @@
 <template>
   <div class="search-panel" style="background-color: var(--bg-sub)">
-    <div class="u-flex u-justify-between">
+    <div class="u-flex">
       <div class="flex-grow">
         <div class="form-group">
           <div class="control-group">

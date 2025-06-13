@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <div class="content-wrapper u-flex u-justify-center u-items-center">
+    <div class="content-wrapper u-flex u-items-center">
       <div class="u-text-center animate-fade">
         <div class="logo" @click="rotateBox">
           <LucideBox
