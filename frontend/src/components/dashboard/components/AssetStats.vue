@@ -37,7 +37,7 @@
 import {ref, computed, onMounted} from 'vue';
 import {Line} from 'vue-chartjs';
 import axios from '@/utils/axios';
-import {useUserStore} from '@/stores/userStore';
+import {useUserStore} from '@/store/userStore';
 
 const userStore = useUserStore();
 const selectedAssetType = ref([]);

@@ -50,20 +50,20 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useUserStore } from './stores/userStore'
+import { useUserStore } from '@/store/userStore'
 import { useRouter } from 'vue-router'
-import { initializeAuth, useAuth } from './composables/useAuth'
+import { initializeAuth, useAuth } from '@/composables/useAuth'
 import { useLogout } from '@/composables/useLogout'
-import Sidebar from './components/Sidebar.vue'
-import GlobalModals from './components/GlobalModals.vue'
-import Notification from './components/Notification.vue'
-import ConfirmDialog from './components/ConfirmDialog.vue'
-import UserMenuAuthenticated from './components/user/UserMenuAuthenticated.vue'
-import UserMenuGuest from './components/user/UserMenuGuest.vue'
-import emitter from './utils/eventBus'
+import Sidebar from '@/components/Sidebar.vue'
+import GlobalModals from '@/components/GlobalModals.vue'
+import Notification from '@/components/Notification.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import UserMenuAuthenticated from '@/components/user/UserMenuAuthenticated.vue'
+import UserMenuGuest from '@/components/user/UserMenuGuest.vue'
+import emitter from '@/utils/eventBus'
 
 // 这里引入你提取的主题配置文件
-import {createDynamicNaiveTheme} from './naiveTheme'
+import {createDynamicNaiveTheme} from '@/plugins/naive'
 
 // 主题
 const theme = ref({})

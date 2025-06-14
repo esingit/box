@@ -20,7 +20,7 @@
 import {ref} from 'vue';
 import {LucideBox} from 'lucide-vue-next';
 import Dashboard from '@/components/dashboard/Dashboard.vue';
-import {useUserStore} from '@/stores/userStore';
+import {useUserStore} from '@/store/userStore';
 
 const userStore = useUserStore();
 const isRotating = ref(false);

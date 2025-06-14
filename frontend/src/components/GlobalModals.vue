@@ -18,7 +18,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import Profile from '../views/Profile.vue';
+import Profile from '@/views/Profile.vue';
 import LoginForm from './LoginForm.vue';
 import RegisterForm from './RegisterForm.vue';
 

@@ -23,7 +23,7 @@
 
 <script setup>
 import AssetNamesTable from './AssetNamesTable.vue'
-import PaginationBar from '../common/PaginationBar.vue'
+import PaginationBar from '@/components/common/PaginationBar.vue'
 
 defineProps({
   names: {

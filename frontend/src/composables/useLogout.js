@@ -1,6 +1,6 @@
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/userStore'
-import emitter from '../utils/eventBus'
+import { useUserStore } from '@/store/userStore'
+import emitter from '@/utils/eventBus'
 
 export function useLogout() {
   const router = useRouter()

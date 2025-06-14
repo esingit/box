@@ -1,6 +1,6 @@
 import { ref } from 'vue';
-import axios from '@/utils/axios.js';
-import emitter from '@/utils/eventBus.js';
+import axios from '@/utils/axios.ts';
+import emitter from '@/utils/eventBus.ts';
 import { clearCommonMetaCache } from '@/utils/commonMeta';
 
 export function useMetaData() {

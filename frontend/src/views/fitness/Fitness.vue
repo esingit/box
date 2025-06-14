@@ -134,8 +134,7 @@
 <script setup>
 import {onMounted, onUnmounted, ref, watch, computed} from 'vue';
 import {LucidePlus, LucideRefreshCw} from 'lucide-vue-next';
-import {useUserStore} from '@/stores/userStore';
-import emitter from '@/utils/eventBus.js';
+import emitter from '@/utils/eventBus.ts';
 import {useMetaData} from '@/composables/useMetaData';
 import {useFitnessRecords} from '@/composables/useFitnessRecords';
 import {useFitnessForm} from '@/composables/useFitnessForm';
@@ -143,9 +142,6 @@ import FitnessModal from '@/components/fitness/FitnessModal.vue';
 import FitnessList from '@/components/fitness/FitnessList.vue';
 import SearchPanel from '@/components/fitness/SearchPanel.vue';
 import SkeletonCard from '@/components/common/SkeletonCard.vue';
-
-// Store
-const userStore = useUserStore();
 
 // 统计数据
 const stats = ref({

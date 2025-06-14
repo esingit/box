@@ -31,7 +31,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { LucideX } from 'lucide-vue-next'
-import emitter from '@/utils/eventBus.js'
+import emitter from '@/utils/eventBus.ts'
 
 const visible = ref(false)
 const title = ref('操作确认')

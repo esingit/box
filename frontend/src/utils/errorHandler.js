@@ -3,7 +3,7 @@ import { axiosConfig } from './axiosConfig'
 import axios from './axios'
 import { tokenService } from './tokenService'
 import { cancelPendingRequests } from './requestManager'
-import { useUserStore } from '@/stores/userStore'
+import { useUserStore } from '@/store/userStore'
 
 export class ErrorHandler {
   static async handleAuthError(error) {

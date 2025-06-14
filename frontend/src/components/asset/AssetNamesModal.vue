@@ -84,8 +84,8 @@ import ModalHeader from './ModalHeader.vue'
 import AssetNamesList from './AssetNamesList.vue'
 import AssetNameForm from './AssetNameForm.vue'
 import SkeletonCard from '@/components/common/SkeletonCard.vue'
-import axios from '@/utils/axios.js'
-import emitter from '@/utils/eventBus.js'
+import axios from '@/utils/axios.ts'
+import emitter from '@/utils/eventBus.ts'
 
 // 防抖函数
 function debounce(fn, delay = 300) {

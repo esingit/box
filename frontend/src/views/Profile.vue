@@ -85,7 +85,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { LucideX, LucideUser, LucideLock } from 'lucide-vue-next'
-import { useUserStore } from '@/stores/userStore'
+import { useUserStore } from '@/store/userStore'
 import axios from '@/utils/axios'
 
 const userStore = useUserStore()

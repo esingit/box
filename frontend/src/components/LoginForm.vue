@@ -77,19 +77,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue';
-import { 
-  LucideX, 
-  LucideUser, 
-  LucideLock, 
-  LucideShieldCheck, 
-  LucideLogIn, 
-  LucideLoader2 
-} from 'lucide-vue-next';
-import { useUserStore } from '../stores/userStore';
-import { useAuth } from '../composables/useAuth';
-import emitter from '../utils/eventBus';
-import axios from '../utils/axios';
+import {reactive, ref, watch} from 'vue';
+import {LucideLoader2, LucideLock, LucideLogIn, LucideShieldCheck, LucideUser, LucideX} from 'lucide-vue-next';
+import {useUserStore} from '@/store/userStore';
+import {useAuth} from '@/composables/useAuth';
+import emitter from '@/utils/eventBus';
+import axios from '@/utils/axios';
 
 const emit = defineEmits(['close', 'login-success']);
 

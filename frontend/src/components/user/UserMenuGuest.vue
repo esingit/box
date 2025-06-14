@@ -14,7 +14,7 @@
 
 <script setup>
 import { LucideLogIn, LucideUserPlus } from 'lucide-vue-next';
-import '@/assets/components.css';
+import '@/assets/styles/components.css';
 
 defineEmits(['login', 'register']);
 </script>

@@ -1,7 +1,5 @@
-// theme/dynamic-theme.ts
 function getCSSVar(name: string): string {
     const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-    // 若为空，则使用默认值或抛错提示更好排查
     if (!value) {
         console.warn(`CSS variable ${name} is not defined or empty`)
     }
@@ -40,8 +38,20 @@ export function createDynamicNaiveTheme() {
             tableColor: getCSSVar('--bg-main'),
 
             dividerColor: getCSSVar('--border-sub'),
-            borderRadius: getCSSVar('--radius-md'),
+            borderRadius: getCSSVar('--radius-full'),
             fontFamily: getCSSVar('--font-family'),
+        },
+
+        Button: {
+            borderRadius: getCSSVar('--radius-full'),
+            heightMedium: getCSSVar('--btn-h'),
+            paddingMedium: `0 ${getCSSVar('--space-xl')}`,
+            fontSizeMedium: getCSSVar('--font-md'),
+            textColorPrimary: getCSSVar('--btn-primary-text'),
+            colorPrimary: getCSSVar('--btn-primary-bg'),
+            colorHoverPrimary: getCSSVar('--btn-primary-hover-bg'),
+            borderPrimary: getCSSVar('--btn-primary-border'),
+            borderHoverPrimary: getCSSVar('--btn-primary-hover-border'),
         }
     }
 }

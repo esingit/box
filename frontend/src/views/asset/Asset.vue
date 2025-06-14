@@ -144,9 +144,9 @@
 <script setup>
 import {computed, onMounted, reactive, ref, watch} from 'vue'
 import {LucideCopy, LucidePlus, LucideRefreshCw, LucideWallet} from 'lucide-vue-next'
-import {useAssetStore} from '@/stores/assetStore'
+import {useAssetStore} from '@/store/assetStore'
 import {useAuth} from '@/composables/useAuth'
-import emitter from '@/utils/eventBus.js'
+import emitter from '@/utils/eventBus.ts'
 import AssetList from '@/components/asset/AssetList.vue'
 import AssetModal from '@/components/asset/AssetModal.vue'
 import SearchPanel from '@/components/asset/SearchPanel.vue'

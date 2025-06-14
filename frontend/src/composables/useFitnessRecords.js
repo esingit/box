@@ -1,7 +1,7 @@
 import { ref, reactive } from 'vue';
-import axios from '@/utils/axios.js';
+import axios from '@/utils/axios.ts';
 import { formatFitnessRecord } from '@/utils/commonMeta';
-import emitter from '@/utils/eventBus.js';
+import emitter from '@/utils/eventBus.ts';
 
 export function useFitnessRecords() {
   const records = ref([]);

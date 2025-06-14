@@ -11,7 +11,7 @@
 
 <script setup>
 import { LucidePencil, LucideTrash2 } from 'lucide-vue-next';
-import emitter from '@/utils/eventBus.js';
+import emitter from '@/utils/eventBus.ts';
 
 const props = defineProps({
   record: {

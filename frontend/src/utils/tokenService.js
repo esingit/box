@@ -22,7 +22,7 @@ class TokenService {
         throw new Error('No token found');
       }
 
-      const { useUserStore } = await import('@/stores/userStore');
+      const { useUserStore } = await import('@/store/userStore');
       const userStore = useUserStore();
 
       // 使用统一的token验证方法
