@@ -38,7 +38,7 @@ export function createDynamicNaiveTheme() {
             tableColor: getCSSVar('--bg-main'),
 
             dividerColor: getCSSVar('--border-sub'),
-            borderRadius: getCSSVar('--radius-full'),
+            borderRadius: getCSSVar('--radius-xl'),
             fontFamily: getCSSVar('--font-family'),
         },
 
