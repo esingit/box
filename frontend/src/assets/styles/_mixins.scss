@@ -1,0 +1,150 @@
+/* 应用容器 */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* 内容区域 */
+.content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.main-content {
+  flex: 1;
+}
+
+.main-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-xs) var(--space-xl);
+  border-bottom: 1px solid var(--border-main);
+}
+
+/* 侧边栏 */
+.sidebar {
+  width: var(--sidebar-w);
+  background-color: var(--bg-main);
+  border-right: 1px solid var(--border-main);
+  transition: width var(--transition);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-w);
+}
+
+.logo {
+  height: var(--menu-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin: var(--space-xs) var(--space-md);
+}
+
+.logo-icon {
+  transition: transform 0.5s ease;
+}
+
+.logo-icon.rotate {
+  transform: rotate(360deg);
+}
+
+/* 菜单 */
+.menu {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  height: var(--menu-h);
+  padding: 0 var(--space-lg);
+  color: var(--text-sub);
+  text-decoration: none;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.menu-item:hover {
+  background-color: var(--bg-sub);
+  color: var(--text-main);
+}
+
+.menu-item.active {
+  background-color: var(--bg-sub);
+  color: var(--text-main);
+  font-weight: var(--font-medium);
+}
+
+.menu-icon {
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.menu-text {
+  opacity: 1;
+  transition: all var(--transition);
+}
+
+.collapsed .menu-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+/* 页面容器 */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-xl);
+}
+
+/* 内容区域 */
+.content-section {
+  margin-top: var(--space-xl);
+  background: var(--bg-main);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-main);
+}
+
+.content-action {
+  margin: var(--space-xl);
+}
+
+/* 布局工具类 */
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Dashboard 布局 */
+.dashboard-wrapper {
+  width: 100%;
+  max-width: 100%;
+  flex-direction: column;
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin: var(--space-lg);
+}

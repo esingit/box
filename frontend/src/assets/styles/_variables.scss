@@ -1,0 +1,140 @@
+:root {
+    /* 主题色 */
+    --primary: #2c3e50;
+    --primary-hover: #34495e;
+    --primary-light: rgba(44, 62, 80, 0.1);
+    --primary-light-solid: #ecf0f1; /* 浅灰蓝背景，可用于块级背景 */
+
+    /* 文字 */
+    --text-main: #353740;
+    --text-sub: #8e8ea0;
+    --text-muted: #acacbe;
+    --text-light: #fff;
+
+    /* 背景 */
+    --bg-main: #fff;
+    --bg-sub: #f7f7f8;
+    --bg-muted: #fafafa;
+    --bg-hover: #f9fafb;
+
+    /* 骨架屏 */
+    --skeleton-bg: #f0f0f0;
+    --skeleton-highlight: #f8f8f8;
+
+    /* 边框 */
+    --border-main: #e5e7eb;
+    --border-sub: #d1d5db;
+    --border-hover: #a3a3a3;
+
+    /* 状态色 */
+    --success: #059669;
+    --success-light: rgba(5, 150, 105, 0.2);
+    --error: #e56a6a;
+    --error-light: rgba(220, 38, 38, 0.2);
+    --warning: #d97706;
+    --warning-light: rgba(217, 119, 6, 0.2);
+    --info: #3b82f6;
+    --info-light: rgba(59, 130, 246, 0.2);
+
+    /* 状态深色 */
+    --success-dark: #4a5568;
+    --error-dark: #1a202c;
+    --warning-dark: #718096;
+    --info-dark: #a0aec0;
+
+    /* 状态背景 */
+    --bg-error: rgba(245, 101, 101, 0.1);
+    --bg-hover-light: rgba(160, 174, 192, 0.1);
+
+    /* 阴影 */
+    --shadow-sm: 0 1px 3px rgba(26, 26, 26, 0.1);
+    --shadow-md: 0 4px 8px rgba(26, 26, 26, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 24px 48px rgba(26, 26, 26, 0.14);
+
+    /* 按钮色 */
+    --btn-primary-bg: #1a1a1a;
+    --btn-primary-text: #fff;
+    --btn-primary-border: #1a1a1a;
+    --btn-primary-hover-bg: #454545;
+    --btn-primary-hover-border: #666;
+
+    --btn-text-color: #666;
+    --btn-text-hover-bg: #f5f5f5;
+    --btn-text-hover-border: #999;
+    --btn-text-border: #e0e0e0;
+
+    --btn-danger-bg: #dc2626;
+    --btn-danger-text: #fff;
+    --btn-danger-border: #dc2626;
+    --btn-danger-hover-bg: #b91c1c;
+    --btn-danger-hover-border: #991b1b;
+
+    --btn-outline-border: #374151;
+    --btn-outline-text: #374151;
+    --btn-outline-hover-bg: #374151;
+    --btn-outline-hover-text: #fff;
+
+    /* 字体 */
+    --font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+    /* 字号 */
+    --font-xs: 12px;
+    --font-sm: 14px;
+    --font-md: 16px;
+    --font-lg: 18px;
+    --font-xl: 20px;
+    --font-xxl: 22px;
+
+    /* 字重 */
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+
+    /* 间距 */
+    --space-xs: 6px;
+    --space-sm: 10px;
+    --space-md: 14px;
+    --space-lg: 18px;
+    --space-xl: 24px;
+    --space-xxl: 28px;
+    --space-xxxl: 36px;
+
+    /* 层级 */
+    --z-neg: -1;
+    --z-base: 1;
+    --z-sticky: 100;
+    --z-dropdown: 1000;
+    --z-fixed: 1200;
+    --z-modal: 2000;
+    --z-popover: 2100;
+    --z-tooltip: 3000;
+
+    /* 组件尺寸 */
+    --menu-h: 48px;
+    --sidebar-w: 160px;
+    --sidebar-collapsed-w: 56px;
+    --content-max-w: 1200px;
+    --input-h: 44px;
+    --input-h-sm: 36px;
+    --btn-h: 40px;
+    --btn-h-sm: 32px;
+
+    /* 圆角 */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+    --radius-xxl: 28px;
+    --radius-full: 9999px;
+
+    /* 过渡 */
+    --transition-fast: 0.15s;
+    --transition-base: 0.25s;
+    --transition-slow: 0.4s;
+    --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+    --transition: var(--transition-base);
+}
+
+

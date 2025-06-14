@@ -1,0 +1,159 @@
+/* 表单布局 */
+.form-group {
+  margin-bottom: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+  color: var(--text-main);
+  font-weight: var(--font-medium);
+  flex-shrink: 0;
+}
+
+.form-control {
+  width: 100%;
+  padding: var(--space-sm);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  transition: var(--transition);
+}
+
+.form-control:hover {
+  border-color: var(--border-hover);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.form-submit {
+  margin-top: var(--space-xl);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+/* 表单消息 */
+.form-message {
+  margin-top: var(--space-md);
+  font-size: var(--font-sm);
+}
+
+.message-error {
+  color: var(--error);
+}
+
+.message-success {
+  color: var(--success);
+}
+
+/* 必填标记 */
+.required {
+  color: var(--error);
+  margin-left: 2px;
+}
+
+/* 验证码输入框组 */
+.captcha-input-group {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.captcha-input {
+  flex: 1;
+}
+
+.captcha-image {
+  height: var(--input-h);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+/* 登录表单特定样式 */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.login-form .form-buttons {
+  margin-top: var(--space-lg);
+  flex-shrink: 0;
+}
+
+.captcha-group {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: stretch;
+}
+
+.captcha-group .input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 按钮容器 */
+.form-btn-container {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.message-container {
+  margin-bottom: var(--space-lg);
+}
+
+/* Select 控件 */
+.form-select {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-full);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-size: var(--font-sm);
+  transition: var(--transition);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+  flex: 1;
+  min-width: 0; /* 防止flex子项溢出 */
+}
+
+.form-select:hover {
+  border-color: var(--border-hover);
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--bg-main);
+}
+
+.form-select:disabled {
+  background-color: var(--bg-sub);
+  cursor: not-allowed;
+}
+
+/* Select 选项 */
+.form-select option {
+  padding: var(--space-sm) var(--space-md);
+  color: var(--text-main);
+}
