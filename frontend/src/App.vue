@@ -84,10 +84,17 @@ const {
 } = authModal
 
 const isUserLoading = ref(true)
-const profileSettingsRef = ref(null)
+const profileSettingsRef = ref<InstanceType<typeof Profile> | null>(null)
 
 function notify(type: 'success' | 'error', msg: string) {
   window.$message?.[type](msg)
+}
+
+// 统一错误处理
+function handleError(error: any, defaultMessage: string) {
+  const message = error.message || defaultMessage
+  notify('error', message)
+  console.error(error) // 记录错误堆栈以便调试
 }
 
 async function handleLoginSuccess() {
@@ -97,8 +104,8 @@ async function handleLoginSuccess() {
     if (typeof pendingAuthAction.value === 'function') {
       await pendingAuthAction.value()
     }
-  } catch {
-    notify('error', '登录后操作失败')
+  } catch (error) {
+    handleError(error, '登录后操作失败')
   } finally {
     pendingAuthAction.value = null
     hideLogin()
@@ -111,16 +118,21 @@ async function handleLogout() {
     await userStore.logout()
     clearToken()
     notify('success', '已退出登录')
-  } catch {
-    notify('error', '退出登录失败')
+  } catch (error) {
+    handleError(error, '退出登录失败')
   }
 }
 
-async function initializeUser() {
+async function initializeUser(retryCount = 3) {
   try {
     await userStore.hydrate()
-  } catch {
-    notify('error', '用户数据初始化失败')
+  } catch (error) {
+    if (retryCount > 0) {
+      notify('error', '用户数据加载失败，正在重试...')
+      setTimeout(() => initializeUser(retryCount - 1), 2000) // 每两秒尝试一次，最多三次
+    } else {
+      handleError(error, '无法加载用户数据，请检查您的网络连接或稍后再试')
+    }
   } finally {
     isUserLoading.value = false
   }
@@ -132,12 +144,3 @@ function handleOpenProfile() {
 
 initializeUser()
 </script>
-
-<style scoped>
-.top-right-user-menu {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 1000;
-}
-</style>
