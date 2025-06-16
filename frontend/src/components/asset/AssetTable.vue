@@ -91,8 +91,8 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import EmptyState from '@/components/common/EmptyState.vue'
-import RecordActions from '@/components/common/RecordActions.vue'
+import EmptyState from '@/components/base/EmptyState.vue'
+import RecordActions from '@/components/base/RecordActions.vue'
 
 // 默认列宽
 const DEFAULT_COLUMN_WIDTHS = {

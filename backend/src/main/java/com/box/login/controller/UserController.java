@@ -85,19 +85,25 @@ public class UserController {
 
         // --- 登录失败次数跟踪和条件验证码逻辑 --- START
         String loginFailKey = "login_fail:" + username;
-        String captchaKey = "captcha:" + request.getCaptchaId();
+        String captchaId = request.getCaptchaId();
+        String captchaKey = "captcha:" + captchaId;
 
         Integer failCount = redisTemplate.opsForValue().get(loginFailKey) != null ?
                 Integer.parseInt(redisTemplate.opsForValue().get(loginFailKey)) : 0;
 
         boolean captchaRequired = failCount >= 3;
 
-        if (captchaRequired) {
+        // 页面存在验证码或登录失败次数>=3次需要验证码
+        String captcha = request.getCaptcha();
+        if (captchaRequired || captcha != null) {
             String savedCaptcha = redisTemplate.opsForValue().get(captchaKey);
+            if (captchaId == null) {
+                return Result.<String>error("请输入验证码", true);
+            }
             if (savedCaptcha == null) {
                 return Result.<String>error("验证码已过期", true);
             }
-            if (!savedCaptcha.equalsIgnoreCase(request.getCaptcha())) {
+            if (!savedCaptcha.equalsIgnoreCase(captcha)) {
                 incrementLoginFailCount(username, loginFailKey, failCount);
                 redisTemplate.delete(captchaKey);
                 return Result.<String>error("验证码错误", true);

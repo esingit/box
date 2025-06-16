@@ -1,14 +1,21 @@
+<!-- components/layout/UserMenuGuest.vue -->
 <template>
-  <div class="user-menu-container">
-    <button class="user-menu-btn" @click="$emit('show-login')">
-      <LucideLogIn class="btn-icon" />
+  <div class="flex items-center justify-end w-full px-3 py-1.5 relative select-none bg-white">
+    <button
+        @click="$emit('show-login')"
+        class="flex items-center gap-1.5 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-full transition"
+    >
+      <LucideLogIn class="w-4 h-4 text-gray-500" />
       登录
     </button>
 
-    <span class="divider-vertical"></span>
+    <div class="w-px h-5 mx-2 bg-gray-300"></div>
 
-    <button class="user-menu-btn" @click="$emit('show-register')">
-      <LucideUserPlus class="btn-icon" />
+    <button
+        @click="$emit('show-register')"
+        class="flex items-center gap-1.5 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-full transition"
+    >
+      <LucideUserPlus class="w-4 h-4 text-gray-500" />
       注册
     </button>
   </div>
@@ -16,34 +23,5 @@
 
 <script setup lang="ts">
 import { LucideLogIn, LucideUserPlus } from 'lucide-vue-next'
-
 defineEmits(['show-login', 'show-register'])
 </script>
-
-<style scoped>
-.user-menu-container {
-  display: flex;
-  align-items: center;
-  user-select: none;
-  background-color: var(--bg-main);
-  padding: 4px 12px;
-  border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm);
-}
-
-.user-menu-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
-  border: none;
-  background: transparent;
-  color: var(--text-main);
-  cursor: pointer;
-}
-
-.user-menu-btn:hover {
-  background-color: var(--bg-hover);
-  border-radius: var(--radius-full);
-}
-</style>

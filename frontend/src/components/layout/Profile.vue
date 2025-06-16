@@ -1,286 +1,209 @@
 <template>
-  <n-modal
-      v-model:show="isOpen"
-      :closable="false"
-      :auto-focus="false"
-      style="width: 800px; height: 500px;"
-  >
-    <n-card
-        title="设置"
-        :bordered="false"
-        size="huge"
-        role="dialog"
-        aria-labelledby="settings-modal"
-        style="width: 100%; height: 100%;"
-    >
-      <template #header-extra>
-        <n-button quaternary circle @click="closeModal">
-          <template #icon>
-            <LucideX class="close-icon" />
-          </template>
-        </n-button>
-      </template>
-
-      <n-layout has-sider style="height: calc(100% - 60px);">
-        <!-- 左侧导航菜单 -->
-        <n-layout-sider
-            :width="200"
-            :collapsed-width="200"
-            show-trigger="bar"
-            collapse-mode="width"
-            :native-scrollbar="false"
-            bordered
+  <div v-if="isOpen" class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center overflow-hidden">
+    <div class="bg-white w-[800px] max-h-[calc(100vh-40px)] rounded-2xl overflow-hidden flex flex-col">
+      <!-- Header -->
+      <header class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">设置</h2>
+        <button
+            @click="closeModal"
+            aria-label="关闭设置窗口"
+            class="btn-text"
+            type="button"
         >
-          <n-menu
-              :options="menuOptions"
-              v-model:value="activeTab"
-              :root-indent="18"
-              :indent="24"
-          />
-        </n-layout-sider>
+          ✕
+        </button>
+      </header>
 
-        <!-- 右侧内容区域 -->
-        <n-layout-content :native-scrollbar="false" style="padding: 24px;">
-          <!-- 个人信息面板 -->
-          <div v-show="activeTab === 'profile'">
-            <n-h3 style="margin-top: 0;">个人信息</n-h3>
-            <n-descriptions
-                :column="1"
-                bordered
-                size="medium"
-                label-placement="left"
-                :label-style="{ width: '120px' }"
-            >
-              <n-descriptions-item label="用户名">
-                <n-text strong>{{ user?.username || 'N/A' }}</n-text>
-              </n-descriptions-item>
-              <n-descriptions-item label="上次登录">
-                <n-text>{{ formatDateTime(user?.lastLoginTime) }}</n-text>
-              </n-descriptions-item>
-            </n-descriptions>
+      <!-- Body -->
+      <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <nav class="w-48 p-3 space-y-1" aria-label="设置菜单">
+          <button
+              type="button"
+              class="w-full menu-btn"
+              :class="activeTab === 'profile' ? 'active' : ''"
+              @click="switchTab('profile')"
+          >
+            个人信息
+          </button>
+          <button
+              type="button"
+              class="w-full menu-btn"
+              :class="activeTab === 'security' ? 'active' : ''"
+              @click="switchTab('security')"
+          >
+            安全设置
+          </button>
+        </nav>
+
+        <!-- Content -->
+        <section
+            ref="contentRef"
+            class="flex-1 p-8 overflow-auto outline-none h-[560px]"
+            tabindex="0"
+            aria-live="polite"
+        >
+          <!-- Profile -->
+          <div v-if="activeTab === 'profile'">
+            <h3 class="text-xl font-semibold mb-6 text-gray-900">个人信息</h3>
+            <table class="w-full text-sm text-gray-700 border-collapse">
+              <tbody>
+              <tr class="border-b last:border-b-0">
+                <td class="font-medium w-32 py-3">用户名</td>
+                <td class="py-3">{{ user?.username || 'N/A' }}</td>
+              </tr>
+              <tr class="border-b last:border-b-0">
+                <td class="font-medium py-3">上次登录</td>
+                <td class="py-3">{{ formatDateTime(user?.lastLoginTime) }}</td>
+              </tr>
+              </tbody>
+            </table>
           </div>
 
-          <!-- 安全设置面板 -->
-          <div v-show="activeTab === 'security'">
-            <n-h3 style="margin-top: 0;">修改密码</n-h3>
-            <n-form
-                ref="formRef"
-                :model="formModel"
-                :rules="formRules"
-                size="medium"
-                label-placement="left"
-                :label-width="100"
-                style="max-width: 400px;"
+          <!-- Security -->
+          <div v-else-if="activeTab === 'security'">
+            <h3 class="text-xl font-semibold mb-6 text-gray-900">修改密码</h3>
+            <Form
+                :validation-schema="schema"
+                @submit="handlePasswordSubmit"
+                class="space-y-6 max-w-md"
+                v-slot="{ errors }"
             >
-              <n-form-item label="旧密码" path="oldPassword">
-                <n-input
-                    v-model:value="formModel.oldPassword"
+              <div>
+                <label for="oldPassword" class="block text-sm font-medium text-gray-700 mb-2">旧密码</label>
+                <Field
+                    id="oldPassword"
+                    name="oldPassword"
                     type="password"
                     placeholder="请输入旧密码"
-                    autocomplete="current-password"
-                    show-password-on="click"
+                    class="input-base"
                 />
-              </n-form-item>
+                <span class="msg-error">{{ errors.oldPassword }}</span>
+              </div>
 
-              <n-form-item label="新密码" path="newPassword">
-                <n-input
-                    v-model:value="formModel.newPassword"
+              <div>
+                <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-2">新密码</label>
+                <Field
+                    id="newPassword"
+                    name="newPassword"
                     type="password"
                     placeholder="6-20位字母数字组合"
-                    autocomplete="new-password"
-                    show-password-on="click"
+                    class="input-base"
                 />
-              </n-form-item>
+                <span class="msg-error">{{ errors.newPassword }}</span>
+              </div>
 
-              <n-form-item label="确认密码" path="confirmPassword">
-                <n-input
-                    v-model:value="formModel.confirmPassword"
+              <div>
+                <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">确认密码</label>
+                <Field
+                    id="confirmPassword"
+                    name="confirmPassword"
                     type="password"
                     placeholder="再次确认新密码"
-                    autocomplete="new-password"
-                    show-password-on="click"
+                    class="input-base"
                 />
-              </n-form-item>
+                <span class="msg-error">{{ errors.confirmPassword }}</span>
+              </div>
 
-              <n-form-item v-if="resetMsg">
-                <n-alert
-                    :type="resetSuccess ? 'success' : 'error'"
-                    closable
-                    @close="resetMsg = ''"
-                >
-                  {{ resetMsg }}
-                </n-alert>
-              </n-form-item>
+              <p
+                  v-if="resetMsg"
+                  :class="resetSuccess ? 'msg-success' : 'msg-error'"
+                  class="mt-1 text-sm font-medium"
+                  role="alert"
+              >
+                {{ resetMsg }}
+              </p>
 
-              <n-form-item>
-                <n-space>
-                  <n-button
-                      type="primary"
-                      :loading="loading"
-                      @click="handlePasswordSubmit"
-                  >
-                    确认修改
-                  </n-button>
-                  <n-button @click="resetForm">重置</n-button>
-                </n-space>
-              </n-form-item>
-            </n-form>
+              <div class="flex gap-3">
+                <button type="submit" class="btn-primary" :disabled="loading">
+                  {{ loading ? '提交中...' : '确认修改' }}
+                </button>
+                <button type="button" class="btn-outline" @click="onResetClicked">重置</button>
+              </div>
+            </Form>
           </div>
-        </n-layout-content>
-      </n-layout>
-    </n-card>
-  </n-modal>
+        </section>
+      </div>
+    </div>
+  </div>
 </template>
 
-<script lang="ts" setup>
-import { ref, computed, reactive } from 'vue'
+<script setup lang="ts">
+import { ref, computed, nextTick } from 'vue'
 import { useUserStore } from '@/store/userStore'
-import { useMessage } from 'naive-ui'
-import axios from '@/utils/axios'
-import type { FormInst, FormRules, MenuOption } from 'naive-ui'
-import { LucideX } from 'lucide-vue-next'
+import { Field, Form } from 'vee-validate'
+import * as yup from 'yup'
 
-interface User {
-  username?: string
-  lastLoginTime?: string
-}
+const isOpen = ref(false)
+const activeTab = ref<'profile' | 'security'>('profile')
+const contentRef = ref<HTMLElement | null>(null)
 
-interface PasswordForm {
-  oldPassword: string
-  newPassword: string
-  confirmPassword: string
-}
+const loading = ref(false)
+const resetMsg = ref('')
+const resetSuccess = ref(false)
 
 const userStore = useUserStore()
-const message = useMessage()
-const formRef = ref<FormInst | null>(null)
+const user = computed(() => userStore.user)
 
-const user = computed<User>(() => userStore.user)
-const isOpen = ref<boolean>(false)
-const activeTab = ref<string>('profile')
-const resetMsg = ref<string>('')
-const resetSuccess = ref<boolean>(false)
-const loading = ref<boolean>(false)
-
-const formModel = reactive<PasswordForm>({
-  oldPassword: '',
-  newPassword: '',
-  confirmPassword: ''
+const schema = yup.object({
+  oldPassword: yup.string().required('请输入旧密码'),
+  newPassword: yup
+      .string()
+      .required('请输入新密码')
+      .matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,20}$/, '密码必须为6-20位字母数字组合'),
+  confirmPassword: yup
+      .string()
+      .oneOf([yup.ref('newPassword')], '两次密码不一致')
+      .required('请确认新密码'),
 })
 
-const formRules: FormRules = {
-  oldPassword: [
-    { required: true, message: '请输入旧密码', trigger: 'blur' }
-  ],
-  newPassword: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    {
-      pattern: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,20}$/,
-      message: '密码必须为6-20位，包含字母和数字',
-      trigger: 'blur'
-    }
-  ],
-  confirmPassword: [
-    { required: true, message: '请确认新密码', trigger: 'blur' },
-    {
-      validator: (rule, value) => {
-        return value === formModel.newPassword
-      },
-      message: '两次新密码输入不一致',
-      trigger: 'blur'
-    }
-  ]
-}
-
-const menuOptions: MenuOption[] = [
-  {
-    label: '个人信息',
-    key: 'profile'
-  },
-  {
-    label: '安全设置',
-    key: 'security'
-  }
-]
-
-const closeModal = (): void => {
-  isOpen.value = false
-  resetForm()
-  resetMsg.value = ''
-  resetSuccess.value = false
-}
-
-const resetForm = (): void => {
-  formModel.oldPassword = ''
-  formModel.newPassword = ''
-  formModel.confirmPassword = ''
-  formRef.value?.restoreValidation()
-}
-
-const formatDateTime = (val: string | undefined): string => {
+function formatDateTime(val?: string): string {
   if (!val) return 'N/A'
-
-  try {
-    const date = new Date(val)
-    if (isNaN(date.getTime())) return val
-
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    const seconds = String(date.getSeconds()).padStart(2, '0')
-
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
-  } catch {
-    return val
-  }
+  const d = new Date(val)
+  return isNaN(d.getTime()) ? val : d.toLocaleString()
 }
 
-const handlePasswordSubmit = async (): Promise<void> => {
-  if (!formRef.value) return
+function resetForm() {
+  // 这里只重置输入，由vee-validate的Form实现
+}
 
-  try {
-    await formRef.value.validate()
-  } catch {
-    return
-  }
-
+function onResetClicked() {
   resetMsg.value = ''
   resetSuccess.value = false
-  loading.value = true
+}
 
-  try {
-    const { data } = await axios.post('/api/user/reset-password', {
-      username: user.value.username,
-      oldPassword: formModel.oldPassword,
-      newPassword: formModel.newPassword
-    })
-
-    if (data.success) {
-      resetMsg.value = '密码重置成功！'
-      resetSuccess.value = true
-      message.success('密码修改成功')
-      resetForm()
-    } else {
-      resetMsg.value = data.message || '重置失败'
-      resetSuccess.value = false
-    }
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.message || '请求失败，请稍后再试'
-    resetMsg.value = errorMessage
+function switchTab(tab: 'profile' | 'security') {
+  if (activeTab.value !== tab) {
+    activeTab.value = tab
+    resetMsg.value = ''
     resetSuccess.value = false
-    message.error(errorMessage)
-  } finally {
-    loading.value = false
+    nextTick(() => {
+      contentRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
+    })
   }
 }
 
-const openModal = (): void => {
+async function handlePasswordSubmit(values: any) {
+  loading.value = true
+  const { oldPassword, newPassword } = values
+  const result = await userStore.resetPassword(oldPassword, newPassword)
+  resetMsg.value = result.message
+  resetSuccess.value = result.success
+  loading.value = false
+}
+
+function openModal() {
   isOpen.value = true
   activeTab.value = 'profile'
-  resetForm()
+  resetMsg.value = ''
+  resetSuccess.value = false
 }
 
-defineExpose({ openModal })
+function closeModal() {
+  isOpen.value = false
+  resetMsg.value = ''
+  resetSuccess.value = false
+}
+
+defineExpose({ openModal, closeModal })
 </script>

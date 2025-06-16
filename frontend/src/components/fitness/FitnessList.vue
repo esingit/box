@@ -23,7 +23,7 @@
 
 <script setup>
 import FitnessTable from './FitnessTable.vue';
-import PaginationBar from 'components/common/PaginationBar.vue';
+import PaginationBar from '@/components/base/PaginationBar.vue';
 
 defineProps({
   records: {

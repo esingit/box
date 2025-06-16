@@ -1,130 +1,139 @@
 :root {
-    /* 主题色 */
-    --primary: #2c3e50;
-    --primary-hover: #34495e;
-    --primary-light: rgba(44, 62, 80, 0.1);
-    --primary-light-solid: #ecf0f1;
+  /* 主题色 */
+  --primary: #2c3e50;
+  --primary-hover: #34495e;
+  --primary-light: rgba(44, 62, 80, 0.1);
+  --primary-light-solid: #ecf0f1;
 
-    /* 文字颜色 */
-    --text-main: #353740;
-    --text-sub: #8e8ea0;
-    --text-muted: #acacbe;
-    --text-light: #ffffff;
-    --text-hint: #c2c2d4;
+  /* 文字颜色 */
+  --text-main: #353740;
+  --text-sub: #8e8ea0;
+  --text-muted: #acacbe;
+  --text-light: #ffffff;
+  --text-hint: #c2c2d4;
 
-    /* 背景颜色 */
-    --bg-main: #ffffff;
-    --bg-sub: #f7f7f8;
-    --bg-muted: #fafafa;
-    --bg-hover: #f9fafb;
-    --bg-error: rgba(245, 101, 101, 0.1);
-    --bg-hover-light: rgba(160, 174, 192, 0.1);
+  /* 背景颜色 */
+  --bg-main: #ffffff;
+  /* 次级背景，用于菜单、卡片、浮层等 */
+  --bg-sub: #f9f9f9;
+  /* hover 背景色，浅灰 */
+  --bg-hover: #f3f4f6;
+  /* active 背景色，略深一些 */
+  --bg-active: #e5e7eb;
+  /* 禁用项背景色 */
+  --bg-disabled: #f1f1f1;
+  /* 焦点背景高亮，用于键盘 focus 场景 */
+  --bg-focus: #e0e7ff;
+  /* 高对比背景（比如高亮搜索项） */
+  --bg-highlight: #fef3c7;
+  /* 滚动条/细节背景 */
+  --bg-muted: #f6f6f6;
 
-    /* 基础阴影 */
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05); /* 最轻微阴影 */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
-    --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.2); /* 最大阴影 */
+  /* 基础阴影 */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05); /* 最轻微阴影 */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.2); /* 最大阴影 */
 
-    /* 特殊阴影 */
-    --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* 内阴影 */
-    --shadow-glow: 0 0 15px rgba(59, 130, 246, 0.5); /* 发光效果 */
-    --shadow-focus: 0 0 0 3px rgba(44, 62, 80, 0.3); /* 聚焦状态 */
-    --shadow-outline: 0 0 0 2px var(--primary); /* 轮廓高亮 */
+  /* 特殊阴影 */
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* 内阴影 */
+  --shadow-glow: 0 0 15px rgba(59, 130, 246, 0.5); /* 发光效果 */
+  --shadow-focus: 0 0 0 3px rgba(44, 62, 80, 0.3); /* 聚焦状态 */
+  --shadow-outline: 0 0 0 2px var(--primary); /* 轮廓高亮 */
 
-    /* 功能阴影 */
-    --shadow-card: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1); /* 卡片 */
-    --shadow-dropdown: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05); /* 下拉菜单 */
-    --shadow-modal: 0 25px 50px rgba(0, 0, 0, 0.15), 0 10px 15px rgba(0, 0, 0, 0.1); /* 模态框 */
-    --shadow-tooltip: 0 10px 15px rgba(0, 0, 0, 0.1); /* 提示框 */
+  /* 功能阴影 */
+  --shadow-card: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1); /* 卡片 */
+  --shadow-dropdown: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05); /* 下拉菜单 */
+  --shadow-modal: 0 25px 50px rgba(0, 0, 0, 0.15), 0 10px 15px rgba(0, 0, 0, 0.1); /* 模态框 */
+  --shadow-tooltip: 0 10px 15px rgba(0, 0, 0, 0.1); /* 提示框 */
 
-    /* 状态阴影 */
-    --shadow-success: 0 0 10px rgba(5, 150, 105, 0.4); /* 成功状态 */
-    --shadow-error: 0 0 10px rgba(220, 38, 38, 0.4); /* 错误状态 */
-    --shadow-warning: 0 0 10px rgba(217, 119, 6, 0.4); /* 警告状态 */
-    --shadow-info: 0 0 10px rgba(59, 130, 246, 0.4); /* 信息状态 */
+  /* 状态阴影 */
+  --shadow-success: 0 0 10px rgba(5, 150, 105, 0.4); /* 成功状态 */
+  --shadow-error: 0 0 10px rgba(220, 38, 38, 0.4); /* 错误状态 */
+  --shadow-warning: 0 0 10px rgba(217, 119, 6, 0.4); /* 警告状态 */
+  --shadow-info: 0 0 10px rgba(59, 130, 246, 0.4); /* 信息状态 */
 
-    /* 骨架屏 */
-    --skeleton-bg: #f0f0f0;
-    --skeleton-highlight: #f8f8f8;
+  /* 骨架屏 */
+  --skeleton-bg: #f0f0f0;
+  --skeleton-highlight: #f8f8f8;
 
-    /* 边框颜色 */
-    --border-main: #e5e7eb;
-    --border-sub: #d1d5db;
-    --border-hover: #a3a3a3;
-    --border-focus: 2px solid var(--primary);
+  /* 边框颜色 */
+  --border-main: #e5e7eb;
+  --border-sub: #d1d5db;
+  --border-hover: #a3a3a3;
+  --border-focus: 2px solid var(--primary);
 
-    /* 状态色 */
-    --success: #059669;
-    --success-light: rgba(5, 150, 105, 0.2);
-    --error: #e56a6a;
-    --error-light: rgba(220, 38, 38, 0.2);
-    --warning: #d97706;
-    --warning-light: rgba(217, 119, 6, 0.2);
-    --info: #3b82f6;
-    --info-light: rgba(59, 130, 246, 0.2);
+  /* 状态色 */
+  --success: #059669;
+  --success-light: rgba(5, 150, 105, 0.2);
+  --error: #e56a6a;
+  --error-light: rgba(220, 38, 38, 0.2);
+  --warning: #d97706;
+  --warning-light: rgba(217, 119, 6, 0.2);
+  --info: #3b82f6;
+  --info-light: rgba(59, 130, 246, 0.2);
 
-    /* 状态深色 */
-    --success-dark: #4a5568;
-    --error-dark: #1a202c;
-    --warning-dark: #718096;
-    --info-dark: #a0aec0;
+  /* 状态深色 */
+  --success-dark: #4a5568;
+  --error-dark: #1a202c;
+  --warning-dark: #718096;
+  --info-dark: #a0aec0;
 
-    /* 按钮颜色 */
-    --btn-primary: #1a1a1a;
-    --btn-primary-hover: #454545;
-    --btn-text: #666666;
-    --btn-text-hover: #f5f5f5;
-    --btn-danger: #dc2626;
-    --btn-danger-hover: #b91c1c;
-    --btn-outline: #374151;
-    --btn-outline-hover: #374151;
+  /* 按钮颜色 */
+  --btn-primary: #1a1a1a;
+  --btn-primary-hover: #454545;
+  --btn-text: #666666;
+  --btn-text-hover: #f5f5f5;
+  --btn-danger: #dc2626;
+  --btn-danger-hover: #b91c1c;
+  --btn-outline: #374151;
+  --btn-outline-hover: #374151;
 
-    /* 按钮状态 */
-    --btn-primary-bg: var(--btn-primary);
-    --btn-primary-text: var(--text-light);
-    --btn-primary-border: var(--btn-primary);
-    --btn-primary-hover-bg: var(--btn-primary-hover);
-    --btn-primary-hover-border: #666666;
+  /* 按钮状态 */
+  --btn-primary-bg: var(--btn-primary);
+  --btn-primary-text: var(--text-light);
+  --btn-primary-border: var(--btn-primary);
+  --btn-primary-hover-bg: var(--btn-primary-hover);
+  --btn-primary-hover-border: #666666;
 
-    --btn-text-bg: transparent;
-    --btn-text-color: var(--btn-text);
-    --btn-text-border: #e0e0e0;
-    --btn-text-hover-bg: var(--btn-text-hover);
-    --btn-text-hover-border: #999999;
+  --btn-text-bg: transparent;
+  --btn-text-color: var(--btn-text);
+  --btn-text-border: #e0e0e0;
+  --btn-text-hover-bg: var(--btn-text-hover);
+  --btn-text-hover-border: #999999;
 
-    --btn-danger-bg: var(--btn-danger);
-    --btn-danger-text: var(--text-light);
-    --btn-danger-border: var(--btn-danger);
-    --btn-danger-hover-bg: var(--btn-danger-hover);
-    --btn-danger-hover-border: #991b1b;
+  --btn-danger-bg: var(--btn-danger);
+  --btn-danger-text: var(--text-light);
+  --btn-danger-border: var(--btn-danger);
+  --btn-danger-hover-bg: var(--btn-danger-hover);
+  --btn-danger-hover-border: #991b1b;
 
-    --btn-outline-bg: transparent;
-    --btn-outline-color: var(--btn-outline);
-    --btn-outline-border: var(--btn-outline);
-    --btn-outline-hover-bg: var(--btn-outline-hover);
-    --btn-outline-hover-color: var(--text-light);
+  --btn-outline-bg: transparent;
+  --btn-outline-color: var(--btn-outline);
+  --btn-outline-border: var(--btn-outline);
+  --btn-outline-hover-bg: var(--btn-outline-hover);
+  --btn-outline-hover-color: var(--text-light);
 
-    /* 字体 */
-    --font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  /* 字体 */
+  --font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
-    /* 字号 */
-    --font-xs: 12px;
-    --font-sm: 14px;
-    --font-md: 16px;
-    --font-lg: 18px;
-    --font-xl: 20px;
-    --font-xxl: 22px;
+  /* 字号 */
+  --font-xs: 12px;
+  --font-sm: 14px;
+  --font-md: 16px;
+  --font-lg: 18px;
+  --font-xl: 20px;
+  --font-xxl: 22px;
 
-    /* 字重 */
-    --font-normal: 400;
-    --font-medium: 500;
-    --font-semibold: 600;
-    --font-bold: 700;
+  /* 字重 */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
 
-    /* 间距 */
+  /* 间距 */
   --space-xxxs: 2px;
   --space-xxs: 4px;
   --space-xs: 6px;
@@ -137,37 +146,37 @@
   --space-xxxxl: 48px;
   --space-xxxxxl: 64px;
 
-    /* 层级 */
-    --z-neg: -1;
-    --z-base: 1;
-    --z-sticky: 100;
-    --z-dropdown: 1000;
-    --z-fixed: 1200;
-    --z-modal: 2000;
-    --z-popover: 2100;
-    --z-tooltip: 3000;
+  /* 层级 */
+  --z-neg: -1;
+  --z-base: 1;
+  --z-sticky: 100;
+  --z-dropdown: 1000;
+  --z-fixed: 1200;
+  --z-modal: 2000;
+  --z-popover: 2100;
+  --z-tooltip: 3000;
 
-    /* 组件尺寸 */
-    --menu-h: 48px;
-    --sidebar-w: 160px;
-    --sidebar-collapsed-w: 56px;
-    --content-max-w: 1200px;
-    --input-h: 44px;
-    --input-h-sm: 36px;
-    --btn-h: 40px;
-    --btn-h-sm: 32px;
+  /* 组件尺寸 */
+  --menu-h: 48px;
+  --sidebar-w: 160px;
+  --sidebar-collapsed-w: 56px;
+  --content-max-w: 1200px;
+  --input-h: 44px;
+  --input-h-sm: 36px;
+  --btn-h: 40px;
+  --btn-h-sm: 32px;
 
-    /* 圆角 */
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 14px;
-    --radius-xl: 20px;
-    --radius-xxl: 28px;
-    --radius-full: 9999px;
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-xxl: 28px;
+  --radius-full: 9999px;
 
-    /* 过渡动画 */
-    --transition-fast: 0.15s;
-    --transition: 0.25s;
-    --transition-slow: 0.4s;
-    --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  /* 过渡动画 */
+  --transition-fast: 0.15s;
+  --transition: 0.25s;
+  --transition-slow: 0.4s;
+  --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
 }

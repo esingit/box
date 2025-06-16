@@ -1,0 +1,78 @@
+.input-base {
+  @apply block w-full px-4 py-2 text-sm outline-none appearance-none;
+
+  font-family: var(--font-family, sans-serif);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-xl);
+  height: var(--input-h);
+  transition: border-color 0.2s ease;
+
+  &::placeholder {
+    color: var(--text-hint);
+  }
+
+  &:focus {
+    border-color: var(--primary);
+    background-color: var(--bg-hover);
+    /* 去掉阴影 */
+    box-shadow: none;
+  }
+
+  &:disabled,
+  &.is-disabled {
+    background-color: var(--bg-muted);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    border-color: var(--border-sub);
+  }
+
+  &.is-error {
+    border-color: var(--error);
+    background-color: var(--bg-error);
+
+    &:focus {
+      box-shadow: none;
+    }
+  }
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+textarea,
+select {
+  @extend .input-base;
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg fill='gray' viewBox='0 0 20 20'%3E%3Cpath d='M7 7l3-3 3 3M7 13l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+}
+
+.input-sm {
+  height: var(--input-h-sm);
+  font-size: var(--font-xs);
+  padding: 0 var(--space-sm);
+  border-radius: var(--radius-md);
+}
+
+.input-pill {
+  border-radius: var(--radius-full);
+}
+
+/* 错误提示文字 */
+.input-error-text {
+  margin-top: 0.25rem;
+  font-size: 0.75rem; /* text-xs */
+  color: var(--error);
+}

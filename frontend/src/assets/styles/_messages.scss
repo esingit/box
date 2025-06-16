@@ -1,0 +1,78 @@
+@layer components {
+  /* 通用提示文字基础样式 */
+  %msg-base {
+    @apply text-sm mt-1;
+    font-family: var(--font-family, sans-serif);
+    line-height: 1.5;
+  }
+
+  /* 状态颜色文字 */
+  .msg-success {
+    @extend %msg-base;
+    color: var(--success);
+  }
+
+  .msg-error {
+    @extend %msg-base;
+    color: var(--error);
+  }
+
+  .msg-warning {
+    @extend %msg-base;
+    color: var(--warning);
+  }
+
+  .msg-info {
+    @extend %msg-base;
+    color: var(--info);
+  }
+
+  .msg-muted {
+    @extend %msg-base;
+    color: var(--text-muted);
+  }
+
+  .msg-strong {
+    @extend %msg-base;
+    color: var(--text-main);
+    font-weight: var(--font-medium);
+  }
+
+  /* 状态提示块基础样式 */
+  .msg-block {
+    @extend %msg-base;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-lg);
+    background-color: var(--bg-sub);
+    border: 1px solid var(--border-sub);
+  }
+
+  /* 状态块变体：成功、错误、警告、信息 */
+  .msg-block-success {
+    @extend .msg-block;
+    background-color: var(--success-light);
+    color: var(--success);
+    border-color: var(--success);
+  }
+
+  .msg-block-error {
+    @extend .msg-block;
+    background-color: var(--error-light);
+    color: var(--error);
+    border-color: var(--error);
+  }
+
+  .msg-block-warning {
+    @extend .msg-block;
+    background-color: var(--warning-light);
+    color: var(--warning);
+    border-color: var(--warning);
+  }
+
+  .msg-block-info {
+    @extend .msg-block;
+    background-color: var(--info-light);
+    color: var(--info);
+    border-color: var(--info);
+  }
+}

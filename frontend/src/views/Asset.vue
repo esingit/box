@@ -150,7 +150,7 @@ import emitter from '@/utils/eventBus.ts'
 import AssetList from '@/components/asset/AssetList.vue'
 import AssetModal from '@/components/asset/AssetModal.vue'
 import SearchPanel from '@/components/asset/SearchPanel.vue'
-import SkeletonCard from '@/components/common/SkeletonCard.vue'
+import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import axios from 'axios'
 
 // 外部依赖

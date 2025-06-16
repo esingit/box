@@ -141,7 +141,7 @@ import {useFitnessForm} from '@/composable/useFitnessForm';
 import FitnessModal from '@/components/fitness/FitnessModal.vue';
 import FitnessList from '@/components/fitness/FitnessList.vue';
 import SearchPanel from '@/components/fitness/SearchPanel.vue';
-import SkeletonCard from '@/components/common/SkeletonCard.vue';
+import SkeletonCard from '@/components/base/SkeletonCard.vue';
 
 // 统计数据
 const stats = ref({

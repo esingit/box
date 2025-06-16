@@ -83,7 +83,7 @@ import { LucidePlus, LucideX } from 'lucide-vue-next'
 import ModalHeader from './ModalHeader.vue'
 import AssetNamesList from './AssetNamesList.vue'
 import AssetNameForm from './AssetNameForm.vue'
-import SkeletonCard from '@/components/common/SkeletonCard.vue'
+import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import axios from 'axios'
 import emitter from '@/utils/eventBus.ts'
 

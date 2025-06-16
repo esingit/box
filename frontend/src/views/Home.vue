@@ -1,51 +1,45 @@
+<!-- src/views/Home.vue -->
 <template>
-  <n-layout class="page-container" style="height: 100vh; background: transparent;">
-    <n-layout-header class="header" style="display: flex; justify-content: center; align-items: center; gap: 8px; background: transparent;">
-      <Package
-          class="logo-icon"
-          :class="{ rotate: isRotating }"
+  <div class="flex flex-col h-full">
+    <header class="flex items-center justify-center gap-2 px-4 py-3">
+    <Package
+          class="cursor-pointer transition-transform duration-500"
+          :class="{ 'rotate-[360deg]': isRotating }"
           :size="40"
           @click="rotateBox"
-          style="cursor: pointer;"
       />
-      <h1 class="page-title" style="margin: 0;">BOX</h1>
-    </n-layout-header>
+      <h1 class="text-2xl font-bold">BOX</h1>
+    </header>
 
-    <n-layout-content class="content-wrapper" style="display: flex; justify-content: center; align-items: center; background: transparent;">
+    <main class="flex-1 overflow-auto p-4">
       <Dashboard v-if="userStore.isLoggedIn" />
-    </n-layout-content>
-  </n-layout>
+    </main>
+  </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { Package } from 'lucide-vue-next';
-import { NLayout, NLayoutHeader, NLayoutContent } from 'naive-ui';
-import Dashboard from '@/components/dashboard/Dashboard.vue';
-import { useUserStore } from '@/store/userStore';
+import { ref } from 'vue'
+import { Package } from 'lucide-vue-next'
+import Dashboard from '@/components/dashboard/Dashboard.vue'
+import { useUserStore } from '@/store/userStore'
 
-const userStore = useUserStore();
-const isRotating = ref(false);
+const userStore = useUserStore()
+const isRotating = ref(false)
+
+function applyRotationAnimation(duration = 1000) {
+  isRotating.value = true
+  setTimeout(() => {
+    isRotating.value = false
+  }, duration)
+}
 
 function rotateBox() {
-  isRotating.value = true;
-  setTimeout(() => {
-    isRotating.value = false;
-  }, 1000);
+  applyRotationAnimation()
 }
 </script>
 
 <style scoped>
-@keyframes rotateAnimation {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.rotate {
-  animation: rotateAnimation 1s linear;
+.rotate-\[360deg\] {
+  transform: rotate(360deg);
 }
 </style>

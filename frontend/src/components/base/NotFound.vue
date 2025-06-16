@@ -1,16 +1,16 @@
 <template>
-  <n-space vertical align="center" justify="center" class="exception-container">
-    <n-result
-        :status="code"
-        :title="code"
-        :sub-title="message"
-        class="exception-result"
-    >
-      <n-button type="primary" @click="goHome" class="exception-button">
+  <div class="exception-container flex flex-col items-center justify-center h-[80vh] text-center px-4">
+    <div class="max-w-md w-full">
+      <div class="text-9xl font-extrabold mb-4 select-none text-gray-300">{{ codeDisplay }}</div>
+      <h1 class="text-2xl font-semibold mb-2">{{ message }}</h1>
+      <button
+          @click="goHome"
+          class="mt-6 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-md transition"
+      >
         返回首页
-      </n-button>
-    </n-result>
-  </n-space>
+      </button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -38,6 +38,11 @@ onMounted(() => {
   }
 })
 
+const codeDisplay = computed(() => {
+  // error 类型显示通用错误码 400，或者可以自定义
+  return code.value === 'error' ? '400' : code.value
+})
+
 function goHome() {
   router.push('/home')
 }
@@ -45,19 +50,6 @@ function goHome() {
 
 <style scoped>
 .exception-container {
-  height: 80vh;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.exception-result {
-  max-width: 420px;
-  margin: 0 auto;
-}
-
-.exception-button {
-  margin-top: var(--space-md);
+  /* tailwind 已覆盖 */
 }
 </style>

@@ -1,100 +1,107 @@
-<!-- App.vue -->
 <template>
-  <n-config-provider :theme-overrides="theme">
-    <n-notification-provider>
-      <n-message-provider>
-        <template v-if="isUserLoading">
-          <div class="loading">加载中...</div>
-        </template>
+  <div class="app-wrapper">
+    <!-- 加载中提示 -->
+    <div v-if="isUserLoading" class="loading">加载中...</div>
 
-        <template v-else-if="isLoggedIn">
-          <n-layout has-sider>
-            <Sidebar/>
-            <n-layout>
-              <div class="top-right-user-menu">
-                <UserMenuAuthenticated
-                    :user="user"
-                    @logout="handleLogout"
-                    @open-profile="handleOpenProfile"
-                />
-              </div>
-              <n-layout-content>
-                <RouterView/>
-              </n-layout-content>
-            </n-layout>
-          </n-layout>
-        </template>
+    <!-- 登录状态判断 -->
+    <div v-else>
+      <!-- 已登录 -->
+      <template v-if="isLoggedIn">
+        <div class="layout flex h-screen">
+          <Sidebar :isLoggedIn="isLoggedIn" />
+          <div class="flex-1 flex flex-col">
+            <!-- 顶部用户信息栏 -->
+            <div class="top-right-user-menu p-4 flex justify-end border-b">
+              <UserMenuAuthenticated
+                  :user="user"
+                  @logout="handleLogout"
+                  @open-profile="handleOpenProfile"
+              />
+            </div>
+            <!-- 主内容区域 -->
+            <div class="content flex-1 overflow-auto p-6">
+              <RouterView />
+            </div>
+          </div>
+        </div>
+      </template>
 
-        <template v-else>
-          <div class="top-right-user-menu">
+      <!-- 未登录 -->
+      <template v-else>
+        <div class="flex flex-col min-h-screen">
+          <!-- 顶部访客菜单 -->
+          <div class="top-right-user-menu p-1 flex justify-end border-b">
             <UserMenuGuest
-                @show-login="showLogin"
-                @show-register="showRegister"
+                @show-login="showLogin()"
+                @show-register="showRegister()"
             />
           </div>
-          <RouterView/>
-        </template>
+          <!-- 路由内容区域 -->
+          <div class="flex-1 overflow-auto p-6">
+            <RouterView />
+          </div>
+        </div>
+      </template>
+    </div>
 
-        <AuthModals
-            v-model:showLogin="isShowingLoginModal"
-            v-model:showRegister="isShowingRegisterModal"
-            @login-success="handleLoginSuccess"
-            @register-success="handleLoginSuccess"
-        />
+    <!-- 登录 / 注册弹窗 -->
+    <AuthModals
+        v-model:showLogin="isShowingLoginModal"
+        v-model:showRegister="isShowingRegisterModal"
+        @login-success="handleLoginSuccess"
+        @register-success="handleLoginSuccess"
+    />
 
-        <Profile ref="profileSettingsRef"/>
+    <!-- 个人资料弹窗 -->
+    <Profile ref="profileSettingsRef" />
 
-        <Notification/>
-        <ConfirmDialog/>
-      </n-message-provider>
-    </n-notification-provider>
-  </n-config-provider>
+    <!-- 全局通知和确认弹窗 -->
+    <Notification />
+    <ConfirmDialog />
+  </div>
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue'
-import {storeToRefs} from 'pinia'
-import {createDynamicNaiveTheme} from '@/plugins/naive'
-import {useUserStore} from '@/store/userStore'
-import {useAuth} from '@/composable/useAuth'
-import {useAuthModal} from '@/composable/useAuthModal'
+import { ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useUserStore } from '@/store/userStore'
+import { useAuth } from '@/composable/useAuth'
+import { useAuthModal } from '@/composable/useAuthModal'
 
 import Sidebar from '@/components/layout/Sidebar.vue'
-import AuthModals from '@/components/common/AuthModals.vue'
-import Notification from '@/components/common/Notification.vue'
-import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import AuthModals from '@/components/auth/AuthModals.vue'
+import Notification from '@/components/base/Notification.vue'
+import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
 import UserMenuGuest from '@/components/layout/UserMenuGuest.vue'
 import UserMenuAuthenticated from '@/components/layout/UserMenuAuthenticated.vue'
 import Profile from '@/components/layout/Profile.vue'
 
-const theme = createDynamicNaiveTheme()
 const userStore = useUserStore()
 const auth = useAuth()
 const authModal = useAuthModal()
 
-const {user} = storeToRefs(userStore)
-const {isLoggedIn, pendingAuthAction, clearToken} = auth
+const { user } = storeToRefs(userStore)
+const { isLoggedIn, pendingAuthAction, clearToken } = auth
 const {
   isShowingLoginModal,
   isShowingRegisterModal,
   showLogin,
   showRegister,
   hideLogin,
-  hideRegister
+  hideRegister,
 } = authModal
 
 const isUserLoading = ref(true)
 const profileSettingsRef = ref<InstanceType<typeof Profile> | null>(null)
 
 function notify(type: 'success' | 'error', msg: string) {
-  window.$message?.[type](msg)
+  console.log(`[${type.toUpperCase()}] ${msg}`)
 }
 
-// 统一错误处理
 function handleError(error: any, defaultMessage: string) {
   const message = error.message || defaultMessage
   notify('error', message)
-  console.error(error) // 记录错误堆栈以便调试
+  console.error(error)
 }
 
 async function handleLoginSuccess() {
@@ -129,7 +136,7 @@ async function initializeUser(retryCount = 3) {
   } catch (error) {
     if (retryCount > 0) {
       notify('error', '用户数据加载失败，正在重试...')
-      setTimeout(() => initializeUser(retryCount - 1), 2000) // 每两秒尝试一次，最多三次
+      setTimeout(() => initializeUser(retryCount - 1), 2000)
     } else {
       handleError(error, '无法加载用户数据，请检查您的网络连接或稍后再试')
     }

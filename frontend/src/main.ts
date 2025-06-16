@@ -1,30 +1,33 @@
-import {createApp} from 'vue'
+// src/main.ts
+import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router/routes'
-import {createPinia} from 'pinia'
-import naive from 'naive-ui'
+import { createPinia } from 'pinia'
 
-// 引入 echarts 注册模块
-import {setupECharts} from './plugins/echarts'
+// 引入 ECharts 注册模块
+import { setupECharts } from './plugins/echarts'
 
-// 全局样式
-import './assets/styles/index.scss'
+// 引入全局样式
+import './assets/main.css'
 
 async function bootstrap() {
     const app = createApp(App)
 
+    // 状态管理
     const pinia = createPinia()
     app.use(pinia)
 
-    const {useUserStore} = await import('./store/userStore')
+    // 预加载用户数据
+    const { useUserStore } = await import('./store/userStore')
     const userStore = useUserStore()
     if (typeof userStore.hydrate === 'function') {
         await userStore.hydrate()
     }
 
-    app.use(naive)
+    // 路由
     app.use(router)
 
+    // ECharts 注册
     setupECharts(app)
 
     app.mount('#app')
