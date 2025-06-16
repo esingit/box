@@ -44,8 +44,8 @@
 
   .msg-block-transparent {
      @extend .msg-block;
-     background-color: rgba(var(--bg-sub-rgb), 0.3); /* 半透明背景 */
-     border-color: rgba(var(--border-sub-rgb), 0.5); /* 半透明边框 */
+     background-color: rgba(var(--bg-sub-rgb), 0.5); /* 半透明背景 */
+     border-color: rgba(var(--border-sub-rgb), 0.7); /* 半透明边框 */
      backdrop-filter: saturate(50%) blur(5px); /* 轻微背景模糊，增强层次感 */
    }
 

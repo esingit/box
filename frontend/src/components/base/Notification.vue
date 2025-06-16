@@ -1,6 +1,6 @@
 <template>
   <div
-      class="fixed top-4 left-1/2 transform -translate-x-1/2 flex flex-col space-y-2 z-50 min-w-[250px]"
+      class="fixed top-8 left-1/2 transform -translate-x-1/2 flex flex-col space-y-2 z-50 min-w-[250px]"
   >
     <transition-group name="toast" tag="div">
       <div
@@ -128,10 +128,10 @@ onBeforeUnmount(() => {
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateY(-100%) translateX(-50%);
+  transform: translateY(-100%);
 }
 .toast-enter-active,
 .toast-leave-active {
   transition: all 0.3s ease;
 }
-</style>
+</style>v
