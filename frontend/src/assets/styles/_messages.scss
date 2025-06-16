@@ -1,37 +1,32 @@
 @layer components {
-  /* 通用提示文字基础样式 */
+  /* 基础提示文字样式 */
   %msg-base {
     @apply text-sm mt-1;
-    font-family: var(--font-family, sans-serif);
+    font-family: var(--font-family);
     line-height: 1.5;
   }
 
-  /* 状态颜色文字 */
+  /* 文字颜色状态 */
   .msg-success {
     @extend %msg-base;
     color: var(--success);
   }
-
   .msg-error {
     @extend %msg-base;
     color: var(--error);
   }
-
   .msg-warning {
     @extend %msg-base;
     color: var(--warning);
   }
-
   .msg-info {
     @extend %msg-base;
     color: var(--info);
   }
-
   .msg-muted {
     @extend %msg-base;
     color: var(--text-muted);
   }
-
   .msg-strong {
     @extend %msg-base;
     color: var(--text-main);
@@ -47,28 +42,32 @@
     border: 1px solid var(--border-sub);
   }
 
-  /* 状态块变体：成功、错误、警告、信息 */
+  .msg-block-transparent {
+     @extend .msg-block;
+     background-color: rgba(var(--bg-sub-rgb), 0.3); /* 半透明背景 */
+     border-color: rgba(var(--border-sub-rgb), 0.5); /* 半透明边框 */
+     backdrop-filter: saturate(50%) blur(5px); /* 轻微背景模糊，增强层次感 */
+   }
+
+  /* 状态提示块变体 */
   .msg-block-success {
     @extend .msg-block;
     background-color: var(--success-light);
     color: var(--success);
     border-color: var(--success);
   }
-
   .msg-block-error {
     @extend .msg-block;
     background-color: var(--error-light);
     color: var(--error);
     border-color: var(--error);
   }
-
   .msg-block-warning {
     @extend .msg-block;
     background-color: var(--warning-light);
     color: var(--warning);
     border-color: var(--warning);
   }
-
   .msg-block-info {
     @extend .msg-block;
     background-color: var(--info-light);

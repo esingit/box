@@ -52,7 +52,7 @@
         </div>
       </div>
 
-      <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+      <p v-if="error" class="msg-error">{{ error }}</p>
 
       <button
           type="submit"
@@ -68,7 +68,7 @@
         已有账号？
         <button
             @click="$emit('switch-to-login')"
-            class="text-blue-600 hover:underline focus:outline-none"
+            class="msg-strong hover:underline focus:outline-none"
         >
           立即登录
         </button>

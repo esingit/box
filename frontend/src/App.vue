@@ -67,6 +67,7 @@ import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store/userStore'
 import { useAuth } from '@/composable/useAuth'
 import { useAuthModal } from '@/composable/useAuthModal'
+import emitter from '@/utils/eventBus'
 
 import Sidebar from '@/components/layout/Sidebar.vue'
 import AuthModals from '@/components/auth/AuthModals.vue'
@@ -94,12 +95,12 @@ const {
 const isUserLoading = ref(true)
 const profileSettingsRef = ref<InstanceType<typeof Profile> | null>(null)
 
-function notify(type: 'success' | 'error', msg: string) {
-  console.log(`[${type.toUpperCase()}] ${msg}`)
+function notify(type: 'success' | 'error' | 'info' | 'warning', msg: string) {
+  emitter.emit('notify', { message: msg, type })
 }
 
 function handleError(error: any, defaultMessage: string) {
-  const message = error.message || defaultMessage
+  const message = error?.message || defaultMessage
   notify('error', message)
   console.error(error)
 }
@@ -124,7 +125,6 @@ async function handleLogout() {
   try {
     await userStore.logout()
     clearToken()
-    notify('success', '已退出登录')
   } catch (error) {
     handleError(error, '退出登录失败')
   }
@@ -151,3 +151,4 @@ function handleOpenProfile() {
 
 initializeUser()
 </script>
+
