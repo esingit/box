@@ -9,7 +9,7 @@ public class Result<T> {
     private boolean success;
     private String message;
     private T data;
-    private boolean showCaptcha;
+    private boolean needCaptcha;
 
     public Result() {
     }
@@ -33,11 +33,11 @@ public class Result<T> {
                 .setMessage(message);
     }
 
-    public static <T> Result<T> error(String message, boolean showCaptcha) {
+    public static <T> Result<T> error(String message, boolean needCaptcha) {
         return new Result<T>()
                 .setSuccess(false)
                 .setMessage(message)
-                .setShowCaptcha(showCaptcha);
+                .setNeedCaptcha(needCaptcha);
     }
 
     public static <T> Result<T> of(boolean success, String message, T data) {

@@ -1,4 +1,9 @@
-import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios'
+import axios, {
+    AxiosResponse,
+    AxiosError,
+    InternalAxiosRequestConfig,
+    AxiosHeaders
+} from 'axios'
 import { axiosConfig, ALLOWED_DUPLICATE_ENDPOINTS } from '@/api/axiosConfig'
 import { generateRequestKey, requestManager } from '@/api/requestManager'
 import { tokenService } from '@/api/tokenService'
@@ -10,16 +15,23 @@ type CustomRequestConfig = InternalAxiosRequestConfig & {
     signal?: AbortSignal
 }
 
-// 创建 Axios 实例，使用统一配置
+// 白名单：无需携带 Token 的接口
+const AUTH_WHITELIST: string[] = [
+    '/api/user/login',
+    '/api/user/register',
+    '/api/captcha'
+]
+
+// 创建 Axios 实例
 const instance = axios.create(axiosConfig)
 
-// 请求拦截器：处理重复请求和 Token 注入
+// 请求拦截器
 instance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
         const customConfig = config as CustomRequestConfig
         const requestKey = generateRequestKey(customConfig)
 
-        // 判断是否允许重复请求
+        // 防止重复请求
         const allowDuplicate =
             customConfig.allowDuplicate ||
             ALLOWED_DUPLICATE_ENDPOINTS.some(endpoint =>
@@ -37,9 +49,16 @@ instance.interceptors.request.use(
             requestManager.add(requestKey, controller)
         }
 
-        // 登录/注册接口跳过 Token 注入
-        const url = customConfig.url || ''
-        const isAuthEndpoint = url.includes('/user/login') || url.includes('/user/register')
+        // 获取路径名用于白名单判断
+        const rawUrl = customConfig.url || ''
+        const fullUrl = new URL(rawUrl, customConfig.baseURL || location.origin)
+        const requestPath = fullUrl.pathname
+
+        const isAuthEndpoint = AUTH_WHITELIST.some(endpoint =>
+            requestPath.startsWith(endpoint)
+        )
+
+        // 非白名单接口才注入 token
         if (!isAuthEndpoint) {
             const token = tokenService.getToken()
             if (!customConfig.headers) {
@@ -55,24 +74,20 @@ instance.interceptors.request.use(
     error => Promise.reject(error)
 )
 
-// 响应拦截器：清理请求管理 & 错误处理
+// 响应拦截器
 instance.interceptors.response.use(
     (response: AxiosResponse) => {
-        // 成功时，删除请求管理中的记录
         requestManager.delete(generateRequestKey(response.config as CustomRequestConfig))
         return response
     },
     async (error: unknown) => {
-        // 类型守卫，确保 error 为 AxiosError
         if (axios.isAxiosError(error)) {
             const axiosErr = error as AxiosError
             const config = axiosErr.config as CustomRequestConfig | undefined
-            // 清理请求管理
             if (config) {
                 requestManager.delete(generateRequestKey(config))
             }
 
-            // 如果请求被取消，直接抛出
             if (axiosErr.code === 'ERR_CANCELED') {
                 return Promise.reject(axiosErr)
             }
@@ -83,7 +98,6 @@ instance.interceptors.response.use(
                 return Promise.reject(axiosErr)
             }
 
-            // 401 独立处理
             if (response.status === 401) {
                 if (config?.skipAuthRetry) {
                     return Promise.reject(axiosErr)
@@ -91,12 +105,10 @@ instance.interceptors.response.use(
                 return ErrorHandler.handle401Error(axiosErr, config)
             }
 
-            // 其他错误
             ErrorHandler.handleOtherErrors(response.status, response.data)
-
             return ErrorHandler.handleRetry(axiosErr, config)
         }
-        // 非 AxiosError，直接抛出
+
         return Promise.reject(error)
     }
 )

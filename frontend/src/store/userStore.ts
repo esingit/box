@@ -1,11 +1,20 @@
+// pinia userStore.ts
 import { defineStore } from 'pinia'
-import axios from '@/utils/axios'
+import axios, { AxiosInstance } from 'axios'
 import type { Router } from 'vue-router'
+import { tokenService } from '@/api/tokenService'
 
 interface User {
     username: string
     email: string
     lastLoginTime: string
+}
+
+interface ApiResponse<T = any> {
+    success: boolean
+    message: string
+    data?: T
+    needCaptcha?: boolean
 }
 
 interface LoginResponse {
@@ -14,157 +23,187 @@ interface LoginResponse {
     needCaptcha?: boolean
 }
 
-const API_URL = '/api/user'
+const createApiClient = (store: ReturnType<typeof useUserStore>): AxiosInstance => {
+    const instance = axios.create({
+        baseURL: '/api/user',
+        timeout: 10000,
+    })
+
+    instance.interceptors.request.use(config => {
+        if (store.token && config.headers) {
+            config.headers.Authorization = `Bearer ${store.token}`
+        }
+        return config
+    })
+
+    instance.interceptors.response.use(
+        res => res,
+        err => Promise.reject(err)
+    )
+
+    return instance
+}
 
 export const useUserStore = defineStore('user', {
     state: () => ({
         token: null as string | null,
-        user: null as User | null,
-        isLoggedIn: false
+        user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null,
+        isInitialized: false,
+        apiClient: null as AxiosInstance | null,
     }),
 
     getters: {
-        currentUser: (state): User | null => state.user,
-        formattedLastLoginTime: (state): string => {
-            if (state.user?.lastLoginTime) {
-                try {
-                    return new Date(state.user.lastLoginTime).toLocaleString('zh-CN')
-                } catch {
-                    return state.user.lastLoginTime
-                }
+        currentUser: (state) => state.user,
+        formattedLastLoginTime: (state) => {
+            if (!state.user?.lastLoginTime) return 'N/A'
+            try {
+                return new Date(state.user.lastLoginTime).toLocaleString('zh-CN')
+            } catch {
+                return state.user.lastLoginTime
             }
-            return 'N/A'
-        }
+        },
     },
 
     actions: {
-        async verifyToken(): Promise<boolean> {
-            try {
-                const response = await axios.get(`${API_URL}/verify-token`)
-                if (response.data.success) {
-                    if (response.data.data?.shouldRefresh) {
-                        const refreshResult = await axios.post(`${API_URL}/refresh-token`)
-                        if (refreshResult.data.success) {
-                            const newToken = refreshResult.data.data
-                            this.token = newToken
-                            localStorage.setItem('token', newToken)
-                            axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
-                        }
-                    }
-                    return true
-                }
-                throw new Error(response.data.message || 'Token验证失败')
-            } catch (error) {
-                console.error('Token验证失败:', error)
-                await this.logout(false)
-                return false
+        initApiClient() {
+            if (!this.apiClient) {
+                this.apiClient = createApiClient(this)
+            }
+        },
+
+        setAuthHeader(token: string | null) {
+            if (!this.apiClient) this.initApiClient()
+            if (token) {
+                this.apiClient!.defaults.headers.common['Authorization'] = `Bearer ${token}`
+            } else {
+                delete this.apiClient!.defaults.headers.common['Authorization']
             }
         },
 
         async hydrate(): Promise<boolean> {
-            const token = localStorage.getItem('token')
-            const userStr = localStorage.getItem('user')
-
-            if (token) {
-                this.token = token
-                this.user = userStr ? JSON.parse(userStr) : null
-                this.isLoggedIn = true
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-                return await this.verifyToken()
+            this.token = tokenService.getToken()
+            if (!this.token) {
+                this.clearAuth()
+                this.isInitialized = true
+                return false
             }
-            return false
+            this.setAuthHeader(this.token)
+            try {
+                const valid = await this.verifyToken()
+                if (!valid) {
+                    this.clearAuth()
+                    this.isInitialized = true
+                    return false
+                }
+                await this.fetchUser()
+                this.isInitialized = true
+                return true
+            } catch {
+                this.clearAuth()
+                this.isInitialized = true
+                return false
+            }
         },
 
-        async register(userData: Record<string, any>): Promise<any> {
+        async verifyToken(): Promise<boolean> {
+            if (!this.apiClient) this.initApiClient()
             try {
-                const response = await axios.post(`${API_URL}/register`, userData)
-                return response.data
-            } catch (error) {
-                console.error('注册失败:', error)
-                throw error
+                const res = await this.apiClient!.get<ApiResponse<{ shouldRefresh?: boolean }>>('/verify-token')
+                if (res.data.success) {
+                    if (res.data.data?.shouldRefresh) {
+                        return await this.refreshToken()
+                    }
+                    return true
+                }
+                return false
+            } catch {
+                return false
+            }
+        },
+
+        async refreshToken(): Promise<boolean> {
+            if (!this.apiClient) this.initApiClient()
+            try {
+                const res = await this.apiClient!.post<ApiResponse<string>>('/refresh-token')
+                if (res.data.success && res.data.data) {
+                    this.token = res.data.data
+                    tokenService.setToken(this.token)
+                    this.setAuthHeader(this.token)
+                    return true
+                }
+                return false
+            } catch {
+                return false
+            }
+        },
+
+        async fetchUser(): Promise<void> {
+            if (!this.token) {
+                this.clearAuth()
+                return
+            }
+            if (!this.apiClient) this.initApiClient()
+            try {
+                const res = await this.apiClient!.get<ApiResponse<User>>('/profile')
+                if (res.data.success && res.data.data) {
+                    this.user = res.data.data
+                    localStorage.setItem('user', JSON.stringify(this.user))
+                } else {
+                    this.clearAuth()
+                }
+            } catch {
+                this.clearAuth()
             }
         },
 
         async login(credentials: Record<string, any>): Promise<LoginResponse> {
+            if (!this.apiClient) this.initApiClient()
             try {
-                const response = await axios.post(`${API_URL}/login`, credentials)
-
-                if (response.data.success && response.data.data) {
-                    const data = response.data.data
-                    axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
-
-                    this.token = data.token
-                    this.user = {
-                        username: data.username,
-                        email: data.email,
-                        lastLoginTime: data.lastLoginTime
-                    }
-                    this.isLoggedIn = true
-
-                    localStorage.setItem('token', data.token)
-                    localStorage.setItem('user', JSON.stringify(this.user))
-
+                const res = await this.apiClient!.post<ApiResponse<string>>('/login', credentials)
+                if (res.data.success && res.data.data) {
+                    this.token = res.data.data
+                    tokenService.setToken(this.token)
+                    this.setAuthHeader(this.token)
+                    await this.fetchUser()
                     return { success: true, message: '登录成功' }
                 }
+                return { success: false, message: res.data.message || '登录失败', needCaptcha: res.data.needCaptcha }
+            } catch (err: any) {
+                return { success: false, message: err.response?.data?.message || '登录失败，请重试' }
+            }
+        },
 
+        async register(userData: Record<string, any>): Promise<ApiResponse> {
+            if (!this.apiClient) this.initApiClient()
+            try {
+                const res = await this.apiClient!.post<ApiResponse>('/register', userData)
+                return res.data
+            } catch (err: any) {
                 return {
                     success: false,
-                    message: response.data.message || '登录失败',
-                    needCaptcha: response.data.needCaptcha
-                }
-            } catch (error: any) {
-                console.error('登录失败:', error)
-                return {
-                    success: false,
-                    message: error.response?.data?.message || '登录失败，请重试'
+                    message: err.response?.data?.message || '注册失败，请稍后再试',
+                    needCaptcha: err.response?.data?.needCaptcha || false,
                 }
             }
         },
 
-        clearAuthHeader(): void {
-            delete axios.defaults.headers.common['Authorization']
-        },
-
-        async callLogoutAPI(): Promise<any> {
-            return await axios.post(`${API_URL}/logout`, null, {
-                skipAuthRetry: true,
-                timeout: 5000
-            })
-        },
-
-        // 修改 logout，接收 router 参数，调用处传入
         async logout(callAPI = true, router?: Router): Promise<void> {
+            if (!this.apiClient) this.initApiClient()
             if (callAPI) {
                 try {
-                    await this.callLogoutAPI()
-                } catch (error) {
-                    console.error('登出API调用失败:', error)
-                }
+                    await this.apiClient!.post('/logout')
+                } catch {}
             }
-
-            localStorage.removeItem('token')
-            localStorage.removeItem('user')
-
-            this.token = null
-            this.user = null
-            this.isLoggedIn = false
-
-            this.clearAuthHeader()
-
-            if (router) {
-                router.push('/login')
-            }
+            this.clearAuth()
+            if (router) router.push('/login')
         },
 
-        formatLastLoginTime(): string {
-            if (this.user?.lastLoginTime) {
-                try {
-                    return new Date(this.user.lastLoginTime).toLocaleString('zh-CN')
-                } catch {
-                    return this.user.lastLoginTime
-                }
-            }
-            return 'N/A'
-        }
-    }
+        clearAuth() {
+            this.token = null
+            this.user = null
+            localStorage.removeItem('user')
+            tokenService.removeToken()
+            this.setAuthHeader(null)
+        },
+    },
 })

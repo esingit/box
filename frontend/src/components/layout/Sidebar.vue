@@ -1,7 +1,7 @@
 <template>
   <aside class="sidebar" :class="{ 'collapsed': isCollapsed }">
     <div class="logo" @click="toggleSidebar">
-      <LucideBox class="logo-icon" :class="{ 'animate-spin': isRotating }" :size="24" />
+      <Package class="logo-icon" :class="{ 'animate-spin': isRotating }" :size="24" />
     </div>
     <nav class="menu">
       <router-link 
@@ -24,7 +24,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { LucideHome, LucideBox, LucideDumbbell, LucideWallet } from 'lucide-vue-next'
+import { LucideHome, Package, LucideDumbbell, LucideWallet } from 'lucide-vue-next'
 
 const props = defineProps({
   isLoggedIn: {

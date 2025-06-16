@@ -1,0 +1,57 @@
+
+/* 方位定义 */
+.u-flex { display: flex; }
+.u-items-center { align-items: center; }
+
+/* 通用竖直分割线 */
+.divider-vertical {
+  display: inline-block;
+  width: 2px;
+  height: 1.5em;
+  background-color: var(--primary);
+  margin: 0 12px;
+  vertical-align: middle;
+  border-radius: var(--radius-sm);
+}
+
+/* 通用横向分割线 */
+.info-divider {
+  border: none;
+  border-top: 1px solid var(--btn-text-border);
+  margin: 12px 0;
+}
+
+/* 加载中样式 */
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+  color: var(--text-main);
+}
+
+.modal-header {
+  padding: var(--space-xs) var(--space-xl);
+  font-size: var(--font-sm);
+  font-weight: var(--font-medium);
+}
+.modal-divider {
+  border-bottom: 1px solid var(--border-main);
+  margin: 0 var(--space-xl);
+}
+
+.error-message {
+  color: var(--error);;
+  font-size: 13px;
+  margin-top: 4px;
+  line-height: 1.4;
+  white-space: normal;
+  display: block;
+}
+
+.captcha-img {
+  cursor: pointer;
+  height: 36px;
+  border-radius: 4px;
+  margin-left: 8px;
+  user-select: none;
+}

@@ -1,20 +1,6 @@
-/* 通用竖直分割线 divider-vertical */
-.divider-vertical {
-  display: inline-block;
-  width: 2px;
-  height: 1.5em;
-  background-color: var(--primary);
-  margin: 0 12px;
-  vertical-align: middle;
-  border-radius: var(--radius-sm);
-}
 
-/* 通用横向分割线 divider-vertical */
-.info-divider {
-  border: none;
-  border-top: 1px solid var(--btn-text-border);
-  margin: 12px 0;
-}
+
+
 
 /* 页面标题 */
 .page-title {
@@ -92,19 +78,6 @@
   position: relative;
 }
 
-.user-menu-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
-  border: none;
-  background: transparent;
-  color: var(--text-main);
-}
-
-.user-menu-btn:hover {
-  background-color: var(--bg-hover);
-}
 
 .dropdown-menu {
   position: absolute;

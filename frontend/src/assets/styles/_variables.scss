@@ -3,28 +3,58 @@
     --primary: #2c3e50;
     --primary-hover: #34495e;
     --primary-light: rgba(44, 62, 80, 0.1);
-    --primary-light-solid: #ecf0f1; /* 浅灰蓝背景，可用于块级背景 */
+    --primary-light-solid: #ecf0f1;
 
-    /* 文字 */
+    /* 文字颜色 */
     --text-main: #353740;
     --text-sub: #8e8ea0;
     --text-muted: #acacbe;
-    --text-light: #fff;
+    --text-light: #ffffff;
+    --text-hint: #c2c2d4;
 
-    /* 背景 */
-    --bg-main: #fff;
+    /* 背景颜色 */
+    --bg-main: #ffffff;
     --bg-sub: #f7f7f8;
     --bg-muted: #fafafa;
     --bg-hover: #f9fafb;
+    --bg-error: rgba(245, 101, 101, 0.1);
+    --bg-hover-light: rgba(160, 174, 192, 0.1);
+
+    /* 基础阴影 */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05); /* 最轻微阴影 */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+    --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.2); /* 最大阴影 */
+
+    /* 特殊阴影 */
+    --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* 内阴影 */
+    --shadow-glow: 0 0 15px rgba(59, 130, 246, 0.5); /* 发光效果 */
+    --shadow-focus: 0 0 0 3px rgba(44, 62, 80, 0.3); /* 聚焦状态 */
+    --shadow-outline: 0 0 0 2px var(--primary); /* 轮廓高亮 */
+
+    /* 功能阴影 */
+    --shadow-card: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1); /* 卡片 */
+    --shadow-dropdown: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05); /* 下拉菜单 */
+    --shadow-modal: 0 25px 50px rgba(0, 0, 0, 0.15), 0 10px 15px rgba(0, 0, 0, 0.1); /* 模态框 */
+    --shadow-tooltip: 0 10px 15px rgba(0, 0, 0, 0.1); /* 提示框 */
+
+    /* 状态阴影 */
+    --shadow-success: 0 0 10px rgba(5, 150, 105, 0.4); /* 成功状态 */
+    --shadow-error: 0 0 10px rgba(220, 38, 38, 0.4); /* 错误状态 */
+    --shadow-warning: 0 0 10px rgba(217, 119, 6, 0.4); /* 警告状态 */
+    --shadow-info: 0 0 10px rgba(59, 130, 246, 0.4); /* 信息状态 */
 
     /* 骨架屏 */
     --skeleton-bg: #f0f0f0;
     --skeleton-highlight: #f8f8f8;
 
-    /* 边框 */
+    /* 边框颜色 */
     --border-main: #e5e7eb;
     --border-sub: #d1d5db;
     --border-hover: #a3a3a3;
+    --border-focus: 2px solid var(--primary);
 
     /* 状态色 */
     --success: #059669;
@@ -42,38 +72,40 @@
     --warning-dark: #718096;
     --info-dark: #a0aec0;
 
-    /* 状态背景 */
-    --bg-error: rgba(245, 101, 101, 0.1);
-    --bg-hover-light: rgba(160, 174, 192, 0.1);
+    /* 按钮颜色 */
+    --btn-primary: #1a1a1a;
+    --btn-primary-hover: #454545;
+    --btn-text: #666666;
+    --btn-text-hover: #f5f5f5;
+    --btn-danger: #dc2626;
+    --btn-danger-hover: #b91c1c;
+    --btn-outline: #374151;
+    --btn-outline-hover: #374151;
 
-    /* 阴影 */
-    --shadow-sm: 0 1px 3px rgba(26, 26, 26, 0.1);
-    --shadow-md: 0 4px 8px rgba(26, 26, 26, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 24px 48px rgba(26, 26, 26, 0.14);
+    /* 按钮状态 */
+    --btn-primary-bg: var(--btn-primary);
+    --btn-primary-text: var(--text-light);
+    --btn-primary-border: var(--btn-primary);
+    --btn-primary-hover-bg: var(--btn-primary-hover);
+    --btn-primary-hover-border: #666666;
 
-    /* 按钮色 */
-    --btn-primary-bg: #1a1a1a;
-    --btn-primary-text: #fff;
-    --btn-primary-border: #1a1a1a;
-    --btn-primary-hover-bg: #454545;
-    --btn-primary-hover-border: #666;
-
-    --btn-text-color: #666;
-    --btn-text-hover-bg: #f5f5f5;
-    --btn-text-hover-border: #999;
+    --btn-text-bg: transparent;
+    --btn-text-color: var(--btn-text);
     --btn-text-border: #e0e0e0;
+    --btn-text-hover-bg: var(--btn-text-hover);
+    --btn-text-hover-border: #999999;
 
-    --btn-danger-bg: #dc2626;
-    --btn-danger-text: #fff;
-    --btn-danger-border: #dc2626;
-    --btn-danger-hover-bg: #b91c1c;
+    --btn-danger-bg: var(--btn-danger);
+    --btn-danger-text: var(--text-light);
+    --btn-danger-border: var(--btn-danger);
+    --btn-danger-hover-bg: var(--btn-danger-hover);
     --btn-danger-hover-border: #991b1b;
 
-    --btn-outline-border: #374151;
-    --btn-outline-text: #374151;
-    --btn-outline-hover-bg: #374151;
-    --btn-outline-hover-text: #fff;
+    --btn-outline-bg: transparent;
+    --btn-outline-color: var(--btn-outline);
+    --btn-outline-border: var(--btn-outline);
+    --btn-outline-hover-bg: var(--btn-outline-hover);
+    --btn-outline-hover-color: var(--text-light);
 
     /* 字体 */
     --font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -129,12 +161,9 @@
     --radius-xxl: 28px;
     --radius-full: 9999px;
 
-    /* 过渡 */
+    /* 过渡动画 */
     --transition-fast: 0.15s;
-    --transition-base: 0.25s;
+    --transition: 0.25s;
     --transition-slow: 0.4s;
     --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
-    --transition: var(--transition-base);
 }
-
-

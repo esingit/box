@@ -1,9 +1,14 @@
 import mitt, { Emitter, Handler } from 'mitt'
 
+type NotifyPayload = {
+  message: string
+  type?: 'info' | 'success' | 'error' | 'warning'
+}
+
 type Events = {
   'login-error': string
   'auth-state-changed': boolean
-  'notify': unknown
+  'notify': NotifyPayload
   'login-success': void
 }
 
@@ -21,7 +26,5 @@ emitter.once = function <K extends keyof Events>(type: K, handler: Handler<Event
   emitter.on(type, wrappedHandler)
   return () => emitter.off(type, wrappedHandler)
 }
-
-emitter.on('notify', () => {})
 
 export default emitter

@@ -14,7 +14,7 @@
         <n-empty v-if="fitnessError" :description="fitnessError" status="error" class="empty-state">
           <template #description>{{ getEmptyDescription('健身') }}</template>
         </n-empty>
-        <Line v-else-if="fitnessChartData" :data="fitnessChartData" :options="chartOptions" />
+        <Line v-else-if="fitnessChartData" :data="fitnessChartData" :options="chartOptions"/>
         <n-empty v-else description="暂无数据" class="empty-state">
           <template #description>{{ getEmptyDescription('健身') }}</template>
         </n-empty>
@@ -24,11 +24,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { Line } from 'vue-chartjs';
-import axios from '@/utils/axios';
-import { useMetaData } from '@/composables/useMetaData';
-import { NCard, NEmpty, NSelect, NSpace } from 'naive-ui';
+import {ref, computed, onMounted} from 'vue';
+import {Line} from 'vue-chartjs';
+import axios from 'axios';
+import {useMetaStore} from '@/store/metaStore'
+import {NCard, NEmpty, NSelect, NSpace} from 'naive-ui';
 import {
   Chart as ChartJS, Title, Tooltip, Legend, LineElement,
   CategoryScale, LinearScale, PointElement
@@ -39,10 +39,12 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 const selectedFitnessTypes = ref(['PUSH_UP']);
 const fitnessData = ref([]);
 const fitnessError = ref('');
-const { types: metaTypes, fetchMetaData } = useMetaData();
+
+// 统一从 useMetaStore 获取
+const {types: metaTypes, fetchMetaData} = useMetaStore();
 
 const fitnessTypeOptions = computed(() =>
-    metaTypes.value.map(item => ({ label: item.value1, value: item.key1 }))
+    metaTypes.value.map(item => ({label: item.value1, value: item.key1}))
 );
 
 function getEmptyDescription(type) {
@@ -51,7 +53,7 @@ function getEmptyDescription(type) {
 
 function formatAmount(value) {
   if (value == null) return '-';
-  return new Intl.NumberFormat('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(value);
 }
 
 const chartOptions = {
@@ -61,8 +63,12 @@ const chartOptions = {
     legend: {
       labels: {
         generateLabels: (chart) => chart.data.datasets.map((dataset, i) => ({
-          text: dataset.label, fillStyle: 'transparent', strokeStyle: '#d1d5db', lineWidth: 1,
-          hidden: !chart.getDatasetMeta(i).visible, index: i
+          text: dataset.label,
+          fillStyle: 'transparent',
+          strokeStyle: '#d1d5db',
+          lineWidth: 1,
+          hidden: !chart.getDatasetMeta(i).visible,
+          index: i
         }))
       }
     },
@@ -75,8 +81,8 @@ const chartOptions = {
     }
   },
   scales: {
-    x: { title: { display: true, text: '日期' }, grid: { color: 'rgba(0,0,0,0.1)' } },
-    y: { title: { display: true, text: '次数' }, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.1)' } }
+    x: {title: {display: true, text: '日期'}, grid: {color: 'rgba(0,0,0,0.1)'}},
+    y: {title: {display: true, text: '次数'}, beginAtZero: true, grid: {color: 'rgba(0,0,0,0.1)'}}
   }
 };
 
@@ -110,7 +116,7 @@ const fitnessChartData = computed(() => {
     return `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
   });
 
-  return { labels: formattedDates, datasets };
+  return {labels: formattedDates, datasets};
 });
 
 const fetchFitnessData = async () => {
@@ -118,7 +124,8 @@ const fetchFitnessData = async () => {
     fitnessError.value = '';
     fitnessData.value = [];
     const now = new Date();
-    const start = new Date(); start.setDate(now.getDate() - 30);
+    const start = new Date();
+    start.setDate(now.getDate() - 30);
 
     const res = await axios.get('/api/fitness-record/list', {
       params: {

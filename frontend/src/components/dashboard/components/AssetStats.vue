@@ -36,7 +36,7 @@
 <script setup>
 import {ref, computed, onMounted} from 'vue';
 import {Line} from 'vue-chartjs';
-import axios from '@/utils/axios';
+import axios from 'axios';
 import {useUserStore} from '@/store/userStore';
 
 const userStore = useUserStore();

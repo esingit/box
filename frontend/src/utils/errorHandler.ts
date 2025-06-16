@@ -9,18 +9,18 @@ export class ErrorHandler {
   static async handleAuthError(error) {
     tokenService.isRefreshing = false
     tokenService.clearWaitingQueue()
-    
+
     const userStore = useUserStore()
     await userStore.logout(false)
     cancelPendingRequests('登录已过期')
-    
+
     const { nextTick } = await import('vue')
     await nextTick()
-    
-    const { useAuth } = await import('@/composables/useAuth')
+
+    const { useAuth } = await import('@/composable/useAuth')
     const { showLogin } = useAuth()
     showLogin('登录已过期，请重新登录')
-    
+
     return Promise.reject(error)
   }
 
@@ -28,7 +28,7 @@ export class ErrorHandler {
     if (config.url.includes('/logout')) {
       return Promise.resolve({ data: { success: true } })
     }
-    
+
     if (config.url.includes('/login') || config.skipAuthRetry) {
       return Promise.reject(error)
     }
@@ -37,17 +37,17 @@ export class ErrorHandler {
       if (!tokenService.isRefreshing) {
         tokenService.isRefreshing = true
         const newToken = await tokenService.refreshToken()
-        
+
         if (newToken) {
           config.headers['Authorization'] = `Bearer ${newToken}`
           tokenService.processWaitingQueue(newToken)
           tokenService.isRefreshing = false
           return axios(config)
         }
-        
+
         return this.handleAuthError(error, userStore)
       }
-      
+
       return tokenService.addToWaitingQueue(config)
     } catch (refreshError) {
       return this.handleAuthError(refreshError, userStore)

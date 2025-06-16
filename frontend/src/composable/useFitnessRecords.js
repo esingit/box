@@ -1,5 +1,5 @@
 import { ref, reactive } from 'vue';
-import axios from '@/utils/axios.ts';
+import axios from 'axios';
 import { formatFitnessRecord } from '@/utils/commonMeta';
 import emitter from '@/utils/eventBus.ts';
 

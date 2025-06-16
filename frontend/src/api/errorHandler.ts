@@ -12,7 +12,7 @@ export const ErrorHandler = {
         console.warn('未授权，请登录')
         // 这里可以调用刷新token的接口，或者直接登出
         // 例如：
-        // await authService.refreshToken()
+        // await import('@/api/tokenService').then(module => module.default.refreshToken())
         // 或者
         // router.push('/login')
         return Promise.reject(error)

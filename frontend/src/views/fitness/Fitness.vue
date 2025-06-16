@@ -135,9 +135,9 @@
 import {onMounted, onUnmounted, ref, watch, computed} from 'vue';
 import {LucidePlus, LucideRefreshCw} from 'lucide-vue-next';
 import emitter from '@/utils/eventBus.ts';
-import {useMetaData} from '@/composables/useMetaData';
-import {useFitnessRecords} from '@/composables/useFitnessRecords';
-import {useFitnessForm} from '@/composables/useFitnessForm';
+import {useMetaStore} from '@/store/metaStore'
+import {useFitnessRecords} from '@/composable/useFitnessRecords';
+import {useFitnessForm} from '@/composable/useFitnessForm';
 import FitnessModal from '@/components/fitness/FitnessModal.vue';
 import FitnessList from '@/components/fitness/FitnessList.vue';
 import SearchPanel from '@/components/fitness/SearchPanel.vue';
@@ -155,7 +155,7 @@ const stats = ref({
 });
 
 // 组合式函数
-const {types, units, fetchMetaData} = useMetaData();
+const {types, units, fetchMetaData} = useMetaStore();
 const {
   records,
   loading,

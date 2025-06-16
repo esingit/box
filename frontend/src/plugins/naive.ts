@@ -1,3 +1,4 @@
+// src/plugins/naive.ts
 function getCSSVar(name: string): string {
     const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
     if (!value) {

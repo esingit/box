@@ -1,159 +1,143 @@
+<!-- App.vue -->
 <template>
   <n-config-provider :theme-overrides="theme">
-    <div :class="['app-container']" id="app">
-      <!-- 侧边栏 -->
-      <Sidebar v-if="shouldShowSidebar" :isLoggedIn="isLoggedIn" />
+    <n-notification-provider>
+      <n-message-provider>
+        <template v-if="isUserLoading">
+          <div class="loading">加载中...</div>
+        </template>
 
-      <div class="content-wrapper">
-        <main class="main-content">
-          <!-- 页面顶部用户菜单 -->
-          <div class="main-header">
-            <nav class="user-menu-container">
-              <!-- 登录后菜单 -->
-              <UserMenuAuthenticated
-                  v-if="isLoggedIn"
-                  :username="user?.username"
-                  :showMenu="showMenu"
-                  @toggle="toggleMenu"
-                  @open-profile="openProfile"
-                  @logout="logout"
-                  ref="userMenuRef"
-              />
+        <template v-else-if="isLoggedIn">
+          <n-layout has-sider>
+            <Sidebar/>
+            <n-layout>
+              <div class="top-right-user-menu">
+                <UserMenuAuthenticated
+                    :user="user"
+                    @logout="handleLogout"
+                    @open-profile="handleOpenProfile"
+                />
+              </div>
+              <n-layout-content>
+                <RouterView/>
+              </n-layout-content>
+            </n-layout>
+          </n-layout>
+        </template>
 
-              <!-- 未登录菜单 -->
-              <UserMenuGuest v-else @login="showLogin" @register="showRegister" />
-            </nav>
+        <template v-else>
+          <div class="top-right-user-menu">
+            <UserMenuGuest
+                @show-login="showLogin"
+                @show-register="showRegister"
+            />
           </div>
+          <RouterView/>
+        </template>
 
-          <!-- 主要内容区 -->
-          <router-view />
-        </main>
-      </div>
+        <AuthModals
+            v-model:showLogin="isShowingLoginModal"
+            v-model:showRegister="isShowingRegisterModal"
+            @login-success="handleLoginSuccess"
+            @register-success="handleLoginSuccess"
+        />
 
-      <!-- 全局弹窗组件 -->
-      <GlobalModals
-          ref="profileRef"
-          :show-login="isShowingLoginModal"
-          :show-register="isShowingRegisterModal"
-          @login-close="hideLogin"
-          @login-success="handleLoginSuccess"
-          @register-close="hideRegister"
-          @register-success="handleRegisterSuccess"
-      />
+        <Profile ref="profileSettingsRef"/>
 
-      <!-- 全局通知组件 -->
-      <Notification />
-      <ConfirmDialog />
-    </div>
+        <Notification/>
+        <ConfirmDialog/>
+      </n-message-provider>
+    </n-notification-provider>
   </n-config-provider>
 </template>
 
-<script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useUserStore } from '@/store/userStore'
-import { useRouter } from 'vue-router'
-import { initializeAuth, useAuth } from '@/composables/useAuth'
-import { useLogout } from '@/composables/useLogout'
-import Sidebar from '@/components/Sidebar.vue'
-import GlobalModals from '@/components/GlobalModals.vue'
-import Notification from '@/components/Notification.vue'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import UserMenuAuthenticated from '@/components/user/UserMenuAuthenticated.vue'
-import UserMenuGuest from '@/components/user/UserMenuGuest.vue'
-import emitter from '@/utils/eventBus'
-
-// 这里引入你提取的主题配置文件
+<script setup lang="ts">
+import {ref} from 'vue'
+import {storeToRefs} from 'pinia'
 import {createDynamicNaiveTheme} from '@/plugins/naive'
+import {useUserStore} from '@/store/userStore'
+import {useAuth} from '@/composable/useAuth'
+import {useAuthModal} from '@/composable/useAuthModal'
 
-// 主题
-const theme = ref({})
+import Sidebar from '@/components/layout/Sidebar.vue'
+import AuthModals from '@/components/common/AuthModals.vue'
+import Notification from '@/components/common/Notification.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import UserMenuGuest from '@/components/layout/UserMenuGuest.vue'
+import UserMenuAuthenticated from '@/components/layout/UserMenuAuthenticated.vue'
+import Profile from '@/components/layout/Profile.vue'
 
-// 状态管理
+const theme = createDynamicNaiveTheme()
 const userStore = useUserStore()
-const router = useRouter()
-const { isShowingLoginModal, isShowingRegisterModal, showLogin, hideLogin, showRegister, hideRegister } = useAuth()
+const auth = useAuth()
+const authModal = useAuthModal()
 
-// 计算属性
-const shouldShowSidebar = computed(() =>
-    !['/', '/home'].includes(router.currentRoute.value.path) || isLoggedIn.value
-)
-const isLoggedIn = computed(() => userStore.isLoggedIn)
-const user = computed(() => userStore.user)
+const {user} = storeToRefs(userStore)
+const {isLoggedIn, pendingAuthAction, clearToken} = auth
+const {
+  isShowingLoginModal,
+  isShowingRegisterModal,
+  showLogin,
+  showRegister,
+  hideLogin,
+  hideRegister
+} = authModal
 
-// 响应式数据
-const showMenu = ref(false)
-const profileRef = ref(null)
-const userMenuRef = ref(null)
+const isUserLoading = ref(true)
+const profileSettingsRef = ref(null)
 
-// 用户菜单相关函数
-function toggleMenu() {
-  showMenu.value = !showMenu.value
-}
-function closeMenu() {
-  showMenu.value = false
+function notify(type: 'success' | 'error', msg: string) {
+  window.$message?.[type](msg)
 }
 
-// 用 ref 监听点击外部关闭菜单
-function handleClickOutside(event) {
-  const path = event.composedPath()
-  const menuEl = userMenuRef.value?.$el || null
-  if (showMenu.value && menuEl && !path.includes(menuEl)) {
-    closeMenu()
-  }
-}
-
-function openProfile() {
-  if (profileRef.value?.openModal) {
-    profileRef.value.openModal()
-    closeMenu()
-  }
-}
-
-async function logout() {
-  closeMenu()
-  const { handleLogout } = useLogout()
+async function handleLoginSuccess() {
   try {
-    await handleLogout(true)
-  } catch (error) {
-    console.error('退出登录失败:', error)
+    await userStore.fetchUser()
+    notify('success', '登录成功')
+    if (typeof pendingAuthAction.value === 'function') {
+      await pendingAuthAction.value()
+    }
+  } catch {
+    notify('error', '登录后操作失败')
+  } finally {
+    pendingAuthAction.value = null
+    hideLogin()
+    hideRegister()
   }
 }
 
-// 认证相关函数
-function handleLoginSuccess() {
-  closeMenu()
-  hideLogin()
-  emitter.emit('login-success')
-  emitter.emit('notify', '登录成功', 'success')
+async function handleLogout() {
+  try {
+    await userStore.logout()
+    clearToken()
+    notify('success', '已退出登录')
+  } catch {
+    notify('error', '退出登录失败')
+  }
 }
 
-function handleRegisterSuccess() {
-  hideRegister()
+async function initializeUser() {
+  try {
+    await userStore.hydrate()
+  } catch {
+    notify('error', '用户数据初始化失败')
+  } finally {
+    isUserLoading.value = false
+  }
 }
 
-// 生命周期钩子
-function onShowAuth(type, message) {
-  if (type === 'login') showLogin(message)
-  else if (type === 'register') showRegister()
-}
-function onShowLoginModal(message) {
-  showLogin(message)
+function handleOpenProfile() {
+  profileSettingsRef.value?.openModal()
 }
 
-onMounted(() => {
-  document.addEventListener('mousedown', handleClickOutside)
-  emitter.on('show-auth', onShowAuth)
-  emitter.on('show-login-modal', onShowLoginModal)
-  initializeAuth().catch(error => {
-    console.error('认证初始化失败:', error)
-    userStore.logout(false)
-  })
-  theme.value = createDynamicNaiveTheme()
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', handleClickOutside)
-  emitter.off('show-auth', onShowAuth)
-  emitter.off('show-login-modal', onShowLoginModal)
-})
+initializeUser()
 </script>
+
+<style scoped>
+.top-right-user-menu {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+}
+</style>

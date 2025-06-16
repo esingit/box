@@ -7,26 +7,26 @@ public class ApiResponse<T> {
     private boolean success;
     private String message;
     private T data;
-    private boolean showCaptcha;
+    private boolean needCaptcha;
 
-    public ApiResponse(boolean success, String message, T data, boolean showCaptcha) {
+    public ApiResponse(boolean success, String message, T data, boolean needCaptcha) {
         this.success = success;
         this.message = message;
         this.data = data;
-        this.showCaptcha = showCaptcha;
+        this.needCaptcha = needCaptcha;
     }
 
     public ApiResponse(boolean success, String message) {
         this.success = success;
         this.message = message;
         this.data = null;
-        this.showCaptcha = false;
+        this.needCaptcha = false;
     }
 
     public boolean isSuccess() { return success; }
     public String getMessage() { return message; }
     public T getData() { return data; }
-    public boolean isShowCaptcha() { return showCaptcha; }
+    public boolean isNeedCaptcha() { return needCaptcha; }
 
     public static <T> ApiResponse<T> success(T data) {
         return new ApiResponse<>(true, "success", data, false);

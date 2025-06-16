@@ -145,13 +145,13 @@
 import {computed, onMounted, reactive, ref, watch} from 'vue'
 import {LucideCopy, LucidePlus, LucideRefreshCw, LucideWallet} from 'lucide-vue-next'
 import {useAssetStore} from '@/store/assetStore'
-import {useAuth} from '@/composables/useAuth'
+import {useAuth} from '@/composable/useAuth'
 import emitter from '@/utils/eventBus.ts'
 import AssetList from '@/components/asset/AssetList.vue'
 import AssetModal from '@/components/asset/AssetModal.vue'
 import SearchPanel from '@/components/asset/SearchPanel.vue'
 import SkeletonCard from '@/components/common/SkeletonCard.vue'
-import axios from '@/utils/axios'
+import axios from 'axios'
 
 // 外部依赖
 const assetStore = useAssetStore()

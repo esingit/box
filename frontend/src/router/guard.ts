@@ -1,57 +1,52 @@
 import type { Router } from 'vue-router'
 import { useUserStore } from '@/store/userStore'
-import { useAuth } from '@/composables/useAuth'
+import { useAuth } from '@/composable/useAuth'
 import emitter from '@/utils/eventBus'
 
-let isLoggingOut = false // 防止重复触发登出
+let logoutPromise: Promise<void> | null = null
 
-export async function setupRouterGuard(router: Router) {
+export function setupRouterGuard(router: Router) {
+  const userStore = useUserStore()
+  const { showLogin } = useAuth()
+
   router.beforeEach(async (to, from, next) => {
-    const userStore = useUserStore()
-    const { showLogin } = useAuth()
-
     // 设置页面标题
     if (to.meta.title) {
       document.title = String(to.meta.title)
     }
 
-    // 路由不存在：重定向回上一个路径或首页
+    // 404重定向
     if (!to.matched.length) {
-      const fallbackPath = from.path || '/home'
-      next(fallbackPath)
-      return
-    }
-
-    // 处理退出登录路由
-    if (to.name === 'logout') {
-      if (!isLoggingOut) {
-        isLoggingOut = true
-        await userStore.logout(true)
-        isLoggingOut = false
-      }
       next('/home')
       return
     }
 
-    // 需要登录的页面验证
+    // 退出登录路由
+    if (to.name === 'logout') {
+      if (!logoutPromise) {
+        logoutPromise = userStore.logout(true).finally(() => {
+          logoutPromise = null
+        })
+      }
+      await logoutPromise
+      next('/home')
+      return
+    }
+
+    // 需要登录权限页面
     if (to.meta.requiresAuth) {
       if (!userStore.isLoggedIn) {
-        const targetPath = to.fullPath
         showLogin('请先登录')
+        // 等待登录事件触发后跳转，暂时中断导航
         emitter.once('login-success', () => {
-          router.push(targetPath)
+          router.push(to.fullPath)
         })
-
-        if (!from.name) {
-          next('/home')
-        } else {
-          next(false) // 中断跳转等待登录
-        }
+        // 这里直接取消当前导航，弹窗会显示，等待用户操作
+        next(false)
         return
       }
     }
 
-    // 正常放行
     next()
   })
 }
