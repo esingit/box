@@ -2,7 +2,8 @@
 @import 'styles/_buttons.scss';
 @import 'styles/_inputs.scss';
 @import 'styles/_messages.scss';
-
+@import 'styles/_modals.scss';
+@import 'styles/_animations.scss';
 
 @tailwind base;
 @tailwind components;

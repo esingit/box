@@ -1,18 +1,27 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center overflow-hidden">
-    <div class="bg-white w-[800px] max-h-[calc(100vh-40px)] rounded-2xl overflow-hidden flex flex-col">
+  <div
+      v-if="isOpen"
+      class="modal-overlay"
+      @click="closeModal"
+  >
+    <div
+        class="modal-container animate-fade-in w-[800px]"
+        @click.stop
+    >
       <!-- Header -->
-      <header class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">设置</h2>
+      <header class="modal-header">
+        <h2 class="modal-title">设置</h2>
         <button
             @click="closeModal"
             aria-label="关闭设置窗口"
-            class="btn-text"
+            class="btn-text text-xl"
             type="button"
         >
           ✕
         </button>
       </header>
+
+      <div class="modal-divider"/>
 
       <!-- Body -->
       <div class="flex flex-1 overflow-hidden">
@@ -43,7 +52,7 @@
             tabindex="0"
             aria-live="polite"
         >
-          <!-- Profile -->
+          <!-- 你的内容这里不变 -->
           <div v-if="activeTab === 'profile'">
             <h3 class="text-xl font-semibold mb-6 text-gray-900">个人信息</h3>
             <table class="w-full text-sm text-gray-700 border-collapse">
@@ -60,7 +69,6 @@
             </table>
           </div>
 
-          <!-- Security -->
           <div v-else-if="activeTab === 'security'">
             <h3 class="text-xl font-semibold mb-6 text-gray-900">修改密码</h3>
             <Form
@@ -69,6 +77,7 @@
                 class="space-y-6 max-w-md"
                 v-slot="{ errors }"
             >
+              <!-- 表单内容不变 -->
               <div>
                 <label for="oldPassword" class="block text-sm font-medium text-gray-700 mb-2">旧密码</label>
                 <Field
@@ -129,9 +138,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
-import { useUserStore } from '@/store/userStore'
-import { Field, Form } from 'vee-validate'
+import {ref, computed, nextTick} from 'vue'
+import {useUserStore} from '@/store/userStore'
+import {Field, Form} from 'vee-validate'
 import * as yup from 'yup'
 
 const isOpen = ref(false)
@@ -178,14 +187,14 @@ function switchTab(tab: 'profile' | 'security') {
     resetMsg.value = ''
     resetSuccess.value = false
     nextTick(() => {
-      contentRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
+      contentRef.value?.scrollTo({top: 0, behavior: 'smooth'})
     })
   }
 }
 
 async function handlePasswordSubmit(values: any) {
   loading.value = true
-  const { oldPassword, newPassword } = values
+  const {oldPassword, newPassword} = values
   const result = await userStore.resetPassword(oldPassword, newPassword)
   resetMsg.value = result.message
   resetSuccess.value = result.success
@@ -205,5 +214,5 @@ function closeModal() {
   resetSuccess.value = false
 }
 
-defineExpose({ openModal, closeModal })
+defineExpose({openModal, closeModal})
 </script>

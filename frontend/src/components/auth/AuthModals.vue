@@ -31,21 +31,25 @@ const emit = defineEmits([
 
 const showLogin = computed({
   get: () => props.showLogin,
-  set: (v) => emit('update:showLogin', v)
+  set: (val) => emit('update:showLogin', val)
 })
 
 const showRegister = computed({
   get: () => props.showRegister,
-  set: (v) => emit('update:showRegister', v)
+  set: (val) => emit('update:showRegister', val)
 })
 
 function switchToRegister() {
-  showLogin.value = false
-  showRegister.value = true
+  if (showLogin.value) {
+    showLogin.value = false
+    showRegister.value = true
+  }
 }
 
 function switchToLogin() {
-  showRegister.value = false
-  showLogin.value = true
+  if (showRegister.value) {
+    showRegister.value = false
+    showLogin.value = true
+  }
 }
 </script>

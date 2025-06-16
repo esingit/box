@@ -1,0 +1,49 @@
+@layer components {
+  /* 背景遮罩 + 模糊层 */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    background-color: var(--primary-light);
+    backdrop-filter: blur(1px); /* 你可以调整像素大小 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* 模态框容器 */
+  .modal-container {
+    background-color: var(--bg-main);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-modal);
+    width: 100%;
+    max-width: 100rem;
+    padding: var(--space-xl);
+    position: relative;
+  }
+
+  /* 标题栏，含标题和关闭按钮 */
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+  }
+
+  .modal-title {
+    font-size: var(--font-xl);
+    font-weight: var(--font-semibold);
+    color: var(--text-main);
+    margin-bottom: var(--space-sm);
+  }
+
+  /* 分割线 */
+  .modal-divider {
+    height: 1px;
+    background-color: var(--border-main);
+    margin-left: calc(var(--space-xl) * -1);
+    margin-right: calc(var(--space-xl) * -1);
+    margin-bottom: var(--space-md);
+  }
+}
