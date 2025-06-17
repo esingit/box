@@ -1,13 +1,17 @@
 <template>
-  <form @submit.prevent="onSubmit">
-    <div class="form-group">
-      <label class="input-label">资产名称<span class="required">*</span></label>
-      <div class="control-group">
+  <form @submit.prevent="onSubmit" class="space-y-6">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        资产名称<span class="text-red-500">*</span>
+      </label>
+      <div class="flex items-center space-x-2 mt-1">
         <select
             v-model="form.assetNameId"
-            class="select form-select"
             required
             @keydown.enter.prevent="handleEnter"
+            class="flex-grow block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
+                 py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+                 text-gray-900 dark:text-gray-100"
         >
           <option value="">请选择资产名称</option>
           <option v-for="name in assetNames" :key="name.id" :value="name.id">
@@ -16,23 +20,28 @@
         </select>
         <button
             type="button"
-            class="btn btn-primary control-action"
+            class="inline-flex items-center px-3 py-2 border border-indigo-600 text-indigo-600 rounded-md
+                 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             @click.prevent="emitMaintain"
         >
-          <LucideSettings size="16" class="btn-icon" />
+          <LucideSettings size="16" class="mr-1" />
           名称管理
         </button>
       </div>
     </div>
 
-    <div class="form-group">
-      <label class="input-label">资产分类<span class="required">*</span></label>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        资产分类<span class="text-red-500">*</span>
+      </label>
       <select
           v-model="form.assetTypeId"
-          class="select form-select"
           required
           @change="onAssetTypeChange"
           @keydown.enter.prevent="handleEnter"
+          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
+               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+               text-gray-900 dark:text-gray-100"
       >
         <option value="">请选择资产分类</option>
         <option v-for="type in types" :key="type.id" :value="type.id">
@@ -41,13 +50,17 @@
       </select>
     </div>
 
-    <div class="form-group">
-      <label class="input-label">资产位置<span class="required">*</span></label>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        资产位置<span class="text-red-500">*</span>
+      </label>
       <select
           v-model="form.assetLocationId"
-          class="select form-select"
           required
           @keydown.enter.prevent="handleEnter"
+          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
+               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+               text-gray-900 dark:text-gray-100"
       >
         <option value="">请选择资产位置</option>
         <option v-for="location in locations" :key="location.id" :value="location.id">
@@ -56,27 +69,35 @@
       </select>
     </div>
 
-    <div class="form-group">
-      <label class="input-label">金额<span class="required">*</span></label>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        金额<span class="text-red-500">*</span>
+      </label>
       <input
           v-model.number="form.amount"
-          class="amount-input input"
           type="number"
-          step="0.01"
           min="0"
+          step="0.01"
           required
           placeholder="请输入金额"
           @keydown.enter.prevent="handleEnter"
+          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
+               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+               text-gray-900 dark:text-gray-100"
       />
     </div>
 
-    <div class="form-group">
-      <label class="input-label">货币单位<span class="required">*</span></label>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        货币单位<span class="text-red-500">*</span>
+      </label>
       <select
           v-model="form.unitId"
-          class="form-select select"
           required
           @keydown.enter.prevent="handleEnter"
+          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
+               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+               text-gray-900 dark:text-gray-100"
       >
         <option value="">请选择货币单位</option>
         <option v-for="unit in filteredUnits" :key="unit.id" :value="String(unit.id)">
@@ -85,25 +106,31 @@
       </select>
     </div>
 
-    <div class="form-group">
-      <label class="input-label">日期<span class="required">*</span></label>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        日期<span class="text-red-500">*</span>
+      </label>
       <input
           v-model="form.acquireTime"
           type="date"
-          class="date-input input"
           required
           @keydown.enter.prevent="handleEnter"
+          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
+               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+               text-gray-900 dark:text-gray-100"
       />
     </div>
 
-    <div class="form-group">
-      <label class="input-label">备注</label>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">备注</label>
       <input
           v-model="form.remark"
           type="text"
-          class="remark-input input"
           :placeholder="remarkPlaceholder"
           @keydown.enter.prevent="handleEnter"
+          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
+               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+               text-gray-900 dark:text-gray-100"
       />
     </div>
   </form>

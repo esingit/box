@@ -1,52 +1,40 @@
 <template>
-  <div v-if="show" class="modal-overlay" @click.self="$emit('cancel')">
-    <div class="modal-container">
-      <ModalHeader 
-        :title="title" 
-        @close="$emit('cancel')" 
-      />
-      
-      <div class="modal-body">
-        <FitnessForm 
-          ref="formRef"
-          :form="form"
-          :types="types"
-          :units="units"
-          :remark-placeholder="remarkPlaceholder"
-        />
-      </div>
+  <BaseModal :visible="show" :title="title" @update:visible="handleCancel" width="500px">
+    <FitnessForm
+        ref="formRef"
+        :form="form"
+        :types="types"
+        :units="units"
+        :remark-placeholder="remarkPlaceholder"
+    />
 
-      <div class="modal-footer">
-        <button 
-          class="btn btn-text" 
-          @click="$emit('cancel')"
+    <template #footer>
+      <div class="flex justify-end gap-4">
+        <button
+            class="text-gray-600 hover:text-gray-900 transition"
+            @click="handleCancel"
         >
           取消
         </button>
-        <button 
-          class="btn btn-primary" 
-          :disabled="loading || !isFormValid" 
-          @click="handleSubmit"
+        <button
+            class="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-blue-300 disabled:cursor-not-allowed transition"
+            :disabled="loading || !isFormValid"
+            @click="handleSubmit"
         >
           {{ loading ? '处理中...' : confirmText }}
         </button>
       </div>
-    </div>
-  </div>
+    </template>
+  </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue';
+import BaseModal from '@/components/base/BaseModal.vue'
 import FitnessForm from './FitnessForm.vue';
-import ModalHeader from './ModalHeader.vue';
-
-const formRef = ref(null);
 
 const props = defineProps({
-  show: {
-    type: Boolean,
-    default: false
-  },
+  show: Boolean,
   form: {
     type: Object,
     required: true
@@ -77,18 +65,19 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits({
-  cancel: null,
-  submit: null
-});
+const emit = defineEmits(['cancel', 'submit']);
 
-// 表单验证状态
+const formRef = ref(null);
+
 const isFormValid = computed(() => {
   if (!formRef.value) return false;
   return formRef.value.isValid;
 });
 
-// 提交处理
+function handleCancel() {
+  emit('cancel');
+}
+
 function handleSubmit() {
   if (!isFormValid.value || props.loading) return;
   emit('submit');

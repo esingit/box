@@ -1,6 +1,6 @@
 import emitter from './eventBus'
 import { axiosConfig } from './axiosConfig'
-import axios from './axios'
+import axiosInstance from '@/utils/axios';
 import { tokenService } from './tokenService'
 import { cancelPendingRequests } from './requestManager'
 import { useUserStore } from '@/store/userStore'

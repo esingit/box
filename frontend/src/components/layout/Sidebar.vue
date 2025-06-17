@@ -69,7 +69,7 @@ const menuItems = [
 
 const sidebarClass = computed(() =>
     [
-      'h-full bg-white text-gray-800 flex flex-col transition-all duration-500 ease-in-out border-r border-gray-200 fixed z-40',
+      'h-full bg-[var(--bg-sub)] text-gray-800 flex flex-col transition-all duration-500 ease-in-out border-r border-gray-200 fixed z-40',
       isCollapsed.value ? 'w-0  overflow-visible' : 'w-32'
     ].join(' ')
 )

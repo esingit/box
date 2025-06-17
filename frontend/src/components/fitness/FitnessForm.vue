@@ -1,10 +1,13 @@
 <template>
-  <form>
-    <div class="form-group">
-      <label class="input-label">类型<span class="required">*</span></label>
+  <form class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700">
+        类型 <span class="text-red-500">*</span>
+      </label>
       <select
           v-model="form.typeId"
-          class="select form-select"
+          class="mt-1 block w-full rounded-md border border-gray-300 bg-white py-2 px-3
+               shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-300 focus:ring-opacity-50"
           required
           @change="onTypeChange"
           @keydown.enter.prevent="moveCursorToNextLine"
@@ -16,24 +19,30 @@
       </select>
     </div>
 
-    <div class="form-group">
-      <label class="input-label">数量<span class="required">*</span></label>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">
+        数量 <span class="text-red-500">*</span>
+      </label>
       <input
           type="number"
           v-model.number="form.count"
           min="1"
-          class="input"
+          class="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3
+               shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-300 focus:ring-opacity-50"
           required
           placeholder="请输入数量"
           @keydown.enter.prevent="moveCursorToNextLine"
       />
     </div>
 
-    <div class="form-group">
-      <label class="input-label">单位<span class="required">*</span></label>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">
+        单位 <span class="text-red-500">*</span>
+      </label>
       <select
           v-model="form.unitId"
-          class="select form-select"
+          class="mt-1 block w-full rounded-md border border-gray-300 bg-white py-2 px-3
+               shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-300 focus:ring-opacity-50"
           required
           @keydown.enter.prevent="moveCursorToNextLine"
       >
@@ -44,24 +53,30 @@
       </select>
     </div>
 
-    <div class="form-group">
-      <label class="input-label">完成日期<span class="required">*</span></label>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">
+        完成日期 <span class="text-red-500">*</span>
+      </label>
       <input
           type="date"
           v-model="form.finishTime"
-          class="input"
+          class="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3
+               shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-300 focus:ring-opacity-50"
           required
           @keydown.enter.prevent="moveCursorToNextLine"
       />
     </div>
 
-    <div class="form-group">
-      <label class="input-label">备注</label>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">
+        备注
+      </label>
       <input
           type="text"
           v-model="form.remark"
-          class="input"
           :placeholder="remarkPlaceholder"
+          class="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3
+               shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-300 focus:ring-opacity-50"
           @keydown.enter.prevent="moveCursorToNextLine"
       />
     </div>
@@ -69,44 +84,60 @@
 </template>
 
 <script setup>
-import { computed, onMounted, nextTick } from 'vue'
+import { reactive, computed, onMounted, nextTick } from 'vue'
 
 const props = defineProps({
-  form: { type: Object, required: true },
+  // 如果你需要传入form，打开下面这行
+  // form: { type: Object, default: null },
   types: { type: Array, default: () => [] },
   units: { type: Array, default: () => [] },
   remarkPlaceholder: { type: String, default: '请输入备注（可选）' }
 })
 
-// 根据所选类型动态筛选单位
+// 本地初始化form，避免undefined报错
+const form = reactive({
+  typeId: '',
+  count: 1,
+  unitId: '',
+  finishTime: '',
+  remark: ''
+})
+
+// 如果你需要传入form，请用下面代码替换上面初始化
+// const form = reactive(props.form || {
+//   typeId: '',
+//   count: 1,
+//   unitId: '',
+//   finishTime: '',
+//   remark: ''
+// })
+
 const filteredUnits = computed(() => {
-  const selected = props.types.find(t => t.id === props.form.typeId)
+  const selected = props.types.find(t => String(t.id) === String(form.typeId))
   return selected?.key3
       ? props.units.filter(unit => unit.key1 === selected.key3)
       : props.units
 })
 
-// 类型改变时自动设置默认单位
 const onTypeChange = () => {
-  const selected = props.types.find(t => t.id === props.form.typeId)
+  const selected = props.types.find(t => String(t.id) === String(form.typeId))
   const match = selected?.key3
       ? props.units.find(unit => unit.key1 === selected.key3)
       : null
-  props.form.unitId = match?.id || ''
+  form.unitId = match?.id || ''
 }
 
 onMounted(onTypeChange)
 
 const isValid = computed(() =>
-    props.form.typeId &&
-    props.form.unitId &&
-    props.form.count > 0 &&
-    !!props.form.finishTime
+    form.typeId &&
+    form.unitId &&
+    form.count > 0 &&
+    !!form.finishTime
 )
 
 defineExpose({ isValid })
 
-// 回车后让光标跳到下一个可编辑控件
 const moveCursorToNextLine = (event) => {
   event.preventDefault()
   nextTick(() => {

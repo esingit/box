@@ -1,9 +1,11 @@
+// /store/fitnessStore.ts
+import { defineStore } from 'pinia';
 import { ref, reactive } from 'vue';
-import axios from 'axios';
+import axiosInstance from '@/utils/axios';
 import { formatFitnessRecord } from '@/utils/commonMeta';
 import emitter from '@/utils/eventBus.ts';
 
-export function useFitnessRecords() {
+export const fitnessStore = defineStore('fitnessRecord', () => {
   const records = ref([]);
   const loading = ref(false);
   const total = ref(0);
@@ -20,19 +22,18 @@ export function useFitnessRecords() {
   async function fetchRecords(page = current.value, size = pageSize.value) {
     loading.value = true;
     try {
-      const params = {
+      const params: any = {
         page,
         pageSize: size
       };
 
-      // 添加非空的查询参数
       if (query.typeId) params.typeId = query.typeId;
       if (query.startDate) params.startDate = query.startDate + 'T00:00:00';
       if (query.endDate) params.endDate = query.endDate + 'T23:59:59';
       if (query.remark) params.remark = query.remark.trim();
 
-      const res = await axios.get('/api/fitness-record/list', { params });
-      
+      const res = await axiosInstance.get('/api/fitness-record/list', { params });
+
       if (res.data?.success) {
         const rawRecords = res.data.data?.records || [];
         records.value = await Promise.all(rawRecords.map(record => formatFitnessRecord(record)));
@@ -42,7 +43,7 @@ export function useFitnessRecords() {
       } else {
         emitter.emit('notify', res.data?.message || '获取健身记录失败', 'error');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('获取健身记录失败:', err);
       emitter.emit('notify', '获取数据失败：' + (err.message || '未知错误'), 'error');
       records.value = [];
@@ -52,9 +53,9 @@ export function useFitnessRecords() {
     }
   }
 
-  async function addRecord(formData) {
+  async function addRecord(formData: any) {
     try {
-      const res = await axios.post('/api/fitness-record/add', {
+      const res = await axiosInstance.post('/api/fitness-record/add', {
         ...formData,
         finishTime: formData.finishTime + 'T00:00:00'
       });
@@ -66,16 +67,16 @@ export function useFitnessRecords() {
       }
       emitter.emit('notify', res.data?.message || '添加失败', 'error');
       return false;
-    } catch (err) {
+    } catch (err: any) {
       console.error('添加健身记录失败:', err);
       emitter.emit('notify', '添加失败：' + (err.message || '未知错误'), 'error');
       return false;
     }
   }
 
-  async function updateRecord(formData) {
+  async function updateRecord(formData: any) {
     try {
-      const res = await axios.put('/api/fitness-record/update', {
+      const res = await axiosInstance.put('/api/fitness-record/update', {
         ...formData,
         finishTime: formData.finishTime + 'T00:00:00'
       });
@@ -87,16 +88,16 @@ export function useFitnessRecords() {
       }
       emitter.emit('notify', res.data?.message || '更新失败', 'error');
       return false;
-    } catch (err) {
+    } catch (err: any) {
       console.error('更新健身记录失败:', err);
       emitter.emit('notify', '更新失败：' + (err.message || '未知错误'), 'error');
       return false;
     }
   }
 
-  async function deleteRecord(id) {
+  async function deleteRecord(id: number | string) {
     try {
-      const res = await axios.delete(`/api/fitness-record/delete/${id}`);
+      const res = await axiosInstance.delete(`/api/fitness-record/delete/${id}`);
       if (res.data?.success) {
         await fetchRecords(current.value);
         emitter.emit('notify', '删除成功', 'success');
@@ -104,7 +105,7 @@ export function useFitnessRecords() {
       }
       emitter.emit('notify', res.data?.message || '删除失败', 'error');
       return false;
-    } catch (err) {
+    } catch (err: any) {
       console.error('删除健身记录失败:', err);
       emitter.emit('notify', '删除失败：' + (err.message || '未知错误'), 'error');
       return false;
@@ -113,13 +114,13 @@ export function useFitnessRecords() {
 
   async function fetchStats() {
     try {
-      const res = await axios.get('/api/fitness-record/stats');
+      const res = await axiosInstance.get('/api/fitness-record/stats');
       if (res.data?.success) {
         return res.data.data;
       }
       emitter.emit('notify', res.data?.message || '获取统计数据失败', 'error');
       return null;
-    } catch (err) {
+    } catch (err: any) {
       console.error('获取统计数据失败:', err);
       emitter.emit('notify', '获取统计数据失败：' + (err.message || '未知错误'), 'error');
       return null;
@@ -136,12 +137,12 @@ export function useFitnessRecords() {
     fetchRecords(1);
   }
 
-  function handlePageChange(page) {
+  function handlePageChange(page: number) {
     current.value = page;
     fetchRecords(page);
   }
 
-  function handlePageSizeChange(size) {
+  function handlePageSizeChange(size: number) {
     pageSize.value = size;
     fetchRecords(1, size);
   }
@@ -162,4 +163,4 @@ export function useFitnessRecords() {
     handlePageSizeChange,
     fetchStats
   };
-}
+});

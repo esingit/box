@@ -1,21 +1,21 @@
 <template>
-  <div class="list-component">
-    <div class="table-container">
-      <FitnessTable 
-        :records="records"
-        @edit="handleEdit"
-        @delete="handleDelete"
+  <div class="flex flex-col space-y-4">
+    <div class="overflow-x-auto rounded border border-gray-200 bg-white shadow-sm">
+      <FitnessTable
+          :records="records"
+          @edit="handleEdit"
+          @delete="handleDelete"
       />
     </div>
-    
-    <div class="pagination-container">
+
+    <div class="flex justify-end">
       <PaginationBar
-        v-if="total > 0"
-        :current="current"
-        :total="total"
-        :page-size="pageSize"
-        @page-change="$emit('page-change', $event)"
-        @page-size-change="$emit('page-size-change', $event)"
+          v-if="total > 0"
+          :current="current"
+          :total="total"
+          :page-size="pageSize"
+          @page-change="$emit('page-change', $event)"
+          @page-size-change="$emit('page-size-change', $event)"
       />
     </div>
   </div>

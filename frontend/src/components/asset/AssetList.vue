@@ -1,21 +1,21 @@
 <template>
-  <div class="list-component">
-    <div class="table-container">
+  <div class="flex flex-col space-y-4">
+    <div class="overflow-auto rounded border border-gray-200 dark:border-gray-700">
       <AssetTable
-        :records="records"
-        @edit="$emit('edit', $event)"
-        @delete="$emit('delete', $event)"
+          :records="records"
+          @edit="$emit('edit', $event)"
+          @delete="$emit('delete', $event)"
       />
     </div>
 
-    <div class="pagination-container">
+    <div class="flex justify-end">
       <PaginationBar
-        v-if="total > 0"
-        :current="current"
-        :total="total"
-        :page-size="pageSize"
-        @page-change="$emit('page-change', $event)"
-        @page-size-change="$emit('page-size-change', $event)"
+          v-if="total > 0"
+          :current="current"
+          :total="total"
+          :page-size="pageSize"
+          @page-change="$emit('page-change', $event)"
+          @page-size-change="$emit('page-size-change', $event)"
       />
     </div>
   </div>
@@ -26,23 +26,17 @@ import AssetTable from './AssetTable.vue'
 import PaginationBar from '@/components/base/PaginationBar.vue'
 
 defineProps({
-  records: {
-    type: Array,
-    required: true
-  },
-  current: {
-    type: Number,
-    required: true
-  },
-  total: {
-    type: Number,
-    required: true
-  },
-  pageSize: {
-    type: Number,
-    required: true
-  }
+  records: Array,
+  current: Number,
+  total: Number,
+  pageSize: Number
 })
 
 defineEmits(['edit', 'delete', 'page-change', 'page-size-change'])
 </script>
+
+<style scoped>
+.list-component {
+  /* 你可以留空，全部用 Tailwind 管理样式 */
+}
+</style>

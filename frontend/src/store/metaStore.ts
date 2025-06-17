@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import axios from 'axios'
+import axiosInstance from '@/utils/axios';
 import emitter from '@/utils/eventBus'
 import { clearCommonMetaCache } from '@/utils/commonMeta'
 
@@ -13,8 +13,8 @@ export const useMetaStore = defineStore('meta', () => {
     loading.value = true
     try {
       const [typeRes, unitRes] = await Promise.all([
-        axios.get('/api/common-meta/by-type', { params: { typeCode: 'FITNESS_TYPE' } }),
-        axios.get('/api/common-meta/by-type', { params: { typeCode: 'UNIT' } })
+        axiosInstance.get('/api/common-meta/by-type', { params: { typeCode: 'FITNESS_TYPE' } }),
+        axiosInstance.get('/api/common-meta/by-type', { params: { typeCode: 'UNIT' } })
       ])
 
       if (typeRes.data?.success) {
@@ -35,7 +35,7 @@ export const useMetaStore = defineStore('meta', () => {
         })
       }
     } catch (error) {
-      if (!axios.isCancel?.(error)) {
+      if (!axiosInstance.isCancel?.(error)) {
         console.error('获取元数据失败:', error)
         emitter.emit('notify', {
           message: '获取元数据失败，请稍后重试',

@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import axiosInstance from '@/utils/axios';
 import emitter from '@/utils/eventBus'
 import { formatAssetRecord, clearCommonMetaCache } from '@/utils/commonMeta'
 import { AssetRecordRaw } from '@/types/asset'

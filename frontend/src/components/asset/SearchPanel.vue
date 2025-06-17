@@ -1,65 +1,94 @@
 <template>
-  <div class="search-panel" style="background-color: var(--bg-sub)">
-    <div class="u-flex">
-      <div class="flex-grow">
-        <div class="form-group">
-          <div class="control-group">
-            <select v-model="localQuery.assetNameId" class="form-select">
-              <option value="">全部资产名称</option>
-              <option v-for="name in assetNames" :key="name.id" :value="name.id">
-                {{ name.name }}
-              </option>
-            </select>
+  <div class="bg-white border border-gray-300 rounded-md p-4">
+    <div class="flex space-x-4">
+      <div class="flex-grow space-y-4">
+        <div class="flex space-x-4">
+          <select
+              v-model="localQuery.assetNameId"
+              class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">全部资产名称</option>
+            <option v-for="name in assetNames" :key="name.id" :value="name.id">{{ name.name }}</option>
+          </select>
 
-            <select v-model="localQuery.typeId" class="form-select">
-              <option value="">全部资产类型</option>
-              <option v-for="type in types" :key="type.id" :value="type.id">
-                {{ type.value1 }}
-              </option>
-            </select>
+          <select
+              v-model="localQuery.typeId"
+              class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">全部资产类型</option>
+            <option v-for="type in types" :key="type.id" :value="type.id">{{ type.value1 }}</option>
+          </select>
 
-            <select v-model="localQuery.locationId" class="form-select">
-              <option value="">全部资产位置</option>
-              <option v-for="location in locations" :key="location.id" :value="location.id">
-                {{ location.value1 }}
-              </option>
-            </select>
-          </div>
+          <select
+              v-model="localQuery.locationId"
+              class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">全部资产位置</option>
+            <option v-for="location in locations" :key="location.id" :value="location.id">{{ location.value1 }}</option>
+          </select>
         </div>
 
         <transition
-          enter-active-class="animate__animated animate__fadeIn"
-          leave-active-class="animate__animated animate__fadeOut"
+            enter-active-class="transition-opacity duration-300"
+            leave-active-class="transition-opacity duration-300"
         >
-          <div v-show="isExpanded" class="form-group">
-            <div class="control-group">
-              <div class="date-range">
-                <input type="date" v-model="localQuery.startDate" class="input" />
-                <span class="date-separator">至</span>
-                <input type="date" v-model="localQuery.endDate" class="input" />
-              </div>
-
+          <div v-if="isExpanded" class="flex space-x-4 items-center">
+            <div class="flex space-x-2 items-center">
               <input
-                class="input control-input"
-                v-model="localQuery.remark"
-                placeholder="备注关键词"
-                type="text"
+                  type="date"
+                  v-model="localQuery.startDate"
+                  class="border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="开始日期"
+              />
+              <span class="text-gray-500 select-none">至</span>
+              <input
+                  type="date"
+                  v-model="localQuery.endDate"
+                  class="border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="结束日期"
               />
             </div>
+
+            <input
+                type="text"
+                v-model="localQuery.remark"
+                placeholder="备注关键词"
+                class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="备注关键词"
+            />
           </div>
         </transition>
       </div>
 
-      <div class="search-actions u-flex u-items-center">
-        <button class="btn btn-icon btn-text" title="更多查询" @click="isExpanded = !isExpanded">
-          <LucideChevronDown v-if="!isExpanded" />
-          <LucideChevronUp v-else />
+      <div class="flex flex-col space-y-2 justify-center">
+        <button
+            @click="isExpanded = !isExpanded"
+            :title="isExpanded ? '收起更多查询' : '更多查询'"
+            class="p-2 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="切换更多查询"
+            type="button"
+        >
+          <component :is="isExpanded ? LucideChevronUp : LucideChevronDown" class="w-5 h-5" />
         </button>
-        <button class="btn btn-icon btn-primary" title="查询" @click="search">
-          <LucideSearch />
+
+        <button
+            @click="search"
+            title="查询"
+            class="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="执行查询"
+            type="button"
+        >
+          <LucideSearch class="w-5 h-5" />
         </button>
-        <button class="btn btn-icon btn-text" title="重置" @click="reset">
-          <LucideRotateCcw />
+
+        <button
+            @click="reset"
+            title="重置"
+            class="p-2 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="重置查询条件"
+            type="button"
+        >
+          <LucideRotateCcw class="w-5 h-5" />
         </button>
       </div>
     </div>
@@ -73,46 +102,60 @@ import { LucideSearch, LucideRotateCcw, LucideChevronDown, LucideChevronUp } fro
 const props = defineProps({
   query: {
     type: Object,
-    required: true
+    default: () => ({}),
   },
   types: {
     type: Array,
-    required: true
+    default: () => [],
   },
   locations: {
     type: Array,
-    required: true
+    default: () => [],
   },
   assetNames: {
     type: Array,
-    required: true
-  }
+    default: () => [],
+  },
 });
 
-const emit = defineEmits(['update:query', 'search', 'reset']);
+const emit = defineEmits(['updateQuery', 'search', 'reset']);
 const isExpanded = ref(false);
 
 const localQuery = reactive({
-  assetNameId: props.query.assetNameId || '',
-  typeId: props.query.typeId || '',
-  locationId: props.query.locationId || '',
-  startDate: props.query.startDate || '',
-  endDate: props.query.endDate || '',
-  remark: props.query.remark || ''
+  assetNameId: '',
+  typeId: '',
+  locationId: '',
+  startDate: '',
+  endDate: '',
+  remark: '',
 });
 
-watch(() => props.query, (newQuery) => {
-  localQuery.assetNameId = newQuery.assetNameId || '';
-  localQuery.typeId = newQuery.typeId || '';
-  localQuery.locationId = newQuery.locationId || '';
-  localQuery.startDate = newQuery.startDate || '';
-  localQuery.endDate = newQuery.endDate || '';
-  localQuery.remark = newQuery.remark || '';
-}, { deep: true });
+function updateLocalQuery(source) {
+  Object.assign(localQuery, {
+    assetNameId: source.assetNameId || '',
+    typeId: source.typeId || '',
+    locationId: source.locationId || '',
+    startDate: source.startDate || '',
+    endDate: source.endDate || '',
+    remark: source.remark || '',
+  });
+}
 
-watch(localQuery, (newQuery) => {
-  emit('update:query', { ...newQuery });
-}, { deep: true });
+updateLocalQuery(props.query);
+
+watch(
+    () => props.query,
+    (newQuery) => updateLocalQuery(newQuery),
+    { deep: true }
+);
+
+watch(
+    localQuery,
+    (newQuery) => {
+      emit('updateQuery', { ...newQuery });
+    },
+    { deep: true }
+);
 
 function search() {
   emit('search');
@@ -122,5 +165,3 @@ function reset() {
   emit('reset');
 }
 </script>
-
-

@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :visible="visible" title="欢迎回来" @update:visible="close">
+  <BaseModal :visible="visible" title="欢迎回来" @update:visible="close" width="500px">
     <Form @submit="handleSubmit" :validation-schema="schema" class="space-y-4" autocomplete="off">
       <div>
         <label class="modal-label">用户名</label>

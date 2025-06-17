@@ -1,66 +1,74 @@
 <template>
-  <div v-if="show" class="modal-overlay" @click.self="handleClose">
-    <div class="modal-container modal-lg">
-      <ModalHeader 
-        title="资产名称维护" 
-        @close="handleClose" 
+  <BaseModal
+      :visible="show"
+      :widthClass="'w-full max-w-4xl max-h-[90vh]'"
+      @update:visible="handleVisibleChange"
+  >
+    <!-- 头部 -->
+    <template #header>
+      <ModalHeader
+          title="资产名称维护"
+          @close="handleClose"
+          class="border-b border-gray-200 dark:border-gray-700"
       />
+    </template>
 
-      <div class="modal-body">
-        <!-- 搜索工具栏 -->
-        <div class="search-toolbar">
-          <div class="search-wrapper">
-            <input
+    <!-- 内容 -->
+    <div class="flex-1 overflow-auto p-6 flex flex-col">
+      <!-- 搜索工具栏 -->
+      <div class="flex items-center justify-between mb-4 space-x-3">
+        <div class="relative flex-1">
+          <input
               v-model="searchTerm"
               type="text"
-              class="input search-input"
               placeholder="搜索资产名称"
-            />
-            <div v-if="searchTerm" class="clear-icon" @click="clearSearch">
-              <LucideX :size="18" />
-            </div>
-          </div>
-          <div class="search-actions">
-            <button 
-              v-if="!showAdd && !showEdit" 
-              class="btn btn-primary" 
-              title="新增资产名称"
-              @click="showAddForm"
-            >
-              <LucidePlus class="btn-icon" :size="18" />
-              <span>新增</span>
-            </button>
-          </div>
+              class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          />
+          <button
+              v-if="searchTerm"
+              @click="clearSearch"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label="清除搜索"
+          >
+            <LucideX size="18" />
+          </button>
         </div>
 
-        <!-- 资产名称表单 -->
-        <AssetNameForm
+        <button
+            v-if="!showAdd && !showEdit"
+            @click="showAddForm"
+            class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md px-4 py-2 shadow-sm transition"
+            title="新增资产名称"
+        >
+          <LucidePlus size="18" />
+          <span>新增</span>
+        </button>
+      </div>
+
+      <!-- 资产名称表单 -->
+      <AssetNameForm
           v-if="showAdd || showEdit"
           :show="showAdd || showEdit"
           :loading="loading"
           :form-error="formError"
-          :edit-data="showEdit ? {
-            id: editingId,
-            name: editingName,
-            description: editingDescription
-          } : null"
+          :edit-data="showEdit ? { id: editingId, name: editingName, description: editingDescription } : null"
           @close="() => {
-            formError = ''
-            showAdd ? (showAdd = false) : (showEdit = false)
-          }"
+          formError = ''
+          showAdd ? (showAdd = false) : (showEdit = false)
+        }"
           @submit="handleFormSubmit"
           @update:form-error="val => formError = val"
-        />
+      />
 
-        <!-- 列表区域 -->
-        <div v-else class="content-section">
-          <template v-if="loading">
-            <div class="skeleton-list">
-              <SkeletonCard v-for="n in 5" :key="n" />
-            </div>
-          </template>
-          <template v-else>
-            <AssetNamesList
+      <!-- 列表区域 -->
+      <div v-else class="flex-1 overflow-auto">
+        <template v-if="loading">
+          <div class="space-y-3">
+            <SkeletonCard v-for="n in 5" :key="n" />
+          </div>
+        </template>
+        <template v-else>
+          <AssetNamesList
               :names="filteredNameList"
               :current="current"
               :total="total"
@@ -69,17 +77,17 @@
               @delete="handleDelete"
               @page-change="handlePageChange"
               @page-size-change="handlePageSizeChange"
-            />
-          </template>
-        </div>
+          />
+        </template>
       </div>
     </div>
-  </div>
+  </BaseModal>
 </template>
 
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { LucidePlus, LucideX } from 'lucide-vue-next'
+import BaseModal from '@/components/base/BaseModal.vue'
 import ModalHeader from './ModalHeader.vue'
 import AssetNamesList from './AssetNamesList.vue'
 import AssetNameForm from './AssetNameForm.vue'
@@ -87,7 +95,7 @@ import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import axios from 'axios'
 import emitter from '@/utils/eventBus.ts'
 
-// 防抖函数
+// 你的防抖函数保持不变
 function debounce(fn, delay = 300) {
   let timer = null
   return function (...args) {
@@ -105,7 +113,6 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'refresh'])
 
-// 状态管理
 const searchTerm = ref('')
 const names = ref([])
 const loading = ref(false)
@@ -120,7 +127,6 @@ const pageSize = ref(10)
 const total = ref(0)
 const formError = ref('')
 
-// 处理关闭模态框
 function handleClose() {
   resetState()
   emit('close')
@@ -136,12 +142,10 @@ function resetState() {
   error.value = null
 }
 
-// 监听搜索词变化
 watch(searchTerm, debounce(() => {
   fetchNames(1)
 }, 300))
 
-// 获取资产名称列表
 async function fetchNames(page = current.value) {
   loading.value = true
   error.value = null
@@ -159,7 +163,6 @@ async function fetchNames(page = current.value) {
       total.value = data.total || 0
       current.value = data.current || 1
       pageSize.value = data.size || 10
-      // 查询提示
       if (searchTerm.value) {
         if (Number(total.value) === 0) {
           emitter.emit('notify', { message: '未找到匹配的资产名称', type: 'info' })
@@ -180,13 +183,11 @@ async function fetchNames(page = current.value) {
   }
 }
 
-// 清除搜索
 function clearSearch() {
   searchTerm.value = ''
   fetchNames(1)
 }
 
-// 处理编辑
 function startEdit(name) {
   editingId.value = name.id
   editingName.value = name.name
@@ -205,19 +206,16 @@ function showAddForm() {
   showAdd.value = true
 }
 
-// 分页相关
 const filteredNameList = computed(() => {
   const start = (current.value - 1) * pageSize.value
   const end = start + pageSize.value
   return names.value.slice(start, end)
 })
 
-// 更新总数
 watch(names, (newList) => {
   total.value = newList.length
 })
 
-// 处理分页变化
 function handlePageChange(page) {
   current.value = page
 }
@@ -227,13 +225,11 @@ function handlePageSizeChange(size) {
   current.value = 1
 }
 
-// 处理表单提交
 async function handleFormSubmit(data) {
   loading.value = true
   formError.value = ''
   try {
     if (showAdd.value) {
-      // 处理新增
       const { name, description } = data
       const res = await axios.post('/api/asset-names', {
         name: name.trim(),
@@ -254,7 +250,6 @@ async function handleFormSubmit(data) {
         }
       }
     } else if (showEdit.value) {
-      // 处理编辑
       const { id, name, description } = data
       const res = await axios.put(`/api/asset-names/${id}`, {
         name: name.trim(),
@@ -284,7 +279,6 @@ async function handleFormSubmit(data) {
   }
 }
 
-// 处理删除
 async function handleDelete(name) {
   loading.value = true
   error.value = null
@@ -307,10 +301,8 @@ async function handleDelete(name) {
   }
 }
 
-// 初始化加载数据
 fetchNames()
 
-// 监听显示状态变化
 watch(() => props.show, (newVal) => {
   if (newVal) {
     fetchNames()
@@ -318,4 +310,10 @@ watch(() => props.show, (newVal) => {
     handleClose()
   }
 })
+
+// 这里要同步外部 v-model:visible 关闭弹窗
+function handleVisibleChange(val) {
+  if (!val) handleClose()
+  emit('close', val)
+}
 </script>

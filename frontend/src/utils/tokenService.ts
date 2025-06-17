@@ -1,4 +1,4 @@
-import axios from './axios'
+import axiosInstance from '@/utils/axios';
 
 class TokenService {
   constructor() {

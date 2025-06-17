@@ -1,13 +1,14 @@
 <template>
-  <div v-if="show" class="modal-overlay" @click.self="$emit('cancel')">
-    <div class="modal-container">
-      <ModalHeader 
-        :title="title" 
-        @close="$emit('cancel')" 
-      />
-      
-      <div class="modal-body">
-        <AssetForm
+  <BaseModal
+      :visible="show"
+      :title="title"
+      :widthClass="'w-full max-w-lg'"
+      @update:visible="handleVisibleChange"
+      width="500px"
+  >
+    <!-- 内容插槽 -->
+    <div class="p-6 flex-1 overflow-auto">
+      <AssetForm
           ref="formRef"
           :form="form"
           :asset-names="assetNames"
@@ -16,99 +17,73 @@
           :locations="locations"
           :remark-placeholder="remarkPlaceholder"
           @maintain="handleMaintainClick"
-        />
-      </div>
+      />
+    </div>
 
-      <div class="modal-footer">
-        <button class="btn btn-text" @click="$emit('cancel')">
+    <!-- 底部插槽 -->
+    <template #footer>
+      <div class="flex justify-end space-x-4 p-4 border-t border-gray-200 dark:border-gray-700">
+        <button
+            class="px-4 py-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            @click="handleCancel"
+        >
           取消
         </button>
         <button
-          class="btn btn-primary"
-          :disabled="loading || !isFormValid"
-          @click="handleSubmit"
+            class="px-4 py-2 rounded-md text-white font-semibold transition
+                 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed"
+            :disabled="loading || !isFormValid"
+            @click="handleSubmit"
         >
           {{ loading ? '处理中...' : confirmText }}
         </button>
       </div>
-    </div>
-  </div>
+    </template>
+
+  </BaseModal>
 
   <AssetNamesModal
-    v-if="showNamesModal"
-    :show="showNamesModal"
-    @close="handleNamesModalClose"
-    @refresh="handleNamesModalRefresh"
+      v-if="showNamesModal"
+      :show="showNamesModal"
+      @close="handleNamesModalClose"
+      @refresh="handleNamesModalRefresh"
   />
 </template>
 
-<script setup>
-import { computed, ref, watch } from 'vue'
-import ModalHeader from './ModalHeader.vue'
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+import BaseModal from '@/components/base/BaseModal.vue'
 import AssetForm from './AssetForm.vue'
 import AssetNamesModal from './AssetNamesModal.vue'
 
 const props = defineProps({
-  show: {
-    type: Boolean,
-    required: true
-  },
-  title: {
-    type: String,
-    required: true
-  },
-  form: {
-    type: Object,
-    required: true
-  },
-  assetNames: {
-    type: Array,
-    required: true
-  },
-  types: {
-    type: Array,
-    required: true
-  },
-  units: {
-    type: Array,
-    required: true
-  },
-  locations: {
-    type: Array,
-    required: true
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  },
-  confirmText: {
-    type: String,
-    default: '确定'
-  },
-  remarkPlaceholder: {
-    type: String,
-    default: '备注'
-  }
+  show: Boolean,
+  title: String,
+  form: Object,
+  assetNames: Array,
+  types: Array,
+  units: Array,
+  locations: Array,
+  loading: { type: Boolean, default: false },
+  confirmText: { type: String, default: '确定' },
+  remarkPlaceholder: { type: String, default: '备注' }
 })
 
-const formRef = ref(null)
-const showNamesModal = ref(false)
 const emit = defineEmits(['submit', 'cancel', 'refresh-names'])
 
-// 表单验证状态
+const formRef = ref<any>(null)
+const showNamesModal = ref(false)
+
 const isFormValid = computed(() => {
-  if (!formRef.value) return false
-  return formRef.value.isValid
+  return formRef.value?.isValid ?? false
 })
 
-// 确保日期格式正确
-const formatDate = (date) => {
+function formatDate(date: string | null) {
   if (!date) return null
   if (date.includes('T')) return date
   return `${date}T00:00:00`
 }
 
-// 提交处理
 function handleSubmit() {
   if (!isFormValid.value || props.loading) return
   const formData = { ...props.form }
@@ -128,11 +103,19 @@ function handleNamesModalRefresh() {
   emit('refresh-names')
 }
 
-// 监听父组件的 show 属性变化
+function handleCancel() {
+  emit('cancel')
+  emit('update:visible', false)
+}
+
+function handleVisibleChange(val: boolean) {
+  if (!val) handleCancel()
+  emit('update:visible', val)
+}
+
 watch(() => props.show, (newVal) => {
   if (!newVal) {
     showNamesModal.value = false
   }
 })
 </script>
-

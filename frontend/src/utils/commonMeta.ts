@@ -1,4 +1,4 @@
-import axios from './axios';
+import axiosInstance from '@/utils/axios';;
 
 // 缓存已获取的数据
 const cache = new Map<string | number, { typeName: string; value1: string }>();

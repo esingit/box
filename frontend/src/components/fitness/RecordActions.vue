@@ -1,10 +1,12 @@
 <template>
-  <div class="operations">
-    <button class="action-btn" @click="$emit('edit')" title="编辑">
-      <LucidePencil :size="16" />
+  <div class="flex items-center gap-2">
+    <button @click="$emit('edit')" title="编辑"
+            class="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition text-gray-600">
+      <LucidePencil class="w-4 h-4" />
     </button>
-    <button class="action-btn" @click="$emit('delete')" title="删除">
-      <LucideTrash2 :size="16" />
+    <button @click="$emit('delete')" title="删除"
+            class="h-8 w-8 flex items-center justify-center rounded-md hover:bg-red-100 text-red-500 transition">
+      <LucideTrash2 class="w-4 h-4" />
     </button>
   </div>
 </template>

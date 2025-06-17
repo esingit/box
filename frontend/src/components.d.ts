@@ -21,6 +21,7 @@ declare module 'vue' {
     BaseButton: typeof import('./components/base/BaseButton.vue')['default']
     BaseDialog: typeof import('./components/base/BaseDialog.vue')['default']
     BaseModal: typeof import('./components/base/BaseModal.vue')['default']
+    BaseTooltip: typeof import('./components/base/BaseTooltip.vue')['default']
     ConfirmDialog: typeof import('./components/base/ConfirmDialog.vue')['default']
     Dashboard: typeof import('./components/dashboard/Dashboard.vue')['default']
     EmptyState: typeof import('./components/base/EmptyState.vue')['default']
@@ -72,6 +73,7 @@ declare module 'vue' {
     SearchPanel: typeof import('./components/asset/SearchPanel.vue')['default']
     Sidebar: typeof import('./components/layout/Sidebar.vue')['default']
     SkeletonCard: typeof import('./components/base/SkeletonCard.vue')['default']
+    Tooltip: typeof import('./components/base/Tooltip.vue')['default']
     UserMenuAuthenticated: typeof import('./components/layout/UserMenuAuthenticated.vue')['default']
     UserMenuGuest: typeof import('./components/layout/UserMenuGuest.vue')['default']
   }

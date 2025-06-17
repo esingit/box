@@ -1,38 +1,40 @@
 <template>
-  <div class="search-panel" style="background-color: var(--bg-sub)">
-    <div class="u-flex">
-      <div class="flex-grow">
-        <div class="form-group">
-          <div class="control-group">
-            <select v-model="localQuery.typeId" class="form-select">
-              <option value="">全部类型</option>
-              <option v-for="type in types" :key="type.id" :value="type.id">
-                {{ type.value1 }}
-              </option>
-            </select>
+  <div class="w-full bg-white border rounded-xl p-4 shadow-sm">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <!-- 左侧筛选项 -->
+      <div class="flex flex-wrap items-center gap-4 flex-1">
+        <!-- 类型下拉 -->
+        <select v-model="localQuery.typeId"
+                class="h-10 rounded-lg border border-gray-300 text-sm px-3 focus:outline-none focus:ring-2 focus:ring-black bg-white">
+          <option value="">全部类型</option>
+          <option v-for="type in types" :key="type.id" :value="type.id">
+            {{ type.value1 }}
+          </option>
+        </select>
 
-            <div class="date-range">
-              <input type="date" v-model="localQuery.startDate" class="input" />
-              <span class="date-separator">至</span>
-              <input type="date" v-model="localQuery.endDate" class="input" />
-            </div>
-
-            <input 
-              class="input control-input"
-              v-model="localQuery.remark" 
-              placeholder="备注关键词" 
-              type="text" 
-            />
-          </div>
+        <!-- 日期区间 -->
+        <div class="flex items-center gap-2">
+          <input type="date" v-model="localQuery.startDate"
+                 class="h-10 rounded-lg border border-gray-300 text-sm px-3 focus:outline-none focus:ring-2 focus:ring-black" />
+          <span class="text-gray-400">至</span>
+          <input type="date" v-model="localQuery.endDate"
+                 class="h-10 rounded-lg border border-gray-300 text-sm px-3 focus:outline-none focus:ring-2 focus:ring-black" />
         </div>
+
+        <!-- 备注关键词 -->
+        <input type="text" v-model="localQuery.remark" placeholder="备注关键词"
+               class="h-10 w-48 rounded-lg border border-gray-300 text-sm px-3 focus:outline-none focus:ring-2 focus:ring-black" />
       </div>
 
-      <div class="search-actions u-flex u-items-center">
-        <button class="btn btn-icon btn-primary" title="查询" @click="search">
-          <LucideSearch />
+      <!-- 操作按钮 -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button @click="search" title="查询"
+                class="h-10 w-10 flex items-center justify-center rounded-lg bg-black text-white hover:bg-gray-800 transition">
+          <LucideSearch class="w-4 h-4" />
         </button>
-        <button class="btn btn-icon btn-text" title="重置" @click="reset">
-          <LucideRotateCcw />
+        <button @click="reset" title="重置"
+                class="h-10 w-10 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition">
+          <LucideRotateCcw class="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -44,19 +46,11 @@ import { ref, watch, reactive } from 'vue';
 import { LucideSearch, LucideRotateCcw } from 'lucide-vue-next';
 
 const props = defineProps({
-  query: {
-    type: Object,
-    required: true
-  },
-  types: {
-    type: Array,
-    required: true
-  }
+  query: Object,
+  types: Array
 });
-
 const emit = defineEmits(['update:query', 'search', 'reset']);
 
-// 本地查询对象，用于实现双向绑定
 const localQuery = reactive({
   typeId: props.query.typeId || '',
   startDate: props.query.startDate || '',
@@ -64,7 +58,6 @@ const localQuery = reactive({
   remark: props.query.remark || ''
 });
 
-// 监听外部查询对象变化
 watch(() => props.query, (newQuery) => {
   localQuery.typeId = newQuery.typeId || '';
   localQuery.startDate = newQuery.startDate || '';
@@ -72,22 +65,13 @@ watch(() => props.query, (newQuery) => {
   localQuery.remark = newQuery.remark || '';
 }, { deep: true });
 
-// 监听本地查询对象变化
 watch(localQuery, (newQuery) => {
-  console.log('SearchPanel - 本地查询条件变化：', newQuery);
-  emit('update:query', {
-    typeId: newQuery.typeId,
-    startDate: newQuery.startDate,
-    endDate: newQuery.endDate,
-    remark: newQuery.remark
-  });
+  emit('update:query', { ...newQuery });
 }, { deep: true });
 
-// 搜索和重置功能
 function search() {
   emit('search');
 }
-
 function reset() {
   emit('reset');
 }

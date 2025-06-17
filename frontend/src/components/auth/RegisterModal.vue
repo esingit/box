@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :visible="visible" title="注册新用户" @update:visible="close">
+  <BaseModal :visible="visible" title="注册新用户" @update:visible="close" width="500px">
     <form @submit.prevent="onSubmit" class="space-y-4">
       <div>
         <label class="modal-label">用户名</label>

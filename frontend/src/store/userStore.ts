@@ -1,4 +1,3 @@
-// userStore.ts
 import { defineStore } from 'pinia'
 import axios, { AxiosInstance } from 'axios'
 import type { Router } from 'vue-router'
@@ -58,9 +57,9 @@ export const useUserStore = defineStore('user', {
         user: (() => {
             try {
                 const stored = localStorage.getItem('user')
-                return stored ? JSON.parse(stored) : null
+                return stored ? JSON.parse(stored) : {}
             } catch {
-                return null
+                return {}
             }
         })(),
         isInitialized: false,
@@ -70,7 +69,7 @@ export const useUserStore = defineStore('user', {
     }),
 
     getters: {
-        currentUser: state => state.user,
+        currentUser: state => state.user || {},
         formattedLastLoginTime: state => {
             if (!state.user?.lastLoginTime) return 'N/A'
             try {
@@ -79,6 +78,8 @@ export const useUserStore = defineStore('user', {
                 return state.user.lastLoginTime
             }
         },
+        // 方便判断是否登录
+        isAuthenticated: state => state.isLoggedIn && !!state.token,
     },
 
     actions: {
@@ -120,8 +121,7 @@ export const useUserStore = defineStore('user', {
                     return false
                 }
 
-                // 只有token验证成功且没有用户数据时才获取
-                if (!this.user) {
+                if (!this.user || Object.keys(this.user).length === 0) {
                     await this.fetchUser()
                 }
                 this.isInitialized = true
@@ -179,8 +179,7 @@ export const useUserStore = defineStore('user', {
                 return
             }
 
-            // 避免重复获取用户数据
-            if (this.user && this.isLoggedIn) {
+            if (this.user && Object.keys(this.user).length > 0 && this.isLoggedIn) {
                 return
             }
 
@@ -192,9 +191,11 @@ export const useUserStore = defineStore('user', {
                     localStorage.setItem('user', JSON.stringify(this.user))
                     this.isLoggedIn = true
                 } else {
+                    this.user = {}
                     await this.clearAuth(false)
                 }
             } catch {
+                this.user = {}
                 await this.clearAuth(false)
             }
         },
@@ -268,7 +269,7 @@ export const useUserStore = defineStore('user', {
 
         async clearAuth(clearUI = true): Promise<void> {
             this.token = null
-            this.user = null
+            this.user = {}
             this.isLoggedIn = false
             this.isRefreshing = false
             localStorage.removeItem('user')
@@ -282,7 +283,6 @@ export const useUserStore = defineStore('user', {
                 })
 
                 try {
-                    // 使用 replace 而不是 href 避免页面重载
                     if (window.location.pathname !== '/home') {
                         window.location.replace('/home')
                     }

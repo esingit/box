@@ -1,142 +1,132 @@
 <template>
-  <div class="page-container">
-    <!-- 资产概览卡片 -->
-    <div class="card">
-      <div class="card-header flex-between">
-        <h3 class="card-title" v-if="!loading && stats.formattedDate">
-          {{ stats.formattedDate }}资产记录统计
-        </h3>
-        <div class="card-actions" v-if="!loading">
-          <button 
-            class="btn btn-icon btn-text" 
+  <div class="flex flex-col gap-6 p-6 bg-white text-gray-800 dark:bg-black dark:text-white">
+    <!-- 统计信息卡片区域 -->
+    <div class="w-full flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-medium" v-if="!loading && stats.formattedDate">
+          {{ stats.formattedDate }} 资产记录统计
+        </h2>
+        <button
+            class="hover:text-gray-500 dark:hover:text-gray-300 transition"
             :class="{ 'animate-spin': retrying }"
             @click="fetchStatsWithRetry"
             :title="retrying ? '正在重试...' : '刷新统计数据'"
-          >
-            <LucideRefreshCw class="btn-icon-md" />
-          </button>
-        </div>
+        >
+          <LucideRefreshCw class="w-5 h-5" />
+        </button>
       </div>
 
-      <div class="card-grid">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <template v-if="loading">
-          <SkeletonCard v-for="i in 3" :key="i" class="stat-card" />
+          <SkeletonCard v-for="i in 3" :key="i" class="h-[120px]" />
         </template>
         <template v-else>
-          <!-- 总资产卡片 -->
-          <div class="stat-card" :title="'总资产 ' + formatAmount(stats.totalAssets)">
-            <h4 class="stat-label">总资产</h4>
-            <div class="stat-value positive">{{ formatAmount(stats.totalAssets) }}</div>
-            <div class="stat-change" :class="getChangeClass(stats.assetsChange)">
+          <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition">
+            <div class="text-sm text-gray-500">总资产</div>
+            <div class="text-2xl font-semibold text-green-600">{{ formatAmount(stats.totalAssets) }}</div>
+            <div :class="getChangeClass(stats.assetsChange)">
               {{ getChangePrefix(stats.assetsChange) }}{{ formatAmount(stats.assetsChange) }}
             </div>
           </div>
-          
-          <!-- 总负债卡片 -->
-          <div class="stat-card" :title="'总负债 ' + formatAmount(stats.totalLiabilities)">
-            <h4 class="stat-label">总负债</h4>
-            <div class="stat-value negative">{{ formatAmount(stats.totalLiabilities) }}</div>
-            <div class="stat-change" :class="getChangeClass(stats.liabilitiesChange, true)">
+
+          <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition">
+            <div class="text-sm text-gray-500">总负债</div>
+            <div class="text-2xl font-semibold text-red-500">{{ formatAmount(stats.totalLiabilities) }}</div>
+            <div :class="getChangeClass(stats.liabilitiesChange, true)">
               {{ getChangePrefix(stats.liabilitiesChange) }}{{ formatAmount(stats.liabilitiesChange) }}
             </div>
           </div>
-          
-          <!-- 净资产卡片 -->
-          <div class="stat-card" :title="'净资产 ' + formatAmount(netWorth)">
-            <h4 class="stat-label">净资产</h4>
-            <div class="stat-value" :class="netWorth > 0 ? 'positive' : 'negative'">{{ formatAmount(netWorth) }}</div>
-            <div class="stat-change" :class="getChangeClass(netWorthChange)">
+
+          <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition">
+            <div class="text-sm text-gray-500">净资产</div>
+            <div class="text-2xl font-semibold" :class="netWorth > 0 ? 'text-green-600' : 'text-red-500'">
+              {{ formatAmount(netWorth) }}
+            </div>
+            <div :class="getChangeClass(netWorthChange)">
               {{ getChangePrefix(netWorthChange) }}{{ formatAmount(netWorthChange) }}
             </div>
           </div>
         </template>
       </div>
-      
-      <!-- 重试状态提示 -->
-      <div v-if="retrying" class="text-hint">
+
+      <div v-if="retrying" class="text-xs text-gray-400 mt-2">
         正在重试 ({{ retryCount }}/{{ maxRetries }})...
       </div>
     </div>
 
-    <!-- 搜索和操作区域 -->
-    <div class="content-section">
+    <!-- 搜索栏和按钮操作区域 -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <SearchPanel
-        :query="query"
-        :types="assetStore.types"
-        :locations="assetStore.locations"
-        :asset-names="assetStore.assetNames"
-        @update:query="val => Object.assign(query, val)"
-        @search="handleQuery"
-        @reset="resetQuery"
-        @refresh-names="refreshAssetNames"
+          :query="query"
+          :types="assetStore.types"
+          :locations="assetStore.locations"
+          :asset-names="assetStore.assetNames"
+          @update:query="val => Object.assign(query, val)"
+          @search="handleQuery"
+          @reset="resetQuery"
+          @refresh-names="refreshAssetNames"
       />
 
-      <div class="action-bar content-action">
-        <button class="btn btn-primary" @click="showModal">
-          <LucidePlus class="btn-icon-sm" />
-          添加记录
+      <div class="flex items-center gap-2">
+        <button class="px-4 py-2 rounded-lg bg-black text-white hover:opacity-90" @click="showModal">
+          <LucidePlus class="w-4 h-4 inline mr-1" /> 添加记录
         </button>
-        <button class="btn btn-outline" @click="onCopyClick">
-          <LucideCopy class="btn-icon-sm" />
-          复制上回记录
+        <button class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800" @click="onCopyClick">
+          <LucideCopy class="w-4 h-4 inline mr-1" /> 复制上回记录
         </button>
       </div>
     </div>
 
-    <!-- 记录列表区域 -->
-    <div class="content-section">
+    <!-- 列表区域 -->
+    <div>
       <AssetList
-        v-if="!loading"
-        :records="records"
-        :current="current"
-        :total="total"
-        :page-size="pageSize"
-        @edit="editRecord"
-        @delete="deleteRecord"
-        @page-change="handlePageChange"
-        @page-size-change="handlePageSizeChange"
+          v-if="!loading"
+          :records="records"
+          :current="current"
+          :total="total"
+          :page-size="pageSize"
+          @edit="editRecord"
+          @delete="deleteRecord"
+          @page-change="handlePageChange"
+          @page-size-change="handlePageSizeChange"
       />
-
-      <!-- 加载中骨架屏 -->
-      <div v-else class="skeleton-list">
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <SkeletonCard v-for="n in pageSize" :key="n" />
       </div>
     </div>
 
-    <!-- 添加记录弹窗 -->
+    <!-- 添加 / 编辑弹窗 -->
     <AssetModal
-      v-if="showAddModal"
-      :show="showAddModal"
-      :form="form"
-      :asset-names="assetStore.assetNames"
-      :types="assetStore.types"
-      :units="assetStore.units"
-      :locations="assetStore.locations"
-      :loading="adding"
-      title="添加记录"
-      confirm-text="确定"
-      remark-placeholder="备注（可选）"
-      @submit="handleAddRecord"
-      @cancel="cancelModal"
-      @refresh-names="refreshAssetNames"
+        v-if="showAddModal"
+        :show="showAddModal"
+        :form="form"
+        :asset-names="assetStore.assetNames"
+        :types="assetStore.types"
+        :units="assetStore.units"
+        :locations="assetStore.locations"
+        :loading="adding"
+        title="添加记录"
+        confirm-text="确定"
+        remark-placeholder="备注（可选）"
+        @submit="handleAddRecord"
+        @cancel="cancelModal"
+        @refresh-names="refreshAssetNames"
     />
-    
-    <!-- 编辑记录弹窗 -->
     <AssetModal
-      v-if="editingIdx !== null"
-      :show="editingIdx !== null"
-      :form="editForm"
-      :asset-names="assetStore.assetNames"
-      :types="assetStore.types"
-      :units="assetStore.units"
-      :locations="assetStore.locations"
-      :loading="false"
-      title="编辑记录"
-      confirm-text="保存"
-      remark-placeholder="备注"
-      @submit="saveEdit"
-      @cancel="cancelEdit"
-      @refresh-names="refreshAssetNames"
+        v-if="editingIdx !== null"
+        :show="editingIdx !== null"
+        :form="editForm"
+        :asset-names="assetStore.assetNames"
+        :types="assetStore.types"
+        :units="assetStore.units"
+        :locations="assetStore.locations"
+        :loading="false"
+        title="编辑记录"
+        confirm-text="保存"
+        remark-placeholder="备注"
+        @submit="saveEdit"
+        @cancel="cancelEdit"
+        @refresh-names="refreshAssetNames"
     />
   </div>
 </template>
@@ -151,7 +141,7 @@ import AssetList from '@/components/asset/AssetList.vue'
 import AssetModal from '@/components/asset/AssetModal.vue'
 import SearchPanel from '@/components/asset/SearchPanel.vue'
 import SkeletonCard from '@/components/base/SkeletonCard.vue'
-import axios from 'axios'
+import axiosInstance from '@/utils/axios';
 
 // 外部依赖
 const assetStore = useAssetStore()
@@ -277,7 +267,7 @@ async function tryFetchStats() {
   try {
     loading.value = true
     retrying.value = retryCount.value > 0
-    const res = await axios.get('/api/asset-record/latest-stats')
+    const res = await axiosInstance.get('/api/asset-record/latest-stats')
     if (res.data?.success) {
       stats.value = res.data.data
       retryCount.value = 0
@@ -306,7 +296,7 @@ async function tryFetchStats() {
 // 获取资产统计
 async function fetchStats() {
   try {
-    const res = await axios.get('/api/asset-record/latest-stats')
+    const res = await axiosInstance.get('/api/asset-record/latest-stats')
     if (res.data?.success) {
       stats.value = res.data.data
       return true

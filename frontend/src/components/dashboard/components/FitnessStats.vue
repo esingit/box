@@ -39,7 +39,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import Chart from 'chart.js/auto';
-import axios from 'axios';
+import axiosInstance from '@/utils/axios';
 
 const selectedFitnessTypes = ref(['PUSH_UP']);
 const fitnessData = ref([]);
@@ -130,7 +130,7 @@ const fitnessChartData = computed(() => {
 
 async function fetchMetaData() {
   try {
-    const res = await axios.get('/api/meta/types', { params: { typeCode: 'FITNESS_TYPE' } });
+    const res = await axiosInstance.get('/api/meta/types', { params: { typeCode: 'FITNESS_TYPE' } });
     if (res.data?.success) {
       metaTypes.value = res.data.data || [];
     }
@@ -147,7 +147,7 @@ async function fetchFitnessData() {
     const start = new Date();
     start.setDate(now.getDate() - 30);
 
-    const res = await axios.get('/api/fitness-record/list', {
+    const res = await axiosInstance.get('/api/fitness-record/list', {
       params: {
         page: 1,
         pageSize: 999,

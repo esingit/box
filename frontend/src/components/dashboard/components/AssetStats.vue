@@ -48,7 +48,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Line } from 'vue-chartjs'
-import axios from 'axios'
+import axiosInstance from '@/utils/axios';
 import { useUserStore } from '@/store/userStore'
 
 const userStore = useUserStore()
@@ -166,7 +166,7 @@ const fetchAssetNames = async () => {
     assetNames.value = []
     return
   }
-  const response = await axios.get('/api/asset-names/all', {
+  const response = await axiosInstance.get('/api/asset-names/all', {
     params: { assetTypeId: selectedAssetType.value.join(',') },
   })
   if (response.data?.success && Array.isArray(response.data.data)) {
@@ -183,7 +183,7 @@ const fetchAssetData = async () => {
     const params = {}
     if (selectedAssetType.value.length) params.assetTypeId = selectedAssetType.value.join(',')
     if (selectedAssetName.value.length) params.assetNameId = selectedAssetName.value.join(',')
-    const response = await axios.get('/api/asset/statistics', { params })
+    const response = await axiosInstance.get('/api/asset/statistics', { params })
     if (Array.isArray(response.data)) {
       assetData.value = response.data
     }
@@ -203,7 +203,7 @@ const handleAssetNameChange = async () => {
 
 onMounted(async () => {
   if (!userStore.isLoggedIn || !userStore.token) return
-  const res = await axios.get('/api/common-meta/by-type', {
+  const res = await axiosInstance.get('/api/common-meta/by-type', {
     params: { typeCode: 'ASSET_TYPE' },
   })
   if (res.data?.success) {

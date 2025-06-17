@@ -1,13 +1,32 @@
-import { reactive, ref } from 'vue';
+import { ref, reactive, Ref } from 'vue';
 
-export function useFitnessForm(types, units) {
-  // 工具函数
-  function getTodayDate() {
+interface FitnessType {
+  id: number | string;
+  name?: string;
+}
+
+interface FitnessUnit {
+  id: number | string;
+  name?: string;
+}
+
+interface FitnessForm {
+  typeId: number | string | null;
+  count: number;
+  unitId: number | string | null;
+  finishTime: string;
+  remark: string;
+}
+
+export function useFitnessForm(
+    types: Ref<FitnessType[]>,
+    units: Ref<FitnessUnit[]>
+) {
+  function getTodayDate(): string {
     return new Date().toISOString().slice(0, 10);
   }
 
-  // 初始表单状态
-  const initialFormState = {
+  const initialFormState: FitnessForm = {
     typeId: null,
     count: 1,
     unitId: null,
@@ -15,17 +34,14 @@ export function useFitnessForm(types, units) {
     remark: ''
   };
 
-  // 表单数据
-  const form = reactive({ ...initialFormState });
-  const editForm = reactive({ ...initialFormState });
-  
-  // 表单状态
+  const form = reactive<FitnessForm>({ ...initialFormState });
+  const editForm = reactive<FitnessForm>({ ...initialFormState });
+
   const adding = ref(false);
-  const editingIdx = ref(null);
+  const editingIdx = ref<number | null>(null);
   const showAddModal = ref(false);
 
-  // 重置表单
-  function resetForm(formData) {
+  function resetForm(formData: FitnessForm) {
     if (!formData) {
       console.warn('重置表单时收到空的表单对象');
       return;
@@ -36,25 +52,22 @@ export function useFitnessForm(types, units) {
     formData.finishTime = getTodayDate();
   }
 
-  // 处理编辑开始
-  function startEdit(idx, record) {
+  function startEdit(idx: number, record: Partial<FitnessForm>) {
     editingIdx.value = idx;
     Object.assign(editForm, {
-      typeId: record.typeId,
-      count: record.count,
-      unitId: record.unitId,
+      typeId: record.typeId ?? null,
+      count: record.count ?? 1,
+      unitId: record.unitId ?? null,
       finishTime: record.finishTime?.slice(0, 10) || getTodayDate(),
       remark: record.remark || ''
     });
   }
 
-  // 取消编辑
   function cancelEdit() {
     editingIdx.value = null;
     resetForm(editForm);
   }
 
-  // 关闭添加模态框
   function closeAddModal() {
     showAddModal.value = false;
     resetForm(form);
@@ -69,6 +82,6 @@ export function useFitnessForm(types, units) {
     resetForm,
     startEdit,
     cancelEdit,
-    closeAddModal,
+    closeAddModal
   };
 }
