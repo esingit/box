@@ -1,10 +1,10 @@
 .input-base {
   @apply block w-full px-4 py-2 text-sm outline-none appearance-none;
 
-  font-family: var(--font-family, sans-serif);
+  font-family: var(--font-family);
   background-color: var(--bg-main);
   color: var(--text-main);
-  border: 1px solid var(--border-main);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   height: var(--input-h);
   transition: border-color 0.2s ease;
@@ -14,10 +14,9 @@
   }
 
   &:focus {
-    border-color: var(--primary);
+    border-color: var(--color-primary);
     background-color: var(--bg-hover);
-    /* 去掉阴影 */
-    box-shadow: none;
+    box-shadow: none; /* 去掉阴影 */
   }
 
   &:disabled,
@@ -25,12 +24,12 @@
     background-color: var(--bg-muted);
     color: var(--text-muted);
     cursor: not-allowed;
-    border-color: var(--border-sub);
+    border-color: var(--color-border-sub);
   }
 
   &.is-error {
-    border-color: var(--error);
-    background-color: var(--bg-error);
+    border-color: var(--color-error);
+    background-color: var(--color-error-light);
 
     &:focus {
       box-shadow: none;
@@ -52,7 +51,7 @@ textarea {
 }
 
 select {
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg fill='gray' viewBox='0 0 20 20'%3E%3Cpath d='M7 7l3-3 3 3M7 13l3 3 3-3'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNoZXZyb24tZG93bi1pY29uIGx1Y2lkZS1jaGV2cm9uLWRvd24iPjxwYXRoIGQ9Im02IDkgNiA2IDYtNiIvPjwvc3ZnPg==");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 1rem;
@@ -74,5 +73,5 @@ select {
 .input-error-text {
   margin-top: 0.25rem;
   font-size: 0.75rem; /* text-xs */
-  color: var(--error);
+  color: var(--color-error);
 }

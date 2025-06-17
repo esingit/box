@@ -1,26 +1,63 @@
 @import 'styles/_variables.scss';
 @import 'styles/_buttons.scss';
+@import 'styles/_menuBtn.scss';
 @import 'styles/_inputs.scss';
 @import 'styles/_messages.scss';
 @import 'styles/_modals.scss';
 @import 'styles/_animations.scss';
+@import 'styles/_layout.scss';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 自定义基础样式 */
-*, *::before, *::after {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+@layer base {
+    *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
 
-body {
-    font-family: var(--font-family), serif;
-    background-color: var(--bg-main);
-    color: var(--text-main);
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    html, body {
+        font-family: var(--font-family);
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    a {
+        color: var(--color-primary);
+        transition: color var(--transition);
+    }
+
+    button {
+        transition: all var(--transition);
+        outline: none;
+    }
+
+    input, textarea, select {
+        background-color: var(--bg-sub);
+        border: 1px solid var(--color-border);
+        color: var(--text-main);
+        padding: var(--space-sm);
+        border-radius: var(--radius-md);
+        transition: all var(--transition);
+    }
+
+    input:focus, textarea:focus, select:focus {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-focus);
+    }
+
+    /* 竖线 */
+    .vertical-line{
+       @apply w-px h-5 mx-3 bg-gray-500
+    }
+
+    /* 图标 */
+    .btn-icon{
+       @apply w-4 h-4 text-gray-500  hover:text-gray-700 focus:text-gray-700
+    }
 }

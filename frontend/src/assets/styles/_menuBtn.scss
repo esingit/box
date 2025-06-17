@@ -1,0 +1,49 @@
+.menu-btn {
+  @apply w-full text-left px-5 py-3 rounded-xl transition-shadow duration-150 ease-in-out;
+
+  height: var(--menu-h);
+  font-family: var(--font-family);
+  font-weight: var(--font-semibold);
+  font-size: var(--font-md);
+  color: var(--color-primary);
+  background-color: transparent;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+  outline: none;
+}
+
+.menu-btn:hover:not(.active) {
+  background-color: var(--bg-hover);
+  color: var(--color-primary-hover); /* 加强 hover 字色区分 */
+}
+
+.menu-btn:focus-visible {
+  box-shadow: var(--shadow-focus);
+  background-color: var(--bg-active);
+  color: var(--color-primary);
+}
+
+.menu-btn.active {
+  background-color: var(--bg-active);
+  color: var(--color-primary);
+  font-weight: var(--font-semibold);
+  pointer-events: none;
+}
+
+.menu-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  color: var(--text-muted); /* 禁用时字体颜色调整 */
+}
+
+.menu-btn .icon {
+  @apply mr-3 flex-shrink-0;
+  color: var(--text-muted);
+}
+
+.menu-btn-h {
+  @apply font-semibold flex items-center gap-1.5 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-xl transition
+}

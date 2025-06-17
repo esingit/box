@@ -11,7 +11,7 @@
           <Sidebar :isLoggedIn="isLoggedIn" />
           <div class="flex-1 flex flex-col">
             <!-- 顶部用户信息栏 -->
-            <div class="top-right-user-menu p-4 flex justify-end border-b">
+            <div class="menu-container">
               <UserMenuAuthenticated
                   :user="user"
                   @logout="handleLogout"
@@ -19,7 +19,7 @@
               />
             </div>
             <!-- 主内容区域 -->
-            <div class="content flex-1 overflow-auto p-6">
+            <div class="app-content">
               <RouterView />
             </div>
           </div>
@@ -30,14 +30,14 @@
       <template v-else>
         <div class="flex flex-col min-h-screen">
           <!-- 顶部访客菜单 -->
-          <div class="top-right-user-menu p-1 flex justify-end border-b">
+          <div class="menu-container">
             <UserMenuGuest
                 @show-login="showLogin()"
                 @show-register="showRegister()"
             />
           </div>
           <!-- 路由内容区域 -->
-          <div class="flex-1 overflow-auto p-6">
+          <div class="app-content">
             <RouterView />
           </div>
         </div>

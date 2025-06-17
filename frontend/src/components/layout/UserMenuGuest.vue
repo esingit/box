@@ -1,21 +1,21 @@
 <!-- components/layout/UserMenuGuest.vue -->
 <template>
-  <div class="flex items-center justify-end w-full px-3 py-1.5 relative select-none bg-white">
+  <div class="menu-head">
     <button
         @click="$emit('show-login')"
-        class="flex items-center gap-1.5 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-full transition"
+        class="menu-btn-h"
     >
-      <LucideLogIn class="w-4 h-4 text-gray-500" />
+      <LucideLogIn class="btn-icon" />
       登录
     </button>
 
-    <div class="w-px h-5 mx-2 bg-gray-300"></div>
+    <div class="vertical-line"></div>
 
     <button
         @click="$emit('show-register')"
-        class="flex items-center gap-1.5 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-full transition"
+        class="menu-btn-h"
     >
-      <LucideUserPlus class="w-4 h-4 text-gray-500" />
+      <LucideUserPlus class="btn-icon" />
       注册
     </button>
   </div>

@@ -15,7 +15,7 @@ export default defineConfig(({ command, mode }) => {
 
   const API_BASE = env.VITE_API_BASE_URL || ''
   const APP_PORT = Number(env.VITE_APP_PORT || 3000)
-  const APP_TITLE = env.VITE_APP_TITLE || '企业后台'
+  const APP_TITLE = env.VITE_APP_TITLE || 'Box'
 
   return {
     base: './',

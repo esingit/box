@@ -2,7 +2,7 @@
   <BaseModal :visible="visible" title="注册新用户" @update:visible="close">
     <form @submit.prevent="handleSubmit" class="space-y-4">
       <div>
-        <label class="block text-sm font-medium mb-1">用户名</label>
+        <label class="modal-label">用户名</label>
         <input
             v-model="form.username"
             type="text"
@@ -13,7 +13,7 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium mb-1">密码</label>
+        <label class="modal-label">密码</label>
         <input
             v-model="form.password"
             type="password"
@@ -24,7 +24,7 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium mb-1">确认密码</label>
+        <label class="modal-label">确认密码</label>
         <input
             v-model="form.confirmPassword"
             type="password"
@@ -35,7 +35,7 @@
       </div>
 
       <div v-if="needCaptcha">
-        <label class="block text-sm font-medium mb-1">验证码</label>
+        <label class="modal-label">验证码</label>
         <div class="flex items-center gap-2">
           <input
               v-model="form.captcha"

@@ -4,8 +4,8 @@
     position: fixed;
     inset: 0;
     z-index: var(--z-modal);
-    background-color: var(--primary-light);
-    backdrop-filter: blur(1px); /* 你可以调整像素大小 */
+    background-color: var(--color-primary-light);
+    backdrop-filter: blur(1px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -38,10 +38,14 @@
     margin-bottom: var(--space-sm);
   }
 
+  .modal-label {
+    @apply block text-sm font-medium mb-1
+  }
+
   /* 分割线 */
   .modal-divider {
     height: 1px;
-    background-color: var(--border-main);
+    background-color: var(--color-border);
     margin-left: calc(var(--space-xl) * -1);
     margin-right: calc(var(--space-xl) * -1);
     margin-bottom: var(--space-md);
