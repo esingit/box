@@ -1,34 +1,35 @@
-<!-- components/auth/LoginModalWithCaptcha.vue -->
 <template>
   <BaseModal :visible="visible" title="欢迎回来" @update:visible="close">
-    <form @submit.prevent="handleSubmit" class="space-y-4" autocomplete="off">
+    <Form @submit="handleSubmit" :validation-schema="schema" class="space-y-4" autocomplete="off">
       <div>
         <label class="modal-label">用户名</label>
-        <input
-            v-model="form.username"
+        <Field
+            name="username"
             type="text"
             class="input-base"
             placeholder="请输入用户名"
             autocomplete="username"
         />
+        <ErrorMessage name="username" class="msg-error" />
       </div>
 
       <div>
         <label class="modal-label">密码</label>
-        <input
-            v-model="form.password"
+        <Field
+            name="password"
             type="password"
             class="input-base"
             placeholder="请输入密码"
             autocomplete="current-password"
         />
+        <ErrorMessage name="password" class="msg-error" />
       </div>
 
       <div v-if="needCaptcha">
         <label class="modal-label">验证码</label>
         <div class="flex items-center gap-2">
-          <input
-              v-model="form.captcha"
+          <Field
+              name="captcha"
               type="text"
               class="input-base"
               placeholder="请输入验证码"
@@ -41,18 +42,15 @@
               :title="captchaLoading ? '加载中...' : '点击刷新验证码'"
           />
         </div>
+        <ErrorMessage name="captcha" class="msg-error" />
       </div>
 
       <p v-if="error" class="msg-error">{{ error }}</p>
 
-      <button
-          type="submit"
-          class="btn-primary w-full"
-          :disabled="loading"
-      >
+      <button type="submit" class="btn-primary w-full" :disabled="loading">
         {{ loading ? '登录中...' : '登录' }}
       </button>
-    </form>
+    </Form>
 
     <template #footer>
       <div class="mt-4 text-center text-sm">
@@ -69,7 +67,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { Form, Field, ErrorMessage } from 'vee-validate'
+import * as yup from 'yup'
 import { useUserStore } from '@/store/userStore'
 import BaseModal from '@/components/base/BaseModal.vue'
 
@@ -81,12 +81,6 @@ const visible = computed({
   set: val => emit('update:visible', val)
 })
 
-const form = reactive({
-  username: '',
-  password: '',
-  captcha: ''
-})
-
 const loading = ref(false)
 const error = ref('')
 const needCaptcha = ref(false)
@@ -95,6 +89,20 @@ const captchaId = ref('')
 const captchaLoading = ref(false)
 
 const userStore = useUserStore()
+
+const schema = yup.object({
+  username: yup.string().min(4, '用户名至少4位').required('请输入用户名'),
+  password: yup
+      .string()
+      .required('请输入密码')
+      .min(6, '密码至少6位')
+      .matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/, '密码必须包含数字和字母'),
+  captcha: yup.string().when([], {
+    is: () => needCaptcha.value,
+    then: schema => schema.required('请输入验证码'),
+    otherwise: schema => schema.notRequired()
+  })
+})
 
 watch(needCaptcha, async val => {
   if (val && !captchaUrl.value) {
@@ -105,7 +113,6 @@ watch(needCaptcha, async val => {
 })
 
 function clearCaptcha() {
-  form.captcha = ''
   captchaUrl.value = ''
   captchaId.value = ''
 }
@@ -127,46 +134,28 @@ async function refreshCaptcha() {
   }
 }
 
-function resetForm() {
-  form.username = ''
-  form.password = ''
-  form.captcha = ''
-  error.value = ''
-  loading.value = false
-  needCaptcha.value = false
-  clearCaptcha()
-}
-
 function close() {
   visible.value = false
-  setTimeout(() => resetForm(), 300)
+  setTimeout(() => {
+    error.value = ''
+    clearCaptcha()
+    needCaptcha.value = false
+  }, 300)
 }
 
-async function handleSubmit() {
+async function handleSubmit(values: { username: string; password: string; captcha?: string }) {
   if (loading.value) return
   error.value = ''
-
-  if (!form.username.trim() || form.username.length < 4) {
-    error.value = '用户名至少4位'
-    return
-  }
-  if (!form.password || form.password.length < 6) {
-    error.value = '密码至少6位'
-    return
-  }
-  if (needCaptcha.value && !form.captcha.trim()) {
-    error.value = '请输入验证码'
-    return
-  }
-
   loading.value = true
+
   try {
     const credentials: Record<string, any> = {
-      username: form.username.trim(),
-      password: form.password.trim()
+      username: values.username.trim(),
+      password: values.password.trim()
     }
+
     if (needCaptcha.value) {
-      credentials.captcha = form.captcha.trim()
+      credentials.captcha = values.captcha?.trim()
       credentials.captchaId = captchaId.value
     }
 
@@ -189,9 +178,3 @@ async function handleSubmit() {
   }
 }
 </script>
-
-<style scoped>
-.input {
-  @apply w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm;
-}
-</style>
