@@ -22,12 +22,12 @@
 
 .menu-btn:focus-visible {
   box-shadow: var(--shadow-focus);
-  background-color: var(--bg-active);
+  background-color: var(--bg-hover);
   color: var(--color-primary);
 }
 
 .menu-btn.active {
-  background-color: var(--bg-active);
+  background-color: var(--bg-hover);
   color: var(--color-primary);
   font-weight: var(--font-semibold);
   pointer-events: none;

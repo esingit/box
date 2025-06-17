@@ -1,20 +1,14 @@
 <!-- components/layout/Sidebar.vue -->
 <template>
-  <aside
-      :class="[
-      'h-full bg-gray-800 text-white flex flex-col transition-all duration-300',
-      isCollapsed ? 'w-16' : 'w-52'
-    ]"
-  >
+  <aside :class="sidebarClass">
     <!-- Logo -->
     <div
-        class="h-16 flex items-center justify-center border-b border-gray-700 cursor-pointer"
+        class="h-12 flex items-center justify-center border-gray-200 cursor-pointer relative"
         @click="toggleSidebar"
     >
       <Package
           :size="24"
-          class="text-white transition-transform duration-500"
-          :class="{ 'animate-spin': isRotating }"
+          :class="logoClass"
       />
     </div>
 
@@ -24,21 +18,32 @@
           v-for="(item, index) in menuItems"
           :key="index"
           :to="item.path"
-          class="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-700 transition-colors"
-          :class="{
-          'bg-gray-700 font-semibold': $route.path === item.path,
-          'justify-center': isCollapsed
-        }"
+          class="flex font-semibold items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100 rounded-xl transition-colors text-gray-800"
+          :class="getItemClass(item.path)"
       >
-        <component :is="item.icon" :size="20" />
-        <span v-if="!isCollapsed" class="whitespace-nowrap">{{ item.title }}</span>
+        <component :is="item.icon" :size="20"
+                   :class="{ 'opacity-0 scale-0 transition-all duration-500': isCollapsed }"
+        />
+        <span class="whitespace-nowrap">{{ item.title }}</span>
       </router-link>
     </nav>
   </aside>
+
+  <!-- 悬浮的箱子图标 -->
+  <div
+      v-if="isCollapsed"
+      class="fixed top-3 left-3 z-50 cursor-pointer animate-bounce-in"
+      @click="toggleSidebar"
+  >
+    <Package
+        :size="24"
+        class="text-gray-800 hover:text-gray-600 transition-colors drop-shadow-md"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   LucideHome,
@@ -47,13 +52,14 @@ import {
   LucideWallet
 } from 'lucide-vue-next'
 
-const props = defineProps<{
-  isLoggedIn: boolean
-}>()
+const props = defineProps<{ isLoggedIn: boolean }>()
 
 const route = useRoute()
 const isRotating = ref(false)
 const isCollapsed = ref(false)
+
+// 注入父组件的方法
+const setSidebarCollapsed = inject('setSidebarCollapsed') as (collapsed: boolean) => void
 
 const menuItems = [
   { path: '/', title: '首页', icon: LucideHome },
@@ -61,10 +67,33 @@ const menuItems = [
   { path: '/asset', title: '资产', icon: LucideWallet }
 ]
 
+const sidebarClass = computed(() =>
+    [
+      'h-full bg-white text-gray-800 flex flex-col transition-all duration-500 ease-in-out border-r border-gray-200 fixed z-40',
+      isCollapsed.value ? 'w-0  overflow-visible' : 'w-32'
+    ].join(' ')
+)
+
+const logoClass = computed(() => [
+  'text-gray-800 transition-all duration-500',
+  isRotating.value && 'animate-spin',
+  isCollapsed.value && 'opacity-0 scale-0'
+].filter(Boolean).join(' '))
+
+const getItemClass = (path: string) => ({
+  'bg-gray-100': route.path === path,
+})
+
 function toggleSidebar() {
   if (!props.isLoggedIn) return
   isRotating.value = true
   isCollapsed.value = !isCollapsed.value
+
+  // 通知父组件侧边栏状态变化
+  if (setSidebarCollapsed) {
+    setSidebarCollapsed(isCollapsed.value)
+  }
+
   setTimeout(() => {
     isRotating.value = false
   }, 500)
@@ -72,14 +101,22 @@ function toggleSidebar() {
 </script>
 
 <style scoped>
-/* optional: disable spin animation interruption */
-.animate-spin {
-  animation: spin 0.5s linear;
+@keyframes bounce-in {
+  0% {
+    transform: translateX(-100px) scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(-10px) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.animate-bounce-in {
+  animation: bounce-in 0.6s ease-out forwards;
 }
 </style>

@@ -7,9 +7,12 @@
     <div v-else>
       <!-- 已登录 -->
       <template v-if="isLoggedIn">
-        <div class="layout flex h-screen">
+        <div class="layout flex h-screen relative">
           <Sidebar :isLoggedIn="isLoggedIn" />
-          <div class="flex-1 flex flex-col">
+          <div
+              class="flex-1 flex flex-col transition-all duration-500 ease-in-out"
+              :class="{ 'ml-0': sidebarCollapsed, 'ml-32': !sidebarCollapsed }"
+          >
             <!-- 顶部用户信息栏 -->
             <div class="menu-container">
               <UserMenuAuthenticated
@@ -26,7 +29,7 @@
         </div>
       </template>
 
-      <!-- 未登录 -->
+      <!-- 未登录部分保持不变 -->
       <template v-else>
         <div class="flex flex-col min-h-screen">
           <!-- 顶部访客菜单 -->
@@ -52,17 +55,14 @@
         @register-success="handleLoginSuccess"
     />
 
-    <!-- 个人资料弹窗 -->
     <Profile ref="profileSettingsRef" />
-
-    <!-- 全局通知和确认弹窗 -->
     <Notification />
     <ConfirmDialog />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, provide } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store/userStore'
 import { useAuth } from '@/composable/useAuth'
@@ -150,5 +150,14 @@ function handleOpenProfile() {
 }
 
 initializeUser()
+
+
+const sidebarCollapsed = ref(false)
+
+// 提供给子组件的方法
+provide('setSidebarCollapsed', (collapsed: boolean) => {
+  sidebarCollapsed.value = collapsed
+})
+
 </script>
 
