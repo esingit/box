@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.box.login.mapper.FitnessRecordMapper">
+
     <resultMap id="fitnessRecordDTOMap" type="com.box.login.dto.FitnessRecordDTO">
         <result property="id" column="id"/>
         <result property="typeId" column="type_id"/>
@@ -21,18 +22,21 @@
     </resultMap>
 
     <select id="selectPageWithMeta" resultMap="fitnessRecordDTOMap">
-        SELECT 
-            fr.*,
-            type_meta.type_name as type_name,
-            type_meta.value1 as type_value,
-            unit_meta.type_name as unit_name,
-            unit_meta.value1 as unit_value
+        SELECT
+        fr.*,
+        type_meta.type_name as type_name,
+        type_meta.value1 as type_value,
+        unit_meta.type_name as unit_name,
+        unit_meta.value1 as unit_value
         FROM fitness_record fr
-        LEFT JOIN common_meta type_meta ON fr.type_id = type_meta.id
-        LEFT JOIN common_meta unit_meta ON fr.unit_id = unit_meta.id
+        LEFT JOIN common_meta type_meta ON fr.type_id = type_meta.id AND type_meta.deleted = 0
+        LEFT JOIN common_meta unit_meta ON fr.unit_id = unit_meta.id AND unit_meta.deleted = 0
         <where>
-            <if test="typeId != null">
-                AND fr.type_id = #{typeId}
+            <if test="typeIdList != null and typeIdList.size > 0">
+                AND fr.type_id IN
+                <foreach collection="typeIdList" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
             </if>
             <if test="remark != null and remark != ''">
                 AND fr.remark LIKE CONCAT('%', #{remark}, '%')
@@ -52,19 +56,20 @@
     </select>
 
     <select id="getStatistics" resultType="java.util.HashMap">
-        SELECT 
+        SELECT
             DATE_FORMAT(fr.finish_time, '%Y-%m-%d') as date,
             type_meta.value1 as type,
             fr.count as value
-        FROM 
+        FROM
             fitness_record fr
-        LEFT JOIN 
+            LEFT JOIN
             common_meta type_meta ON fr.type_id = type_meta.id AND type_meta.deleted = 0
-        WHERE 
+        WHERE
             fr.create_user = #{userId}
-            AND fr.deleted = 0
-            AND fr.finish_time &gt;= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        ORDER BY 
+          AND fr.deleted = 0
+          AND fr.finish_time &gt;= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        ORDER BY
             fr.finish_time ASC, type_meta.value1
     </select>
+
 </mapper>

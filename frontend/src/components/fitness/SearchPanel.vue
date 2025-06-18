@@ -1,78 +1,102 @@
+<!--src/components/fitness/SearchPanel.vue-->
 <template>
-  <div class="w-full bg-white border rounded-xl p-4 shadow-sm">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <!-- 左侧筛选项 -->
-      <div class="flex flex-wrap items-center gap-4 flex-1">
-        <!-- 类型下拉 -->
-        <select v-model="localQuery.typeId"
-                class="h-10 rounded-lg border border-gray-300 text-sm px-3 focus:outline-none focus:ring-2 focus:ring-black bg-white">
-          <option value="">全部类型</option>
-          <option v-for="type in types" :key="type.id" :value="type.id">
-            {{ type.value1 }}
-          </option>
-        </select>
+  <div
+      class="relative w-full bg-white border rounded-xl p-4 transition"
+  >
+    <!-- 第一行 -->
+    <div class="flex items-center justify-between gap-3 flex-nowrap min-w-full">
+      <!-- 多选类型 -->
+      <MultiSelectTeleport
+          v-model="query.typeIdList"
+          :options="fitnessTypeOptions"
+          placeholder="全部类型"
+          class="flex-grow max-w-full"
+      />
 
-        <!-- 日期区间 -->
-        <div class="flex items-center gap-2">
-          <input type="date" v-model="localQuery.startDate"
-                 class="h-10 rounded-lg border border-gray-300 text-sm px-3 focus:outline-none focus:ring-2 focus:ring-black" />
-          <span class="text-gray-400">至</span>
-          <input type="date" v-model="localQuery.endDate"
-                 class="h-10 rounded-lg border border-gray-300 text-sm px-3 focus:outline-none focus:ring-2 focus:ring-black" />
-        </div>
-
-        <!-- 备注关键词 -->
-        <input type="text" v-model="localQuery.remark" placeholder="备注关键词"
-               class="h-10 w-48 rounded-lg border border-gray-300 text-sm px-3 focus:outline-none focus:ring-2 focus:ring-black" />
+      <!-- 日期 -->
+      <div class="flex items-center gap-2 min-w-[220px] flex-shrink-0">
+        <input
+            type="date"
+            v-model="query.startDate"
+            class="input-base"
+        />
+        <span class="text-gray-400 select-none">至</span>
+        <input
+            type="date"
+            v-model="query.endDate"
+            class="input-base"
+        />
       </div>
 
-      <!-- 操作按钮 -->
+      <!-- 按钮组 -->
       <div class="flex items-center gap-2 shrink-0">
-        <button @click="search" title="查询"
-                class="h-10 w-10 flex items-center justify-center rounded-lg bg-black text-white hover:bg-gray-800 transition">
+        <button
+            @click="onSearch"
+            title="查询"
+            class="btn-outline"
+        >
           <LucideSearch class="w-4 h-4" />
         </button>
-        <button @click="reset" title="重置"
-                class="h-10 w-10 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition">
+        <button
+            @click="onReset"
+            title="重置"
+            class="btn-outline"
+        >
           <LucideRotateCcw class="w-4 h-4" />
         </button>
+        <button
+            @click="showMore = !showMore"
+            title="更多"
+            class="btn-outline"
+        >
+          <component :is="showMore ? LucideChevronUp : LucideChevronDown" class="w-4 h-4" />
+        </button>
       </div>
+    </div>
+
+    <!-- 第二行 -->
+    <div v-if="showMore" class="mt-4 flex min-w-full">
+      <input
+          type="text"
+          v-model="query.remark"
+          placeholder="备注关键词"
+          class="base-input"
+      />
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, watch, reactive } from 'vue';
-import { LucideSearch, LucideRotateCcw } from 'lucide-vue-next';
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import MultiSelectTeleport from '@/components/base/BaseMultiSelect.vue'
+import {
+  LucideSearch,
+  LucideRotateCcw,
+  LucideChevronDown,
+  LucideChevronUp
+} from 'lucide-vue-next'
 
-const props = defineProps({
-  query: Object,
-  types: Array
-});
-const emit = defineEmits(['update:query', 'search', 'reset']);
+import { useFitnessStore } from '@/store/fitnessStore'
+import { useMetaStore } from '@/store/metaStore'
 
-const localQuery = reactive({
-  typeId: props.query.typeId || '',
-  startDate: props.query.startDate || '',
-  endDate: props.query.endDate || '',
-  remark: props.query.remark || ''
-});
+const showMore = ref(false)
+const fitnessStore = useFitnessStore()
+const metaStore = useMetaStore()
 
-watch(() => props.query, (newQuery) => {
-  localQuery.typeId = newQuery.typeId || '';
-  localQuery.startDate = newQuery.startDate || '';
-  localQuery.endDate = newQuery.endDate || '';
-  localQuery.remark = newQuery.remark || '';
-}, { deep: true });
+const { query } = storeToRefs(fitnessStore)
 
-watch(localQuery, (newQuery) => {
-  emit('update:query', { ...newQuery });
-}, { deep: true });
+const fitnessTypeOptions = computed(() =>
+    (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
+      label: item.value1,
+      value: item.id
+    }))
+)
 
-function search() {
-  emit('search');
+const onSearch = () => {
+  fitnessStore.loadList()
 }
-function reset() {
-  emit('reset');
+const onReset = () => {
+  fitnessStore.resetQuery()
 }
 </script>

@@ -1,71 +1,50 @@
 package com.box.login.controller;
 
+import com.box.login.dto.CaptchaResponse;
 import com.box.login.utils.CaptchaUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.imageio.ImageIO;
-import jakarta.servlet.http.HttpServletResponse;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import java.awt.image.BufferedImage;
-
-class CaptchaResponse {
-    private String captchaId;
-    private String captchaUrl;
-
-    public CaptchaResponse(String captchaId, String captchaUrl) {
-        this.captchaId = captchaId;
-        this.captchaUrl = captchaUrl;
-    }
-
-    public String getCaptchaId() {
-        return captchaId;
-    }
-
-    public String getCaptchaUrl() {
-        return captchaUrl;
-    }
-}
 
 @RestController
 @RequestMapping("/api/captcha")
 public class CaptchaController {
-    
+
     private final StringRedisTemplate redisTemplate;
-    
+
     public CaptchaController(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
-    
+
     @GetMapping
     @ResponseBody
     public ResponseEntity<CaptchaResponse> getCaptcha() {
         // 生成验证码
         CaptchaUtil.CaptchaResult captcha = CaptchaUtil.generateCaptcha();
-        
+
         // 生成唯一标识
         String captchaId = UUID.randomUUID().toString();
-        
+
         // 将验证码保存到Redis，设置5分钟过期
         redisTemplate.opsForValue().set(
-            "captcha:" + captchaId,
-            captcha.getCode(),
-            5,
-            TimeUnit.MINUTES
+                "captcha:" + captchaId,
+                captcha.getCode(),
+                5,
+                TimeUnit.MINUTES
         );
-        
+
         // 构建图片URL
         String captchaUrl = "/captcha/image/" + captchaId;
-        
+
         // 返回JSON响应
         return ResponseEntity.ok(new CaptchaResponse(captchaId, captchaUrl));
     }

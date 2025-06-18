@@ -37,14 +37,6 @@ public class AssetRecordServiceImpl implements AssetRecordService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AssetRecordServiceImpl.class);
 
     @Override
-    @Transactional(readOnly = true)
-    public List<AssetRecord> listAll() {
-        QueryWrapper<AssetRecord> wrapper = new QueryWrapper<>();
-        wrapper.eq("create_user", UserContextHolder.getCurrentUsername());
-        return assetRecordMapper.selectList(wrapper);
-    }
-
-    @Override
     public void addRecord(AssetRecord record) {
         log.debug("Adding new record: {}", record);
 
@@ -106,11 +98,9 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
     @Override
     @Transactional(readOnly = true)
-    public IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, Long assetNameId, Long locationId, 
-            Long typeId, String remark, String startDate, String endDate, String createUser) {
-        log.debug("Executing pageByConditions - assetNameId: {}, locationId: {}, typeId: {}, startDate: {}, endDate: {}, createUser: {}",
-                assetNameId, locationId, typeId, startDate, endDate, createUser);
-        return assetRecordMapper.selectPageWithMeta(page, assetNameId, locationId, typeId, remark, startDate, endDate, createUser);
+    public IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, List<Long> assetNameIdList, List<Long> locationIdList,
+                                                  List<Long> typeIdList, String remark, String startDate, String endDate, String createUser) {
+        return assetRecordMapper.selectPageWithMeta(page, assetNameIdList, locationIdList, typeIdList, remark, startDate, endDate, createUser);
     }
 
     @Override

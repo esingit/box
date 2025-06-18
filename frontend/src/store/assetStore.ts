@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import axiosInstance from '@/utils/axios';
 import emitter from '@/utils/eventBus'
-import { formatAssetRecord, clearCommonMetaCache } from '@/utils/commonMeta'
+import { formatAssetRecord } from '@/utils/commonMeta'
 import { AssetRecordRaw } from '@/types/asset'
 
 interface AssetRecord {
@@ -27,9 +27,6 @@ interface RecordQuery {
 
 export const useAssetStore = defineStore('asset', () => {
   const assetNames = ref<any[]>([])
-  const types = ref<any[]>([])
-  const units = ref<any[]>([])
-  const locations = ref<any[]>([])
   const loading = ref(false)
 
   async function fetchRecords(query: RecordQuery) {
@@ -47,7 +44,7 @@ export const useAssetStore = defineStore('asset', () => {
       if (query.endDate) params.endDate = query.endDate + 'T23:59:59'
       if (query.remark) params.remark = query.remark.trim()
 
-      const res = await axios.get('/api/asset-record/list', { params })
+      const res = await axiosInstance.get('/api/asset-record/list', { params })
       if (res.data?.success) {
         const rawRecords = res.data.data.records || []
         const records = await Promise.all(
@@ -79,7 +76,7 @@ export const useAssetStore = defineStore('asset', () => {
 
   async function fetchAssetNames() {
     try {
-      const res = await axios.get('/api/asset-names/all')
+      const res = await axiosInstance.get('/api/asset-names/all')
       if (res.data?.success) {
         assetNames.value = res.data.data || []
       } else {
@@ -96,63 +93,9 @@ export const useAssetStore = defineStore('asset', () => {
     }
   }
 
-  async function fetchTypes() {
-    try {
-      const res = await axios.get('/api/common-meta/by-type', {
-        params: { typeCode: 'ASSET_TYPE' }
-      })
-      if (res.data?.success) {
-        types.value = res.data.data || []
-      }
-    } catch (error: any) {
-      emitter.emit('notify', {
-        message: '获取资产类型列表失败',
-        type: 'error'
-      })
-    }
-  }
-
-  async function fetchUnits() {
-    try {
-      const res = await axios.get('/api/common-meta/by-type', {
-        params: { typeCode: 'UNIT' }
-      })
-      if (res.data?.success) {
-        units.value = res.data.data || []
-        clearCommonMetaCache()
-      } else {
-        emitter.emit('notify', {
-          message: '获取货币单位列表失败',
-          type: 'error'
-        })
-      }
-    } catch (error: any) {
-      emitter.emit('notify', {
-        message: '获取货币单位列表失败',
-        type: 'error'
-      })
-    }
-  }
-
-  async function fetchLocations() {
-    try {
-      const res = await axios.get('/api/common-meta/by-type', {
-        params: { typeCode: 'ASSET_LOCATION' }
-      })
-      if (res.data?.success) {
-        locations.value = res.data.data || []
-      }
-    } catch (error: any) {
-      emitter.emit('notify', {
-        message: '获取资产位置列表失败',
-        type: 'error'
-      })
-    }
-  }
-
   async function copyLastRecords(force = false) {
     try {
-      const res = await axios.post('/api/asset-record/copy-last' + (force ? '?force=true' : ''))
+      const res = await axiosInstance.post('/api/asset-record/copy-last' + (force ? '?force=true' : ''))
       if (res.data?.success) {
         emitter.emit('notify', {
           message: '复制成功',
@@ -172,7 +115,7 @@ export const useAssetStore = defineStore('asset', () => {
 
   async function deleteRecord(id: number) {
     try {
-      const res = await axios.delete(`/api/asset-record/delete/${id}`)
+      const res = await axiosInstance.delete(`/api/asset-record/delete/${id}`)
       if (res.data?.success) {
         emitter.emit('notify', {
           message: '删除成功',
@@ -192,7 +135,7 @@ export const useAssetStore = defineStore('asset', () => {
 
   async function addRecord(record: AssetRecord) {
     try {
-      const res = await axios.post('/api/asset-record/add', record)
+      const res = await axiosInstance.post('/api/asset-record/add', record)
       if (res.data?.success) {
         emitter.emit('notify', {
           message: '添加成功',
@@ -213,7 +156,7 @@ export const useAssetStore = defineStore('asset', () => {
 
   async function updateRecord(record: AssetRecord) {
     try {
-      const res = await axios.put('/api/asset-record/update', record)
+      const res = await axiosInstance.put('/api/asset-record/update', record)
       if (res.data?.success) {
         emitter.emit('notify', {
           message: '更新成功',
@@ -232,35 +175,14 @@ export const useAssetStore = defineStore('asset', () => {
     }
   }
 
-  async function initData() {
-    loading.value = true
-    try {
-      await Promise.all([
-        fetchAssetNames(),
-        fetchTypes(),
-        fetchUnits(),
-        fetchLocations()
-      ])
-    } finally {
-      loading.value = false
-    }
-  }
-
   return {
     assetNames,
-    types,
-    units,
-    locations,
     loading,
     fetchRecords,
     fetchAssetNames,
-    fetchTypes,
-    fetchUnits,
-    fetchLocations,
     copyLastRecords,
     deleteRecord,
     addRecord,
-    updateRecord,
-    initData
+    updateRecord
   }
 })

@@ -1,3 +1,4 @@
+<!-- /components/fitness/FitnessTable.vue -->
 <template>
   <div class="table-container overflow-auto border border-gray-200 rounded-md">
     <table class="min-w-full border-collapse table-fixed text-sm text-gray-700">
@@ -20,7 +21,15 @@
       </tr>
       </thead>
       <tbody>
-      <tr v-if="records.length === 0">
+      <tr v-if="loading">
+        <td :colspan="tableHeaders.length" class="py-8">
+          <div class="space-y-2">
+            <div v-for="i in 5" :key="i" class="h-6 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </td>
+      </tr>
+
+      <tr v-else-if="records.length === 0">
         <td :colspan="tableHeaders.length" class="py-8 text-center text-gray-400">
           <EmptyState
               icon="Dumbbell"
@@ -29,91 +38,72 @@
           />
         </td>
       </tr>
-      <tr v-for="(record, idx) in records" :key="record.id || idx"
-          class="hover:bg-gray-50 transition-colors duration-150"
-      >
+
+      <tr v-else v-for="(record, idx) in records" :key="record.id"
+          class="hover:bg-gray-50 transition-colors duration-150">
         <td class="px-3 py-2 truncate"
             :style="{ width: columnWidths[0] + 'px' }"
             @mouseenter="showTooltip($event, record.typeValue)"
-            @mouseleave="hideTooltip"
-        >
+            @mouseleave="hideTooltip">
           {{ record.typeValue }}
         </td>
         <td class="px-3 py-2 text-right"
             :style="{ width: columnWidths[1] + 'px' }"
             @mouseenter="showTooltip($event, record.count + ' ' + record.unitValue)"
-            @mouseleave="hideTooltip"
-        >
+            @mouseleave="hideTooltip">
           {{ record.count }}
         </td>
         <td class="px-3 py-2 truncate"
             :style="{ width: columnWidths[2] + 'px' }"
             @mouseenter="showTooltip($event, record.unitValue)"
-            @mouseleave="hideTooltip"
-        >
+            @mouseleave="hideTooltip">
           {{ record.unitValue }}
         </td>
         <td class="px-3 py-2 truncate"
             :style="{ width: columnWidths[3] + 'px' }"
             @mouseenter="showTooltip($event, formatDate(record.finishTime))"
-            @mouseleave="hideTooltip"
-        >
+            @mouseleave="hideTooltip">
           {{ formatDate(record.finishTime) }}
         </td>
         <td class="px-3 py-2 truncate"
             :style="{ width: columnWidths[4] + 'px' }"
             @mouseenter="showTooltip($event, record.remark)"
-            @mouseleave="hideTooltip"
-        >
-          <span v-if="record.remark" class="text-gray-700">{{ record.remark }}</span>
+            @mouseleave="hideTooltip">
+          <span v-if="record.remark">{{ record.remark }}</span>
           <span v-else class="text-gray-400">-</span>
         </td>
         <td class="px-3 py-2 text-center"
-            :style="{ width: columnWidths[5] + 'px' }"
-        >
+            :style="{ width: columnWidths[5] + 'px' }">
           <RecordActions
               :record="record"
               type="fitness"
-              @edit="$emit('edit', idx)"
-              @delete="$emit('delete', idx)"
+              @edit="$emit('edit', record.id)"
+              @delete="$emit('delete', record.id)"
           />
         </td>
       </tr>
       </tbody>
     </table>
 
-    <!-- 通用 Tooltip -->
     <div v-if="tooltip.visible"
          :style="tooltip.style"
-         class="fixed z-50 max-w-xs rounded-md bg-gray-900 text-white text-xs py-1 px-2 shadow-lg pointer-events-none select-none transition-opacity duration-150"
-    >
+         class="fixed z-50 max-w-xs rounded-md bg-gray-900 text-white text-xs py-1 px-2 shadow-lg pointer-events-none select-none transition-opacity duration-150">
       {{ tooltip.content }}
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import RecordActions from '@/components/base/RecordActions.vue'
 
-const DEFAULT_COLUMN_WIDTHS = {
-  type: 120,
-  count: 100,
-  unit: 100,
-  date: 120,
-  remark: 200,
-  actions: 100
-}
-
-const props = defineProps({
-  records: {
-    type: Array,
-    default: () => []   // 这里加默认空数组，防止未传或 undefined
-  }
-})
-
-const emit = defineEmits(['edit', 'delete'])
+// 接收 props
+const props = defineProps<{ records: any[]; loading: boolean }>()
+const emit = defineEmits<{
+  (e: 'edit', id: number): void
+  (e: 'delete', id: number): void
+}>()
 
 const tableHeaders = [
   { key: 'type', label: '类型', class: '' },
@@ -124,149 +114,92 @@ const tableHeaders = [
   { key: 'actions', label: '操作', class: '' }
 ]
 
-const columnWidths = ref(Object.values(DEFAULT_COLUMN_WIDTHS))
-const resizing = ref(false)
-const resizingIndex = ref(-1)
-const startX = ref(0)
-const startWidth = ref(0)
+const DEFAULT_COLUMN_WIDTHS = {
+  type: 120,
+  count: 100,
+  unit: 100,
+  date: 120,
+  remark: 200,
+  actions: 100
+}
 
-const tooltip = ref({
-  visible: false,
-  content: '',
-  style: {
-    top: '0px',
-    left: '0px',
-    opacity: '0'
-  }
-})
+const columnWidths = ref(Object.values(DEFAULT_COLUMN_WIDTHS))
+const tooltip = ref({ visible: false, content: '', style: { top: '0px', left: '0px', opacity: '0' } })
 
 function saveColumnWidths() {
-  try {
-    const widths = {}
-    tableHeaders.forEach((header, index) => {
-      widths[header.key] = columnWidths.value[index]
-    })
-    localStorage.setItem('fitnessTableColumnWidths', JSON.stringify(widths))
-  } catch {
-    // 忽略存储失败
-  }
+  localStorage.setItem(
+      'fitnessTableColumnWidths',
+      JSON.stringify(Object.fromEntries(
+          tableHeaders.map((h, i) => [h.key, columnWidths.value[i]])
+      ))
+  )
 }
-
 function loadColumnWidths() {
-  try {
-    const saved = localStorage.getItem('fitnessTableColumnWidths')
-    if (saved) {
-      const widths = JSON.parse(saved)
-      tableHeaders.forEach((header, index) => {
-        columnWidths.value[index] = widths[header.key] || DEFAULT_COLUMN_WIDTHS[header.key]
-      })
-    }
-  } catch {
-    // 忽略读取失败
+  const saved = localStorage.getItem('fitnessTableColumnWidths')
+  if (saved) {
+    const widths = JSON.parse(saved)
+    columnWidths.value = tableHeaders.map(h => widths[h.key] || DEFAULT_COLUMN_WIDTHS[h.key])
   }
 }
 
-function startResize(event, index) {
-  resizing.value = true
-  resizingIndex.value = index
-  startX.value = event.pageX
-  startWidth.value = columnWidths.value[index]
+let resizing = false
+let resizingIndex = -1
+let startX = 0
+let startWidth = 0
 
+function startResize(e: MouseEvent, index: number) {
+  resizing = true
+  resizingIndex = index
+  startX = e.pageX
+  startWidth = columnWidths.value[index]
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
-  event.target.classList.add('column-resizing')
+  ;(e.target as HTMLElement).classList.add('column-resizing')
 }
-
-function handleResize(event) {
-  if (!resizing.value) return
-  const index = resizingIndex.value
-  const minWidth = 60
-  const diff = event.pageX - startX.value
-  const newWidth = Math.max(minWidth, startWidth.value + diff)
-  columnWidths.value[index] = newWidth
+function handleResize(e: MouseEvent) {
+  if (!resizing) return
+  const diff = e.pageX - startX
+  const newWidth = Math.max(60, startWidth + diff)
+  columnWidths.value[resizingIndex] = newWidth
   saveColumnWidths()
 }
-
 function stopResize() {
-  if (!resizing.value) return
-  resizing.value = false
-  resizingIndex.value = -1
+  if (!resizing) return
+  resizing = false
+  resizingIndex = -1
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
   document.querySelectorAll('.column-resizing').forEach(el => el.classList.remove('column-resizing'))
 }
-
-function resetColumnWidth(index) {
+function resetColumnWidth(index: number) {
   columnWidths.value[index] = DEFAULT_COLUMN_WIDTHS[tableHeaders[index].key]
   saveColumnWidths()
 }
 
-function showTooltip(event, content) {
+function showTooltip(e: MouseEvent, content: string) {
   if (!content) return hideTooltip()
   tooltip.value.content = content
   tooltip.value.visible = true
-
   nextTick(() => {
-    const offsetX = event.clientX
-    const offsetY = event.clientY - 10
-    tooltip.value.style.left = `${offsetX}px`
-    tooltip.value.style.top = `${offsetY}px`
+    tooltip.value.style.left = `${e.clientX}px`
+    tooltip.value.style.top = `${e.clientY - 10}px`
     tooltip.value.style.opacity = '1'
   })
 }
-
 function hideTooltip() {
   tooltip.value.visible = false
-  tooltip.value.opacity = '0'
-}
-
-function handleScroll() {
-  hideTooltip()
+  tooltip.value.style.opacity = '0'
 }
 
 onMounted(() => {
   loadColumnWidths()
-  window.addEventListener('scroll', handleScroll)
+  window.addEventListener('scroll', hideTooltip)
 })
-
 onBeforeUnmount(() => {
-  window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('scroll', hideTooltip)
 })
 
-function formatDate(dateString) {
-  return dateString ? dateString.slice(0, 10) : '-'
+function formatDate(str: string) {
+  return str?.slice(0, 10) || '-'
 }
 </script>
-
-<style scoped>
-.column-resizer {
-  user-select: none;
-  /* 鼠标改成列调整光标 */
-  cursor: col-resize;
-  transition: background-color 0.2s;
-  z-index: 10;
-}
-
-.column-resizer:hover {
-  background-color: rgba(59, 130, 246, 0.5); /* Tailwind 蓝色500半透明 */
-}
-
-.column-resizing {
-  background-color: rgba(59, 130, 246, 0.8);
-}
-
-.fixed {
-  position: fixed !important;
-  z-index: 9999;
-}
-
-.table-container::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
-}
-
-.table-container::-webkit-scrollbar-thumb {
-  background-color: rgba(107, 114, 128, 0.5);
-  border-radius: 3px;
-}
-</style>

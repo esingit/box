@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 资产记录控制器
  */
@@ -31,22 +33,18 @@ public class AssetRecordController {
     @Operation(summary = "分页查询资产记录")
     @GetMapping("/list")
     public ApiResponse<IPage<AssetRecordDTO>> listRecords(
-            @Parameter(description = "资产名称ID") @RequestParam(required = false) Long assetNameId,
-            @Parameter(description = "资产位置ID") @RequestParam(required = false) Long locationId,
-            @Parameter(description = "资产类型ID") @RequestParam(required = false) Long typeId,
+            @Parameter(description = "资产名称ID") @RequestParam(required = false) List<Long> assetNameIdList,
+            @Parameter(description = "资产位置ID") @RequestParam(required = false) List<Long> locationIdList,
+            @Parameter(description = "资产类型ID") @RequestParam(required = false) List<Long> typeIdList,
             @Parameter(description = "备注关键词") @RequestParam(required = false) String remark,
             @Parameter(description = "开始日期") @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期") @RequestParam(required = false) String endDate,
             @Parameter(description = "当前页码") @RequestParam(defaultValue = "1") Integer page,
             @Parameter(description = "每页大小") @RequestParam(defaultValue = "7") Integer pageSize) {
         try {
-            log.debug("Received list request - assetNameId: {}, locationId: {}, typeId: {}, remark: {}, startDate: {}, endDate: {}, page: {}, pageSize: {}", 
-                     assetNameId, locationId, typeId, remark, startDate, endDate, page, pageSize);
             Page<AssetRecord> pageObj = new Page<>(page, pageSize);
             String currentUser = UserContextHolder.getCurrentUsername();
-            log.debug("Querying records for user: {}", currentUser);
-            IPage<AssetRecordDTO> records = assetRecordService.pageByConditions(pageObj, assetNameId, locationId, typeId, remark, startDate, endDate, currentUser);
-            log.debug("Query completed. Total records: {}, Current page: {}", records.getTotal(), records.getCurrent());
+            IPage<AssetRecordDTO> records = assetRecordService.pageByConditions(pageObj, assetNameIdList, locationIdList, typeIdList, remark, startDate, endDate, currentUser);
             return ApiResponse.success(records);
         } catch (Exception e) {
             log.error("Failed to list records:", e);

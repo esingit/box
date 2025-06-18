@@ -1,3 +1,4 @@
+<!--src/components/base/PaginationBar.vue-->
 <template>
   <div class="pagination flex items-center space-x-3 text-gray-700 dark:text-gray-300 select-none">
     <button

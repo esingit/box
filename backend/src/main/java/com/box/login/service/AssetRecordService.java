@@ -9,12 +9,11 @@ import com.box.login.entity.AssetRecord;
 import java.util.List;
 
 public interface AssetRecordService {
-    List<AssetRecord> listAll();
     void addRecord(AssetRecord record);
     void updateRecord(AssetRecord record);
     void deleteRecord(Long id);
-    IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, Long assetNameId, Long locationId, 
-                                           Long typeId, String remark, String startDate, String endDate, 
+    IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, List<Long> assetNameIdList, List<Long> locationIdList,
+                                           List<Long> typeIdList, String remark, String startDate, String endDate,
                                            String createUser);
     void copyLastRecords(boolean force);
     AssetStatsDTO getLatestStats(String createUser, Integer offset);

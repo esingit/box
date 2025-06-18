@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/fitness-record")
 public class FitnessRecordController {
@@ -23,19 +25,15 @@ public class FitnessRecordController {
 
     @GetMapping("/list")
     public ApiResponse<IPage<FitnessRecordDTO>> listRecords(
-            @RequestParam(required = false) Long typeId,
+            @RequestParam(required = false) List<Long> typeIdList,
             @RequestParam(required = false) String remark,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "7") Integer pageSize) {
-        log.debug("Received list request - typeId: {}, remark: {}, startDate: {}, endDate: {}, page: {}, pageSize: {}", 
-                 typeId, remark, startDate, endDate, page, pageSize);
         Page<FitnessRecord> pageObj = new Page<>(page, pageSize);
         String currentUser = UserContextHolder.getCurrentUsername();
-        log.debug("Querying records for user: {}", currentUser);
-        IPage<FitnessRecordDTO> records = fitnessRecordService.pageByConditions(pageObj, typeId, remark, startDate, endDate, currentUser);
-        log.debug("Query completed. Total records: {}, Current page: {}", records.getTotal(), records.getCurrent());
+        IPage<FitnessRecordDTO> records = fitnessRecordService.pageByConditions(pageObj, typeIdList, remark, startDate, endDate, currentUser);
         return ApiResponse.success(records);
     }
 
@@ -59,9 +57,7 @@ public class FitnessRecordController {
 
     @GetMapping("/stats")
     public ApiResponse<FitnessStatsDTO> getStats() {
-        log.debug("获取健身统计数据");
         String currentUser = UserContextHolder.getCurrentUsername();
-        log.debug("当前用户: {}", currentUser);
         FitnessStatsDTO stats = fitnessRecordService.getStats(currentUser);
         return ApiResponse.success(stats);
     }

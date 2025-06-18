@@ -9,11 +9,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.util.List;
 
 public interface FitnessRecordService {
-    List<FitnessRecord> listAll();
     void addRecord(FitnessRecord record);
     void updateRecord(FitnessRecord record);
     void deleteRecord(Long id);
-    List<FitnessRecord> listByConditions(Long typeId, String remark, String startDate, String endDate);
-    IPage<FitnessRecordDTO> pageByConditions(Page<FitnessRecord> page, Long typeId, String remark, String startDate, String endDate, String createUser);
+    IPage<FitnessRecordDTO> pageByConditions(Page<FitnessRecord> page, List<Long> typeIdList, String remark, String startDate, String endDate, String createUser);
     FitnessStatsDTO getStats(String createUser);
 }

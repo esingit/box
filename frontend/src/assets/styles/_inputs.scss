@@ -1,5 +1,5 @@
-.input-base {
-  @apply block w-full px-4 py-2 text-sm outline-none appearance-none;
+.input-base{
+  @apply flex w-full px-4 py-2 text-sm outline-none appearance-none items-center justify-between;
 
   font-family: var(--font-family);
   background-color: var(--bg-main);
@@ -75,3 +75,4 @@ select {
   font-size: 0.75rem; /* text-xs */
   color: var(--color-error);
 }
+

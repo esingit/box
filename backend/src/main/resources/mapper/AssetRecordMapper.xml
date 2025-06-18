@@ -5,7 +5,6 @@
         <result property="id" column="id"/>
         <result property="assetNameId" column="asset_name_id"/>
         <result property="assetTypeId" column="asset_type_id"/>
-
         <result property="amount" column="amount"/>
         <result property="unitId" column="unit_id"/>
         <result property="assetLocationId" column="asset_location_id"/>
@@ -23,45 +22,55 @@
         <result property="unitValue" column="unit_value"/>
         <result property="locationName" column="location_name"/>
         <result property="locationValue" column="location_value"/>
+        <result property="assetName" column="asset_name"/>
     </resultMap>
 
     <select id="selectPageWithMeta" resultMap="assetRecordDTOMap">
-        SELECT 
-            ar.id,
-            ar.asset_name_id,
-            ar.asset_type_id,
-            ar.amount,
-            ar.unit_id,
-            ar.asset_location_id,
-            ar.acquire_time,
-            ar.remark,
-            ar.create_time,
-            ar.update_time,
-            ar.create_user,
-            ar.update_user,
-            ar.version,
-            ar.deleted,
-            COALESCE(an.name, '') as asset_name,
-            COALESCE(type_meta.type_name, '') as asset_type_name,
-            COALESCE(type_meta.value1, '') as asset_type_value,
-            COALESCE(unit_meta.type_name, '') as unit_name,
-            COALESCE(unit_meta.value1, '') as unit_value,
-            COALESCE(location_meta.type_name, '') as location_name,
-            COALESCE(location_meta.value1, '') as location_value
+        SELECT
+        ar.id,
+        ar.asset_name_id,
+        ar.asset_type_id,
+        ar.amount,
+        ar.unit_id,
+        ar.asset_location_id,
+        ar.acquire_time,
+        ar.remark,
+        ar.create_time,
+        ar.update_time,
+        ar.create_user,
+        ar.update_user,
+        ar.version,
+        ar.deleted,
+        COALESCE(an.name, '') as asset_name,
+        COALESCE(type_meta.type_name, '') as asset_type_name,
+        COALESCE(type_meta.value1, '') as asset_type_value,
+        COALESCE(unit_meta.type_name, '') as unit_name,
+        COALESCE(unit_meta.value1, '') as unit_value,
+        COALESCE(location_meta.type_name, '') as location_name,
+        COALESCE(location_meta.value1, '') as location_value
         FROM asset_record ar
-        LEFT JOIN asset_name an ON ar.asset_name_id = an.id
-        LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE'
-        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'CURRENCY'
-        LEFT JOIN common_meta location_meta ON ar.asset_location_id = location_meta.id AND location_meta.type_code = 'ASSET_LOCATION'
+        LEFT JOIN asset_name an ON ar.asset_name_id = an.id AND an.deleted = 0
+        LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE' AND type_meta.deleted = 0
+        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'CURRENCY' AND unit_meta.deleted = 0
+        LEFT JOIN common_meta location_meta ON ar.asset_location_id = location_meta.id AND location_meta.type_code = 'ASSET_LOCATION' AND location_meta.deleted = 0
         <where>
-            <if test="assetNameId != null">
-                AND ar.asset_name_id = #{assetNameId}
+            <if test="assetNameIdList != null and assetNameIdList.size > 0">
+                AND ar.asset_name_id IN
+                <foreach collection="assetNameIdList" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
             </if>
-            <if test="locationId != null">
-                AND ar.asset_location_id = #{locationId}
+            <if test="locationIdList != null and locationIdList.size > 0">
+                AND ar.asset_location_id IN
+                <foreach collection="locationIdList" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
             </if>
-            <if test="typeId != null">
-                AND ar.asset_type_id = #{typeId}
+            <if test="assetTypeIdList != null and assetTypeIdList.size > 0">
+                AND ar.asset_type_id IN
+                <foreach collection="assetTypeIdList" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
             </if>
             <if test="remark != null and remark != ''">
                 AND ar.remark LIKE CONCAT('%', #{remark}, '%')
@@ -82,38 +91,38 @@
 
     <select id="getDetailedStatistics" resultType="com.box.login.dto.AssetDetailDTO">
         SELECT
-            DATE_FORMAT(ar.acquire_time, '%Y-%m-%d') as date,
-            ar.asset_type_id as assetTypeId,
-            type_meta.value1 as assetTypeName,
-            ar.asset_name_id as assetNameId,
-            an.name as assetName,
-            SUM(CASE
-                WHEN unit_meta.value1 = 'CNY' THEN ar.amount
-                WHEN unit_meta.value1 = 'USD' THEN ar.amount * 7.2  -- 假设汇率 1 USD = 7.2 CNY
-                ELSE ar.amount
-            END) as amount
-        FROM 
-            asset_record ar
-            LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE' AND type_meta.deleted = 0
-            LEFT JOIN asset_name an ON ar.asset_name_id = an.id AND an.deleted = 0
-            LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'CURRENCY' AND unit_meta.deleted = 0
-        WHERE 
-            ar.create_user = #{userId}
-            AND ar.deleted = 0
-            AND ar.acquire_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-            <if test="assetTypeId != null">
-                AND ar.asset_type_id = #{assetTypeId}
-            </if>
-            <if test="assetNameId != null">
-                AND ar.asset_name_id = #{assetNameId}
-            </if>
-        GROUP BY 
-            DATE_FORMAT(ar.acquire_time, '%Y-%m-%d'),
-            ar.asset_type_id,
-            ar.asset_name_id
+        DATE_FORMAT(ar.acquire_time, '%Y-%m-%d') as date,
+        ar.asset_type_id as assetTypeId,
+        type_meta.value1 as assetTypeValue,
+        ar.asset_name_id as assetNameId,
+        an.name as assetName,
+        SUM(CASE
+        WHEN unit_meta.value1 = 'CNY' THEN ar.amount
+        WHEN unit_meta.value1 = 'USD' THEN ar.amount * 7.2  -- 假设汇率 1 USD = 7.2 CNY
+        ELSE ar.amount
+        END) as amount
+        FROM
+        asset_record ar
+        LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE' AND type_meta.deleted = 0
+        LEFT JOIN asset_name an ON ar.asset_name_id = an.id AND an.deleted = 0
+        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'CURRENCY' AND unit_meta.deleted = 0
+        WHERE
+        ar.create_user = #{userId}
+        AND ar.deleted = 0
+        AND ar.acquire_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        <if test="assetTypeId != null">
+            AND ar.asset_type_id = #{assetTypeId}
+        </if>
+        <if test="assetNameId != null">
+            AND ar.asset_name_id = #{assetNameId}
+        </if>
+        GROUP BY
+        DATE_FORMAT(ar.acquire_time, '%Y-%m-%d'),
+        ar.asset_type_id,
+        ar.asset_name_id
         ORDER BY
-            date ASC,
-            type_meta.value1 ASC,
-            an.name ASC
+        date ASC,
+        assetTypeValue ASC,
+        an.name ASC
     </select>
 </mapper>

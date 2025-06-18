@@ -1,166 +1,204 @@
-// /store/fitnessStore.ts
-import { defineStore } from 'pinia';
-import { ref, reactive } from 'vue';
-import axiosInstance from '@/utils/axios';
-import { formatFitnessRecord } from '@/utils/commonMeta';
-import emitter from '@/utils/eventBus.ts';
+import { defineStore } from 'pinia'
+import { ref, reactive, computed } from 'vue'
+import axiosInstance from '@/utils/axios'
+import { formatFitnessRecord } from '@/utils/commonMeta'
+import emitter from '@/utils/eventBus'
+import qs from 'qs'
 
-export const fitnessStore = defineStore('fitnessRecord', () => {
-  const records = ref([]);
-  const loading = ref(false);
-  const total = ref(0);
-  const current = ref(1);
-  const pageSize = ref(7);
+export const useFitnessStore = defineStore('fitness', () => {
+  // --- 状态 ---
+  const list = ref<any[]>([])
+  const pagination = reactive({ current: 1, pageSize: 7, total: 0 })
+  const loadingList = ref(false)
 
-  const query = reactive({
-    typeId: '',
-    startDate: '',
-    endDate: '',
-    remark: ''
-  });
+  const query = reactive<{
+    typeIdList: number[]
+    startDate?: string
+    endDate?: string
+    remark?: string
+  }>({
+    typeIdList: []
+  })
 
-  async function fetchRecords(page = current.value, size = pageSize.value) {
-    loading.value = true;
+  const stats = reactive({
+    monthlyCount: 0,
+    weeklyCount: 0,
+    lastWorkoutDays: 0,
+    nextWorkoutDay: '-',
+    proteinIntake: 0,
+    carbsIntake: 0
+  })
+  const loadingStats = ref(false)
+
+  let recordController: AbortController | null = null
+  let statsController: AbortController | null = null
+
+  const hasRecords = computed(() => list.value.length > 0)
+  const recordCount = computed(() => pagination.total)
+
+  // --- 内部函数 ---
+  function buildParams() {
+    return {
+      page: pagination.current,
+      pageSize: pagination.pageSize,
+      typeIdList: query.typeIdList.length > 0 ? query.typeIdList : undefined,
+      startDate: query.startDate ? query.startDate + 'T00:00:00' : undefined,
+      endDate: query.endDate ? query.endDate + 'T23:59:59' : undefined,
+      remark: query.remark || undefined
+    }
+  }
+
+  async function handleError(err: any, action: string) {
+    if (err?.code === 'ERR_CANCELED') return
+    console.error(`[${action}] 出错:`, err)
+    emitter.emit('notify', {
+      message: `${action} 失败：${err?.message || '未知错误'}`,
+      type: 'error'
+    })
+  }
+
+  function formatFinishTime(data: any) {
+    return {
+      ...data,
+      finishTime: data.finishTime.includes('T') ? data.finishTime : data.finishTime + 'T00:00:00'
+    }
+  }
+
+  // --- 列表操作 ---
+  async function loadList() {
+    if (recordController) recordController.abort()
+    recordController = new AbortController()
+    loadingList.value = true
+
     try {
-      const params: any = {
-        page,
-        pageSize: size
-      };
+      const res = await axiosInstance.get('/api/fitness-record/list', {
+        params: buildParams(),
+        signal: recordController.signal,
+        // ✅ 自定义参数序列化，确保数组参数后端能识别
+        paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
+      })
 
-      if (query.typeId) params.typeId = query.typeId;
-      if (query.startDate) params.startDate = query.startDate + 'T00:00:00';
-      if (query.endDate) params.endDate = query.endDate + 'T23:59:59';
-      if (query.remark) params.remark = query.remark.trim();
-
-      const res = await axiosInstance.get('/api/fitness-record/list', { params });
-
-      if (res.data?.success) {
-        const rawRecords = res.data.data?.records || [];
-        records.value = await Promise.all(rawRecords.map(record => formatFitnessRecord(record)));
-        total.value = Number(res.data.data?.total) || 0;
-        current.value = Number(res.data.data?.current) || 1;
-        pageSize.value = Number(res.data.data?.size) || pageSize.value;
+      if (res.data.success) {
+        const raw = res.data.data
+        list.value = await Promise.all(raw.records.map(formatFitnessRecord))
+        pagination.total = Number(raw.total ?? 0)
+        pagination.current = Number(raw.current ?? pagination.current)
+        pagination.pageSize = Number(raw.size ?? pagination.pageSize)
       } else {
-        emitter.emit('notify', res.data?.message || '获取健身记录失败', 'error');
+        emitter.emit('notify', { message: res.data.message || '获取列表失败', type: 'error' })
       }
-    } catch (err: any) {
-      console.error('获取健身记录失败:', err);
-      emitter.emit('notify', '获取数据失败：' + (err.message || '未知错误'), 'error');
-      records.value = [];
-      total.value = 0;
+    } catch (err) {
+      await handleError(err, '获取列表')
     } finally {
-      loading.value = false;
+      loadingList.value = false
+      recordController = null
     }
   }
 
-  async function addRecord(formData: any) {
-    try {
-      const res = await axiosInstance.post('/api/fitness-record/add', {
-        ...formData,
-        finishTime: formData.finishTime + 'T00:00:00'
-      });
+  function changePage(page: number) {
+    pagination.current = page
+    return loadList()
+  }
 
-      if (res.data?.success) {
-        await fetchRecords(current.value);
-        emitter.emit('notify', '添加成功', 'success');
-        return true;
+  function changePageSize(size: number) {
+    pagination.pageSize = size
+    pagination.current = 1
+    return loadList()
+  }
+
+  function resetQuery() {
+    query.typeIdList = []
+    query.startDate = undefined
+    query.endDate = undefined
+    query.remark = undefined
+    pagination.current = 1
+    return loadList()
+  }
+
+  // --- 统计操作 ---
+  async function loadStats() {
+    if (statsController) statsController.abort()
+    statsController = new AbortController()
+    loadingStats.value = true
+
+    try {
+      const res = await axiosInstance.get('/api/fitness-record/stats', {
+        signal: statsController.signal
+      })
+
+      if (res.data.success) {
+        Object.assign(stats, res.data.data)
+      } else {
+        emitter.emit('notify', { message: res.data.message || '获取统计失败', type: 'error' })
       }
-      emitter.emit('notify', res.data?.message || '添加失败', 'error');
-      return false;
-    } catch (err: any) {
-      console.error('添加健身记录失败:', err);
-      emitter.emit('notify', '添加失败：' + (err.message || '未知错误'), 'error');
-      return false;
+    } catch (err) {
+      await handleError(err, '获取统计')
+    } finally {
+      loadingStats.value = false
+      statsController = null
     }
   }
 
-  async function updateRecord(formData: any) {
+  // --- 增删改 ---
+  async function addRecord(data: any) {
     try {
-      const res = await axiosInstance.put('/api/fitness-record/update', {
-        ...formData,
-        finishTime: formData.finishTime + 'T00:00:00'
-      });
-
-      if (res.data?.success) {
-        await fetchRecords(current.value);
-        emitter.emit('notify', '更新成功', 'success');
-        return true;
+      const res = await axiosInstance.post('/api/fitness-record/add', formatFinishTime(data))
+      if (res.data.success) {
+        emitter.emit('notify', { message: '添加成功', type: 'success' })
+        await loadList()
+      } else {
+        emitter.emit('notify', { message: res.data.message || '添加失败', type: 'error' })
       }
-      emitter.emit('notify', res.data?.message || '更新失败', 'error');
-      return false;
-    } catch (err: any) {
-      console.error('更新健身记录失败:', err);
-      emitter.emit('notify', '更新失败：' + (err.message || '未知错误'), 'error');
-      return false;
+    } catch (err) {
+      await handleError(err, '添加记录')
+    }
+  }
+
+  async function updateRecord(data: any) {
+    try {
+      const res = await axiosInstance.put('/api/fitness-record/update', formatFinishTime(data))
+      if (res.data.success) {
+        emitter.emit('notify', { message: '更新成功', type: 'success' })
+        await loadList()
+      } else {
+        emitter.emit('notify', { message: res.data.message || '更新失败', type: 'error' })
+      }
+    } catch (err) {
+      await handleError(err, '更新记录')
     }
   }
 
   async function deleteRecord(id: number | string) {
     try {
-      const res = await axiosInstance.delete(`/api/fitness-record/delete/${id}`);
-      if (res.data?.success) {
-        await fetchRecords(current.value);
-        emitter.emit('notify', '删除成功', 'success');
-        return true;
+      const res = await axiosInstance.delete(`/api/fitness-record/delete/${id}`)
+      if (res.data.success) {
+        emitter.emit('notify', { message: '删除成功', type: 'success' })
+        await loadList()
+      } else {
+        emitter.emit('notify', { message: res.data.message || '删除失败', type: 'error' })
       }
-      emitter.emit('notify', res.data?.message || '删除失败', 'error');
-      return false;
-    } catch (err: any) {
-      console.error('删除健身记录失败:', err);
-      emitter.emit('notify', '删除失败：' + (err.message || '未知错误'), 'error');
-      return false;
+    } catch (err) {
+      await handleError(err, '删除记录')
     }
-  }
-
-  async function fetchStats() {
-    try {
-      const res = await axiosInstance.get('/api/fitness-record/stats');
-      if (res.data?.success) {
-        return res.data.data;
-      }
-      emitter.emit('notify', res.data?.message || '获取统计数据失败', 'error');
-      return null;
-    } catch (err: any) {
-      console.error('获取统计数据失败:', err);
-      emitter.emit('notify', '获取统计数据失败：' + (err.message || '未知错误'), 'error');
-      return null;
-    }
-  }
-
-  function resetQuery() {
-    Object.assign(query, {
-      typeId: '',
-      startDate: '',
-      endDate: '',
-      remark: ''
-    });
-    fetchRecords(1);
-  }
-
-  function handlePageChange(page: number) {
-    current.value = page;
-    fetchRecords(page);
-  }
-
-  function handlePageSizeChange(size: number) {
-    pageSize.value = size;
-    fetchRecords(1, size);
   }
 
   return {
-    records,
-    loading,
-    total,
-    current,
-    pageSize,
+    list,
+    pagination,
     query,
-    fetchRecords,
+    loadingList,
+    stats,
+    loadingStats,
+    hasRecords,
+    recordCount,
+
+    loadList,
+    changePage,
+    changePageSize,
+    resetQuery,
+    loadStats,
     addRecord,
     updateRecord,
-    deleteRecord,
-    resetQuery,
-    handlePageChange,
-    handlePageSizeChange,
-    fetchStats
-  };
-});
+    deleteRecord
+  }
+})

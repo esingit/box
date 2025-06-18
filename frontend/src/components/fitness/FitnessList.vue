@@ -2,7 +2,8 @@
   <div class="flex flex-col space-y-4">
     <div class="overflow-x-auto rounded border border-gray-200 bg-white shadow-sm">
       <FitnessTable
-          :records="records"
+          :records="list"
+          :loading="loadingList"
           @edit="handleEdit"
           @delete="handleDelete"
       />
@@ -10,47 +11,53 @@
 
     <div class="flex justify-end">
       <PaginationBar
-          v-if="total > 0"
-          :current="current"
-          :total="total"
-          :page-size="pageSize"
-          @page-change="$emit('page-change', $event)"
-          @page-size-change="$emit('page-size-change', $event)"
+          v-if="pagination.total > 0"
+          :current="pagination.current"
+          :total="pagination.total"
+          :page-size="pagination.pageSize"
+          @page-change="onPageChange"
+          @page-size-change="onPageSizeChange"
       />
     </div>
   </div>
 </template>
 
-<script setup>
-import FitnessTable from './FitnessTable.vue';
-import PaginationBar from '@/components/base/PaginationBar.vue';
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useFitnessStore } from '@/store/fitnessStore'
+import FitnessTable from './FitnessTable.vue'
+import PaginationBar from '@/components/base/PaginationBar.vue'
 
-defineProps({
-  records: {
-    type: Array,
-    required: true
-  },
-  current: {
-    type: Number,
-    default: 1
-  },
-  total: {
-    type: Number,
-    default: 0
-  },
-  pageSize: {
-    type: Number,
-    default: 10
-  }
-});
+const emit = defineEmits<{
+  (e: 'edit', recordId: number): void
+  (e: 'delete', recordId: number): void
+}>()
 
-const emit = defineEmits(['page-change', 'page-size-change', 'edit', 'delete']);
+const store = useFitnessStore()
+const { list, pagination, loadingList } = storeToRefs(store)
+const { loadList, changePage, changePageSize } = store
 
-function handleEdit(idx) {
-  emit('edit', idx);
+// 初次加载列表
+onMounted(async () => {
+  await loadList()
+})
+
+// 翻页
+async function onPageChange(page: number) {
+  await changePage(page)
 }
 
-function handleDelete(idx) {
-  emit('delete', idx);
+// 每页条数改变
+async function onPageSizeChange(size: number) {
+  await changePageSize(size)
+}
+
+// 编辑和删除事件透传
+function handleEdit(id: number) {
+  emit('edit', id)
+}
+function handleDelete(id: number) {
+  emit('delete', id)
 }
 </script>

@@ -1,25 +1,30 @@
 <template>
-  <BaseModal :visible="show" :title="title" @update:visible="handleCancel" width="500px">
+  <BaseModal
+      :visible="visible"
+      :title="title"
+      @update:visible="handleClose"
+      width="500px"
+  >
     <FitnessForm
-        ref="formRef"
+        ref="fitnessFormRef"
         :form="form"
-        :types="types"
-        :units="units"
         :remark-placeholder="remarkPlaceholder"
+        @submit="onInnerSubmit"
+        @update:form="updateForm"
     />
 
     <template #footer>
       <div class="flex justify-end gap-4">
         <button
             class="text-gray-600 hover:text-gray-900 transition"
-            @click="handleCancel"
+            @click="handleClose"
         >
           取消
         </button>
         <button
             class="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-blue-300 disabled:cursor-not-allowed transition"
-            :disabled="loading || !isFormValid"
-            @click="handleSubmit"
+            :disabled="loading || !isValid"
+            @click="submitForm"
         >
           {{ loading ? '处理中...' : confirmText }}
         </button>
@@ -29,57 +34,56 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed, ref, nextTick } from 'vue'
 import BaseModal from '@/components/base/BaseModal.vue'
-import FitnessForm from './FitnessForm.vue';
+import FitnessForm from './FitnessForm.vue'
 
 const props = defineProps({
-  show: Boolean,
-  form: {
-    type: Object,
-    required: true
-  },
-  types: {
-    type: Array,
-    default: () => []
-  },
-  units: {
-    type: Array,
-    default: () => []
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  },
-  title: {
-    type: String,
-    default: '记录'
-  },
-  confirmText: {
-    type: String,
-    default: '确定'
-  },
-  remarkPlaceholder: {
-    type: String,
-    default: '备注'
-  }
-});
+  visible: Boolean,
+  form: Object,
+  loading: Boolean,
+  title: String,
+  confirmText: String,
+  remarkPlaceholder: String,
+})
 
-const emit = defineEmits(['cancel', 'submit']);
+const emit = defineEmits(['close', 'submit', 'update:form'])
 
-const formRef = ref(null);
+const fitnessFormRef = ref<InstanceType<typeof FitnessForm> | null>(null)
 
-const isFormValid = computed(() => {
-  if (!formRef.value) return false;
-  return formRef.value.isValid;
-});
+const isValid = computed(() => {
+  const f = props.form
+  return f?.typeId && f?.count && f?.unitId && f?.finishTime
+})
 
-function handleCancel() {
-  emit('cancel');
+function handleClose() {
+  emit('close')
 }
 
-function handleSubmit() {
-  if (!isFormValid.value || props.loading) return;
-  emit('submit');
+function updateForm(formData: any) {
+  emit('update:form', formData)
+}
+
+// 外层点击确认时，调用内层暴露的 submit 方法触发表单校验提交
+async function submitForm() {
+  if (props.loading) return
+
+  console.log('开始提交表单') // 添加调试日志
+
+  try {
+    await nextTick() // 确保 DOM 更新完成
+    if (fitnessFormRef.value?.submit) {
+      await fitnessFormRef.value.submit()
+    } else {
+      console.error('表单 ref 或 submit 方法不存在')
+    }
+  } catch (error) {
+    console.error('提交表单时出错:', error)
+  }
+}
+
+// 内层表单提交成功时触发
+function onInnerSubmit(formData: any) {
+  emit('submit', formData)
 }
 </script>
