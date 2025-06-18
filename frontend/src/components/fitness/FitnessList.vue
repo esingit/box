@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col space-y-4">
     <!-- 表格部分 -->
-    <div class="overflow-x-auto rounded border border-gray-200 bg-white shadow-sm">
+    <div class="overflow-x-auto rounded-xl bg-white hover:shadow-md">
       <FitnessTable
           :records="list"
           :loading="loadingList"
@@ -12,7 +12,7 @@
 
     <!-- 分页器 -->
     <div class="flex" v-if="pagination.total > 0">
-      <PaginationBar
+      <BasePaginationBar
           :current="pagination.pageNo"
           :total="pagination.total"
           :page-size="pagination.pageSize"
@@ -28,7 +28,7 @@ import { onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useFitnessStore } from '@/store/fitnessStore'
 import FitnessTable from './FitnessTable.vue'
-import PaginationBar from '@/components/base/PaginationBar.vue'
+import BasePaginationBar from '@/components/base/BasePaginationBar.vue'
 
 const emit = defineEmits<{
   (e: 'edit', recordId: number): void

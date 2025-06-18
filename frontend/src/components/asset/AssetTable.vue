@@ -62,7 +62,7 @@
           <Tooltip v-if="tooltipVisible && tooltipIndex === idx && tooltipField === 'remark'" :content="record.remark"/>
         </td>
         <td class="px-4 py-2 whitespace-nowrap text-center" :style="{ minWidth: columnWidths.actions + 'px' }">
-          <RecordActions :record="record" type="asset" @edit="$emit('edit', idx)" @delete="$emit('delete', idx)"/>
+          <BaseActions :record="record" type="asset" @edit="$emit('edit', idx)" @delete="$emit('delete', idx)"/>
         </td>
       </tr>
       </tbody>
@@ -72,8 +72,8 @@
 
 <script setup>
 import {reactive, ref} from 'vue'
-import RecordActions from '@/components/base/RecordActions.vue'
-import Tooltip from '@/components/base/BaseTooltip.vue'
+import BaseActions from '@/components/base/BaseActions.vue'
+import Tooltip from '@/components/base/BaseNotice.vue'
 
 const props = defineProps({
   records: {

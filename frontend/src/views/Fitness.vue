@@ -103,9 +103,6 @@
           @delete="handleDelete"
           @page-change="handlePageChange"
       />
-      <div v-else class="space-y-4">
-        <SkeletonCard v-for="n in pagination.pageSize" :key="n" />
-      </div>
     </section>
 
     <!-- 添加和编辑弹窗，保持不变 -->
@@ -144,7 +141,6 @@ import { useMetaStore } from '@/store/metaStore'
 import FitnessList from '@/components/fitness/FitnessList.vue'
 import FitnessForm from '@/components/fitness/FitnessForm.vue'
 import FitnessSearch from '@/components/fitness/FitnessSearch.vue'
-import SkeletonCard from '@/components/base/SkeletonCard.vue'
 
 const fitnessStore = useFitnessStore()
 const metaStore = useMetaStore()
@@ -191,7 +187,7 @@ function initFormDefaults() {
   form.count = '1'
   form.remark = ''
 
-  const first = types[0] // ✅ 访问原始对象，包含 id 和 key3
+  const first = types[0]
   form.typeId = String(first.id) || ''
 
   if (first.key3 && metaStore.typeMap.UNIT) {

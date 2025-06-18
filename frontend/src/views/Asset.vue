@@ -18,7 +18,6 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <template v-if="loading">
-          <SkeletonCard v-for="i in 3" :key="i" class="h-[120px]" />
         </template>
         <template v-else>
           <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition">
@@ -90,9 +89,6 @@
           @page-change="handlePageChange"
           @page-size-change="handlePageSizeChange"
       />
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <SkeletonCard v-for="n in pageSize" :key="n" />
-      </div>
     </div>
 
     <!-- 添加 / 编辑弹窗 -->
@@ -139,7 +135,6 @@ import emitter from '@/utils/eventBus.ts'
 import AssetList from '@/components/asset/AssetList.vue'
 import AssetModal from '@/components/asset/AssetModal.vue'
 import SearchPanel from '@/components/asset/SearchPanel.vue'
-import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import axiosInstance from '@/utils/axios';
 
 // 外部依赖

@@ -1,4 +1,4 @@
-<!-- src/components/base/PaginationBar.vue -->
+<!-- src/components/base/BaseBasePaginationBar.vue -->
 <template>
   <div class="flex items-center space-x-3 text-gray-700 select-none justify-end">
 <!-- 上一页 -->

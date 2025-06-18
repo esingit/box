@@ -3,7 +3,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import Home from '@/views/Home.vue'
 import Fitness from '@/views/Fitness.vue'
 import Asset from '@/views/Asset.vue'
-import NotFound from '@/components/base/NotFound.vue'
+import NotFound from '@/views/NotFound.vue'
 
 export const routes: RouteRecordRaw[] = [
   {

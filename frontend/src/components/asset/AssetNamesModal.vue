@@ -63,9 +63,6 @@
       <!-- 列表区域 -->
       <div v-else class="flex-1 overflow-auto">
         <template v-if="loading">
-          <div class="space-y-3">
-            <SkeletonCard v-for="n in 5" :key="n" />
-          </div>
         </template>
         <template v-else>
           <AssetNamesList
@@ -91,7 +88,6 @@ import BaseModal from '@/components/base/BaseModal.vue'
 import ModalHeader from './ModalHeader.vue'
 import AssetNamesList from './AssetNamesList.vue'
 import AssetNameForm from './AssetNameForm.vue'
-import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import axios from 'axios'
 import emitter from '@/utils/eventBus.ts'
 

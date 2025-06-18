@@ -9,7 +9,7 @@
     </div>
 
     <div class="flex justify-end">
-      <PaginationBar
+      <BasePaginationBar
           v-if="total > 0"
           :current="current"
           :total="total"
@@ -23,7 +23,7 @@
 
 <script setup>
 import AssetTable from './AssetTable.vue'
-import PaginationBar from '@/components/base/PaginationBar.vue'
+import BasePaginationBar from '@/components/base/BasePaginationBar.vue'
 
 defineProps({
   records: Array,

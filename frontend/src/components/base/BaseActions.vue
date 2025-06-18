@@ -1,4 +1,4 @@
-<!-- /components/fitness/RecordActions.vue -->
+<!-- /components/fitness/BaseActions.vue -->
 <template>
   <div class="flex items-center gap-2">
     <button

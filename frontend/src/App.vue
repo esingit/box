@@ -56,7 +56,7 @@
     />
 
     <Profile ref="profileSettingsRef" />
-    <Notification />
+    <BaseNotice />
     <BaseDialog />
   </div>
 </template>
@@ -71,7 +71,7 @@ import emitter from '@/utils/eventBus'
 
 import Sidebar from '@/components/layout/Sidebar.vue'
 import AuthModals from '@/components/auth/AuthModals.vue'
-import Notification from '@/components/base/Notification.vue'
+import BaseNotice from '@/components/base/BaseNotice.vue'
 import BaseDialog from '@/components/base/BaseDialog.vue'
 import UserMenuGuest from '@/components/layout/UserMenuGuest.vue'
 import UserMenuAuthenticated from '@/components/layout/UserMenuAuthenticated.vue'

@@ -13,7 +13,7 @@
         v-if="total > 0"
         class="border-t border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50"
     >
-      <PaginationBar
+      <BasePaginationBar
           :current="current"
           :total="total"
           :page-size="pageSize"
@@ -26,7 +26,7 @@
 
 <script setup>
 import AssetNamesTable from './AssetNamesTable.vue'
-import PaginationBar from '@/components/base/PaginationBar.vue'
+import BasePaginationBar from '@/components/base/BasePaginationBar.vue'
 
 defineProps({
   names: Array,

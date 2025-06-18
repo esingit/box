@@ -22,7 +22,7 @@
       <tbody>
       <tr v-if="names.length === 0" class="text-center text-gray-500">
         <td :colspan="tableHeaders.length" class="py-8">
-          <EmptyState
+          <BaseEmptyState
               icon="Wallet"
               message="暂无资产名称"
               description="点击上方的新增按钮添加资产名称"
@@ -65,7 +65,7 @@
           <span v-else class="text-gray-400 select-none">-</span>
         </td>
         <td class="px-4 py-3 text-right" :style="{ width: columnWidths[2] + 'px' }">
-          <RecordActions
+          <BaseActions
               :record="name"
               type="asset-name"
               @edit="$emit('edit', name)"
@@ -80,8 +80,8 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import EmptyState from '@/components/base/EmptyState.vue'
-import RecordActions from '@/components/base/RecordActions.vue'
+import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
+import BaseActions from '@/components/base/BaseActions.vue'
 
 const DEFAULT_COLUMN_WIDTHS = {
   name: 400,
