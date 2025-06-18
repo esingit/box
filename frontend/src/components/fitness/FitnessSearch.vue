@@ -1,14 +1,14 @@
 <template>
   <div class="relative w-full bg-white border rounded-xl p-4 transition hover:shadow-md">
     <!-- 第一行 -->
-    <div class="flex items-center justify-between gap-3 flex-nowrap min-w-full">
+    <div class="flex items-center justify-between gap-3 min-w-full">
       <!-- 多选类型 -->
       <BaseSelect
           v-model="query.typeIdList"
           :options="fitnessTypeOptions"
           multiple
           placeholder="全部类型"
-          class="w-full max-w-[300px]"
+          class="w-full max-w-[500px]"
       />
       <!-- 日期 -->
       <div class="flex items-center gap-2 min-w-[220px] flex-shrink-0">
