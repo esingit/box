@@ -22,6 +22,8 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue'])
 
+const multiple = props.multiple ?? false
+
 const modelValue = computed({
   get() {
     return props.modelValue
@@ -31,8 +33,9 @@ const modelValue = computed({
   }
 })
 
+// 选中的标签文本
 const selectedLabels = computed(() => {
-  if (props.multiple && Array.isArray(modelValue.value)) {
+  if (multiple && Array.isArray(modelValue.value)) {
     return props.options
         .filter(opt => modelValue.value.includes(opt.value))
         .map(opt => opt.label)
@@ -52,14 +55,14 @@ const selectedText = computed(() =>
 <template>
   <div class="relative w-[300px]">
     <Listbox v-model="modelValue" :multiple="multiple">
-      <ListboxButton class="input-base">
+      <ListboxButton class="input-base flex justify-between items-center">
         <span
             class="truncate whitespace-nowrap block max-w-full"
             :title="selectedText"
         >
           {{ selectedText }}
         </span>
-        <LucideChevronDown class="w-4 h-4 text-gray-400" />
+        <LucideChevronDown class="w-4 h-4 text-gray-400 ml-2" />
       </ListboxButton>
 
       <ListboxOptions
@@ -72,13 +75,23 @@ const selectedText = computed(() =>
             v-slot="{ active, selected }"
         >
           <div
-              class="px-3 py-2 rounded-xl transition-colors duration-150 cursor-pointer select-none"
+              class="flex items-center px-3 py-2 rounded-xl cursor-pointer select-none transition-colors duration-150"
               :class="{
               'bg-gray-100': active,
               'font-semibold text-black': selected,
               'text-gray-900': !selected,
             }"
           >
+            <!-- 多选时显示复选框 -->
+            <template v-if="multiple">
+              <input
+                  type="checkbox"
+                  class="mr-2"
+                  :checked="selected"
+                  readonly
+                  tabindex="-1"
+              />
+            </template>
             {{ item.label }}
           </div>
         </ListboxOption>

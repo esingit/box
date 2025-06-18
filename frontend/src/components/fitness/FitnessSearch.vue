@@ -6,9 +6,9 @@
       <BaseSelect
           v-model="query.typeIdList"
           :options="fitnessTypeOptions"
-          :multiple="true"
+          multiple
           placeholder="全部类型"
-          class="max-w-full"
+          class="w-full max-w-[300px]"
       />
       <!-- 日期 -->
       <div class="flex items-center gap-2 min-w-[220px] flex-shrink-0">
@@ -64,12 +64,10 @@
 </template>
 
 <script setup lang="ts">
-import {useMetaStore} from '@/store/metaStore'
-import {ref} from 'vue'
+import { ref } from 'vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
-import {LucideChevronDown, LucideChevronUp, LucideRotateCcw, LucideSearch} from 'lucide-vue-next'
+import { LucideChevronDown, LucideChevronUp, LucideRotateCcw, LucideSearch } from 'lucide-vue-next'
 
-const metaStore = useMetaStore()
 const props = defineProps<{
   query: {
     typeIdList: (string | number)[]
@@ -77,14 +75,12 @@ const props = defineProps<{
     endDate: string
     remark: string
   }
-  fitnessTypeOptions: Array<any>
+  fitnessTypeOptions: Array<{ label: string; value: string | number }>
 }>()
 
 const emit = defineEmits(['search', 'reset'])
 
 const showMore = ref(false)
-
-
 
 function onSearch() {
   emit('search', { ...props.query })
