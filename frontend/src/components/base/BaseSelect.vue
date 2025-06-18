@@ -83,7 +83,7 @@ function isArrayValue(val: unknown): val is (string | number)[] {
 const selectedLabels = computed(() => {
   if (multiple && isArrayValue(modelValue.value)) {
     return props.options
-        .filter(opt => modelValue.value.includes(opt.value))
+        .filter(opt => isArrayValue(modelValue.value) && modelValue.value.includes(opt.value))
         .map(opt => opt.label)
   } else {
     const selected = props.options.find(opt => opt.value === modelValue.value)
