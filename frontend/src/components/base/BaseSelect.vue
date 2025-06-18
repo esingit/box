@@ -1,61 +1,7 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-import {
-  Listbox,
-  ListboxButton,
-  ListboxOptions,
-  ListboxOption
-} from '@headlessui/vue'
-import { LucideChevronDown } from 'lucide-vue-next'
-
-interface Option {
-  label: string
-  value: string | number
-}
-
-const props = defineProps<{
-  modelValue: string | number | (string | number)[]
-  options: Option[]
-  placeholder?: string
-  multiple?: boolean
-}>()
-
-const emit = defineEmits(['update:modelValue'])
-
-const multiple = props.multiple ?? false
-
-const modelValue = computed({
-  get() {
-    return props.modelValue
-  },
-  set(val) {
-    emit('update:modelValue', val)
-  }
-})
-
-// 选中的标签文本
-const selectedLabels = computed(() => {
-  if (multiple && Array.isArray(modelValue.value)) {
-    return props.options
-        .filter(opt => modelValue.value.includes(opt.value))
-        .map(opt => opt.label)
-  } else {
-    const selected = props.options.find(opt => opt.value === modelValue.value)
-    return selected ? [selected.label] : []
-  }
-})
-
-const selectedText = computed(() =>
-    selectedLabels.value.length
-        ? selectedLabels.value.join('、')
-        : props.placeholder || '请选择'
-)
-</script>
-
 <template>
-  <div class="relative w-[300px]">
+  <div class="relative w-full">
     <Listbox v-model="modelValue" :multiple="multiple">
-      <ListboxButton class="input-base flex justify-between items-center">
+      <ListboxButton class="input-base flex justify-between items-center w-full">
         <span
             class="truncate whitespace-nowrap block max-w-full"
             :title="selectedText"
@@ -82,15 +28,14 @@ const selectedText = computed(() =>
               'text-gray-900': !selected,
             }"
           >
-            <!-- 多选时显示复选框 -->
             <template v-if="multiple">
-              <input
-                  type="checkbox"
-                  class="mr-2"
-                  :checked="selected"
-                  readonly
-                  tabindex="-1"
-              />
+              <span class="mr-2 flex items-center justify-center w-5 h-5">
+                <component
+                    :is="selected ? CheckCircle : Circle"
+                    class="w-5 h-5"
+                    :class="selected ? 'text-black' : 'text-black'"
+                />
+              </span>
             </template>
             {{ item.label }}
           </div>
@@ -99,3 +44,56 @@ const selectedText = computed(() =>
     </Listbox>
   </div>
 </template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import {
+  Listbox,
+  ListboxButton,
+  ListboxOptions,
+  ListboxOption
+} from '@headlessui/vue'
+import { LucideChevronDown, Circle, CheckCircle } from 'lucide-vue-next'
+
+interface Option {
+  label: string
+  value: string | number
+}
+
+const props = defineProps<{
+  modelValue: string | number | (string | number)[]
+  options: Option[]
+  placeholder?: string
+  multiple?: boolean
+}>()
+
+const emit = defineEmits(['update:modelValue'])
+
+const multiple = props.multiple ?? false
+
+const modelValue = computed({
+  get: () => props.modelValue,
+  set: val => emit('update:modelValue', val)
+})
+
+function isArrayValue(val: unknown): val is (string | number)[] {
+  return Array.isArray(val)
+}
+
+const selectedLabels = computed(() => {
+  if (multiple && isArrayValue(modelValue.value)) {
+    return props.options
+        .filter(opt => modelValue.value.includes(opt.value))
+        .map(opt => opt.label)
+  } else {
+    const selected = props.options.find(opt => opt.value === modelValue.value)
+    return selected ? [selected.label] : []
+  }
+})
+
+const selectedText = computed(() =>
+    selectedLabels.value.length
+        ? selectedLabels.value.join('、')
+        : props.placeholder || '请选择'
+)
+</script>
