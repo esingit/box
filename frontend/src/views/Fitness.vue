@@ -156,9 +156,9 @@ const loading = ref(false)
 const showAddModal = ref(false)
 const editingIdx = ref<null | number>(null)
 
-const fitnessTypeOptions = computed(() =>
+const fitnessTypeOptions = computed<{ label: string; value: number }[]>(() =>
     (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
-      label: item.value1,
+      label: item.value1 || '',
       value: item.id
     }))
 )
@@ -181,16 +181,17 @@ function formatDate(dateStr: string | null | undefined) {
       .padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
 }
 
-// 初始化表单默认值（同之前）
 function initFormDefaults() {
-  if (fitnessTypeOptions.value.length === 0) return
+  const types = metaStore.typeMap?.FITNESS_TYPE || []
+  if (types.length === 0) return
+
   const now = new Date()
   now.setSeconds(0, 0)
   form.finishTime = now.toISOString().slice(0, 10)
   form.count = '1'
   form.remark = ''
 
-  const first = fitnessTypeOptions.value[0]
+  const first = types[0] // ✅ 访问原始对象，包含 id 和 key3
   form.typeId = String(first.id) || ''
 
   if (first.key3 && metaStore.typeMap.UNIT) {

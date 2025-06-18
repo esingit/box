@@ -1,4 +1,4 @@
-<!-- src/components/base/baseDialogModal.vue -->
+<!-- src/components/base/BaseDialogModal.vue -->
 <template>
   <BaseModal
       :visible="visible"
@@ -21,7 +21,7 @@
       </button>
       <button
           class="btn-primary ml-3"
-          :class="type === 'danger' ? 'btn-danger' : ''"
+          :class="{ 'btn-danger': type === 'danger' }"
           @click="handleConfirm"
           :disabled="loading"
           type="button"
@@ -37,6 +37,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import emitter from '@/utils/eventBus'
 import BaseModal from './BaseModal.vue'
 
+// 状态
 const visible = ref(false)
 const title = ref('操作确认')
 const message = ref('确定要执行此操作吗？')
@@ -45,10 +46,12 @@ const cancelText = ref('取消')
 const type = ref<'primary' | 'danger'>('primary')
 const loading = ref(false)
 
+// 回调
 let confirmCallback: (() => Promise<void> | void) | null = null
 let cancelCallback: (() => void) | null = null
 
-function showConfirm(opts: {
+// 弹出确认框
+function showConfirm(options: {
   title?: string
   message?: string
   confirmText?: string
@@ -57,23 +60,25 @@ function showConfirm(opts: {
   onConfirm?: () => Promise<void> | void
   onCancel?: () => void
 }) {
-  title.value = opts.title || '操作确认'
-  message.value = opts.message || '确定要执行此操作吗？'
-  confirmText.value = opts.confirmText || '确定'
-  cancelText.value = opts.cancelText || '取消'
-  type.value = opts.type || 'primary'
-  confirmCallback = opts.onConfirm || null
-  cancelCallback = opts.onCancel || null
-  visible.value = true
+  title.value = options.title ?? '操作确认'
+  message.value = options.message ?? '确定要执行此操作吗？'
+  confirmText.value = options.confirmText ?? '确定'
+  cancelText.value = options.cancelText ?? '取消'
+  type.value = options.type ?? 'primary'
+  confirmCallback = options.onConfirm ?? null
+  cancelCallback = options.onCancel ?? null
   loading.value = false
+  visible.value = true
 }
 
+// 取消按钮
 function onCancel() {
   if (loading.value) return
   visible.value = false
   cancelCallback?.()
 }
 
+// 确认按钮
 async function handleConfirm() {
   if (loading.value) return
   loading.value = true
@@ -85,12 +90,14 @@ async function handleConfirm() {
   }
 }
 
+// 监听键盘 ESC 关闭
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && visible.value) {
     onCancel()
   }
 }
 
+// 生命周期钩子
 onMounted(() => {
   emitter.on('confirm', showConfirm)
   window.addEventListener('keydown', onKeydown)

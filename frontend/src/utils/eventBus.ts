@@ -10,6 +10,15 @@ type Events = {
   'auth-state-changed': boolean
   'notify': NotifyPayload
   'login-success': void
+  'confirm': {
+    title?: string
+    message?: string
+    confirmText?: string
+    cancelText?: string
+    type?: 'primary' | 'danger'
+    onConfirm?: () => Promise<void> | void
+    onCancel?: () => void
+  }
 }
 
 type ExtendedEmitter = Emitter<Events> & {

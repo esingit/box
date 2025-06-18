@@ -22,7 +22,9 @@
           <Field name="typeId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
-                :options="fitnessTypes.map(t => ({ label: t.value1, value: t.id }))"
+                :options="fitnessTypes
+                .filter(t => t.value1 != null)
+                .map(t => ({ label: t.value1!, value: t.id }))"
                 placeholder="请选择"
                 @update:modelValue="val => {
                 setValue(val)
@@ -30,7 +32,7 @@
               }"
             />
           </Field>
-          <ErrorMessage name="typeId" class="msg-error" />
+          <ErrorMessage name="typeId" class="msg-error"/>
         </div>
 
         <!-- 次数 -->
@@ -42,7 +44,7 @@
               min="1"
               class="input-base"
           />
-          <ErrorMessage name="count" class="msg-error" />
+          <ErrorMessage name="count" class="msg-error"/>
         </div>
 
         <!-- 单位 -->
@@ -51,12 +53,14 @@
           <Field name="unitId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
-                :options="units.map(u => ({ label: u.value1, value: u.id }))"
+                :options="units
+                          .filter(u => u.value1 != null)
+                          .map(u => ({ label: u.value1!, value: u.id }))"
                 placeholder="请选择"
                 @update:modelValue="val => setValue(val)"
             />
           </Field>
-          <ErrorMessage name="unitId" class="msg-error" />
+          <ErrorMessage name="unitId" class="msg-error"/>
         </div>
 
         <!-- 完成时间 -->
@@ -67,7 +71,7 @@
               type="date"
               class="input-base"
           />
-          <ErrorMessage name="finishTime" class="msg-error" />
+          <ErrorMessage name="finishTime" class="msg-error"/>
         </div>
 
         <!-- 备注 -->
@@ -102,12 +106,12 @@
 </template>
 
 <script setup lang="ts">
-import { Form, Field, ErrorMessage } from 'vee-validate'
+import {Form, Field, ErrorMessage} from 'vee-validate'
 import * as yup from 'yup'
-import { ref, watch, computed } from 'vue'
+import {ref, watch, computed} from 'vue'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue' // 你的下拉组件
-import { useMetaStore } from '@/store/metaStore'
+import {useMetaStore} from '@/store/metaStore'
 
 const props = defineProps({
   visible: Boolean,
@@ -121,7 +125,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'submit', 'update:form'])
 
 const formRef = ref()
-const form = ref({ ...props.form })
+const form = ref({...props.form})
 
 const metaStore = useMetaStore()
 const fitnessTypes = computed(() => metaStore.typeMap?.FITNESS_TYPE || [])
@@ -143,17 +147,17 @@ const schema = yup.object({
 watch(
     () => props.form,
     val => {
-      form.value = { ...val }
+      form.value = {...val}
       if (form.value.finishTime && form.value.finishTime.length > 10) {
         form.value.finishTime = form.value.finishTime.slice(0, 10)
       }
-      formRef.value?.resetForm({ values: form.value })
+      formRef.value?.resetForm({values: form.value})
 
       if (form.value.typeId) {
         setDefaultUnit(form.value.typeId)
       }
     },
-    { immediate: true }
+    {immediate: true}
 )
 
 function handleClose() {

@@ -7,7 +7,7 @@
     <!-- 主体内容 -->
     <div class="flex overflow-hidden">
       <!-- 左侧菜单 -->
-      <nav class="w-48 p-3 space-y-1 border-r" aria-label="设置菜单">
+      <nav class="w-48 space-y-1" aria-label="设置菜单">
         <button
             type="button"
             class="w-full menu-btn"
