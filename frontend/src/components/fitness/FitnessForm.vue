@@ -13,22 +13,22 @@
           :validation-schema="schema"
           :initial-values="form"
           @submit="handleSubmit"
-          v-slot="{ values, setFieldValue, meta }"
+          v-slot="{ values, setFieldValue }"
           class="space-y-6"
       >
         <!-- 类型 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">类型</label>
-          <Field
-              as="select"
-              name="typeId"
-              class="input-base"
-              @change="e => onTypeChange(e, setFieldValue, values)"
-          >
-            <option value="" disabled>请选择</option>
-            <option v-for="type in fitnessTypes" :key="type.id" :value="type.id">
-              {{ type.value1 }}
-            </option>
+          <Field name="typeId" v-slot="{ value, setValue }">
+            <BaseSelect
+                :modelValue="value"
+                :options="fitnessTypes.map(t => ({ label: t.value1, value: t.id }))"
+                placeholder="请选择"
+                @update:modelValue="val => {
+                setValue(val)
+                setDefaultUnit(val, setFieldValue, values)
+              }"
+            />
           </Field>
           <ErrorMessage name="typeId" class="msg-error" />
         </div>
@@ -48,15 +48,13 @@
         <!-- 单位 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">单位</label>
-          <Field
-              as="select"
-              name="unitId"
-              class="input-base"
-          >
-            <option value="" disabled>请选择</option>
-            <option v-for="unit in units" :key="unit.id" :value="unit.id">
-              {{ unit.value1 }}
-            </option>
+          <Field name="unitId" v-slot="{ value, setValue }">
+            <BaseSelect
+                :modelValue="value"
+                :options="units.map(u => ({ label: u.value1, value: u.id }))"
+                placeholder="请选择"
+                @update:modelValue="val => setValue(val)"
+            />
           </Field>
           <ErrorMessage name="unitId" class="msg-error" />
         </div>
@@ -108,6 +106,7 @@ import { Form, Field, ErrorMessage } from 'vee-validate'
 import * as yup from 'yup'
 import { ref, watch, computed } from 'vue'
 import BaseModal from '@/components/base/BaseModal.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue' // 你的下拉组件
 import { useMetaStore } from '@/store/metaStore'
 
 const props = defineProps({
@@ -130,13 +129,17 @@ const units = computed(() => metaStore.typeMap?.UNIT || [])
 
 const schema = yup.object({
   typeId: yup.string().required('请选择类型'),
-  count: yup.number().typeError('请输入次数').required('请输入次数').min(1, '次数不能小于1'),
+  count: yup
+      .number()
+      .typeError('请输入次数')
+      .required('请输入次数')
+      .min(1, '次数不能小于1'),
   unitId: yup.string().required('请选择单位'),
   finishTime: yup.string().required('请输入完成时间'),
   remark: yup.string().nullable(),
 })
 
-// 同步 props.form 到内部 form
+// 监听 props.form 变化，同步到内部 form 和重置表单
 watch(
     () => props.form,
     val => {
@@ -162,16 +165,12 @@ function handleSubmit(values: any) {
   emit('submit', values)
 }
 
-function onTypeChange(event: Event, setFieldValue: any, values: any) {
-  const newTypeId = (event.target as HTMLSelectElement).value
-  setFieldValue('typeId', newTypeId)
-  setDefaultUnit(newTypeId, setFieldValue, values)
-}
-
+// 联动默认单位设置，支持外部调用时带 setFieldValue
 function setDefaultUnit(typeId: string, setFieldValue?: any, values?: any) {
   const selectedType = fitnessTypes.value.find(type => String(type.id) === String(typeId))
   if (!selectedType?.key3) {
-    setFieldValue ? setFieldValue('unitId', '') : (form.value.unitId = '')
+    if (setFieldValue) setFieldValue('unitId', '')
+    else form.value.unitId = ''
     return
   }
 
@@ -179,8 +178,9 @@ function setDefaultUnit(typeId: string, setFieldValue?: any, values?: any) {
   if (!defaultUnit) return
 
   const currentUnitId = values?.unitId || form.value.unitId
-  if (!currentUnitId || currentUnitId !== defaultUnit.id) {
-    setFieldValue ? setFieldValue('unitId', defaultUnit.id) : (form.value.unitId = defaultUnit.id)
+  if (!currentUnitId || String(currentUnitId) !== String(defaultUnit.id)) {
+    if (setFieldValue) setFieldValue('unitId', defaultUnit.id)
+    else form.value.unitId = defaultUnit.id
   }
 }
 </script>
