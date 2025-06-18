@@ -1,5 +1,6 @@
 <template>
   <div class="flex flex-col space-y-4">
+    <!-- 表格部分 -->
     <div class="overflow-x-auto rounded border border-gray-200 bg-white shadow-sm">
       <FitnessTable
           :records="list"
@@ -9,10 +10,10 @@
       />
     </div>
 
-    <div class="flex justify-end">
+    <!-- 分页器 -->
+    <div class="flex" v-if="pagination.total > 0">
       <PaginationBar
-          v-if="pagination.total > 0"
-          :current="pagination.current"
+          :current="pagination.pageNo"
           :total="pagination.total"
           :page-size="pagination.pageSize"
           @page-change="onPageChange"
@@ -23,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useFitnessStore } from '@/store/fitnessStore'
 import FitnessTable from './FitnessTable.vue'
@@ -36,24 +37,37 @@ const emit = defineEmits<{
 
 const store = useFitnessStore()
 const { list, pagination, loadingList } = storeToRefs(store)
-const { loadList, changePage, changePageSize } = store
+const { loadList, setPageNo, setPageSize } = store
 
-// 初次加载列表
+// 初次加载
 onMounted(async () => {
   await loadList()
 })
 
+// 防止外部修改 pagination 后未刷新
+watch(
+    () => [pagination.value.pageNo, pagination.value.pageSize],
+    async () => {
+      await loadList()
+    }
+)
+
 // 翻页
 async function onPageChange(page: number) {
-  await changePage(page)
+  if (page !== pagination.value.pageNo) {
+    setPageNo(page)
+    await loadList()
+  }
 }
 
-// 每页条数改变
+// 每页条数变更
 async function onPageSizeChange(size: number) {
-  await changePageSize(size)
+  if (size !== pagination.value.pageSize) {
+    setPageSize(size)
+    await loadList()
+  }
 }
 
-// 编辑和删除事件透传
 function handleEdit(id: number) {
   emit('edit', id)
 }

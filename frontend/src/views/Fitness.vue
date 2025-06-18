@@ -1,4 +1,3 @@
-<!--src/views/Fitness.vue-->
 <template>
   <div class="min-h-screen bg-gray-50 p-6 max-w-6xl mx-auto flex flex-col space-y-8 rounded-xl">
     <!-- 统计卡片 -->
@@ -53,11 +52,7 @@
                   class="ml-3 text-sm font-normal"
                   :class="stats.proteinIntake >= 80 ? 'text-green-500' : 'text-yellow-500'"
               >
-                {{
-                  stats.proteinIntake >= 80
-                      ? '✓'
-                      : `差 ${80 - stats.proteinIntake} 克`
-                }}
+                {{ stats.proteinIntake >= 80 ? '✓' : `差 ${80 - stats.proteinIntake} 克` }}
               </span>
             </p>
             <p class="mt-1 text-sm text-gray-400 flex items-center">
@@ -76,25 +71,20 @@
     </section>
 
     <!-- 搜索和操作 -->
-    <section
-        class="bg-white rounded-xl hover:shadow-md p-6 space-y-4"
-    >
-      <!-- 第一行：按钮栏 -->
+    <section class="bg-white rounded-xl hover:shadow-md p-6 space-y-4">
       <div class="flex justify-start">
         <button
             @click="handleAdd"
             class="btn-primary rounded-full px-5 py-2 flex items-center justify-center space-x-2"
         >
-          <LucidePlus class="w-5 h-5"/>
+          <LucidePlus class="w-5 h-5" />
           <span>添加记录</span>
         </button>
       </div>
-      <!-- 第一行：搜索栏 -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <SearchPanel
+        <FitnessSearch
             :query="query"
-            :types="types"
-            @update:query="val => Object.assign(query, val)"
+            :fitnessTypeOptions="fitnessTypeOptions"
             @search="handleQuery"
             @reset="resetQuery"
             class="flex-grow"
@@ -106,16 +96,20 @@
     <section class="bg-white rounded-xl hover:shadow-md p-6">
       <FitnessList
           v-if="!loading"
+          :list="list"
+          :pageNo="pagination.pageNo"
+          :pageSize="pagination.pageSize"
           @edit="editRecord"
           @delete="handleDelete"
+          @page-change="handlePageChange"
       />
       <div v-else class="space-y-4">
-        <SkeletonCard v-for="n in pageSize" :key="n"/>
+        <SkeletonCard v-for="n in pagination.pageSize" :key="n" />
       </div>
     </section>
 
-    <!-- 弹窗：添加 -->
-    <FitnessModal
+    <!-- 添加和编辑弹窗，保持不变 -->
+    <FitnessForm
         v-if="showAddModal"
         :visible="showAddModal"
         :form="form"
@@ -126,15 +120,14 @@
         @close="closeAddModal"
     />
 
-    <!-- 弹窗：编辑 -->
-    <FitnessModal
+    <FitnessForm
         v-if="editingIdx !== null"
         :visible="true"
         :form="form"
         :loading="false"
         title="编辑记录"
         confirm-text="保存"
-        remark-placeholder="备注"
+        remark-placeholder="备注（可选）"
         @submit="saveEdit"
         @close="cancelEdit"
     />
@@ -142,27 +135,33 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, reactive, ref, watch} from 'vue'
-import {LucidePlus, LucideRefreshCw} from 'lucide-vue-next'
-import {storeToRefs} from 'pinia'
-import {useFitnessStore} from '@/store/fitnessStore'
-import {useMetaStore} from '@/store/metaStore'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { LucidePlus, LucideRefreshCw } from 'lucide-vue-next'
+import { storeToRefs } from 'pinia'
+import { useFitnessStore } from '@/store/fitnessStore'
+import { useMetaStore } from '@/store/metaStore'
 
 import FitnessList from '@/components/fitness/FitnessList.vue'
-import FitnessModal from '@/components/fitness/FitnessModal.vue'
-import SearchPanel from '@/components/fitness/SearchPanel.vue'
+import FitnessForm from '@/components/fitness/FitnessForm.vue'
+import FitnessSearch from '@/components/fitness/FitnessSearch.vue'
 import SkeletonCard from '@/components/base/SkeletonCard.vue'
 
 const fitnessStore = useFitnessStore()
 const metaStore = useMetaStore()
 
-const {list, stats: statsRef} = storeToRefs(fitnessStore)
-const query = ref<Record<string, any>>({})
+// 解构 store 里的响应式状态
+const { list, stats, query, pagination } = storeToRefs(fitnessStore)
+
 const loading = ref(false)
 const showAddModal = ref(false)
 const editingIdx = ref<null | number>(null)
-const pageSize = ref(10)
-const types = ref<any[]>([])
+
+const fitnessTypeOptions = computed(() =>
+    (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
+      label: item.value1,
+      value: item.id
+    }))
+)
 
 const form = reactive({
   typeId: '',
@@ -172,27 +171,27 @@ const form = reactive({
   remark: ''
 })
 
-// 控制 meta 是否加载完成
-const metaLoaded = ref(false)
-
-// 日期格式化
+// 格式化日期函数
 function formatDate(dateStr: string | null | undefined) {
   if (!dateStr) return '-'
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return '-'
-  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
+  return `${d.getFullYear()}-${(d.getMonth() + 1)
+      .toString()
+      .padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
 }
 
+// 初始化表单默认值（同之前）
 function initFormDefaults() {
-  if (types.value.length === 0) return
+  if (fitnessTypeOptions.value.length === 0) return
   const now = new Date()
   now.setSeconds(0, 0)
   form.finishTime = now.toISOString().slice(0, 10)
   form.count = '1'
   form.remark = ''
 
-  const first = types.value[0]
-  form.typeId = String(first.id || '')
+  const first = fitnessTypeOptions.value[0]
+  form.typeId = String(first.id) || ''
 
   if (first.key3 && metaStore.typeMap.UNIT) {
     const unit = metaStore.typeMap.UNIT.find((u: any) => u.key1 === first.key3)
@@ -202,19 +201,7 @@ function initFormDefaults() {
   }
 }
 
-// 监听 meta 加载
-watch(
-    () => metaStore.typeMap,
-    (newVal) => {
-      if (newVal?.FITNESS_TYPE?.length > 0) {
-        types.value = newVal.FITNESS_TYPE
-        initFormDefaults()
-      }
-    },
-    {immediate: true}
-)
-
-// 编辑表单
+// 编辑时表单赋值
 watch(editingIdx, (idx) => {
   if (idx !== null && list.value?.[idx]) {
     const rec = list.value[idx]
@@ -232,30 +219,20 @@ watch(editingIdx, (idx) => {
   }
 })
 
-// 统计卡片
-const stats = computed(() => statsRef.value || {
-  monthlyCount: 0,
-  weeklyCount: 0,
-  lastWorkoutDays: 0,
-  nextWorkoutDay: '',
-  proteinIntake: 0,
-  carbsIntake: 0
-})
-
-const isWorkoutOverdue = computed(() => stats.value.lastWorkoutDays > 3)
+// 计算属性 - 统计相关
+const isWorkoutOverdue = computed(() => stats.value?.lastWorkoutDays > 3)
 const isNextWorkoutOverdue = computed(() => {
-  const t = new Date(stats.value.nextWorkoutDay).getTime()
+  const t = new Date(stats.value?.nextWorkoutDay).getTime()
   return !isNaN(t) && t < Date.now()
 })
 
-// 主动刷新（初次加载 + 手动刷新）
+// 刷新数据（load stats + list）
 async function refreshData() {
   loading.value = true
   try {
     await metaStore.initAll()
     await fitnessStore.loadStats()
-    await fitnessStore.loadList()
-    metaLoaded.value = true
+    await fitnessStore.loadList() // 这里使用store里的query
   } catch (e) {
     console.error('刷新数据失败', e)
   } finally {
@@ -263,62 +240,77 @@ async function refreshData() {
   }
 }
 
-// 打开/关闭弹窗
+// 搜索时更新store中的query并刷新
+function handleQuery(newQuery: Partial<typeof query.value>) {
+  fitnessStore.updateQuery(newQuery)
+  fitnessStore.setPageNo(1) // 搜索时重置页码
+  refreshData()
+}
+
+// 重置查询条件
+function resetQuery() {
+  fitnessStore.resetQuery()
+  refreshData()
+}
+
+// 分页变化，更新页码并刷新
+function handlePageChange(newPage: number) {
+  fitnessStore.setPageNo(newPage)
+  refreshData()
+}
+
+// 添加相关
 function handleAdd() {
   initFormDefaults()
   showAddModal.value = true
 }
-
 function closeAddModal() {
   showAddModal.value = false
 }
-
-// 添加记录
 async function handleAddRecord(data: typeof form) {
-  const payload = {...data, count: Number(data.count) || 0}
+  const payload = { ...data, count: Number(data.count) || 0 }
   await fitnessStore.addRecord(payload)
   showAddModal.value = false
   await refreshData()
 }
 
-// 编辑记录
+// 编辑相关
 function editRecord(recordId: number) {
-  const idx = list.value?.findIndex(r => r.id === recordId)
+  const idx = list.value.findIndex((r) => r.id === recordId)
   if (idx !== -1) editingIdx.value = idx
 }
-
 function cancelEdit() {
   editingIdx.value = null
 }
 
-// 保存编辑
 async function saveEdit(data: typeof form) {
   if (editingIdx.value === null) return
-  const payload = {...data, count: Number(data.count) || 0}
+
+  const original = list.value[editingIdx.value]
+  if (!original || !original.id) return
+
+  const payload = {
+    id: original.id, // 关键：补上 ID
+    typeId: data.typeId,
+    count: Number(data.count) || 0,
+    unitId: data.unitId,
+    finishTime: data.finishTime,
+    remark: data.remark
+  }
+
   await fitnessStore.updateRecord(payload)
   editingIdx.value = null
   await refreshData()
 }
 
-// 删除
+// 删除记录
 async function handleDelete(id: number) {
   await fitnessStore.deleteRecord(id)
   await refreshData()
 }
 
-// 搜索、重置
-async function handleQuery() {
-  await refreshData()
-}
-
-function resetQuery() {
-  query.value = {}
-  refreshData()
-}
-
 onMounted(async () => {
   await metaStore.initAll()
-  await fitnessStore.loadList()
+  await refreshData()
 })
 </script>
-

@@ -58,4 +58,9 @@ public class AssetRecord extends BaseEntity {
      * 购入/登记时间
      */
     private LocalDateTime acquireTime;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }

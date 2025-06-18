@@ -27,4 +27,6 @@ public class AssetName extends BaseEntity {
 
     @Size(max = 500, message = "资产名称描述长度不能超过500个字符")
     private String description; // 资产名称描述
+
+    private String remark; // 备注
 }

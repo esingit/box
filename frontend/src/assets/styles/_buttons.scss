@@ -3,7 +3,7 @@
   %btn-base {
     @apply inline-flex items-center justify-center select-none whitespace-nowrap
     text-sm font-medium transition-colors duration-200 ease-in-out
-    disabled:opacity-50 disabled:cursor-not-allowed;
+    disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-0;
 
     padding: 0 var(--space-lg);
     height: var(--btn-h);

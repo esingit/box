@@ -1,37 +1,41 @@
-<!--src/components/base/PaginationBar.vue-->
+<!-- src/components/base/PaginationBar.vue -->
 <template>
-  <div class="pagination flex items-center space-x-3 text-gray-700 dark:text-gray-300 select-none">
+  <div class="flex items-center space-x-3 text-gray-700 select-none justify-end">
+<!-- 上一页 -->
     <button
-        class="page-btn px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-        :disabled="props.current <= 1"
-        @click="handlePageChange(props.current - 1)"
+        class="btn-outline"
+        :disabled="current <= 1"
+        @click="changePage(current - 1)"
     >
       上一页
     </button>
 
+    <!-- 页码按钮 -->
     <button
-        v-for="page in displayPages"
+        v-for="page in pagesToShow"
         :key="page"
-        class="page-btn px-3 py-1 rounded border cursor-pointer transition"
-        :class="page === props.current
-        ? 'bg-blue-600 text-white border-blue-600'
-        : 'hover:bg-gray-100 border-gray-300'"
-        @click="handlePageChange(page)"
+        class="px-4 py-4 rounded-full border cursor-pointer transition"
+        :class="page === current
+        ? 'btn-primary'
+        : 'btn-outline'"
+        @click="changePage(page)"
     >
       {{ page }}
     </button>
 
+    <!-- 下一页 -->
     <button
-        class="page-btn px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-        :disabled="props.current >= totalPages || totalPages === 0"
-        @click="handlePageChange(props.current + 1)"
+        class="btn-outline"
+        :disabled="current >= totalPages || totalPages === 0"
+        @click="changePage(current + 1)"
     >
       下一页
     </button>
 
+    <!-- 每页条数选择 -->
     <select
-        class="form-select border border-gray-300 rounded px-2 py-1 ml-4 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
-        :value="props.pageSize"
+        class="btn-outline select-none"
+        :value="pageSize"
         @change="$emit('page-size-change', Number($event.target.value))"
     >
       <option v-for="size in pageSizeOptions" :key="size" :value="size">
@@ -39,58 +43,52 @@
       </option>
     </select>
 
-    <span class="pagination-info ml-2 text-gray-500 dark:text-gray-400 text-sm">
-      共 {{ props.total }} 条
+    <!-- 总条数 -->
+    <span class="text-gray-500 text-sm whitespace-nowrap">
+      共 {{ total }} 条
     </span>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-
-const pageSizeOptions = [7, 10, 20, 50]
+import {computed} from 'vue'
 
 const props = defineProps({
-  current: { type: Number, default: 1 },
-  total: { type: Number, default: 0 },
-  pageSize: { type: Number, default: 10 }
+  current: {type: Number, default: 1},
+  total: {type: Number, default: 0},
+  pageSize: {type: Number, default: 10}
 })
 
 const emit = defineEmits(['page-change', 'page-size-change'])
 
-const totalPages = computed(() => {
-  if (props.total === 0) return 0
-  return Math.ceil(props.total / props.pageSize)
-})
+const pageSizeOptions = [7, 10, 20, 50]
 
-const displayPages = computed(() => {
+const totalPages = computed(() => (props.total ? Math.ceil(props.total / props.pageSize) : 0))
+
+const pagesToShow = computed(() => {
+  const maxPages = 5
   const pages = []
-  const maxDisplayPages = 5
-  const half = Math.floor(maxDisplayPages / 2)
-
   if (totalPages.value === 0) return pages
 
-  let start = Math.max(1, props.current - half)
-  let end = Math.min(totalPages.value, start + maxDisplayPages - 1)
-
-  if (end - start + 1 < maxDisplayPages) {
-    start = Math.max(1, end - maxDisplayPages + 1)
+  let start = Math.max(1, props.current - Math.floor(maxPages / 2))
+  let end = Math.min(totalPages.value, start + maxPages - 1)
+  if (end - start + 1 < maxPages) {
+    start = Math.max(1, end - maxPages + 1)
   }
 
-  for (let i = start; i <= end; i++) {
-    pages.push(i)
-  }
+  for (let i = start; i <= end; i++) pages.push(i)
   return pages
 })
 
-function handlePageChange(page) {
+function changePage(page) {
   if (page < 1 || page > totalPages.value || page === props.current) return
   emit('page-change', page)
 }
 </script>
 
 <style scoped>
-.page-btn {
+/* 禁止选中文字 */
+button {
   user-select: none;
 }
 </style>

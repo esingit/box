@@ -4,14 +4,14 @@
     <button
         @click="$emit('edit')"
         title="编辑"
-        class="icon-button text-gray-600 hover:bg-gray-100"
+        class="btn-outline"
     >
       <LucidePencil class="w-4 h-4" />
     </button>
     <button
         @click="$emit('delete')"
         title="删除"
-        class="icon-button text-red-500 hover:bg-red-100"
+        class="btn-danger"
     >
       <LucideTrash2 class="w-4 h-4" />
     </button>

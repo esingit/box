@@ -8,17 +8,25 @@ import qs from 'qs'
 export const useFitnessStore = defineStore('fitness', () => {
   // --- 状态 ---
   const list = ref<any[]>([])
-  const pagination = reactive({ current: 1, pageSize: 7, total: 0 })
-  const loadingList = ref(false)
-
   const query = reactive<{
     typeIdList: number[]
-    startDate?: string
-    endDate?: string
-    remark?: string
+    startDate: string
+    endDate: string
+    remark: string
   }>({
-    typeIdList: []
+    typeIdList: [],
+    startDate: '',
+    endDate: '',
+    remark: ''
   })
+
+  const pagination = reactive({
+    pageNo: 1,
+    pageSize: 7,
+    total: 0
+  })
+
+  const loadingList = ref(false)
 
   const stats = reactive({
     monthlyCount: 0,
@@ -39,7 +47,7 @@ export const useFitnessStore = defineStore('fitness', () => {
   // --- 内部函数 ---
   function buildParams() {
     return {
-      page: pagination.current,
+      page: pagination.pageNo,
       pageSize: pagination.pageSize,
       typeIdList: query.typeIdList.length > 0 ? query.typeIdList : undefined,
       startDate: query.startDate ? query.startDate + 'T00:00:00' : undefined,
@@ -74,7 +82,6 @@ export const useFitnessStore = defineStore('fitness', () => {
       const res = await axiosInstance.get('/api/fitness-record/list', {
         params: buildParams(),
         signal: recordController.signal,
-        // ✅ 自定义参数序列化，确保数组参数后端能识别
         paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
       })
 
@@ -82,7 +89,7 @@ export const useFitnessStore = defineStore('fitness', () => {
         const raw = res.data.data
         list.value = await Promise.all(raw.records.map(formatFitnessRecord))
         pagination.total = Number(raw.total ?? 0)
-        pagination.current = Number(raw.current ?? pagination.current)
+        pagination.pageNo = Number(raw.current ?? pagination.pageNo)
         pagination.pageSize = Number(raw.size ?? pagination.pageSize)
       } else {
         emitter.emit('notify', { message: res.data.message || '获取列表失败', type: 'error' })
@@ -95,24 +102,26 @@ export const useFitnessStore = defineStore('fitness', () => {
     }
   }
 
-  function changePage(page: number) {
-    pagination.current = page
-    return loadList()
+  // --- 更新查询参数 ---
+  function updateQuery(newQuery: Partial<typeof query>) {
+    Object.assign(query, newQuery)
   }
 
-  function changePageSize(size: number) {
+  function setPageNo(page: number) {
+    pagination.pageNo = page
+  }
+
+  function setPageSize(size: number) {
     pagination.pageSize = size
-    pagination.current = 1
-    return loadList()
+    pagination.pageNo = 1
   }
 
   function resetQuery() {
     query.typeIdList = []
-    query.startDate = undefined
-    query.endDate = undefined
-    query.remark = undefined
-    pagination.current = 1
-    return loadList()
+    query.startDate = ''
+    query.endDate = ''
+    query.remark = ''
+    pagination.pageNo = 1
   }
 
   // --- 统计操作 ---
@@ -184,8 +193,8 @@ export const useFitnessStore = defineStore('fitness', () => {
 
   return {
     list,
-    pagination,
     query,
+    pagination,
     loadingList,
     stats,
     loadingStats,
@@ -193,8 +202,9 @@ export const useFitnessStore = defineStore('fitness', () => {
     recordCount,
 
     loadList,
-    changePage,
-    changePageSize,
+    updateQuery,
+    setPageNo,
+    setPageSize,
     resetQuery,
     loadStats,
     addRecord,

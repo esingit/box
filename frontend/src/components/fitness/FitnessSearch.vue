@@ -1,18 +1,15 @@
-<!--src/components/fitness/SearchPanel.vue-->
 <template>
-  <div
-      class="relative w-full bg-white border rounded-xl p-4 transition"
-  >
+  <div class="relative w-full bg-white border rounded-xl p-4 transition hover:shadow-md">
     <!-- 第一行 -->
     <div class="flex items-center justify-between gap-3 flex-nowrap min-w-full">
       <!-- 多选类型 -->
-      <MultiSelectTeleport
+      <BaseSelect
           v-model="query.typeIdList"
           :options="fitnessTypeOptions"
+          :multiple="true"
           placeholder="全部类型"
-          class="flex-grow max-w-full"
+          class="max-w-full"
       />
-
       <!-- 日期 -->
       <div class="flex items-center gap-2 min-w-[220px] flex-shrink-0">
         <input
@@ -67,36 +64,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import MultiSelectTeleport from '@/components/base/BaseMultiSelect.vue'
-import {
-  LucideSearch,
-  LucideRotateCcw,
-  LucideChevronDown,
-  LucideChevronUp
-} from 'lucide-vue-next'
+import {useMetaStore} from '@/store/metaStore'
+import {ref} from 'vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
+import {LucideChevronDown, LucideChevronUp, LucideRotateCcw, LucideSearch} from 'lucide-vue-next'
 
-import { useFitnessStore } from '@/store/fitnessStore'
-import { useMetaStore } from '@/store/metaStore'
+const metaStore = useMetaStore()
+const props = defineProps<{
+  query: {
+    typeIdList: (string | number)[]
+    startDate: string
+    endDate: string
+    remark: string
+  }
+  fitnessTypeOptions: Array<any>
+}>()
+
+const emit = defineEmits(['search', 'reset'])
 
 const showMore = ref(false)
-const fitnessStore = useFitnessStore()
-const metaStore = useMetaStore()
 
-const { query } = storeToRefs(fitnessStore)
 
-const fitnessTypeOptions = computed(() =>
-    (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
-      label: item.value1,
-      value: item.id
-    }))
-)
 
-const onSearch = () => {
-  fitnessStore.loadList()
+function onSearch() {
+  emit('search', { ...props.query })
 }
-const onReset = () => {
-  fitnessStore.resetQuery()
+
+function onReset() {
+  emit('reset')
 }
 </script>

@@ -27,4 +27,6 @@ public class FitnessRecord extends BaseEntity {
     private Long unitId; // 单位ID
     
     private LocalDateTime finishTime; // 健身完成时间
+
+    private String remark; // 备注
 }
