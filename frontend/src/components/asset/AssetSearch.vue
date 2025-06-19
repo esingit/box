@@ -3,14 +3,14 @@
     <!-- 搜索行 -->
     <div class="flex flex-wrap items-center gap-3">
       <div class="flex-1 min-w-[200px]">
-      <BaseSelect
-          v-model="query.assetNameIdList"
-          :options="assetNameOptions"
-          placeholder="全部资产名称"
-          multiple
-          clearable
-          class="w-full"
-      />
+        <BaseSelect
+            v-model="query.assetNameIdList"
+            :options="localAssetNameOptions"
+            placeholder="全部资产名称"
+            multiple
+            clearable
+            class="w-full"
+        />
       </div>
 
       <!-- 资产类型 -->
@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import {
   LucideChevronDown,
@@ -94,6 +94,18 @@ const props = defineProps<{
 
 const emit = defineEmits(['search', 'reset'])
 
+// 本地响应式变量，解决首次为空的问题
+const localAssetNameOptions = ref<Array<{ label: string; value: string | number }>>([])
+
+// 监听 props.assetNameOptions 变化
+watch(
+    () => props.assetNameOptions,
+    (val) => {
+      localAssetNameOptions.value = val || []
+    },
+    { immediate: true }
+)
+
 const showMore = ref(false)
 const toggleMore = () => {
   showMore.value = !showMore.value
@@ -107,3 +119,4 @@ function onReset() {
   emit('reset')
 }
 </script>
+

@@ -58,7 +58,7 @@ export const useAssetNameStore = defineStore('assetName', () => {
         loadingList.value = true
 
         try {
-            const res = await axiosInstance.get('/api/assetName-record/list', {
+            const res = await axiosInstance.get('/api/asset-name/list', {
                 params: buildParams(),
                 signal: recordController.signal,
                 paramsSerializer: params => qs.stringify(params, {arrayFormat: 'repeat'})

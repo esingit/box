@@ -18,7 +18,7 @@ public interface AssetRecordMapper extends BaseMapper<AssetRecord> {
     IPage<AssetRecordDTO> selectPageWithMeta(IPage<AssetRecord> page,
                                              @Param("assetNameIdList") List<Long> assetNameIdList,
                                              @Param("locationIdList") List<Long> locationIdList,
-                                             @Param("typeIdList") List<Long> typeIdList,
+                                             @Param("assetTypeIdList") List<Long> assetTypeIdList,
                                              @Param("remark") String remark,
                                              @Param("startDate") String startDate,
                                              @Param("endDate") String endDate,

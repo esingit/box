@@ -22,7 +22,7 @@ export async function getCommonMetaById(id: string | number): Promise<{ typeName
     try {
         console.debug(`[CommonMeta] 请求ID: ${id}`)
         const res = await axiosInstance.get(`/api/common-meta/by-id/${id}`, {
-            signal: AbortSignal.timeout(5000) // ✅ 已移除 allowDuplicate
+            signal: AbortSignal.timeout(5000)
         })
 
         if (res.data?.success && res.data.data) {

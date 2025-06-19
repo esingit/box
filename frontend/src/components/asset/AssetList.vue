@@ -39,11 +39,6 @@ const store = useAssetStore()
 const { list, pagination, loadingList } = storeToRefs(store)
 const { loadList, setPageNo, setPageSize } = store
 
-// 初次加载
-onMounted(async () => {
-  await loadList()
-})
-
 // 防止外部修改 pagination 后未刷新
 watch(
     () => [pagination.value.pageNo, pagination.value.pageSize],

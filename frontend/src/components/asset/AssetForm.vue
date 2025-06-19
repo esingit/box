@@ -160,9 +160,9 @@
 </template>
 
 <script setup lang="ts">
-import {ref, watch, computed} from 'vue'
+import {computed, ref, watch} from 'vue'
 import * as yup from 'yup'
-import {Form, Field, ErrorMessage} from 'vee-validate'
+import {ErrorMessage, Field, Form} from 'vee-validate'
 import {LucideSettings} from 'lucide-vue-next'
 import {useMetaStore} from '@/store/metaStore'
 import {setDefaultUnit} from '@/utils/commonMeta'

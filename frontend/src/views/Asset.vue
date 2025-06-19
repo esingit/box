@@ -57,13 +57,13 @@
       </div>
       <AssetSearch
           :query="query"
+          :assetNameOptions="assetNameOptions"
           :assetTypeOptions="assetTypeOptions"
           :assetLocationOptions="assetLocationOptions"
           :resultCount="resultCount"
           @search="handleQuery"
           @reset="resetQuery"
           class="flex-grow"
-          :assetNameOptions="assetStore.assetName"
           @refreshAssetName="refreshAssetName"
       />
     </section>
@@ -131,10 +131,35 @@ const resultCount = ref<number | null>(null)
 const netWorth = computed(() => stats.value.totalAssets - stats.value.totalLiabilities)
 const netWorthChange = computed(() => stats.value.assetsChange - stats.value.liabilitiesChange)
 
-const assetTypeOptions = computed(() => (metaStore.typeMap?.ASSET_TYPE || []).map(i => ({ label: i.value1 || '', value: i.id })))
-const assetLocationOptions = computed(() => (metaStore.typeMap?.ASSET_LOCATION || []).map(i => ({ label: i.value1 || '', value: i.id })))
+const assetTypeOptions = computed(() =>
+    (metaStore.typeMap?.ASSET_TYPE || []).map(i => ({ label: i.value1 || '', value: i.id }))
+)
+const assetLocationOptions = computed(() =>
+    (metaStore.typeMap?.ASSET_LOCATION || []).map(i => ({ label: i.value1 || '', value: i.id }))
+)
 
-const form = reactive({ assetNameId: '', assetTypeId: '', assetLocationId: '', amount: '1', unitId: '', acquireTime: '', remark: '' })
+const assetNameOptions = ref<Array<{ label: string; value: string | number }>>([])
+
+watch(
+    () => assetStore.assetName,
+    (val) => {
+      assetNameOptions.value = (val || []).map(item => ({
+        label: item.id,
+        value: item.name || ''
+      }))
+    },
+    { immediate: true }
+)
+
+const form = reactive({
+  assetNameId: '',
+  assetTypeId: '',
+  assetLocationId: '',
+  amount: '1',
+  unitId: '',
+  acquireTime: '',
+  remark: ''
+})
 
 function initFormByRecord(rec: any) {
   Object.assign(form, {
@@ -150,7 +175,13 @@ function initFormByRecord(rec: any) {
 
 function initEmptyForm() {
   Object.assign(form, {
-    assetNameId: '', assetTypeId: '', assetLocationId: '', amount: '1', unitId: '', acquireTime: '', remark: ''
+    assetNameId: '',
+    assetTypeId: '',
+    assetLocationId: '',
+    amount: '1',
+    unitId: '',
+    acquireTime: '',
+    remark: ''
   })
 }
 
@@ -278,6 +309,6 @@ async function refreshAssetName() {
 }
 
 onMounted(async () => {
-  await Promise.all([metaStore.initAll(), refreshData()])
+  await Promise.all([metaStore.initAll(), refreshAssetName(), refreshData()])
 })
 </script>

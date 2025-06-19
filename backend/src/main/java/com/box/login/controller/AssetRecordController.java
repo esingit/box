@@ -35,7 +35,7 @@ public class AssetRecordController {
     public ApiResponse<IPage<AssetRecordDTO>> listRecords(
             @Parameter(description = "资产名称ID") @RequestParam(required = false) List<Long> assetNameIdList,
             @Parameter(description = "资产位置ID") @RequestParam(required = false) List<Long> locationIdList,
-            @Parameter(description = "资产类型ID") @RequestParam(required = false) List<Long> typeIdList,
+            @Parameter(description = "资产类型ID") @RequestParam(required = false) List<Long> assetTypeIdList,
             @Parameter(description = "备注关键词") @RequestParam(required = false) String remark,
             @Parameter(description = "开始日期") @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期") @RequestParam(required = false) String endDate,
@@ -44,7 +44,7 @@ public class AssetRecordController {
         try {
             Page<AssetRecord> pageObj = new Page<>(page, pageSize);
             String currentUser = UserContextHolder.getCurrentUsername();
-            IPage<AssetRecordDTO> records = assetRecordService.pageByConditions(pageObj, assetNameIdList, locationIdList, typeIdList, remark, startDate, endDate, currentUser);
+            IPage<AssetRecordDTO> records = assetRecordService.pageByConditions(pageObj, assetNameIdList, locationIdList, assetTypeIdList, remark, startDate, endDate, currentUser);
             return ApiResponse.success(records);
         } catch (Exception e) {
             log.error("Failed to list records:", e);

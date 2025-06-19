@@ -99,8 +99,8 @@ public class AssetRecordServiceImpl implements AssetRecordService {
     @Override
     @Transactional(readOnly = true)
     public IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, List<Long> assetNameIdList, List<Long> locationIdList,
-                                                  List<Long> typeIdList, String remark, String startDate, String endDate, String createUser) {
-        return assetRecordMapper.selectPageWithMeta(page, assetNameIdList, locationIdList, typeIdList, remark, startDate, endDate, createUser);
+                                                  List<Long> assetTypeIdList, String remark, String startDate, String endDate, String createUser) {
+        return assetRecordMapper.selectPageWithMeta(page, assetNameIdList, locationIdList, assetTypeIdList, remark, startDate, endDate, createUser);
     }
 
     @Override
