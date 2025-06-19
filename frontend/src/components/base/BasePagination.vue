@@ -9,16 +9,18 @@
       上一页
     </button>
 
-    <!-- 页码按钮 -->
-    <button
-        v-for="page in pagesToShow"
-        :key="page"
-        class="px-4 py-4 rounded-full border cursor-pointer transition"
-        :class="page === current ? 'btn-primary' : 'btn-outline'"
-        @click="changePage(page)"
-    >
-      {{ page }}
-    </button>
+    <!-- 页码按钮与省略号 -->
+    <template v-for="(page, idx) in pagesToShow" :key="idx">
+      <button
+          v-if="page !== '...'"
+          class="px-4 py-4 rounded-full border cursor-pointer transition"
+          :class="page === current ? 'btn-primary' : 'btn-outline'"
+          @click="changePage(page as number)"
+      >
+        {{ page }}
+      </button>
+      <span v-else class="px-2 select-none">...</span>
+    </template>
 
     <!-- 下一页 -->
     <button
@@ -29,13 +31,13 @@
       下一页
     </button>
 
-    <!-- 每页条数选择（使用 BaseSelect） -->
+    <!-- 每页条数选择 -->
     <div class="w-[120px]">
       <Field name="pageSize" v-slot="{ value, setValue }">
         <BaseSelect
             :modelValue="value"
             direction="up"
-            :options="pageSizeOptions.map(size => ({ label: `每页${size}条`, value: size }))"
+            :options="pageSizeOptions.map(n => ({ label: `每页${n}条`, value: n }))"
             placeholder="每页条数"
             clearable
             @update:modelValue="val => {
@@ -53,18 +55,21 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { Field } from 'vee-validate'
 import BaseSelect from './BaseSelect.vue'
 
-const props = defineProps({
-  current: { type: Number, default: 1 },
-  total: { type: Number, default: 0 },
-  pageSize: { type: Number, default: 10 }
-})
+const props = defineProps<{
+  current: number
+  total: number
+  pageSize: number
+}>()
 
-const emit = defineEmits(['page-change', 'page-size-change'])
+const emit = defineEmits<{
+  (e: 'page-change', page: number): void
+  (e: 'page-size-change', size: number): void
+}>()
 
 const pageSizeOptions = [7, 10, 20, 50]
 
@@ -72,22 +77,59 @@ const totalPages = computed(() =>
     props.total ? Math.ceil(props.total / props.pageSize) : 0
 )
 
-const pagesToShow = computed(() => {
-  const maxPages = 5
-  const pages = []
-  if (totalPages.value === 0) return pages
+const pagesToShow = computed((): (number | '...')[] => {
+  const total = totalPages.value
+  const current = props.current
+  if (total === 0) return []
 
-  let start = Math.max(1, props.current - Math.floor(maxPages / 2))
-  let end = Math.min(totalPages.value, start + maxPages - 1)
-  if (end - start + 1 < maxPages) {
-    start = Math.max(1, end - maxPages + 1)
+  const sideCount = 3    // 前后固定页数
+  const range = 1        // 当前页前后范围
+  const result: (number | '...')[] = []
+
+  const firstPages = [1, 2, 3]
+  const lastPages = [total - 2, total - 1, total].filter(n => n > sideCount)
+
+  const middle: number[] = []
+  const frontThresh = sideCount + range       // 4
+  const tailThresh  = total - sideCount - range + 1  // e.g. 8
+
+  if (current <= frontThresh) {
+    // 靠前：显示 4,5,6
+    for (let i = sideCount + 1; i <= sideCount + range * 2 + 1; i++) {
+      middle.push(i)
+    }
+  } else if (current >= tailThresh) {
+    // 靠后：显示 total-5,total-4,total-3
+    for (let i = total - sideCount - range * 2; i <= total - sideCount; i++) {
+      middle.push(i)
+    }
+  } else {
+    // 中间：显示 current-1, current, current+1
+    for (let i = current - range; i <= current + range; i++) {
+      if (i > sideCount && i < total - sideCount + 1) {
+        middle.push(i)
+      }
+    }
   }
 
-  for (let i = start; i <= end; i++) pages.push(i)
-  return pages
+  // 合并去重并排序
+  const merged = [...firstPages, ...middle, ...lastPages]
+      .filter(p => p >= 1 && p <= total)
+  const sorted = Array.from(new Set(merged)).sort((a, b) => a - b)
+
+  // 插入省略号
+  for (let i = 0; i < sorted.length; i++) {
+    result.push(sorted[i])
+    const nxt = sorted[i + 1]
+    if (nxt && nxt - sorted[i] > 1) {
+      result.push('...')
+    }
+  }
+
+  return result
 })
 
-function changePage(page) {
+function changePage(page: number) {
   if (page < 1 || page > totalPages.value || page === props.current) return
   emit('page-change', page)
 }
