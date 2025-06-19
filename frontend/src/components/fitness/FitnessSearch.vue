@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full bg-white border rounded-xl p-4 transition hover:shadow-md">
+  <div class="relative w-full bg-white border rounded-xl p-4 transition">
     <!-- 第一行 -->
     <div class="flex items-center justify-between gap-3 min-w-full">
       <!-- 多选类型 -->

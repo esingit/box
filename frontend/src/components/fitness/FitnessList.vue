@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col space-y-4">
     <!-- 表格部分 -->
-    <div class="overflow-x-auto rounded-xl bg-white hover:shadow-md">
+    <div class="overflow-x-auto rounded-xl bg-white">
       <FitnessTable
           :records="list"
           :loading="loadingList"
