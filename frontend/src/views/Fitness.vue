@@ -85,6 +85,7 @@
         <FitnessSearch
             :query="query"
             :fitnessTypeOptions="fitnessTypeOptions"
+            :resultCount="resultCount"
             @search="handleQuery"
             @reset="resetQuery"
             class="flex-grow"
@@ -101,7 +102,7 @@
           :pageSize="pagination.pageSize"
           @edit="editRecord"
           @delete="handleDelete"
-      @page-change="handlePageChange"
+          @page-change="handlePageChange"
       />
     </section>
 
@@ -151,6 +152,7 @@ const { list, stats, query, pagination } = storeToRefs(fitnessStore)
 const loading = ref(false)
 const showAddModal = ref(false)
 const editingIdx = ref<null | number>(null)
+const resultCount = ref<number | null>(null)
 
 const fitnessTypeOptions = computed(() =>
     (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
@@ -171,9 +173,7 @@ function formatDate(dateStr: string | null | undefined) {
   if (!dateStr) return '-'
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return '-'
-  return `${d.getFullYear()}-${(d.getMonth() + 1)
-      .toString()
-      .padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
+  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
 }
 
 function initFormDefaults() {
@@ -220,23 +220,40 @@ const isNextWorkoutOverdue = computed(() => {
   return !isNaN(t) && t < Date.now()
 })
 
+// 事件总线toast通知
+function notifyToast(message: string, type: 'success' | 'info' | 'warning' | 'error' = 'success', duration = 3000) {
+  emitter.emit('notify', { message, type, duration })
+}
+
 async function refreshData() {
   loading.value = true
   try {
     await metaStore.initAll()
     await fitnessStore.loadStats()
     await fitnessStore.loadList()
-  } catch (e) {
-    console.error('刷新数据失败', e)
+    resultCount.value = fitnessStore.pagination.total
+    notifyToast(`成功查询出 ${resultCount.value} 条数据`, 'success')
+  } catch (e: any) {
+    notifyToast(e?.message || '刷新数据失败', 'error')
   } finally {
     loading.value = false
   }
 }
 
-function handleQuery(newQuery: Partial<typeof query.value>) {
+async function handleQuery(newQuery: Partial<typeof query.value>) {
   fitnessStore.updateQuery(newQuery)
   fitnessStore.setPageNo(1)
-  refreshData()
+  loading.value = true
+  try {
+    await fitnessStore.loadStats()
+    await fitnessStore.loadList()
+    resultCount.value = fitnessStore.pagination.total
+    notifyToast(`成功查询出 ${resultCount.value} 条数据`, 'success')
+  } catch (e: any) {
+    notifyToast(e?.message || '查询失败', 'error')
+  } finally {
+    loading.value = false
+  }
 }
 
 function resetQuery() {
@@ -253,9 +270,11 @@ function handleAdd() {
   initFormDefaults()
   showAddModal.value = true
 }
+
 function closeAddModal() {
   showAddModal.value = false
 }
+
 async function handleAddRecord(data: typeof form) {
   const payload = { ...data, count: Number(data.count) || 0 }
   await fitnessStore.addRecord(payload)
@@ -267,9 +286,11 @@ function editRecord(recordId: number) {
   const idx = list.value.findIndex((r) => r.id === recordId)
   if (idx !== -1) editingIdx.value = idx
 }
+
 function cancelEdit() {
   editingIdx.value = null
 }
+
 async function saveEdit(data: typeof form) {
   if (editingIdx.value === null) return
   const original = list.value[editingIdx.value]
@@ -287,7 +308,6 @@ async function saveEdit(data: typeof form) {
   await refreshData()
 }
 
-// 这里是改造点，接收完整 record，拼接提示信息传递给确认弹窗
 function handleDelete(record: any) {
   const dataInfo = `[${record.typeValue || '类型未知'},${record.count}${record.unitValue},${formatDate(record.finishTime)}]`
   emitter.emit('confirm', {

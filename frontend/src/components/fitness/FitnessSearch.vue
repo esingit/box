@@ -76,6 +76,7 @@ const props = defineProps<{
     remark: string
   }
   fitnessTypeOptions: Array<{ label: string; value: string | number }>
+  resultCount: number | null
 }>()
 
 const emit = defineEmits(['search', 'reset'])
