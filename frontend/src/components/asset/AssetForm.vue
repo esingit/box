@@ -1,214 +1,240 @@
 <template>
-  <form @submit.prevent="onSubmit" class="space-y-6">
-    <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        资产名称<span class="text-red-500">*</span>
-      </label>
-      <div class="flex items-center space-x-2 mt-1">
-        <select
-            v-model="form.assetNameId"
+  <BaseModal
+      :visible="show"
+      :title="title"
+      width="500px"
+      @update:visible="handleVisibleChange"
+  >
+    <Form
+        id="asset-form"
+        :validation-schema="schema"
+        :initial-values="form"
+        @submit="handleSubmit"
+        v-slot="{ values, setFieldValue }"
+        class="p-6 space-y-6 overflow-auto"
+    >
+      <!-- 资产名称 + 名称管理 -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          资产名称<span class="text-red-500">*</span>
+        </label>
+        <Field name="assetNameId" v-slot="{ value, setValue }">
+          <div class="flex items-center space-x-2">
+            <BaseSelect
+                :modelValue="value"
+                :options="assetNames.map(n => ({ label: n.name, value: n.id }))"
+                placeholder="请选择资产名称"
+                @update:modelValue="val => setValue(val)"
+            />
+            <button
+                type="button"
+                class="inline-flex items-center px-3 py-2 border border-indigo-600 text-indigo-600 rounded hover:bg-indigo-50 focus:ring-2 focus:ring-indigo-500"
+                @click="showNamesModal = true"
+            >
+              <LucideSettings size="16" class="mr-1" />
+              名称管理
+            </button>
+          </div>
+        </Field>
+        <ErrorMessage name="assetNameId" class="msg-error mt-1" />
+      </div>
+
+      <!-- 资产分类 -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          资产分类<span class="text-red-500">*</span>
+        </label>
+        <Field name="assetTypeId" v-slot="{ value, setValue }">
+          <BaseSelect
+              :modelValue="value"
+              :options="types.map(t => ({ label: t.value1, value: t.id }))"
+              placeholder="请选择资产分类"
+              @update:modelValue="val => { setValue(val); onAssetTypeChange(val, setFieldValue) }"
+          />
+        </Field>
+        <ErrorMessage name="assetTypeId" class="msg-error mt-1" />
+      </div>
+
+      <!-- 资产位置 -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          资产位置<span class="text-red-500">*</span>
+        </label>
+        <Field name="assetLocationId" v-slot="{ value, setValue }">
+          <BaseSelect
+              :modelValue="value"
+              :options="locations.map(l => ({ label: l.value1, value: l.id }))"
+              placeholder="请选择资产位置"
+              @update:modelValue="val => setValue(val)"
+          />
+        </Field>
+        <ErrorMessage name="assetLocationId" class="msg-error mt-1" />
+      </div>
+
+      <!-- 金额 -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          金额<span class="text-red-500">*</span>
+        </label>
+        <Field
+            name="amount"
+            type="number"
+            min="0"
+            step="0.01"
+            class="input-base"
             required
-            @keydown.enter.prevent="handleEnter"
-            class="flex-grow block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
-                 py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-                 text-gray-900 dark:text-gray-100"
-        >
-          <option value="">请选择资产名称</option>
-          <option v-for="name in assetNames" :key="name.id" :value="name.id">
-            {{ name.name }}
-          </option>
-        </select>
+        />
+        <ErrorMessage name="amount" class="msg-error mt-1" />
+      </div>
+
+      <!-- 货币单位 -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          货币单位<span class="text-red-500">*</span>
+        </label>
+        <Field name="unitId" v-slot="{ value, setValue }">
+          <BaseSelect
+              :modelValue="value"
+              :options="filteredUnits.map(u => ({ label: u.value1, value: u.id }))"
+              placeholder="请选择货币单位"
+              @update:modelValue="val => setValue(val)"
+          />
+        </Field>
+        <ErrorMessage name="unitId" class="msg-error mt-1" />
+      </div>
+
+      <!-- 日期 -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          日期<span class="text-red-500">*</span>
+        </label>
+        <Field
+            name="acquireTime"
+            type="date"
+            class="input-base"
+            required
+        />
+        <ErrorMessage name="acquireTime" class="msg-error mt-1" />
+      </div>
+
+      <!-- 备注 -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+        <Field
+            name="remark"
+            as="textarea"
+            rows="3"
+            :placeholder="remarkPlaceholder"
+            class="input-base"
+        />
+      </div>
+    </Form>
+
+    <template #footer>
+      <div class="flex justify-end gap-4 p-4 border-t border-gray-200">
+        <button type="button" class="btn-outline" @click="handleCancel">
+          取消
+        </button>
         <button
-            type="button"
-            class="inline-flex items-center px-3 py-2 border border-indigo-600 text-indigo-600 rounded-md
-                 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            @click.prevent="emitMaintain"
+            type="submit"
+            form="asset-form"
+            class="btn-primary"
+            :disabled="loading"
         >
-          <LucideSettings size="16" class="mr-1" />
-          名称管理
+          {{ loading ? '处理中...' : confirmText }}
         </button>
       </div>
-    </div>
+    </template>
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        资产分类<span class="text-red-500">*</span>
-      </label>
-      <select
-          v-model="form.assetTypeId"
-          required
-          @change="onAssetTypeChange"
-          @keydown.enter.prevent="handleEnter"
-          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
-               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-               text-gray-900 dark:text-gray-100"
-      >
-        <option value="">请选择资产分类</option>
-        <option v-for="type in types" :key="type.id" :value="type.id">
-          {{ type.value1 }}
-        </option>
-      </select>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        资产位置<span class="text-red-500">*</span>
-      </label>
-      <select
-          v-model="form.assetLocationId"
-          required
-          @keydown.enter.prevent="handleEnter"
-          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
-               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-               text-gray-900 dark:text-gray-100"
-      >
-        <option value="">请选择资产位置</option>
-        <option v-for="location in locations" :key="location.id" :value="location.id">
-          {{ location.value1 }}
-        </option>
-      </select>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        金额<span class="text-red-500">*</span>
-      </label>
-      <input
-          v-model.number="form.amount"
-          type="number"
-          min="0"
-          step="0.01"
-          required
-          placeholder="请输入金额"
-          @keydown.enter.prevent="handleEnter"
-          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
-               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-               text-gray-900 dark:text-gray-100"
-      />
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        货币单位<span class="text-red-500">*</span>
-      </label>
-      <select
-          v-model="form.unitId"
-          required
-          @keydown.enter.prevent="handleEnter"
-          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
-               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-               text-gray-900 dark:text-gray-100"
-      >
-        <option value="">请选择货币单位</option>
-        <option v-for="unit in filteredUnits" :key="unit.id" :value="String(unit.id)">
-          {{ unit.value1 }}
-        </option>
-      </select>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        日期<span class="text-red-500">*</span>
-      </label>
-      <input
-          v-model="form.acquireTime"
-          type="date"
-          required
-          @keydown.enter.prevent="handleEnter"
-          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
-               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-               text-gray-900 dark:text-gray-100"
-      />
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">备注</label>
-      <input
-          v-model="form.remark"
-          type="text"
-          :placeholder="remarkPlaceholder"
-          @keydown.enter.prevent="handleEnter"
-          class="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600
-               py-2 px-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-               text-gray-900 dark:text-gray-100"
-      />
-    </div>
-  </form>
+    <AssetNameForm
+        v-if="showNamesModal"
+        :show="showNamesModal"
+        @close="handleNamesModalClose"
+        @refresh="handleNamesModalRefresh"
+    />
+  </BaseModal>
 </template>
 
-<script setup>
-import { computed, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+import { Form, Field, ErrorMessage } from 'vee-validate'
+import * as yup from 'yup'
+import BaseModal from '@/components/base/BaseModal.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
+import AssetNameForm from './assetName/AssetNameForm.vue'
 import { LucideSettings } from 'lucide-vue-next'
 
 const props = defineProps({
-  form: { type: Object, required: true },
-  assetNames: { type: Array, required: true },
-  types: { type: Array, required: true },
-  units: { type: Array, required: true },
-  locations: { type: Array, required: true },
+  show: Boolean,
+  title: String,
+  form: Object,
+  assetNames: Array,
+  types: Array,
+  units: Array,
+  locations: Array,
+  loading: Boolean,
+  confirmText: { type: String, default: '确定' },
   remarkPlaceholder: { type: String, default: '备注' }
 })
 
-const emit = defineEmits(['maintain', 'confirm'])
+const emit = defineEmits(['submit', 'cancel', 'refresh-names', 'update:visible'])
 
-const emitConfirm = () => emit('confirm')
-const emitMaintain = () => emit('maintain')
-
-const onSubmit = () => {
-  emitConfirm()
-}
-
-onMounted(() => {
-  onAssetTypeChange()
-})
+const showNamesModal = ref(false)
+const form = ref({ ...props.form })
 
 const filteredUnits = computed(() => {
-  const selected = props.types.find(t => t.id === props.form.assetTypeId)
+  const selected = props.types.find(t => t.id === form.value.assetTypeId)
   return selected?.key3
       ? props.units.filter(unit => unit.key1 === selected.key3)
       : props.units
 })
 
-const onAssetTypeChange = () => {
-  const selected = props.types.find(t => t.id === props.form.assetTypeId)
+const schema = yup.object({
+  assetNameId: yup.string().required('请选择资产名称'),
+  assetTypeId: yup.string().required('请选择资产分类'),
+  assetLocationId: yup.string().required('请选择资产位置'),
+  amount: yup.number().typeError('请输入正确金额').required('请输入金额').min(0, '金额不能小于0'),
+  unitId: yup.string().required('请选择货币单位'),
+  acquireTime: yup.string().required('请选择日期'),
+  remark: yup.string().nullable()
+})
+
+watch(() => props.form, val => {
+  form.value = { ...val }
+})
+
+function onAssetTypeChange(assetTypeId, setFieldValue) {
+  const selected = props.types.find(t => t.id === assetTypeId)
   const match = selected?.key3
       ? props.units.find(unit => unit.key1 === selected.key3)
       : null
-  props.form.unitId = match?.id || ''
+  if (setFieldValue) setFieldValue('unitId', match?.id || '')
+  else form.value.unitId = match?.id || ''
 }
 
-const handleEnter = (e) => {
-  e.preventDefault()
-  const formElements = Array.from(e.target.form.querySelectorAll('select, input'))
-      .filter(el => !el.disabled && el.offsetParent !== null)
-  const index = formElements.indexOf(e.target)
-  if (index > -1 && index < formElements.length - 1) {
-    formElements[index + 1].focus()
-  } else {
-    // 如果是最后一个元素，尝试找到提交按钮
-    const submitButton = e.target.form.querySelector('.modal-footer .btn-primary')
-    if (submitButton) {
-      submitButton.focus()
-    } else {
-      // 如果没有找到提交按钮，触发 confirm 事件
-      emitConfirm()
-      e.target.blur()
-    }
-  }
+function handleSubmit(values) {
+  emit('submit', values)
 }
 
-const fieldValidation = computed(() => ({
-  assetNameId: !!props.form.assetNameId,
-  assetTypeId: !!props.form.assetTypeId,
-  assetLocationId: !!props.form.assetLocationId,
-  amount: props.form.amount > 0,
-  unitId: !!props.form.unitId,
-  acquireTime: !!props.form.acquireTime
-}))
+function handleCancel() {
+  emit('cancel')
+  emit('update:visible', false)
+}
 
-const isValid = computed(() =>
-    Object.values(fieldValidation.value).every(Boolean)
-)
+function handleVisibleChange(val) {
+  if (!val) handleCancel()
+  emit('update:visible', val)
+}
 
-defineExpose({ isValid, fieldValidation })
+function handleNamesModalClose() {
+  showNamesModal.value = false
+}
+
+function handleNamesModalRefresh() {
+  emit('refresh-names')
+}
+
+watch(() => props.show, val => {
+  if (!val) showNamesModal.value = false
+})
 </script>

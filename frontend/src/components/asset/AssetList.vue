@@ -1,6 +1,7 @@
 <template>
   <div class="flex flex-col space-y-4">
-    <div class="overflow-auto rounded border border-gray-200 dark:border-gray-700">
+    <!-- 表格部分 -->
+    <div class="overflow-x-auto rounded-xl bg-white border border-gray-200 dark:border-gray-700">
       <AssetTable
           :records="records"
           @edit="$emit('edit', $event)"
@@ -8,9 +9,9 @@
       />
     </div>
 
-    <div class="flex justify-end">
-      <BasePaginationBar
-          v-if="total > 0"
+    <!-- 分页器 -->
+    <div class="flex justify-end" v-if="total > 0">
+      <BasePagination
           :current="current"
           :total="total"
           :page-size="pageSize"
@@ -23,20 +24,26 @@
 
 <script setup>
 import AssetTable from './AssetTable.vue'
-import BasePaginationBar from '@/components/base/BasePaginationBar.vue'
+import BasePagination from '@/components/base/BasePagination.vue'
 
 defineProps({
-  records: Array,
-  current: Number,
-  total: Number,
-  pageSize: Number
+  records: {
+    type: Array,
+    default: () => []
+  },
+  current: {
+    type: Number,
+    default: 1
+  },
+  total: {
+    type: Number,
+    default: 0
+  },
+  pageSize: {
+    type: Number,
+    default: 10
+  }
 })
 
 defineEmits(['edit', 'delete', 'page-change', 'page-size-change'])
 </script>
-
-<style scoped>
-.list-component {
-  /* 你可以留空，全部用 Tailwind 管理样式 */
-}
-</style>

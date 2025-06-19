@@ -12,7 +12,7 @@
 
     <!-- 分页器 -->
     <div class="flex" v-if="pagination.total > 0">
-      <BasePaginationBar
+      <BasePagination
           :current="pagination.pageNo"
           :total="pagination.total"
           :page-size="pagination.pageSize"
@@ -28,7 +28,7 @@ import { onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useFitnessStore } from '@/store/fitnessStore'
 import FitnessTable from './FitnessTable.vue'
-import BasePaginationBar from '@/components/base/BasePaginationBar.vue'
+import BasePagination from '@/components/base/BasePagination.vue'
 
 const emit = defineEmits<{
   (e: 'edit', recordId: number): void

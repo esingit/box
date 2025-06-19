@@ -1,68 +1,90 @@
 <template>
-  <div class="overflow-auto bg-white border border-gray-200 rounded-md shadow-sm">
-    <table class="min-w-full text-gray-900">
-      <thead class="bg-gray-50 border-b border-gray-200">
+  <div class="table-container overflow-auto border border-gray-200 rounded-xl bg-white">
+    <table class="min-w-full border-collapse table-fixed text-sm text-gray-900">
+      <thead class="bg-gray-50 select-none">
       <tr>
-        <th v-for="header in tableHeaders" :key="header.key"
-            class="px-4 py-2 text-left font-semibold text-sm select-none whitespace-nowrap"
-            :style="{ minWidth: header.minWidth }">
+        <th
+            v-for="header in tableHeaders"
+            :key="header.key"
+            class="px-3 py-2 font-medium text-left whitespace-nowrap relative group"
+            :style="{ width: columnWidths[header.key] + 'px' }"
+        >
           <div class="flex items-center justify-between">
             <span>{{ header.label }}</span>
             <div
                 v-if="header.resizable"
-                class="w-1 cursor-col-resize h-6 ml-2 bg-gray-300 hover:bg-gray-500"
+                class="absolute right-0 top-0 h-full w-1 cursor-col-resize group-hover:bg-gray-300"
                 @mousedown.prevent="startResize($event, header.key)"
+                @dblclick.prevent="resetColumnWidth(header.key)"
             ></div>
           </div>
         </th>
       </tr>
       </thead>
+
       <tbody>
-      <tr v-if="records.length === 0" class="text-center text-gray-500">
-        <td :colspan="tableHeaders.length" class="py-10">
+      <!-- 加载中骨架 -->
+      <tr v-if="loading">
+        <td :colspan="tableHeaders.length" class="py-8">
+          <div class="space-y-2">
+            <div v-for="i in 5" :key="i" class="h-6 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- 无数据 -->
+      <tr v-else-if="!records.length">
+        <td :colspan="tableHeaders.length" class="py-8 text-center text-gray-400 select-none">
           暂无资产记录，点击上方按钮添加
         </td>
       </tr>
-      <tr v-for="(record, idx) in records" :key="record.id || idx" class="hover:bg-gray-50">
-        <td class="px-4 py-2 whitespace-nowrap" :style="{ minWidth: columnWidths.assetName + 'px' }"
-            @mouseenter="showTooltip(idx, 'assetName')" @mouseleave="hideTooltip">
-          {{ record.assetName || '-' }}
-          <Tooltip v-if="tooltipVisible && tooltipIndex === idx && tooltipField === 'assetName'"
-                   :content="record.assetName"/>
-        </td>
-        <td class="px-4 py-2 whitespace-nowrap" :style="{ minWidth: columnWidths.assetType + 'px' }"
-            @mouseenter="showTooltip(idx, 'assetType')" @mouseleave="hideTooltip">
-          {{ record.assetTypeValue || '-' }}
-          <Tooltip v-if="tooltipVisible && tooltipIndex === idx && tooltipField === 'assetType'"
-                   :content="record.assetTypeValue"/>
-        </td>
-        <td class="px-4 py-2 text-right whitespace-nowrap" :style="{ minWidth: columnWidths.amount + 'px' }"
-            @mouseenter="showTooltip(idx, 'amount')" @mouseleave="hideTooltip">
-          <span :class="record.amount < 0 ? 'text-red-600' : ''">{{ formatAmount(record.amount) }}</span>
-          {{ record.unitValue || '' }}
-          <Tooltip v-if="tooltipVisible && tooltipIndex === idx && tooltipField === 'amount'"
-                   :content="formatAmount(record.amount) + ' ' + (record.unitValue || '')"/>
-        </td>
-        <td class="px-4 py-2 whitespace-nowrap" :style="{ minWidth: columnWidths.location + 'px' }"
-            @mouseenter="showTooltip(idx, 'location')" @mouseleave="hideTooltip">
-          {{ record.locationValue || '-' }}
-          <Tooltip v-if="tooltipVisible && tooltipIndex === idx && tooltipField === 'location'"
-                   :content="record.locationValue"/>
-        </td>
-        <td class="px-4 py-2 whitespace-nowrap" :style="{ minWidth: columnWidths.time + 'px' }"
-            @mouseenter="showTooltip(idx, 'time')" @mouseleave="hideTooltip">
-          {{ formatDate(record.acquireTime) }}
-          <Tooltip v-if="tooltipVisible && tooltipIndex === idx && tooltipField === 'time'"
-                   :content="formatDate(record.acquireTime)"/>
-        </td>
-        <td class="px-4 py-2 whitespace-nowrap" :style="{ minWidth: columnWidths.remark + 'px' }"
-            @mouseenter="showTooltip(idx, 'remark')" @mouseleave="hideTooltip">
-          <span v-if="record.remark">{{ record.remark }}</span>
-          <span v-else class="text-gray-400">-</span>
-          <Tooltip v-if="tooltipVisible && tooltipIndex === idx && tooltipField === 'remark'" :content="record.remark"/>
-        </td>
-        <td class="px-4 py-2 whitespace-nowrap text-center" :style="{ minWidth: columnWidths.actions + 'px' }">
-          <BaseActions :record="record" type="asset" @edit="$emit('edit', idx)" @delete="$emit('delete', idx)"/>
+
+      <!-- 数据行 -->
+      <tr
+          v-else
+          v-for="(record, index) in records"
+          :key="record.id || index"
+          class="hover:bg-gray-50 transition-colors"
+      >
+        <td
+            v-for="header in tableHeaders"
+            :key="header.key"
+            class="px-3 py-2 truncate whitespace-nowrap"
+            :style="{ width: columnWidths[header.key] + 'px' }"
+            @mouseenter="showTooltip(index, header.key)"
+            @mouseleave="hideTooltip"
+        >
+          <template v-if="header.key === 'amount'">
+              <span :class="record.amount < 0 ? 'text-red-600' : ''">
+                {{ formatAmount(record.amount) }}
+              </span>
+            {{ record.unitValue || '' }}
+          </template>
+
+          <template v-else-if="header.key === 'actions'">
+            <div class="text-center">
+              <BaseActions
+                  :record="record"
+                  type="asset"
+                  @edit="$emit('edit', record.id)"
+                  @delete="$emit('delete', record)"
+              />
+            </div>
+          </template>
+
+          <template v-else-if="header.key === 'time'">
+            {{ formatDate(record.acquireTime) }}
+          </template>
+
+          <template v-else>
+            {{ record[header.key] || '-' }}
+          </template>
+
+          <!-- Tooltip 只显示当前激活列 -->
+          <Tooltip
+              v-if="tooltipVisible && tooltipIndex === index && tooltipField === header.key && tooltipContent"
+              :content="tooltipContent"
+          />
         </td>
       </tr>
       </tbody>
@@ -71,81 +93,110 @@
 </template>
 
 <script setup>
-import {reactive, ref} from 'vue'
+import { reactive, ref } from 'vue'
 import BaseActions from '@/components/base/BaseActions.vue'
 import Tooltip from '@/components/base/BaseNotice.vue'
 
 const props = defineProps({
   records: {
     type: Array,
-    default: () => [],
+    default: () => []
+  },
+  loading: {
+    type: Boolean,
+    default: false
   }
 })
 const emit = defineEmits(['edit', 'delete'])
 
-// 你可以自由调整这里的初始列宽，单位 px
-const columnWidths = reactive({
-  assetName: 300,
+// 列定义，支持宽度拖拽
+const DEFAULT_COLUMN_WIDTHS = {
+  assetName: 250,
   assetType: 120,
   amount: 130,
   location: 120,
   time: 120,
   remark: 150,
-  actions: 100,
-})
+  actions: 100
+}
 
 const tableHeaders = [
-  {key: 'assetName', label: '资产名称', minWidth: '300px', resizable: true},
-  {key: 'assetType', label: '类型', minWidth: '120px', resizable: true},
-  {key: 'amount', label: '金额', minWidth: '130px', resizable: true},
-  {key: 'location', label: '位置', minWidth: '120px', resizable: true},
-  {key: 'time', label: '时间', minWidth: '120px', resizable: true},
-  {key: 'remark', label: '备注', minWidth: '150px', resizable: true},
-  {key: 'actions', label: '操作', minWidth: '100px', resizable: false},
+  { key: 'assetName', label: '资产名称', resizable: true },
+  { key: 'assetType', label: '类型', resizable: true },
+  { key: 'amount', label: '金额', resizable: true },
+  { key: 'location', label: '位置', resizable: true },
+  { key: 'time', label: '时间', resizable: true },
+  { key: 'remark', label: '备注', resizable: true },
+  { key: 'actions', label: '操作', resizable: false }
 ]
 
-// 简单的拖拽调整列宽逻辑示例
-let resizingColumn = null
+const columnWidths = reactive({ ...DEFAULT_COLUMN_WIDTHS })
+
+// 拖拽调整列宽逻辑
+let resizingKey = null
 let startX = 0
 let startWidth = 0
 
 function startResize(event, key) {
-  resizingColumn = key
+  resizingKey = key
   startX = event.pageX
   startWidth = columnWidths[key]
-
   window.addEventListener('mousemove', doResize)
   window.addEventListener('mouseup', stopResize)
 }
 
 function doResize(event) {
-  if (!resizingColumn) return
+  if (!resizingKey) return
   const delta = event.pageX - startX
   const newWidth = Math.max(60, startWidth + delta)
-  columnWidths[resizingColumn] = newWidth
+  columnWidths[resizingKey] = newWidth
 }
 
 function stopResize() {
-  resizingColumn = null
+  resizingKey = null
   window.removeEventListener('mousemove', doResize)
   window.removeEventListener('mouseup', stopResize)
 }
 
-// tooltip 显示控制
+function resetColumnWidth(key) {
+  columnWidths[key] = DEFAULT_COLUMN_WIDTHS[key]
+}
+
+// Tooltip 控制
 const tooltipVisible = ref(false)
 const tooltipIndex = ref(null)
 const tooltipField = ref(null)
+const tooltipContent = ref('')
 
 function showTooltip(index, field) {
-  tooltipVisible.value = true
   tooltipIndex.value = index
   tooltipField.value = field
+  tooltipVisible.value = true
+
+  const record = props.records[index]
+  if (!record) {
+    tooltipVisible.value = false
+    return
+  }
+
+  switch (field) {
+    case 'amount':
+      tooltipContent.value = `${formatAmount(record.amount)} ${record.unitValue || ''}`.trim()
+      break
+    case 'time':
+      tooltipContent.value = formatDate(record.acquireTime)
+      break
+    default:
+      tooltipContent.value = record[field] || '-'
+      break
+  }
 }
 
 function hideTooltip() {
   tooltipVisible.value = false
   tooltipIndex.value = null
   tooltipField.value = null
+  tooltipContent.value = ''
 }
 
 function formatAmount(amount) {
@@ -162,16 +213,7 @@ function formatDate(dateStr) {
 </script>
 
 <style scoped>
-/* Tooltip 简单样式 */
-.cell-tooltip {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.75);
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 10;
+.table-container {
+  /* 全靠 Tailwind 管理，不需要额外样式 */
 }
 </style>
