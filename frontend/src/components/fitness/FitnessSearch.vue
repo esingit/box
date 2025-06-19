@@ -36,11 +36,11 @@
 
     <!-- 第二行 -->
     <div v-if="showMore" class="flex flex-wrap gap-3">
-      <input
+      <BaseInput
           v-model="query.remark"
           placeholder="备注关键词"
           type="text"
-          class="input-base w-full sm:w-[300px]"
+          clearable
       />
     </div>
   </div>
@@ -48,14 +48,9 @@
 
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import {ref} from 'vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
-import {
-  LucideChevronDown,
-  LucideChevronUp,
-  LucideRotateCcw,
-  LucideSearch,
-} from 'lucide-vue-next'
+import {LucideChevronDown, LucideChevronUp, LucideRotateCcw, LucideSearch,} from 'lucide-vue-next'
 
 const props = defineProps<{
   query: {

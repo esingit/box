@@ -64,7 +64,6 @@
           @search="handleQuery"
           @reset="resetQuery"
           class="flex-grow"
-          @refreshAssetName="refreshAssetName"
       />
     </section>
 
@@ -109,7 +108,9 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { LucideCopy, LucidePlus, LucideRefreshCw } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
+import { format } from 'date-fns'
 import { useAssetStore } from '@/store/assetStore'
+import { useAssetNameStore } from '@/store/assetNameStore'
 import { useMetaStore } from '@/store/metaStore'
 import emitter from '@/utils/eventBus'
 import { formatAmount, getChangeClass, getChangePrefix, formatDate } from '@/utils/formatters'
@@ -120,6 +121,7 @@ import AssetForm from '@/components/asset/AssetForm.vue'
 import AssetSearch from '@/components/asset/AssetSearch.vue'
 
 const assetStore = useAssetStore()
+const assetNameStore = useAssetNameStore()
 const metaStore = useMetaStore()
 const { list, stats, query, pagination } = storeToRefs(assetStore)
 
@@ -137,21 +139,29 @@ const assetTypeOptions = computed(() =>
 const assetLocationOptions = computed(() =>
     (metaStore.typeMap?.ASSET_LOCATION || []).map(i => ({ label: i.value1 || '', value: i.id }))
 )
+const { assetNameOptions } = storeToRefs(assetNameStore)
 
-const assetNameOptions = ref<Array<{ label: string; value: string | number }>>([])
-const { assetName } = storeToRefs(assetStore)
+// --- 新增默认类型id和位置id，动态查找 ---
+const defaultTypeId = computed(() => {
+  const list = metaStore.typeMap?.ASSET_TYPE || []
+  const item = list.find(i => i.value1 === '理财')
+  return item?.id || ''
+})
 
-watch(
-    assetName,
-    (val) => {
-      assetNameOptions.value = (val || []).map(item => ({
-        label: item.name || '',
-        value: item.id
-      }))
-    },
-    { immediate: true }
-)
+const defaultLocationId = computed(() => {
+  const list = metaStore.typeMap?.ASSET_LOCATION || []
+  const item = list.find(i => i.value1 === '工商银行')
+  return item?.id || ''
+})
 
+const defaultUnitId = computed(() => {
+  const list = metaStore.typeMap?.UNIT || []
+  const item = list.find(i => i.value1 === '人民币')
+  return item?.id || ''
+})
+
+
+// form数据，保持 reactive
 const form = reactive({
   assetNameId: '',
   assetTypeId: '',
@@ -162,6 +172,7 @@ const form = reactive({
   remark: ''
 })
 
+// 绑定record到form
 function initFormByRecord(rec: any) {
   Object.assign(form, {
     assetNameId: rec.assetNameId || '',
@@ -174,18 +185,20 @@ function initFormByRecord(rec: any) {
   })
 }
 
+// 重置表单时赋默认值
 function initEmptyForm() {
   Object.assign(form, {
     assetNameId: '',
-    assetTypeId: '',
-    assetLocationId: '',
+    assetTypeId: defaultTypeId.value,
+    assetLocationId: defaultLocationId.value,
     amount: '1',
-    unitId: '',
-    acquireTime: '',
+    unitId: defaultUnitId.value,
+    acquireTime: format(new Date(), 'yyyy-MM-dd'),
     remark: ''
   })
 }
 
+// 监听编辑索引，赋初值或重置
 watch(editingIdx, idx => {
   if (idx !== null && list.value?.[idx]) initFormByRecord(list.value[idx])
   else initEmptyForm()
@@ -225,7 +238,7 @@ function handlePageChange(page: number) {
 }
 
 function handleAdd() {
-  initEmptyForm()
+  initEmptyForm() // 打开新增时赋默认值
   showAddModal.value = true
 }
 
@@ -305,11 +318,11 @@ function onCopyClick() {
   })
 }
 
-async function refreshAssetName() {
-  await assetStore.fetchAssetName()
-}
-
 onMounted(async () => {
-  await Promise.all([metaStore.initAll(), refreshAssetName(), refreshData()])
+  await Promise.all([
+    metaStore.initAll(),
+    assetNameStore.fetchAssetName(),
+    refreshData()
+  ])
 })
 </script>

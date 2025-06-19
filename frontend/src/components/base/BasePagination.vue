@@ -37,6 +37,7 @@
             direction="up"
             :options="pageSizeOptions.map(size => ({ label: `每页${size}条`, value: size }))"
             placeholder="每页条数"
+            clearable
             @update:modelValue="val => {
             setValue(val)
             emit('page-size-change', val)

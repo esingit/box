@@ -150,6 +150,8 @@ export async function formatAssetNameRecord<
 }
 
 // 联动默认单位设置
+import { useMetaStore } from '@/store/metaStore'
+
 export async function setDefaultUnit(
     typeId: string,
     setFieldValue?: (field: string, value: any) => void,
@@ -157,39 +159,28 @@ export async function setDefaultUnit(
 ) {
     const metaStore = useMetaStore()
 
-    // 获取所有类型
     const fitnessTypes = metaStore.typeMap?.FITNESS_TYPE || []
     const assetTypes = metaStore.typeMap?.ASSET_TYPE || []
     const unitList = metaStore.typeMap?.UNIT || []
 
-    // 合并所有类型
     const types = [...fitnessTypes, ...assetTypes]
     const selectedType = types.find(type => String(type.id) === String(typeId))
 
-    // 类型不存在或未配置默认单位，清空 unitId
     if (!selectedType?.key3) {
         if (typeof setFieldValue === 'function') {
             setFieldValue('unitId', '')
-        } else {
-            form.value.unitId = ''
         }
         return
     }
 
-    // 查找默认单位（单位的 key1 匹配类型的 key3）
     const defaultUnit = unitList.find(unit => unit.key1 === selectedType.key3)
     if (!defaultUnit) return
 
-    const currentUnitId = values?.unitId ?? form.value.unitId
+    const currentUnitId = values?.unitId
 
-    // 若当前 unitId 不一致，则设置默认值
     if (!currentUnitId || String(currentUnitId) !== String(defaultUnit.id)) {
         if (typeof setFieldValue === 'function') {
             setFieldValue('unitId', defaultUnit.id)
-        } else {
-            form.value.unitId = defaultUnit.id
         }
     }
 }
-
-

@@ -57,11 +57,12 @@
       </div>
 
       <!-- 备注关键词 -->
-      <input
+     <BaseInput
           type="text"
           v-model="query.remark"
           placeholder="备注关键词"
-          class="input-base w-full md:w-[300px]"
+          required
+          clearable
       />
     </div>
   </div>
@@ -70,6 +71,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
 import {
   LucideChevronDown,
   LucideChevronUp,

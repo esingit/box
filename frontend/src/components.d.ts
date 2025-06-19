@@ -25,6 +25,7 @@ declare module 'vue' {
     BaseButton: typeof import('./components/base/BaseButton.vue')['default']
     BaseDialog: typeof import('./components/base/BaseDialog.vue')['default']
     BaseEmptyState: typeof import('./components/base/BaseEmptyState.vue')['default']
+    BaseInput: typeof import('./components/base/BaseInput.vue')['default']
     BaseModal: typeof import('./components/base/BaseModal.vue')['default']
     BaseMultiSelect: typeof import('./components/base/BaseMultiSelect.vue')['default']
     BaseNotice: typeof import('./components/base/BaseNotice.vue')['default']

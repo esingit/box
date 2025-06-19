@@ -5,18 +5,17 @@
       width="500px"
       @update:visible="handleClose"
   >
-    <!-- 表单主体 -->
     <template #default>
       <Form
           ref="formRef"
-          id="fitness-form"
+          id="asset-form"
           :validation-schema="schema"
           :initial-values="form"
           @submit="handleSubmit"
-          v-slot="{ values, setFieldValue }"
+          v-slot="{ setFieldValue }"
           class="space-y-6"
       >
-        <!-- 资产名称 + 名称管理 -->
+        <!-- 资产名称 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
             资产名称<span class="msg-error">*</span>
@@ -25,8 +24,9 @@
             <div class="flex items-center space-x-2">
               <BaseSelect
                   :modelValue="value"
-                  :options="assetName.map(n => ({ label: n.name, value: n.id }))"
+                  :options="assetNameStore.assetNameOptions"
                   placeholder="请选择资产名称"
+                  clearable
                   @update:modelValue="val => setValue(val)"
               />
               <button
@@ -34,12 +34,12 @@
                   class="btn-outline"
                   @click="showNamesModal = true"
               >
-                <LucideSettings size="16" class="mr-1"/>
+                <LucideSettings size="16" class="mr-1" />
                 名称管理
               </button>
             </div>
           </Field>
-          <ErrorMessage name="assetNameId" class="msg-error mt-1"/>
+          <ErrorMessage name="assetNameId" class="msg-error mt-1" />
         </div>
 
         <!-- 资产分类 -->
@@ -50,12 +50,16 @@
           <Field name="assetTypeId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
-                :options="types.map(t => ({ label: t.value1, value: t.id }))"
+                :options="types"
                 placeholder="请选择资产分类"
-                @update:modelValue="val => { setValue(val); onAssetTypeChange(val, setFieldValue) }"
+                clearable
+                @update:modelValue="val => {
+                setValue(val)
+                onAssetTypeChange(val, setFieldValue)
+              }"
             />
           </Field>
-          <ErrorMessage name="assetTypeId" class="msg-error mt-1"/>
+          <ErrorMessage name="assetTypeId" class="msg-error mt-1" />
         </div>
 
         <!-- 资产位置 -->
@@ -66,12 +70,13 @@
           <Field name="assetLocationId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
-                :options="locations.map(l => ({ label: l.value1, value: l.id }))"
+                :options="locations"
                 placeholder="请选择资产位置"
+                clearable
                 @update:modelValue="val => setValue(val)"
             />
           </Field>
-          <ErrorMessage name="assetLocationId" class="msg-error mt-1"/>
+          <ErrorMessage name="assetLocationId" class="msg-error mt-1" />
         </div>
 
         <!-- 金额 -->
@@ -87,7 +92,7 @@
               class="input-base"
               required
           />
-          <ErrorMessage name="amount" class="msg-error mt-1"/>
+          <ErrorMessage name="amount" class="msg-error mt-1" />
         </div>
 
         <!-- 货币单位 -->
@@ -98,12 +103,13 @@
           <Field name="unitId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
-                :options="filteredUnits.map(u => ({ label: u.value1, value: u.id }))"
+                :options="filteredUnits"
                 placeholder="请选择货币单位"
+                clearable
                 @update:modelValue="val => setValue(val)"
             />
           </Field>
-          <ErrorMessage name="unitId" class="msg-error mt-1"/>
+          <ErrorMessage name="unitId" class="msg-error mt-1" />
         </div>
 
         <!-- 日期 -->
@@ -111,13 +117,8 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">
             日期<span class="msg-error">*</span>
           </label>
-          <Field
-              name="acquireTime"
-              type="date"
-              class="input-base"
-              required
-          />
-          <ErrorMessage name="acquireTime" class="msg-error mt-1"/>
+          <Field name="acquireTime" type="date" class="input-base" required />
+          <ErrorMessage name="acquireTime" class="msg-error mt-1" />
         </div>
 
         <!-- 备注 -->
@@ -139,12 +140,7 @@
         <button type="button" class="btn-outline" @click="handleCancel">
           取消
         </button>
-        <button
-            type="submit"
-            form="asset-form"
-            class="btn-primary"
-            :disabled="loading"
-        >
+        <button type="submit" form="asset-form" class="btn-primary" :disabled="loading">
           {{ loading ? '处理中...' : confirmText }}
         </button>
       </div>
@@ -155,17 +151,18 @@
       v-if="showNamesModal"
       :show="showNamesModal"
       @close="handleNamesModalClose"
-      @refresh="handleNamesModalRefresh"
   />
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch} from 'vue'
+import { ref, computed, watch } from 'vue'
+import { ErrorMessage, Field, Form } from 'vee-validate'
 import * as yup from 'yup'
-import {ErrorMessage, Field, Form} from 'vee-validate'
-import {LucideSettings} from 'lucide-vue-next'
-import {useMetaStore} from '@/store/metaStore'
-import {setDefaultUnit} from '@/utils/commonMeta'
+import { LucideSettings } from 'lucide-vue-next'
+import { useAssetStore } from '@/store/assetStore'
+import { useAssetNameStore } from '@/store/assetNameStore'
+import { useMetaStore } from '@/store/metaStore'
+import { setDefaultUnit } from '@/utils/commonMeta'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import AssetNameForm from './assetName/AssetNameForm.vue'
@@ -176,18 +173,22 @@ const props = defineProps({
   loading: Boolean,
   title: String,
   confirmText: String,
-  remarkPlaceholder: String,
+  remarkPlaceholder: String
 })
 
 const emit = defineEmits(['close', 'submit', 'update:form'])
 
 const formRef = ref()
-const form = ref({...props.form})
+const form = ref({ ...props.form })
+const showNamesModal = ref(false)
 
+const assetStore = useAssetStore()
+const assetNameStore = useAssetNameStore()
 const metaStore = useMetaStore()
-const assetTypes = computed(() => metaStore.typeMap?.ASSET_TYPE || [])
-const assetLocationTypes = computed(() => metaStore.typeMap?.ASSET_LOCATION || [])
-const units = computed(() => metaStore.typeMap?.UNIT || [])
+
+const types = computed(() => metaStore.typeMap?.ASSET_TYPE?.map(i => ({ label: i.value1, value: i.id })) || [])
+const locations = computed(() => metaStore.typeMap?.ASSET_LOCATION?.map(i => ({ label: i.value1, value: i.id })) || [])
+const filteredUnits = computed(() => metaStore.typeMap?.UNIT?.map(i => ({ label: i.value1, value: i.id })) || [])
 
 const schema = yup.object({
   assetNameId: yup.string().required('请选择资产名称'),
@@ -199,25 +200,28 @@ const schema = yup.object({
   remark: yup.string().nullable()
 })
 
-// 监听 props.form 变化，同步到内部 form 和重置表单
 watch(
     () => props.form,
     val => {
-      form.value = {...val}
-      if (form.value.acquireTime && form.value.acquireTime.length > 10) {
+      form.value = { ...val }
+      if (form.value.acquireTime?.length > 10) {
         form.value.acquireTime = form.value.acquireTime.slice(0, 10)
       }
-      formRef.value?.resetForm({values: form.value})
-
+      formRef.value?.resetForm({ values: form.value })
       if (form.value.assetTypeId) {
-        setDefaultUnit(form.value.assetTypeId)
+        // 这里调用，传入当前unitId
+        setDefaultUnit(form.value.assetTypeId, undefined, { unitId: form.value.unitId })
       }
     },
-    {immediate: true}
+    { immediate: true }
 )
 
-function handleClose() {
-  emit('close')
+function onAssetTypeChange(assetTypeId: string, setFieldValue: (field: string, value: any) => void) {
+  if (!assetTypeId) {
+    setFieldValue('unitId', null)
+    return
+  }
+  setDefaultUnit(assetTypeId, setFieldValue, { unitId: form.value.unitId })
 }
 
 function handleSubmit(values: any) {
@@ -225,4 +229,15 @@ function handleSubmit(values: any) {
   emit('submit', values)
 }
 
+function handleClose() {
+  emit('close')
+}
+
+function handleCancel() {
+  emit('close')
+}
+
+function handleNamesModalClose() {
+  showNamesModal.value = false
+}
 </script>

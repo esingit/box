@@ -9,11 +9,11 @@ export const useAssetNameStore = defineStore('assetName', () => {
     // --- 状态 ---
     const list = ref<any[]>([])
     const query = reactive<{
-        naem: string
+        name: string
         description: string
         remark: string
     }>({
-        naem: '',
+        name: '',
         description: '',
         remark: ''
     })
@@ -150,13 +150,40 @@ export const useAssetNameStore = defineStore('assetName', () => {
         }
     }
 
+    // 获取全部数据
+    async function fetchAssetName() {
+        try {
+            const res = await axiosInstance.get('/api/asset-names/all')
+            if (res.data?.success) {
+                assetName.value = res.data.data || []
+            } else {
+                emitter.emit('notify', {
+                    message: `获取资产名称列表失败: ${res.data?.message || '未知错误'}`,
+                    type: 'error'
+                })
+            }
+        } catch (error: any) {
+            emitter.emit('notify', {
+                message: `获取资产名称列表失败: ${error.message || '未知错误'}`,
+                type: 'error'
+            })
+        }
+    }
+
+    const assetName = ref<any[]>([])
+    const assetNameOptions = computed(() =>
+        assetName.value.map(i => ({ label: i.name || '', value: i.id }))
+    )
+
+    function getAssetNameOptionById(id: string | number) {
+        return assetNameOptions.value.find(i => i.value === id)
+    }
+
     return {
         list,
         query,
         pagination,
         loadingList,
-        stats,
-        loadingStats,
         hasRecords,
         recordCount,
         loadList,
@@ -164,9 +191,12 @@ export const useAssetNameStore = defineStore('assetName', () => {
         setPageNo,
         setPageSize,
         resetQuery,
-        loadStats,
         addRecord,
         updateRecord,
         handleDelete,
+        fetchAssetName,
+        assetName,
+        assetNameOptions,
+        getAssetNameOptionById
     }
 })

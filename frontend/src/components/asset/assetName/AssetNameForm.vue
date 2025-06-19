@@ -14,11 +14,12 @@
       <!-- 搜索和新增按钮 -->
       <div class="flex items-center justify-between mb-4 space-x-3">
         <div class="relative flex-1">
-          <input
+         <BaseInput
               v-model="searchTerm"
               type="text"
+              required
+              clearable
               placeholder="搜索资产名称"
-              class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
               autocomplete="off"
           />
           <button
@@ -55,16 +56,13 @@
               for="name"
               class="block text-gray-700 dark:text-gray-300 font-medium mb-1"
           >资产名称 <span class="text-red-500">*</span></label>
-          <input
+         <BaseInput
               id="name"
               v-model.trim="formData.name"
               type="text"
               required
+              clearable
               placeholder="请输入资产名称"
-              :class="[
-              'w-full rounded-md border px-3 py-2 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition',
-              formError ? 'border-red-500' : 'border-gray-300 dark:border-gray-700',
-            ]"
               @input="formError = ''"
               autocomplete="off"
           />
@@ -76,10 +74,11 @@
               for="description"
               class="block text-gray-700 dark:text-gray-300 font-medium mb-1"
           >描述</label>
-          <input
+         <BaseInput
               id="description"
               v-model="formData.description"
               type="text"
+              clearable
               placeholder="请输入描述（可选）"
               class="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
               autocomplete="off"
@@ -168,6 +167,7 @@ import BaseModal from '@/components/base/BaseModal.vue'
 import BasePagination from '@/components/base/BasePagination.vue'
 import BaseActions from '@/components/base/BaseActions.vue'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
 
 const props = defineProps({
   show: Boolean,

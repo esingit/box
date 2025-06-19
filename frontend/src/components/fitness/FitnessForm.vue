@@ -30,6 +30,7 @@
                 setValue(val)
                 setDefaultUnit(val, setFieldValue, values)
               }"
+                clearable
             />
           </Field>
           <ErrorMessage name="typeId" class="msg-error"/>
@@ -58,6 +59,7 @@
                           .map(u => ({ label: u.value1!, value: u.id }))"
                 placeholder="请选择"
                 @update:modelValue="val => setValue(val)"
+                clearable
             />
           </Field>
           <ErrorMessage name="unitId" class="msg-error"/>

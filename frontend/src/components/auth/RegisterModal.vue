@@ -3,26 +3,26 @@
     <form @submit.prevent="onSubmit" class="space-y-4">
       <div>
         <label class="modal-label">用户名</label>
-        <input v-model="username" type="text" class="input-base" placeholder="请输入用户名" />
+       <BaseInput v-model="username" type="text" class="input-base" placeholder="请输入用户名" />
         <p v-if="errors.username" class="msg-error">{{ errors.username }}</p>
       </div>
 
       <div>
         <label class="modal-label">密码</label>
-        <input v-model="password" type="password" class="input-base" placeholder="请输入密码" />
+       <BaseInput v-model="password" type="password" class="input-base" placeholder="请输入密码" />
         <p v-if="errors.password" class="msg-error">{{ errors.password }}</p>
       </div>
 
       <div>
         <label class="modal-label">确认密码</label>
-        <input v-model="confirmPassword" type="password" class="input-base" placeholder="请再次输入密码" />
+       <BaseInput v-model="confirmPassword" type="password" class="input-base" placeholder="请再次输入密码" />
         <p v-if="errors.confirmPassword" class="msg-error">{{ errors.confirmPassword }}</p>
       </div>
 
       <div v-if="needCaptcha">
         <label class="modal-label">验证码</label>
         <div class="flex items-center gap-2">
-          <input v-model="captcha" type="text" class="input-base" placeholder="请输入验证码" />
+         <BaseInput v-model="captcha" type="text" class="input-base" placeholder="请输入验证码" />
           <img
               :src="captchaUrl"
               @click="refreshCaptcha"
@@ -66,8 +66,9 @@
 import { ref, computed, watch } from 'vue'
 import { useForm, useField } from 'vee-validate'
 import * as yup from 'yup'
-import BaseModal from '@/components/base/BaseModal.vue'
 import { useUserStore } from '@/store/userStore'
+import BaseModal from '@/components/base/BaseModal.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
 
 const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits(['update:visible', 'register-success', 'switch-to-login'])

@@ -1,21 +1,14 @@
-import {defineStore} from 'pinia'
-import {ref, reactive, computed} from 'vue'
+// 修改后的 assetStore.ts（含 assetNameOptions）
+import { defineStore } from 'pinia'
+import { ref, reactive, computed } from 'vue'
 import axiosInstance from '@/utils/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
-import {formatAssetRecord} from '@/utils/commonMeta'
+import { formatAssetRecord } from '@/utils/commonMeta'
 
 export const useAssetStore = defineStore('asset', () => {
-    // --- 状态 ---
     const list = ref<any[]>([])
-    const query = reactive<{
-        assetNameIdList: number[]
-        assetLocationIdList: number[]
-        assetTypeIdList: number[]
-        startDate: string
-        endDate: string
-        remark: string
-    }>({
+    const query = reactive({
         assetNameIdList: [],
         assetLocationIdList: [],
         assetTypeIdList: [],
@@ -30,8 +23,6 @@ export const useAssetStore = defineStore('asset', () => {
         total: 0
     })
 
-    const loadingList = ref(false)
-
     const stats = reactive({
         formattedDate: '-',
         totalAssets: 0,
@@ -39,6 +30,8 @@ export const useAssetStore = defineStore('asset', () => {
         totalLiabilities: 0,
         liabilitiesChange: 0,
     })
+
+    const loadingList = ref(false)
     const loadingStats = ref(false)
 
     let recordController: AbortController | null = null
@@ -47,9 +40,6 @@ export const useAssetStore = defineStore('asset', () => {
     const hasRecords = computed(() => list.value.length > 0)
     const recordCount = computed(() => pagination.total)
 
-    const assetName = ref<any[]>([])
-
-    // --- 内部函数 ---
     function buildParams() {
         return {
             page: pagination.pageNo,
@@ -73,13 +63,16 @@ export const useAssetStore = defineStore('asset', () => {
     }
 
     function formatTime(data: any) {
+        const acquireTime = data?.acquireTime
+        if (typeof acquireTime !== 'string' || acquireTime.length === 0) {
+            return { ...data, acquireTime: '' }
+        }
         return {
             ...data,
-            finishTime: data.finishTime.includes('T') ? data.finishTime : data.finishTime + 'T00:00:00'
+            acquireTime: acquireTime.includes('T') ? acquireTime : acquireTime + 'T00:00:00'
         }
     }
 
-    // --- 列表操作 ---
     async function loadList() {
         if (recordController) recordController.abort()
         recordController = new AbortController()
@@ -89,7 +82,7 @@ export const useAssetStore = defineStore('asset', () => {
             const res = await axiosInstance.get('/api/asset-record/list', {
                 params: buildParams(),
                 signal: recordController.signal,
-                paramsSerializer: params => qs.stringify(params, {arrayFormat: 'repeat'})
+                paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
             })
 
             if (res.data.success) {
@@ -99,7 +92,7 @@ export const useAssetStore = defineStore('asset', () => {
                 pagination.pageNo = Number(raw.current ?? pagination.pageNo)
                 pagination.pageSize = Number(raw.size ?? pagination.pageSize)
             } else {
-                emitter.emit('notify', {message: res.data.message || '获取列表失败', type: 'error'})
+                emitter.emit('notify', { message: res.data.message || '获取列表失败', type: 'error' })
             }
         } catch (err) {
             await handleError(err, '获取资产记录')
@@ -109,7 +102,6 @@ export const useAssetStore = defineStore('asset', () => {
         }
     }
 
-    // --- 更新查询参数 ---
     function updateQuery(newQuery: Partial<typeof query>) {
         Object.assign(query, newQuery)
     }
@@ -133,7 +125,6 @@ export const useAssetStore = defineStore('asset', () => {
         pagination.pageNo = 1
     }
 
-    // --- 统计操作 ---
     async function loadStats() {
         if (statsController) statsController.abort()
         statsController = new AbortController()
@@ -147,7 +138,7 @@ export const useAssetStore = defineStore('asset', () => {
             if (res.data.success) {
                 Object.assign(stats, res.data.data)
             } else {
-                emitter.emit('notify', {message: res.data.message || '获取统计失败', type: 'error'})
+                emitter.emit('notify', { message: res.data.message || '获取统计失败', type: 'error' })
             }
         } catch (err) {
             await handleError(err, '获取统计')
@@ -157,12 +148,11 @@ export const useAssetStore = defineStore('asset', () => {
         }
     }
 
-    // --- 增删改 ---
     async function addRecord(data: any) {
         try {
             const res = await axiosInstance.post('/api/asset-record/add', formatTime(data))
             if (res.data.success) {
-                emitter.emit('notify', {message: '添加成功', type: 'success'})
+                emitter.emit('notify', { message: '添加成功', type: 'success' })
                 await loadList()
                 return true
             } else {
@@ -178,7 +168,7 @@ export const useAssetStore = defineStore('asset', () => {
         try {
             const res = await axiosInstance.put('/api/asset-record/update', formatTime(data))
             if (res.data.success) {
-                emitter.emit('notify', {message: '更新成功', type: 'success'})
+                emitter.emit('notify', { message: '更新成功', type: 'success' })
                 await loadList()
                 return true
             } else {
@@ -194,7 +184,7 @@ export const useAssetStore = defineStore('asset', () => {
         try {
             const res = await axiosInstance.delete(`/api/asset-record/delete/${id}`)
             if (res.data.success) {
-                emitter.emit('notify', {message: '删除成功', type: 'success'})
+                emitter.emit('notify', { message: '删除成功', type: 'success' })
                 await loadList()
             } else {
                 throw new Error(res.data.message || '删除失败')
@@ -204,6 +194,7 @@ export const useAssetStore = defineStore('asset', () => {
             throw err
         }
     }
+
     async function copyLastRecords(force = false) {
         try {
             const res = await axiosInstance.post('/api/asset-record/copy-last' + (force ? '?force=true' : ''))
@@ -221,25 +212,6 @@ export const useAssetStore = defineStore('asset', () => {
                 type: 'error'
             })
             throw error
-        }
-    }
-
-    async function fetchAssetName() {
-        try {
-            const res = await axiosInstance.get('/api/asset-names/all')
-            if (res.data?.success) {
-                assetName.value = res.data.data || []
-            } else {
-                emitter.emit('notify', {
-                    message: `获取资产名称列表失败: ${res.data?.message || '未知错误'}`,
-                    type: 'error'
-                })
-            }
-        } catch (error: any) {
-            emitter.emit('notify', {
-                message: `获取资产名称列表失败: ${error.message || '未知错误'}`,
-                type: 'error'
-            })
         }
     }
 
@@ -262,7 +234,5 @@ export const useAssetStore = defineStore('asset', () => {
         updateRecord,
         handleDelete,
         copyLastRecords,
-        fetchAssetName,
-        assetName
     }
 })
