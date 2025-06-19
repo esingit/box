@@ -209,8 +209,8 @@ watch(
       }
       formRef.value?.resetForm({values: form.value})
 
-      if (form.value.typeId) {
-        setDefaultUnit(form.value.typeId)
+      if (form.value.assetTypeId) {
+        setDefaultUnit(form.value.assetTypeId)
       }
     },
     {immediate: true}

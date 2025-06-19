@@ -17,7 +17,7 @@ import java.util.List;
 public interface AssetRecordMapper extends BaseMapper<AssetRecord> {
     IPage<AssetRecordDTO> selectPageWithMeta(IPage<AssetRecord> page,
                                              @Param("assetNameIdList") List<Long> assetNameIdList,
-                                             @Param("locationIdList") List<Long> locationIdList,
+                                             @Param("assetLocationIdList") List<Long> assetLocationIdList,
                                              @Param("assetTypeIdList") List<Long> assetTypeIdList,
                                              @Param("remark") String remark,
                                              @Param("startDate") String startDate,

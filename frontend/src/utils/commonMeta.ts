@@ -1,5 +1,6 @@
 import axiosInstance from '@/utils/axios'
 import axios from 'axios'
+import {useMetaStore} from '@/store/metaStore'
 
 // 缓存已获取的数据
 const cache = new Map<string | number, { typeName: string; value1: string }>()
@@ -64,12 +65,12 @@ async function formatValue(id: string | number | undefined, fallback?: string): 
  * 格式化健身记录中的类型与单位
  */
 export async function formatFitnessRecord<
-    T extends { typeId: string | number; unitId: string | number; typeValue?: string; unitValue?: string }
+    T extends { assetTypeId: string | number; unitId: string | number; typeValue?: string; unitValue?: string }
 >(record: T): Promise<T> {
     if (!record || (record.typeValue && record.unitValue)) return record
 
     const [typeValue, unitValue] = await Promise.all([
-        formatValue(record.typeId, record.typeValue),
+        formatValue(record.assetTypeId, record.typeValue),
         formatValue(record.unitId, record.unitValue)
     ])
 
@@ -149,20 +150,46 @@ export async function formatAssetNameRecord<
 }
 
 // 联动默认单位设置
-export async function setDefaultUnit(typeId: string, setFieldValue?: any, values?: any) {
-    const selectedType = fitnessTypes.value.find(type => String(type.id) === String(typeId))
+export async function setDefaultUnit(
+    typeId: string,
+    setFieldValue?: (field: string, value: any) => void,
+    values?: { unitId?: string | number }
+) {
+    const metaStore = useMetaStore()
+
+    // 获取所有类型
+    const fitnessTypes = metaStore.typeMap?.FITNESS_TYPE || []
+    const assetTypes = metaStore.typeMap?.ASSET_TYPE || []
+    const unitList = metaStore.typeMap?.UNIT || []
+
+    // 合并所有类型
+    const types = [...fitnessTypes, ...assetTypes]
+    const selectedType = types.find(type => String(type.id) === String(typeId))
+
+    // 类型不存在或未配置默认单位，清空 unitId
     if (!selectedType?.key3) {
-        if (setFieldValue) setFieldValue('unitId', '')
-        else form.value.unitId = ''
+        if (typeof setFieldValue === 'function') {
+            setFieldValue('unitId', '')
+        } else {
+            form.value.unitId = ''
+        }
         return
     }
 
-    const defaultUnit = units.value.find(unit => unit.key1 === selectedType.key3)
+    // 查找默认单位（单位的 key1 匹配类型的 key3）
+    const defaultUnit = unitList.find(unit => unit.key1 === selectedType.key3)
     if (!defaultUnit) return
 
-    const currentUnitId = values?.unitId || form.value.unitId
+    const currentUnitId = values?.unitId ?? form.value.unitId
+
+    // 若当前 unitId 不一致，则设置默认值
     if (!currentUnitId || String(currentUnitId) !== String(defaultUnit.id)) {
-        if (setFieldValue) setFieldValue('unitId', defaultUnit.id)
-        else form.value.unitId = defaultUnit.id
+        if (typeof setFieldValue === 'function') {
+            setFieldValue('unitId', defaultUnit.id)
+        } else {
+            form.value.unitId = defaultUnit.id
+        }
     }
 }
+
+

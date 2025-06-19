@@ -139,13 +139,14 @@ const assetLocationOptions = computed(() =>
 )
 
 const assetNameOptions = ref<Array<{ label: string; value: string | number }>>([])
+const { assetName } = storeToRefs(assetStore)
 
 watch(
-    () => assetStore.assetName,
+    assetName,
     (val) => {
       assetNameOptions.value = (val || []).map(item => ({
-        label: item.id,
-        value: item.name || ''
+        label: item.name || '',
+        value: item.id
       }))
     },
     { immediate: true }

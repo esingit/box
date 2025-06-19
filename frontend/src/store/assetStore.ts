@@ -10,15 +10,15 @@ export const useAssetStore = defineStore('asset', () => {
     const list = ref<any[]>([])
     const query = reactive<{
         assetNameIdList: number[]
-        locationIdList: number[]
-        typeIdList: number[]
+        assetLocationIdList: number[]
+        assetTypeIdList: number[]
         startDate: string
         endDate: string
         remark: string
     }>({
         assetNameIdList: [],
-        locationIdList: [],
-        typeIdList: [],
+        assetLocationIdList: [],
+        assetTypeIdList: [],
         startDate: '',
         endDate: '',
         remark: ''
@@ -55,8 +55,8 @@ export const useAssetStore = defineStore('asset', () => {
             page: pagination.pageNo,
             pageSize: pagination.pageSize,
             assetNameIdList: query.assetNameIdList.length ? query.assetNameIdList : undefined,
-            locationIdList: query.locationIdList.length ? query.locationIdList : undefined,
-            typeIdList: query.typeIdList.length ? query.typeIdList : undefined,
+            assetLocationIdList: query.assetLocationIdList.length ? query.assetLocationIdList : undefined,
+            assetTypeIdList: query.assetTypeIdList.length ? query.assetTypeIdList : undefined,
             startDate: query.startDate ? query.startDate + 'T00:00:00' : undefined,
             endDate: query.endDate ? query.endDate + 'T23:59:59' : undefined,
             remark: query.remark.trim() || undefined
@@ -125,8 +125,8 @@ export const useAssetStore = defineStore('asset', () => {
 
     function resetQuery() {
         query.assetNameIdList = []
-        query.locationIdList = []
-        query.typeIdList = []
+        query.assetLocationIdList = []
+        query.assetTypeIdList = []
         query.startDate = ''
         query.endDate = ''
         query.remark = ''
@@ -160,7 +160,7 @@ export const useAssetStore = defineStore('asset', () => {
     // --- 增删改 ---
     async function addRecord(data: any) {
         try {
-            const res = await axiosInstance.post('/api/asset-record/add', data)
+            const res = await axiosInstance.post('/api/asset-record/add', formatTime(data))
             if (res.data.success) {
                 emitter.emit('notify', {message: '添加成功', type: 'success'})
                 await loadList()
@@ -176,7 +176,7 @@ export const useAssetStore = defineStore('asset', () => {
 
     async function updateRecord(data: any) {
         try {
-            const res = await axiosInstance.put('/api/asset-record/update', data)
+            const res = await axiosInstance.put('/api/asset-record/update', formatTime(data))
             if (res.data.success) {
                 emitter.emit('notify', {message: '更新成功', type: 'success'})
                 await loadList()
@@ -262,6 +262,7 @@ export const useAssetStore = defineStore('asset', () => {
         updateRecord,
         handleDelete,
         copyLastRecords,
-        fetchAssetName
+        fetchAssetName,
+        assetName
     }
 })

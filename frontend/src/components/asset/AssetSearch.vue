@@ -15,7 +15,7 @@
 
       <!-- 资产类型 -->
       <BaseSelect
-          v-model="query.typeIdList"
+          v-model="query.assetTypeIdList"
           :options="assetTypeOptions"
           placeholder="全部资产类型"
           multiple
@@ -25,7 +25,7 @@
 
       <!-- 资产位置 -->
       <BaseSelect
-          v-model="query.locationIdList"
+          v-model="query.assetLocationIdList"
           :options="assetLocationOptions"
           placeholder="全部资产位置"
           multiple
@@ -80,8 +80,8 @@ import {
 const props = defineProps<{
   query: {
     assetNameIdList: (string | number)[]
-    typeIdList: (string | number)[]
-    locationIdList: (string | number)[]
+    assetTypeIdList: (string | number)[]
+    assetLocationIdList: (string | number)[]
     startDate: string
     endDate: string
     remark: string

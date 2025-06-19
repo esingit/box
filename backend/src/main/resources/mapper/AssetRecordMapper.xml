@@ -60,9 +60,9 @@
                     #{id}
                 </foreach>
             </if>
-            <if test="locationIdList != null and locationIdList.size > 0">
+            <if test="assetLocationIdList != null and assetLocationIdList.size > 0">
                 AND ar.asset_location_id IN
-                <foreach collection="locationIdList" item="id" open="(" separator="," close=")">
+                <foreach collection="assetLocationIdList" item="id" open="(" separator="," close=")">
                     #{id}
                 </foreach>
             </if>

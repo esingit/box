@@ -63,9 +63,9 @@ interface Option {
   value: string | number
 }
 
-// Props with defaults
+// Props定义，modelValue可选，防止undefined
 const props = withDefaults(defineProps<{
-  modelValue: string | number | (string | number)[]
+  modelValue?: string | number | (string | number)[]
   options?: Option[]
   placeholder?: string
   multiple?: boolean
@@ -79,12 +79,19 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits(['update:modelValue'])
 
+// 空值保护：如果modelValue为undefined或null，自动转成''或[]
+const safeModelValue = computed<string | number | (string | number)[]>(() => {
+  if (props.modelValue === undefined || props.modelValue === null) {
+    return props.multiple ? [] : ''
+  }
+  return props.modelValue
+})
+
 const modelValue = computed({
-  get: () => props.modelValue,
+  get: () => safeModelValue.value,
   set: val => emit('update:modelValue', val)
 })
 
-// 处理空值保护
 const safeOptions = computed(() => props.options ?? [])
 
 function isArrayValue(val: unknown): val is (string | number)[] {

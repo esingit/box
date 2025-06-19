@@ -133,7 +133,7 @@ const fitnessTypes = computed(() => metaStore.typeMap?.FITNESS_TYPE || [])
 const units = computed(() => metaStore.typeMap?.UNIT || [])
 
 const schema = yup.object({
-  typeId: yup.string().required('请选择类型'),
+  assetTypeId: yup.string().required('请选择类型'),
   count: yup
       .number()
       .typeError('请输入次数')
@@ -154,8 +154,8 @@ watch(
       }
       formRef.value?.resetForm({values: form.value})
 
-      if (form.value.typeId) {
-        setDefaultUnit(form.value.typeId)
+      if (form.value.assetTypeId) {
+        setDefaultUnit(form.value.assetTypeId)
       }
     },
     {immediate: true}

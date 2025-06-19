@@ -29,8 +29,8 @@ export interface AssetQueryParams {
     page?: number
     pageSize?: number
     assetNameId?: number | string
-    locationId?: number | string
-    typeId?: number | string
+    assetLocationId?: number | string
+    assetTypeId?: number | string
     startDate?: string
     endDate?: string
     remark?: string
