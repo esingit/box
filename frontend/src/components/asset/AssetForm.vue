@@ -159,7 +159,6 @@ import { ref, computed, watch } from 'vue'
 import { ErrorMessage, Field, Form } from 'vee-validate'
 import * as yup from 'yup'
 import { LucideSettings } from 'lucide-vue-next'
-import { useAssetStore } from '@/store/assetStore'
 import { useAssetNameStore } from '@/store/assetNameStore'
 import { useMetaStore } from '@/store/metaStore'
 import { setDefaultUnit } from '@/utils/commonMeta'
@@ -182,7 +181,6 @@ const formRef = ref()
 const form = ref({ ...props.form })
 const showNamesModal = ref(false)
 
-const assetStore = useAssetStore()
 const assetNameStore = useAssetNameStore()
 const metaStore = useMetaStore()
 
