@@ -12,7 +12,12 @@
       </ListboxButton>
 
       <ListboxOptions
-          class="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+          :class="[
+            'absolute z-50 w-full max-h-60 overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
+            direction === 'up'
+              ? 'mb-1 bottom-full'   // 向上展开，菜单向上方展开
+              : 'mt-1 top-full'      // 向下展开，菜单向下方展开，默认
+          ]"
       >
         <ListboxOption
             v-for="item in props.options"
@@ -65,6 +70,7 @@ const props = defineProps<{
   options: Option[]
   placeholder?: string
   multiple?: boolean
+  direction?: 'up' | 'down'  // 新增direction参数，控制下拉框方向，默认down
 }>()
 
 const emit = defineEmits(['update:modelValue'])
@@ -96,4 +102,7 @@ const selectedText = computed(() =>
         ? selectedLabels.value.join('、')
         : props.placeholder || '请选择'
 )
+
+// 设置默认值为 'down'
+const direction = computed(() => props.direction ?? 'down')
 </script>

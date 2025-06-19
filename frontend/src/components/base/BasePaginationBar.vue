@@ -1,7 +1,6 @@
-<!-- src/components/base/BaseBasePaginationBar.vue -->
 <template>
   <div class="flex items-center space-x-3 text-gray-700 select-none justify-end">
-<!-- 上一页 -->
+    <!-- 上一页 -->
     <button
         class="btn-outline"
         :disabled="current <= 1"
@@ -15,9 +14,7 @@
         v-for="page in pagesToShow"
         :key="page"
         class="px-4 py-4 rounded-full border cursor-pointer transition"
-        :class="page === current
-        ? 'btn-primary'
-        : 'btn-outline'"
+        :class="page === current ? 'btn-primary' : 'btn-outline'"
         @click="changePage(page)"
     >
       {{ page }}
@@ -32,16 +29,21 @@
       下一页
     </button>
 
-    <!-- 每页条数选择 -->
-    <select
-        class="btn-outline select-none"
-        :value="pageSize"
-        @change="$emit('page-size-change', Number($event.target.value))"
-    >
-      <option v-for="size in pageSizeOptions" :key="size" :value="size">
-        每页{{ size }}条
-      </option>
-    </select>
+    <!-- 每页条数选择（使用 BaseSelect） -->
+    <div class="w-[120px]">
+      <Field name="pageSize" v-slot="{ value, setValue }">
+        <BaseSelect
+            :modelValue="value"
+            direction="up"
+            :options="pageSizeOptions.map(size => ({ label: `每页${size}条`, value: size }))"
+            placeholder="每页条数"
+            @update:modelValue="val => {
+            setValue(val)
+            emit('page-size-change', val)
+          }"
+        />
+      </Field>
+    </div>
 
     <!-- 总条数 -->
     <span class="text-gray-500 text-sm whitespace-nowrap">
@@ -51,19 +53,23 @@
 </template>
 
 <script setup>
-import {computed} from 'vue'
+import { computed } from 'vue'
+import { Field } from 'vee-validate'
+import BaseSelect from './BaseSelect.vue'
 
 const props = defineProps({
-  current: {type: Number, default: 1},
-  total: {type: Number, default: 0},
-  pageSize: {type: Number, default: 10}
+  current: { type: Number, default: 1 },
+  total: { type: Number, default: 0 },
+  pageSize: { type: Number, default: 10 }
 })
 
 const emit = defineEmits(['page-change', 'page-size-change'])
 
 const pageSizeOptions = [7, 10, 20, 50]
 
-const totalPages = computed(() => (props.total ? Math.ceil(props.total / props.pageSize) : 0))
+const totalPages = computed(() =>
+    props.total ? Math.ceil(props.total / props.pageSize) : 0
+)
 
 const pagesToShow = computed(() => {
   const maxPages = 5
@@ -85,10 +91,3 @@ function changePage(page) {
   emit('page-change', page)
 }
 </script>
-
-<style scoped>
-/* 禁止选中文字 */
-button {
-  user-select: none;
-}
-</style>
