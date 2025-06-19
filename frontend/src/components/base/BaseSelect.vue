@@ -11,7 +11,7 @@
             :title="showError ? (requiredMessage || '此项为必填') : selectedText"
             :class="[
             'input-base flex justify-between items-center w-full pr-8',
-            showError ? 'border-red-500 ring-1 ring-red-500' : ''
+            showError ? 'msg-error' : ''
           ]"
         >
           <span

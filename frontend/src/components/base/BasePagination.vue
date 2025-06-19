@@ -41,9 +41,9 @@
             placeholder="每页条数"
             clearable
             @update:modelValue="val => {
-            setValue(val)
-            emit('page-size-change', val)
-          }"
+              setValue(val)
+              emit('page-size-change', val)
+            }"
         />
       </Field>
     </div>
@@ -74,13 +74,18 @@ const emit = defineEmits<{
 const pageSizeOptions = [7, 10, 20, 50]
 
 const totalPages = computed(() =>
-    props.total ? Math.ceil(props.total / props.pageSize) : 0
+    props.total && props.pageSize ? Math.ceil(props.total / props.pageSize) : 0
 )
 
 const pagesToShow = computed((): (number | '...')[] => {
   const total = totalPages.value
   const current = props.current
   if (total === 0) return []
+
+  // 如果总页数小于等于7，显示全部页码，避免省略号
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1)
+  }
 
   const sideCount = 3    // 前后固定页数
   const range = 1        // 当前页前后范围

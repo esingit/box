@@ -18,6 +18,7 @@
           :page-size="pagination.pageSize"
           @page-change="onPageChange"
           @page-size-change="onPageSizeChange"
+          clearable
       />
     </div>
   </div>

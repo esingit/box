@@ -86,13 +86,23 @@ export const useFitnessStore = defineStore('fitness', () => {
       })
 
       if (res.data.success) {
-        const raw = res.data.data
+        const raw = res.data.data // 注意这里是 data 里的 data
+
+        if (!raw.records || !Array.isArray(raw.records)) {
+          list.value = []
+          pagination.total = 0
+          return
+        }
+
         list.value = await Promise.all(raw.records.map(formatFitnessRecord))
         pagination.total = Number(raw.total ?? 0)
         pagination.pageNo = Number(raw.current ?? pagination.pageNo)
         pagination.pageSize = Number(raw.size ?? pagination.pageSize)
       } else {
-        emitter.emit('notify', { message: res.data.message || '获取列表失败', type: 'error' })
+        emitter.emit('notify', {
+          message: res.data.message || '获取列表失败',
+          type: 'error'
+        })
       }
     } catch (err) {
       await handleError(err, '获取健身记录')
@@ -101,6 +111,7 @@ export const useFitnessStore = defineStore('fitness', () => {
       recordController = null
     }
   }
+
 
   // --- 更新查询参数 ---
   function updateQuery(newQuery: Partial<typeof query>) {

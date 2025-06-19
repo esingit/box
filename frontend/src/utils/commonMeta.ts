@@ -149,9 +149,6 @@ export async function formatAssetNameRecord<
     return formatted
 }
 
-// 联动默认单位设置
-import { useMetaStore } from '@/store/metaStore'
-
 export async function setDefaultUnit(
     typeId: string,
     setFieldValue?: (field: string, value: any) => void,
