@@ -101,11 +101,11 @@
           :pageSize="pagination.pageSize"
           @edit="editRecord"
           @delete="handleDelete"
-          @page-change="handlePageChange"
+      @page-change="handlePageChange"
       />
     </section>
 
-    <!-- 添加和编辑弹窗，保持不变 -->
+    <!-- 添加和编辑弹窗 -->
     <FitnessForm
         v-if="showAddModal"
         :visible="showAddModal"
@@ -137,6 +137,7 @@ import { LucidePlus, LucideRefreshCw } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { useFitnessStore } from '@/store/fitnessStore'
 import { useMetaStore } from '@/store/metaStore'
+import emitter from '@/utils/eventBus'
 
 import FitnessList from '@/components/fitness/FitnessList.vue'
 import FitnessForm from '@/components/fitness/FitnessForm.vue'
@@ -145,14 +146,13 @@ import FitnessSearch from '@/components/fitness/FitnessSearch.vue'
 const fitnessStore = useFitnessStore()
 const metaStore = useMetaStore()
 
-// 解构 store 里的响应式状态
 const { list, stats, query, pagination } = storeToRefs(fitnessStore)
 
 const loading = ref(false)
 const showAddModal = ref(false)
 const editingIdx = ref<null | number>(null)
 
-const fitnessTypeOptions = computed<{ label: string; value: number }[]>(() =>
+const fitnessTypeOptions = computed(() =>
     (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
       label: item.value1 || '',
       value: item.id
@@ -167,7 +167,6 @@ const form = reactive({
   remark: ''
 })
 
-// 格式化日期函数
 function formatDate(dateStr: string | null | undefined) {
   if (!dateStr) return '-'
   const d = new Date(dateStr)
@@ -198,7 +197,6 @@ function initFormDefaults() {
   }
 }
 
-// 编辑时表单赋值
 watch(editingIdx, (idx) => {
   if (idx !== null && list.value?.[idx]) {
     const rec = list.value[idx]
@@ -216,20 +214,18 @@ watch(editingIdx, (idx) => {
   }
 })
 
-// 计算属性 - 统计相关
 const isWorkoutOverdue = computed(() => stats.value?.lastWorkoutDays > 3)
 const isNextWorkoutOverdue = computed(() => {
   const t = new Date(stats.value?.nextWorkoutDay).getTime()
   return !isNaN(t) && t < Date.now()
 })
 
-// 刷新数据（load stats + list）
 async function refreshData() {
   loading.value = true
   try {
     await metaStore.initAll()
     await fitnessStore.loadStats()
-    await fitnessStore.loadList() // 这里使用store里的query
+    await fitnessStore.loadList()
   } catch (e) {
     console.error('刷新数据失败', e)
   } finally {
@@ -237,26 +233,22 @@ async function refreshData() {
   }
 }
 
-// 搜索时更新store中的query并刷新
 function handleQuery(newQuery: Partial<typeof query.value>) {
   fitnessStore.updateQuery(newQuery)
-  fitnessStore.setPageNo(1) // 搜索时重置页码
+  fitnessStore.setPageNo(1)
   refreshData()
 }
 
-// 重置查询条件
 function resetQuery() {
   fitnessStore.resetQuery()
   refreshData()
 }
 
-// 分页变化，更新页码并刷新
 function handlePageChange(newPage: number) {
   fitnessStore.setPageNo(newPage)
   refreshData()
 }
 
-// 添加相关
 function handleAdd() {
   initFormDefaults()
   showAddModal.value = true
@@ -271,7 +263,6 @@ async function handleAddRecord(data: typeof form) {
   await refreshData()
 }
 
-// 编辑相关
 function editRecord(recordId: number) {
   const idx = list.value.findIndex((r) => r.id === recordId)
   if (idx !== -1) editingIdx.value = idx
@@ -279,31 +270,37 @@ function editRecord(recordId: number) {
 function cancelEdit() {
   editingIdx.value = null
 }
-
 async function saveEdit(data: typeof form) {
   if (editingIdx.value === null) return
-
   const original = list.value[editingIdx.value]
   if (!original || !original.id) return
-
   const payload = {
-    id: original.id, // 关键：补上 ID
+    id: original.id,
     typeId: data.typeId,
     count: Number(data.count) || 0,
     unitId: data.unitId,
     finishTime: data.finishTime,
     remark: data.remark
   }
-
   await fitnessStore.updateRecord(payload)
   editingIdx.value = null
   await refreshData()
 }
 
-// 删除记录
-async function handleDelete(id: number) {
-  await fitnessStore.deleteRecord(id)
-  await refreshData()
+// 这里是改造点，接收完整 record，拼接提示信息传递给确认弹窗
+function handleDelete(record: any) {
+  const dataInfo = `[${record.typeValue || '类型未知'},${record.count}${record.unitValue},${formatDate(record.finishTime)}]`
+  emitter.emit('confirm', {
+    title: '删除确认',
+    message: `确定要删除${dataInfo}这条记录吗？此操作无法撤销。`,
+    type: 'danger',
+    confirmText: '删除',
+    cancelText: '取消',
+    async onConfirm() {
+      await fitnessStore.deleteRecord(record.id)
+      await refreshData()
+    }
+  })
 }
 
 onMounted(async () => {

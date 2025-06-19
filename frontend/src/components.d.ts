@@ -18,7 +18,7 @@ declare module 'vue' {
     AssetStats: typeof import('./components/dashboard/components/AssetStats.vue')['default']
     AssetTable: typeof import('./components/asset/AssetTable.vue')['default']
     AuthModals: typeof import('./components/auth/AuthModals.vue')['default']
-    BaseActions: typeof import('./components/base/baseActions.vue')['default']
+    BaseActions: typeof import('./components/base/BaseActions.vue')['default']
     BaseButton: typeof import('./components/base/BaseButton.vue')['default']
     BaseDialog: typeof import('./components/base/BaseDialog.vue')['default']
     BaseEmptyState: typeof import('./components/base/BaseEmptyState.vue')['default']

@@ -49,12 +49,12 @@
 
     background-color: transparent;
     color: var(--color-primary);
-    border-color: var(--color-primary);
+    border-color: var(--color-border);
 
     &:hover {
       background-color: var(--color-primary-light);
       color: var(--color-primary-hover);
-      border-color: var(--color-primary-hover);
+      border-color: var(--color-border-hover);
     }
   }
 

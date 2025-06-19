@@ -32,7 +32,7 @@ import BasePaginationBar from '@/components/base/BasePaginationBar.vue'
 
 const emit = defineEmits<{
   (e: 'edit', recordId: number): void
-  (e: 'delete', recordId: number): void
+  (e: 'delete', record: any): void   // 注意这里传递的是完整 record 对象
 }>()
 
 const store = useFitnessStore()
@@ -68,10 +68,13 @@ async function onPageSizeChange(size: number) {
   }
 }
 
+// 编辑事件，传递 recordId
 function handleEdit(id: number) {
   emit('edit', id)
 }
-function handleDelete(id: number) {
-  emit('delete', id)
+
+// 删除事件，传递完整 record
+function handleDelete(record: any) {
+  emit('delete', record)
 }
 </script>

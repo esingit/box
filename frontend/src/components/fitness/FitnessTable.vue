@@ -44,31 +44,51 @@
           :key="record.id"
           class="hover:bg-gray-50 transition-colors"
       >
-        <td v-for="(header, i) in tableHeaders" :key="i" class="px-3 py-2 truncate" :style="{ width: columnWidths[i] + 'px' }">
+        <td
+            v-for="(header, i) in tableHeaders"
+            :key="i"
+            class="px-3 py-2 truncate"
+            :style="{ width: columnWidths[i] + 'px' }"
+        >
           <template v-if="header.key === 'type'">
-              <span @mouseenter="showTooltip($event, record.typeValue)" @mouseleave="hideTooltip">
-                {{ record.typeValue }}
-              </span>
+            <span
+                @mouseenter="showTooltip($event, record.typeValue)"
+                @mouseleave="hideTooltip"
+            >
+              {{ record.typeValue }}
+            </span>
           </template>
           <template v-else-if="header.key === 'count'">
-              <span @mouseenter="showTooltip($event, record.count + ' ' + record.unitValue)" @mouseleave="hideTooltip">
-                {{ record.count }}
-              </span>
+            <span
+                @mouseenter="showTooltip($event, record.count + ' ' + record.unitValue)"
+                @mouseleave="hideTooltip"
+            >
+              {{ record.count }}
+            </span>
           </template>
           <template v-else-if="header.key === 'unit'">
-              <span @mouseenter="showTooltip($event, record.unitValue)" @mouseleave="hideTooltip">
-                {{ record.unitValue }}
-              </span>
+            <span
+                @mouseenter="showTooltip($event, record.unitValue)"
+                @mouseleave="hideTooltip"
+            >
+              {{ record.unitValue }}
+            </span>
           </template>
           <template v-else-if="header.key === 'date'">
-              <span @mouseenter="showTooltip($event, formatDate(record.finishTime))" @mouseleave="hideTooltip">
-                {{ formatDate(record.finishTime) }}
-              </span>
+            <span
+                @mouseenter="showTooltip($event, formatDate(record.finishTime))"
+                @mouseleave="hideTooltip"
+            >
+              {{ formatDate(record.finishTime) }}
+            </span>
           </template>
           <template v-else-if="header.key === 'remark'">
-              <span @mouseenter="showTooltip($event, record.remark)" @mouseleave="hideTooltip">
-                {{ record.remark || '-' }}
-              </span>
+            <span
+                @mouseenter="showTooltip($event, record.remark)"
+                @mouseleave="hideTooltip"
+            >
+              {{ record.remark || '-' }}
+            </span>
           </template>
           <template v-else-if="header.key === 'actions'">
             <div class="text-center">
@@ -76,7 +96,7 @@
                   :record="record"
                   type="fitness"
                   @edit="$emit('edit', record.id)"
-                  @delete="$emit('delete', record.id)"
+                  @delete="$emit('delete', record)"
               />
             </div>
           </template>
@@ -101,7 +121,7 @@ import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import BaseActions from '@/components/base/BaseActions.vue'
 
 const props = defineProps<{ records: any[]; loading: boolean }>()
-const emit = defineEmits<{ (e: 'edit', id: number): void; (e: 'delete', id: number): void }>()
+const emit = defineEmits<{ (e: 'edit', id: number): void; (e: 'delete', record: any): void }>()
 
 const tableHeaders = [
   { key: 'type', label: '类型' },
@@ -112,7 +132,7 @@ const tableHeaders = [
   { key: 'actions', label: '操作' }
 ]
 
-const DEFAULT_COLUMN_WIDTHS = {
+const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   type: 120,
   count: 100,
   unit: 100,
@@ -200,6 +220,7 @@ onMounted(() => {
   loadColumnWidths()
   window.addEventListener('scroll', hideTooltip)
 })
+
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', hideTooltip)
 })
