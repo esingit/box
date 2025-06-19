@@ -57,9 +57,9 @@ public class AssetNameController {
             @ApiResponse(responseCode = "400", description = "创建失败")
         }
     )
-    public Result<AssetName> create(@Validated @RequestBody AssetName assetName) {
+    public Result<AssetName> add(@Validated @RequestBody AssetName assetName) {
         try {
-            return Result.success(assetNameService.createAssetName(assetName));
+            return Result.success(assetNameService.addAssetName(assetName));
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
         }
@@ -115,7 +115,7 @@ public class AssetNameController {
         return assetName != null ? Result.success(assetName) : Result.error("资产名称不存在");
     }
 
-    @GetMapping
+    @GetMapping("/list")
     @Operation(
         summary = "高级查询资产名称",
         description = "支持分页、按名称和描述模糊搜索、时间范围筛选等",
@@ -124,7 +124,7 @@ public class AssetNameController {
             @ApiResponse(responseCode = "400", description = "查询失败")
         }
     )
-    public Result<Page<AssetName>> advancedSearch(
+    public Result<Page<AssetName>> listRecords(
             @Parameter(description = "当前页码") @RequestParam(defaultValue = "1") Integer current,
             @Parameter(description = "每页大小") @RequestParam(defaultValue = "10") Integer size,
             @Parameter(description = "资产名称") @RequestParam(required = false) String name,
@@ -134,7 +134,7 @@ public class AssetNameController {
             @Parameter(description = "结束时间 (yyyy-MM-dd HH:mm:ss)") 
                 @RequestParam(required = false) String endTime) {
         try {
-            Page<AssetName> result = assetNameService.advancedSearch(
+            Page<AssetName> result = assetNameService.listRecords(
                 current, size, name, description, startTime, endTime);
             return Result.success(result);
         } catch (Exception e) {

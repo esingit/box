@@ -227,24 +227,3 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', onScroll)
 })
 </script>
-
-<style scoped>
-.cell-tooltip {
-  position: absolute;
-  background-color: #1f2937; /* Tailwind gray-800 */
-  color: white;
-  font-size: 0.75rem;
-  border-radius: 0.375rem;
-  padding: 0.125rem 0.5rem;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-  user-select: none;
-  z-index: 10;
-}
-
-.column-resizing {
-  background-color: #cbd5e1 !important; /* Tailwind slate-300 */
-}
-</style>

@@ -55,7 +55,7 @@ const userStore = useUserStore()
 const selectedAssetType = ref([])
 const selectedAssetName = ref([])
 const assetTypes = ref([])
-const assetNames = ref([])
+const assetName = ref([])
 const assetData = ref([])
 const assetError = ref('')
 
@@ -63,7 +63,7 @@ const assetTypeOptions = computed(() =>
     assetTypes.value.map(type => ({ label: type.value1, value: type.id }))
 )
 const filteredAssetNameOptions = computed(() =>
-    assetNames.value.map(name => ({ label: name.name, value: name.id }))
+    assetName.value.map(name => ({ label: name.name, value: name.id }))
 )
 
 function getEmptyDescription(type) {
@@ -123,7 +123,7 @@ const assetChartData = computed(() => {
   const groupedMap = new Map()
 
   const selectedNameSet = new Set(selectedAssetName.value)
-  const nameMap = new Map(assetNames.value.map(n => [n.id, n.name]))
+  const nameMap = new Map(assetName.value.map(n => [n.id, n.name]))
 
   if (selectedAssetName.value.length > 0) {
     assetData.value.forEach(item => {
@@ -161,18 +161,18 @@ const assetChartData = computed(() => {
   return { labels: formattedDates, datasets }
 })
 
-const fetchAssetNames = async () => {
+const fetchAssetName = async () => {
   if (!selectedAssetType.value.length) {
-    assetNames.value = []
+    assetName.value = []
     return
   }
   const response = await axiosInstance.get('/api/asset-names/all', {
     params: { assetTypeId: selectedAssetType.value.join(',') },
   })
   if (response.data?.success && Array.isArray(response.data.data)) {
-    assetNames.value = response.data.data
+    assetName.value = response.data.data
   } else {
-    assetNames.value = []
+    assetName.value = []
   }
 }
 
@@ -194,7 +194,7 @@ const fetchAssetData = async () => {
 
 const handleAssetTypeChange = async () => {
   selectedAssetName.value = []
-  await fetchAssetNames()
+  await fetchAssetName()
   await fetchAssetData()
 }
 const handleAssetNameChange = async () => {
@@ -211,7 +211,7 @@ onMounted(async () => {
     const finance = assetTypes.value.find(t => t.key1 === 'FINANCE')
     if (finance) {
       selectedAssetType.value = [finance.id]
-      await fetchAssetNames()
+      await fetchAssetName()
       await fetchAssetData()
     }
   }

@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
 import axiosInstance from '@/utils/axios'
-import { formatFitnessRecord } from '@/utils/commonMeta'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
+import { formatFitnessRecord } from '@/utils/commonMeta'
 
 export const useFitnessStore = defineStore('fitness', () => {
   // --- 状态 ---
@@ -65,7 +65,7 @@ export const useFitnessStore = defineStore('fitness', () => {
     })
   }
 
-  function formatFinishTime(data: any) {
+  function formatTime(data: any) {
     return {
       ...data,
       finishTime: data.finishTime.includes('T') ? data.finishTime : data.finishTime + 'T00:00:00'
@@ -95,7 +95,7 @@ export const useFitnessStore = defineStore('fitness', () => {
         emitter.emit('notify', { message: res.data.message || '获取列表失败', type: 'error' })
       }
     } catch (err) {
-      await handleError(err, '获取列表')
+      await handleError(err, '获取健身记录')
     } finally {
       loadingList.value = false
       recordController = null
@@ -151,7 +151,7 @@ export const useFitnessStore = defineStore('fitness', () => {
   // --- 增删改 ---
   async function addRecord(data: any) {
     try {
-      const res = await axiosInstance.post('/api/fitness-record/add', formatFinishTime(data))
+      const res = await axiosInstance.post('/api/fitness-record/add', formatTime(data))
       if (res.data.success) {
         emitter.emit('notify', { message: '添加成功', type: 'success' })
         await loadList()
@@ -165,7 +165,7 @@ export const useFitnessStore = defineStore('fitness', () => {
 
   async function updateRecord(data: any) {
     try {
-      const res = await axiosInstance.put('/api/fitness-record/update', formatFinishTime(data))
+      const res = await axiosInstance.put('/api/fitness-record/update', formatTime(data))
       if (res.data.success) {
         emitter.emit('notify', { message: '更新成功', type: 'success' })
         await loadList()
@@ -200,7 +200,6 @@ export const useFitnessStore = defineStore('fitness', () => {
     loadingStats,
     hasRecords,
     recordCount,
-
     loadList,
     updateQuery,
     setPageNo,

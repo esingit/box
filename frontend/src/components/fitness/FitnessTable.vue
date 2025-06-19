@@ -9,17 +9,21 @@
             class="px-3 py-2 font-medium text-left whitespace-nowrap relative group"
             :style="{ width: columnWidths[index] + 'px' }"
         >
-          {{ header.label }}
-          <div
-              v-if="index < tableHeaders.length - 1"
-              class="absolute right-0 top-0 h-full w-1 cursor-col-resize group-hover:bg-gray-300"
-              @mousedown.prevent="startResize($event, index)"
-              @dblclick.prevent="resetColumnWidth(index)"
-          ></div>
+          <div class="flex items-center justify-between">
+            {{ header.label }}
+            <div
+                v-if="index < tableHeaders.length - 1"
+                class="absolute right-0 top-0 h-full w-1 cursor-col-resize group-hover:bg-gray-300"
+                @mousedown.prevent="startResize($event, index)"
+                @dblclick.prevent="resetColumnWidth(index)"
+            ></div>
+          </div>
         </th>
       </tr>
       </thead>
+
       <tbody>
+      <!-- 加载中骨架 -->
       <tr v-if="loading">
         <td :colspan="tableHeaders.length" class="py-8">
           <div class="space-y-2">
@@ -28,6 +32,7 @@
         </td>
       </tr>
 
+      <!-- 无数据 -->
       <tr v-else-if="!records.length">
         <td :colspan="tableHeaders.length" class="py-8 text-center text-gray-400">
           <BaseEmptyState
@@ -38,10 +43,11 @@
         </td>
       </tr>
 
+      <!-- 数据行 -->
       <tr
           v-else
-          v-for="record in records"
-          :key="record.id"
+          v-for="(record, index) in records"
+          :key="record.id || index"
           class="hover:bg-gray-50 transition-colors"
       >
         <td
@@ -116,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import {ref, onMounted, onBeforeUnmount, nextTick} from 'vue'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import BaseActions from '@/components/base/BaseActions.vue'
 
@@ -124,12 +130,12 @@ const props = defineProps<{ records: any[]; loading: boolean }>()
 const emit = defineEmits<{ (e: 'edit', id: number): void; (e: 'delete', record: any): void }>()
 
 const tableHeaders = [
-  { key: 'type', label: '类型' },
-  { key: 'count', label: '数量' },
-  { key: 'unit', label: '单位' },
-  { key: 'date', label: '日期' },
-  { key: 'remark', label: '备注' },
-  { key: 'actions', label: '操作' }
+  {key: 'type', label: '类型'},
+  {key: 'count', label: '数量'},
+  {key: 'unit', label: '单位'},
+  {key: 'date', label: '日期'},
+  {key: 'remark', label: '备注'},
+  {key: 'actions', label: '操作'}
 ]
 
 const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
@@ -145,7 +151,7 @@ const columnWidths = ref<number[]>([])
 const tooltip = ref({
   visible: false,
   content: '',
-  style: { top: '0px', left: '0px', opacity: '0' }
+  style: {top: '0px', left: '0px', opacity: '0'}
 })
 
 function loadColumnWidths() {

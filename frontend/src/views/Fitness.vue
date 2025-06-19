@@ -3,69 +3,37 @@
     <!-- 统计卡片 -->
     <section class="bg-white rounded-xl hover:shadow-md p-6">
       <header class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-semibold text-gray-900">健身记录统计</h2>
-        <button
-            @click="refreshData"
-            class="text-gray-500 hover:text-gray-900 transition"
-            title="刷新数据"
-        >
-          <LucideRefreshCw class="w-6 h-6"/>
+        <h2 class="text-xl font-semibold text-gray-900">健身统计</h2>
+        <button @click="refreshData" class="text-gray-500 hover:text-gray-900 transition" title="刷新数据">
+          <LucideRefreshCw class="w-6 h-6" />
         </button>
       </header>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <template v-if="loading">
-          <div v-for="i in 3" :key="i" class="h-32 bg-gray-200 rounded-lg animate-pulse"/>
+          <div v-for="i in 3" :key="i" class="h-32 bg-gray-200 rounded-lg animate-pulse" />
         </template>
-
         <template v-else>
-          <div class="p-4 rounded-lg border border-gray-200 hover:shadow-md">
-            <p class="text-sm text-gray-500">本月运动</p>
-            <p class="mt-2 text-3xl font-bold text-gray-900">{{ stats.monthlyCount }} 次</p>
-            <p class="mt-1 text-sm text-gray-400">本周运动 {{ stats.weeklyCount }} 次</p>
-          </div>
-
-          <div class="p-4 rounded-lg border border-gray-200 hover:shadow-md">
-            <p class="text-sm text-gray-500">上次运动</p>
-            <p
-                class="mt-2 text-3xl font-bold"
-                :class="{ 'text-red-500': isWorkoutOverdue, 'text-gray-900': !isWorkoutOverdue }"
-            >
-              {{ stats.lastWorkoutDays }} 天前
-            </p>
-            <p
-                class="mt-1 text-sm"
-                :class="isNextWorkoutOverdue ? 'text-red-500' : 'text-gray-400'"
-            >
-              下次运动日 {{ formatDate(stats.nextWorkoutDay) }}
-            </p>
-          </div>
-
-          <div class="p-4 rounded-lg border border-gray-200 hover:shadow-md">
-            <p class="text-sm text-gray-500">今日蛋白</p>
-            <p
-                class="mt-2 text-3xl font-bold flex items-center"
-                :class="stats.proteinIntake >= 80 ? 'text-green-600' : 'text-gray-900'"
-            >
-              {{ stats.proteinIntake }} 克
-              <span
-                  class="ml-3 text-sm font-normal"
-                  :class="stats.proteinIntake >= 80 ? 'text-green-500' : 'text-yellow-500'"
-              >
-                {{ stats.proteinIntake >= 80 ? '✓' : `差 ${80 - stats.proteinIntake} 克` }}
-              </span>
-            </p>
-            <p class="mt-1 text-sm text-gray-400 flex items-center">
-              今日碳水 {{ stats.carbsIntake }} 克
-              <span
-                  v-if="stats.carbsIntake < 120"
-                  class="ml-2 text-yellow-500"
-              >
-                差 {{ 120 - stats.carbsIntake }} 克
-              </span>
-              <span v-else class="ml-2 text-green-500">✓</span>
-            </p>
-          </div>
+          <BaseStatCard
+              title="本月运动"
+              :amount="`${stats.monthlyCount} 次`"
+              :change="`本周 ${stats.weeklyCount} 次`"
+              change-class="text-gray-400"
+          />
+          <BaseStatCard
+              title="上次运动"
+              :amount="`${stats.lastWorkoutDays} 天前`"
+              :highlight-class="isWorkoutOverdue ? 'text-red-500' : 'text-gray-900'"
+              :change="`下次 ${formatDate(stats.nextWorkoutDay)}`"
+              :change-class="isNextWorkoutOverdue ? 'text-red-500' : 'text-gray-400'"
+          />
+          <BaseStatCard
+              title="今日蛋白"
+              :amount="`${stats.proteinIntake} 克`"
+              :highlight-class="stats.proteinIntake >= 80 ? 'text-green-600' : 'text-gray-900'"
+              :change="stats.proteinIntake >= 80 ? '✓' : `差 ${80 - stats.proteinIntake} 克`"
+              :change-class="stats.proteinIntake >= 80 ? 'text-green-500' : 'text-yellow-500'"
+          />
         </template>
       </div>
     </section>
@@ -73,24 +41,19 @@
     <!-- 搜索和操作 -->
     <section class="bg-white rounded-xl hover:shadow-md p-6 space-y-4">
       <div class="flex justify-start">
-        <button
-            @click="handleAdd"
-            class="btn-primary rounded-full px-5 py-2 flex items-center justify-center space-x-2"
-        >
+        <button @click="handleAdd" class="btn-primary rounded-full px-5 py-2 flex items-center space-x-2">
           <LucidePlus class="w-5 h-5" />
           <span>添加记录</span>
         </button>
       </div>
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <FitnessSearch
-            :query="query"
-            :fitnessTypeOptions="fitnessTypeOptions"
-            :resultCount="resultCount"
-            @search="handleQuery"
-            @reset="resetQuery"
-            class="flex-grow"
-        />
-      </div>
+      <FitnessSearch
+          :query="query"
+          :fitnessTypeOptions="fitnessTypeOptions"
+          :resultCount="resultCount"
+          @search="handleQuery"
+          @reset="resetQuery"
+          class="flex-grow"
+      />
     </section>
 
     <!-- 记录列表 -->
@@ -106,7 +69,7 @@
       />
     </section>
 
-    <!-- 添加和编辑弹窗 -->
+    <!-- 弹窗 -->
     <FitnessForm
         v-if="showAddModal"
         :visible="showAddModal"
@@ -117,7 +80,6 @@
         @submit="handleAddRecord"
         @close="closeAddModal"
     />
-
     <FitnessForm
         v-if="editingIdx !== null"
         :visible="true"
@@ -139,14 +101,15 @@ import { storeToRefs } from 'pinia'
 import { useFitnessStore } from '@/store/fitnessStore'
 import { useMetaStore } from '@/store/metaStore'
 import emitter from '@/utils/eventBus'
+import { formatDate } from '@/utils/formatters'
 
+import BaseStatCard from '@/components/base/BaseStatCard.vue'
 import FitnessList from '@/components/fitness/FitnessList.vue'
 import FitnessForm from '@/components/fitness/FitnessForm.vue'
 import FitnessSearch from '@/components/fitness/FitnessSearch.vue'
 
 const fitnessStore = useFitnessStore()
 const metaStore = useMetaStore()
-
 const { list, stats, query, pagination } = storeToRefs(fitnessStore)
 
 const loading = ref(false)
@@ -154,12 +117,10 @@ const showAddModal = ref(false)
 const editingIdx = ref<null | number>(null)
 const resultCount = ref<number | null>(null)
 
-const fitnessTypeOptions = computed(() =>
-    (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
-      label: item.value1 || '',
-      value: item.id
-    }))
-)
+const fitnessTypeOptions = computed(() => (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
+  label: item.value1 || '',
+  value: item.id
+})))
 
 const form = reactive({
   typeId: '',
@@ -169,58 +130,33 @@ const form = reactive({
   remark: ''
 })
 
-function formatDate(dateStr: string | null | undefined) {
-  if (!dateStr) return '-'
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return '-'
-  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
-}
-
-function initFormDefaults() {
-  const types = metaStore.typeMap?.FITNESS_TYPE || []
-  if (types.length === 0) return
-
-  const now = new Date()
-  now.setSeconds(0, 0)
-  form.finishTime = now.toISOString().slice(0, 10)
-  form.count = '1'
-  form.remark = ''
-
-  const first = types[0]
-  form.typeId = String(first.id) || ''
-
-  if (first.key3 && metaStore.typeMap.UNIT) {
-    const unit = metaStore.typeMap.UNIT.find((u: any) => u.key1 === first.key3)
-    form.unitId = unit ? String(unit.id) : ''
-  } else {
-    form.unitId = ''
-  }
-}
-
-watch(editingIdx, (idx) => {
-  if (idx !== null && list.value?.[idx]) {
-    const rec = list.value[idx]
-    form.typeId = rec.typeId || ''
-    form.count = rec.count?.toString() || '1'
-    form.unitId = rec.unitId || ''
-    form.finishTime = rec.finishTime || ''
-    form.remark = rec.remark || ''
-  } else {
-    form.typeId = ''
-    form.count = '1'
-    form.unitId = ''
-    form.finishTime = ''
-    form.remark = ''
-  }
-})
-
 const isWorkoutOverdue = computed(() => stats.value?.lastWorkoutDays > 3)
 const isNextWorkoutOverdue = computed(() => {
   const t = new Date(stats.value?.nextWorkoutDay).getTime()
   return !isNaN(t) && t < Date.now()
 })
 
-// 事件总线toast通知
+function initEmptyForm() {
+  form.typeId = ''
+  form.count = '1'
+  form.unitId = ''
+  form.finishTime = ''
+  form.remark = ''
+}
+
+function initFormByRecord(rec: any) {
+  form.typeId = rec.typeId || ''
+  form.count = rec.count?.toString() || '1'
+  form.unitId = rec.unitId || ''
+  form.finishTime = rec.finishTime || ''
+  form.remark = rec.remark || ''
+}
+
+watch(editingIdx, (idx) => {
+  if (idx !== null && list.value?.[idx]) initFormByRecord(list.value[idx])
+  else initEmptyForm()
+})
+
 function notifyToast(message: string, type: 'success' | 'info' | 'warning' | 'error' = 'success', duration = 3000) {
   emitter.emit('notify', { message, type, duration })
 }
@@ -228,9 +164,7 @@ function notifyToast(message: string, type: 'success' | 'info' | 'warning' | 'er
 async function refreshData() {
   loading.value = true
   try {
-    await metaStore.initAll()
-    await fitnessStore.loadStats()
-    await fitnessStore.loadList()
+    await Promise.all([fitnessStore.loadStats(), fitnessStore.loadList()])
     resultCount.value = fitnessStore.pagination.total
     notifyToast(`成功查询出 ${resultCount.value} 条数据`, 'success')
   } catch (e: any) {
@@ -243,17 +177,7 @@ async function refreshData() {
 async function handleQuery(newQuery: Partial<typeof query.value>) {
   fitnessStore.updateQuery(newQuery)
   fitnessStore.setPageNo(1)
-  loading.value = true
-  try {
-    await fitnessStore.loadStats()
-    await fitnessStore.loadList()
-    resultCount.value = fitnessStore.pagination.total
-    notifyToast(`成功查询出 ${resultCount.value} 条数据`, 'success')
-  } catch (e: any) {
-    notifyToast(e?.message || '查询失败', 'error')
-  } finally {
-    loading.value = false
-  }
+  await refreshData()
 }
 
 function resetQuery() {
@@ -267,7 +191,7 @@ function handlePageChange(newPage: number) {
 }
 
 function handleAdd() {
-  initFormDefaults()
+  initEmptyForm()
   showAddModal.value = true
 }
 

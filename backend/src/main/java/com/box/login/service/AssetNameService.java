@@ -12,7 +12,7 @@ public interface AssetNameService extends IService<AssetName> {
      * @return 创建后的资产名称对象
      * @throws RuntimeException 如果名称已存在
      */
-    AssetName createAssetName(AssetName assetName);
+    AssetName addAssetName(AssetName assetName);
 
     /**
      * 更新资产名称，校验名称唯一性
@@ -33,6 +33,6 @@ public interface AssetNameService extends IService<AssetName> {
      * @param endTime 创建结束时间
      * @return 分页结果
      */
-    Page<AssetName> advancedSearch(Integer current, Integer size, String name, String description, 
+    Page<AssetName> listRecords(Integer current, Integer size, String name, String description,
                                  String startTime, String endTime);
 }

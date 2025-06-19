@@ -16,7 +16,7 @@ import java.io.Serializable;
 public class AssetNameServiceImpl extends ServiceImpl<AssetNameMapper, AssetName> implements AssetNameService {
     
     @Override
-    public AssetName createAssetName(AssetName assetName) {
+    public AssetName addAssetName(AssetName assetName) {
         // 设置创建人
         assetName.setCreateUser(UserContextHolder.getCurrentUsername());
         save(assetName);
@@ -59,7 +59,7 @@ public class AssetNameServiceImpl extends ServiceImpl<AssetNameMapper, AssetName
     }
 
     @Override
-    public Page<AssetName> advancedSearch(Integer current, Integer size, String name, 
+    public Page<AssetName> listRecords(Integer current, Integer size, String name,
                                         String description, String startTime, String endTime) {
         Page<AssetName> page = new Page<>(current, size);
         LambdaQueryWrapper<AssetName> wrapper = Wrappers.lambdaQuery(AssetName.class);

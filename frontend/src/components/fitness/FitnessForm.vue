@@ -109,9 +109,10 @@
 import {Form, Field, ErrorMessage} from 'vee-validate'
 import * as yup from 'yup'
 import {ref, watch, computed} from 'vue'
-import BaseModal from '@/components/base/BaseModal.vue'
-import BaseSelect from '@/components/base/BaseSelect.vue' // 你的下拉组件
 import {useMetaStore} from '@/store/metaStore'
+import {setDefaultUnit} from '@/utils/commonMeta'
+import BaseModal from '@/components/base/BaseModal.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
 
 const props = defineProps({
   visible: Boolean,
@@ -167,24 +168,5 @@ function handleClose() {
 function handleSubmit(values: any) {
   emit('update:form', values)
   emit('submit', values)
-}
-
-// 联动默认单位设置，支持外部调用时带 setFieldValue
-function setDefaultUnit(typeId: string, setFieldValue?: any, values?: any) {
-  const selectedType = fitnessTypes.value.find(type => String(type.id) === String(typeId))
-  if (!selectedType?.key3) {
-    if (setFieldValue) setFieldValue('unitId', '')
-    else form.value.unitId = ''
-    return
-  }
-
-  const defaultUnit = units.value.find(unit => unit.key1 === selectedType.key3)
-  if (!defaultUnit) return
-
-  const currentUnitId = values?.unitId || form.value.unitId
-  if (!currentUnitId || String(currentUnitId) !== String(defaultUnit.id)) {
-    if (setFieldValue) setFieldValue('unitId', defaultUnit.id)
-    else form.value.unitId = defaultUnit.id
-  }
 }
 </script>

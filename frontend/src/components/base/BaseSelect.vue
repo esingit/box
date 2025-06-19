@@ -13,14 +13,12 @@
 
       <ListboxOptions
           :class="[
-            'absolute z-50 w-full max-h-60 overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
-            direction === 'up'
-              ? 'mb-1 bottom-full'   // 向上展开，菜单向上方展开
-              : 'mt-1 top-full'      // 向下展开，菜单向下方展开，默认
-          ]"
+          'absolute z-50 w-full max-h-60 overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
+          direction === 'up' ? 'mb-1 bottom-full' : 'mt-1 top-full'
+        ]"
       >
         <ListboxOption
-            v-for="item in props.options"
+            v-for="item in safeOptions"
             :key="item.value"
             :value="item.value"
             v-slot="{ active, selected }"
@@ -65,34 +63,44 @@ interface Option {
   value: string | number
 }
 
-const props = defineProps<{
+// Props with defaults
+const props = withDefaults(defineProps<{
   modelValue: string | number | (string | number)[]
-  options: Option[]
+  options?: Option[]
   placeholder?: string
   multiple?: boolean
-  direction?: 'up' | 'down'  // 新增direction参数，控制下拉框方向，默认down
-}>()
+  direction?: 'up' | 'down'
+}>(), {
+  options: () => [],
+  placeholder: '请选择',
+  multiple: false,
+  direction: 'down'
+})
 
 const emit = defineEmits(['update:modelValue'])
-
-const multiple = props.multiple ?? false
 
 const modelValue = computed({
   get: () => props.modelValue,
   set: val => emit('update:modelValue', val)
 })
 
+// 处理空值保护
+const safeOptions = computed(() => props.options ?? [])
+
 function isArrayValue(val: unknown): val is (string | number)[] {
   return Array.isArray(val)
 }
 
 const selectedLabels = computed(() => {
-  if (multiple && isArrayValue(modelValue.value)) {
-    return props.options
-        .filter(opt => isArrayValue(modelValue.value) && modelValue.value.includes(opt.value))
+  const options = safeOptions.value
+  const value = modelValue.value
+
+  if (props.multiple && isArrayValue(value)) {
+    return options
+        .filter(opt => value.includes(opt.value))
         .map(opt => opt.label)
   } else {
-    const selected = props.options.find(opt => opt.value === modelValue.value)
+    const selected = options.find(opt => opt.value === value)
     return selected ? [selected.label] : []
   }
 })
@@ -100,9 +108,8 @@ const selectedLabels = computed(() => {
 const selectedText = computed(() =>
     selectedLabels.value.length
         ? selectedLabels.value.join('、')
-        : props.placeholder || '请选择'
+        : props.placeholder
 )
 
-// 设置默认值为 'down'
 const direction = computed(() => props.direction ?? 'down')
 </script>

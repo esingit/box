@@ -1,165 +1,106 @@
 <template>
-  <div class="relative w-full bg-white border rounded-xl p-4 transition">
-    <!-- 主行 -->
-    <div class="flex items-center justify-between gap-3 min-w-full flex-wrap">
-      <!-- 资产名称 多选 -->
+  <div class="relative w-full bg-white border rounded-xl p-4 space-y-4 transition">
+    <!-- 搜索行 -->
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="flex-1 min-w-[200px]">
       <BaseSelect
-          v-model="localQuery.assetNameIdList"
+          v-model="query.assetNameIdList"
           :options="assetNameOptions"
           placeholder="全部资产名称"
-          class="w-full max-w-[320px]"
           multiple
           clearable
+          class="w-full"
       />
+      </div>
 
-      <!-- 资产类型 多选 -->
+      <!-- 资产类型 -->
       <BaseSelect
-          v-model="localQuery.typeIdList"
-          :options="typeOptions"
+          v-model="query.typeIdList"
+          :options="assetTypeOptions"
           placeholder="全部资产类型"
-          class="w-full max-w-[240px]"
           multiple
           clearable
+          class="w-full max-w-[240px]"
       />
 
-      <!-- 资产位置 多选 -->
+      <!-- 资产位置 -->
       <BaseSelect
-          v-model="localQuery.locationIdList"
-          :options="locationOptions"
+          v-model="query.locationIdList"
+          :options="assetLocationOptions"
           placeholder="全部资产位置"
-          class="w-full max-w-[240px]"
           multiple
           clearable
+          class="w-full max-w-[240px]"
       />
 
       <!-- 按钮组 -->
-      <div class="flex items-center gap-2 shrink-0 mt-2 sm:mt-0">
-        <button @click="onSearch" title="查询" class="btn-outline p-2">
+      <div class="flex items-center gap-2">
+        <button @click="onSearch" title="查询" class="btn-outline">
           <LucideSearch class="w-4 h-4" />
         </button>
-        <button @click="onReset" title="重置" class="btn-outline p-2">
+        <button @click="onReset" title="重置" class="btn-outline">
           <LucideRotateCcw class="w-4 h-4" />
         </button>
-        <button @click="showMore = !showMore" title="更多" class="btn-outline p-2">
+        <button @click="toggleMore" title="更多" class="btn-outline">
           <component :is="showMore ? LucideChevronUp : LucideChevronDown" class="w-4 h-4" />
         </button>
       </div>
     </div>
 
-    <!-- 更多查询 -->
-    <div v-if="showMore" class="mt-4 flex flex-wrap items-center gap-4">
+    <!-- 更多条件 -->
+    <div v-if="showMore" class="flex flex-col md:flex-row md:items-center md:gap-3 gap-2">
       <!-- 日期范围 -->
-      <div class="flex items-center gap-2 min-w-[220px] flex-shrink-0">
-        <input
-            type="date"
-            v-model="localQuery.startDate"
-            class="input-base"
-            placeholder="开始日期"
-        />
-        <span class="text-gray-400 select-none">至</span>
-        <input
-            type="date"
-            v-model="localQuery.endDate"
-            class="input-base"
-            placeholder="结束日期"
-        />
+      <div class="flex items-center gap-2">
+        <input type="date" v-model="query.startDate" class="input-base" />
+        <span class="text-gray-400">至</span>
+        <input type="date" v-model="query.endDate" class="input-base" />
       </div>
 
       <!-- 备注关键词 -->
       <input
           type="text"
-          v-model="localQuery.remark"
+          v-model="query.remark"
           placeholder="备注关键词"
-          class="base-input flex-grow min-w-[240px]"
+          class="input-base w-full md:w-[300px]"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed } from 'vue'
+import { ref } from 'vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import {
   LucideChevronDown,
   LucideChevronUp,
   LucideRotateCcw,
-  LucideSearch
+  LucideSearch,
 } from 'lucide-vue-next'
 
-const props = defineProps({
-  query: Object,
-  assetNames: Array,
-  types: Array,
-  locations: Array
-})
+const props = defineProps<{
+  query: {
+    assetNameIdList: (string | number)[]
+    typeIdList: (string | number)[]
+    locationIdList: (string | number)[]
+    startDate: string
+    endDate: string
+    remark: string
+  }
+  assetNameOptions: Array<{ label: string; value: string | number }>
+  assetTypeOptions: Array<{ label: string; value: string | number }>
+  assetLocationOptions: Array<{ label: string; value: string | number }>
+  resultCount: number | null
+}>()
 
-const emit = defineEmits(['updateQuery', 'search', 'reset'])
+const emit = defineEmits(['search', 'reset'])
 
 const showMore = ref(false)
-
-const localQuery = reactive({
-  assetNameIdList: [] as (string | number)[],
-  typeIdList: [] as (string | number)[],
-  locationIdList: [] as (string | number)[],
-  startDate: '',
-  endDate: '',
-  remark: ''
-})
-
-// 同步外部传入 query 到 localQuery
-function updateLocalQuery(source: any) {
-  Object.assign(localQuery, {
-    assetNameIdList: source.assetNameIdList || [],
-    typeIdList: source.typeIdList || [],
-    locationIdList: source.locationIdList || [],
-    startDate: source.startDate || '',
-    endDate: source.endDate || '',
-    remark: source.remark || ''
-  })
+const toggleMore = () => {
+  showMore.value = !showMore.value
 }
-updateLocalQuery(props.query || {})
-
-watch(
-    () => props.query,
-    (newQuery) => {
-      updateLocalQuery(newQuery || {})
-    },
-    { deep: true }
-)
-
-// 向外同步本地查询条件
-watch(
-    localQuery,
-    (newVal) => {
-      emit('updateQuery', { ...newVal })
-    },
-    { deep: true }
-)
-
-// 选项格式化，保证label/value统一
-const assetNameOptions = computed(() =>
-    (props.assetNames || []).map(item => ({
-      label: item.name || '',
-      value: item.id
-    }))
-)
-
-const typeOptions = computed(() =>
-    (props.types || []).map(item => ({
-      label: item.value1 || '',
-      value: item.id
-    }))
-)
-
-const locationOptions = computed(() =>
-    (props.locations || []).map(item => ({
-      label: item.value1 || '',
-      value: item.id
-    }))
-)
 
 function onSearch() {
-  emit('search')
+  emit('search', { ...props.query })
 }
 
 function onReset() {

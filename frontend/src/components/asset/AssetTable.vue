@@ -1,21 +1,21 @@
 <template>
-  <div class="table-container overflow-auto border border-gray-200 rounded-xl bg-white">
-    <table class="min-w-full border-collapse table-fixed text-sm text-gray-900">
-      <thead class="bg-gray-50 select-none">
+  <div class="table-container overflow-auto border border-gray-200 rounded-xl">
+    <table class="min-w-full border-collapse table-fixed text-sm text-gray-800">
+    <thead class="bg-gray-50 select-none">
       <tr>
         <th
-            v-for="header in tableHeaders"
+            v-for="(header, index) in tableHeaders"
             :key="header.key"
             class="px-3 py-2 font-medium text-left whitespace-nowrap relative group"
-            :style="{ width: columnWidths[header.key] + 'px' }"
+            :style="{ width: columnWidths[index] + 'px' }"
         >
           <div class="flex items-center justify-between">
-            <span>{{ header.label }}</span>
+            {{ header.label }}
             <div
-                v-if="header.resizable"
+                v-if="index < tableHeaders.length - 1"
                 class="absolute right-0 top-0 h-full w-1 cursor-col-resize group-hover:bg-gray-300"
-                @mousedown.prevent="startResize($event, header.key)"
-                @dblclick.prevent="resetColumnWidth(header.key)"
+                @mousedown.prevent="startResize($event, index)"
+                @dblclick.prevent="resetColumnWidth(index)"
             ></div>
           </div>
         </th>
@@ -23,6 +23,7 @@
       </thead>
 
       <tbody>
+
       <!-- 加载中骨架 -->
       <tr v-if="loading">
         <td :colspan="tableHeaders.length" class="py-8">
@@ -34,8 +35,12 @@
 
       <!-- 无数据 -->
       <tr v-else-if="!records.length">
-        <td :colspan="tableHeaders.length" class="py-8 text-center text-gray-400 select-none">
-          暂无资产记录，点击上方按钮添加
+        <td :colspan="tableHeaders.length" class="py-8 text-center text-gray-400">
+          <BaseEmptyState
+              icon="Dumbbell"
+              message="暂无健身记录"
+              description="点击上方的添加记录按钮开始记录"
+          />
         </td>
       </tr>
 
@@ -96,6 +101,7 @@
 import { reactive, ref } from 'vue'
 import BaseActions from '@/components/base/BaseActions.vue'
 import Tooltip from '@/components/base/BaseNotice.vue'
+import BaseEmptyState from "@/components/base/BaseEmptyState.vue";
 
 const props = defineProps({
   records: {
@@ -211,9 +217,3 @@ function formatDate(dateStr) {
   return dateStr.slice(0, 10)
 }
 </script>
-
-<style scoped>
-.table-container {
-  /* 全靠 Tailwind 管理，不需要额外样式 */
-}
-</style>
