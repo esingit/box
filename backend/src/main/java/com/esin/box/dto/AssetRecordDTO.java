@@ -13,5 +13,5 @@ public class AssetRecordDTO extends AssetRecord {
     private String unitName;    // 货币单位名称
     private String unitValue;   // 货币单位值
     private String assetLocationName;  // 资产位置名称
-    private String aseetLocationValue; // 资产位置值
+    private String assetLocationValue; // 资产位置值
 }

@@ -28,28 +28,24 @@ const columns = [
     key: 'typeValue',
     label: '类型',
     resizable: true,
-    defaultWidth: 120,
+    defaultWidth: 200,
+    type: 'text',
     tooltip: (row: any) => row.typeValue
   },
   {
     key: 'count',
     label: '数量',
     resizable: true,
-    defaultWidth: 100,
+    defaultWidth: 200,
+    type: 'count',
     tooltip: (row: any) => `${row.count} ${row.unitValue || ''}`.trim()
-  },
-  {
-    key: 'unitValue',
-    label: '单位',
-    resizable: true,
-    defaultWidth: 100,
-    tooltip: (row: any) => row.unitValue
   },
   {
     key: 'finishTime',
     label: '日期',
     resizable: true,
-    defaultWidth: 120,
+    defaultWidth: 300,
+    type: 'date',
     value: (row: any) => row.finishTime?.slice(0, 10) || '-',
     tooltip: (row: any) => row.finishTime?.slice(0, 10)
   },
@@ -57,14 +53,15 @@ const columns = [
     key: 'remark',
     label: '备注',
     resizable: true,
-    defaultWidth: 200,
+    defaultWidth: 500,
+    type: 'text',
     tooltip: (row: any) => row.remark
   },
   {
     key: 'actions',
     label: '操作',
     resizable: false,
-    defaultWidth: 100,
+    defaultWidth: 30,
     actions: true
   }
 ]

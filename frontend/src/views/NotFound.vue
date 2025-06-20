@@ -5,7 +5,7 @@
       <h1 class="text-2xl font-semibold mb-2">{{ message }}</h1>
       <button
           @click="goHome"
-          class="mt-6 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-md transition"
+          class="btn-primary"
       >
         返回首页
       </button>
@@ -47,9 +47,3 @@ function goHome() {
   router.push('/home')
 }
 </script>
-
-<style scoped>
-.exception-container {
-  /* tailwind 已覆盖 */
-}
-</style>

@@ -91,7 +91,7 @@ export async function formatAssetRecord<
         assetLocationId: string | number
         assetTypeValue?: string
         unitValue?: string
-        aseetLocationValue?: string
+        assetLocationValue?: string
     } & Record<string, any>
 >(record: T): Promise<T> {
     if (!record) {
@@ -101,17 +101,17 @@ export async function formatAssetRecord<
 
     console.debug('[Asset] 格式化记录:', record)
 
-    const [assetTypeValue, unitValue, aseetLocationValue] = await Promise.all([
+    const [assetTypeValue, unitValue, assetLocationValue] = await Promise.all([
         formatValue(record.assetTypeId, record.assetTypeValue),
         formatValue(record.unitId, record.unitValue),
-        formatValue(record.assetLocationId, record.aseetLocationValue)
+        formatValue(record.assetLocationId, record.assetLocationValue)
     ])
 
     const formatted = {
         ...record,
         assetTypeValue,
         unitValue,
-        aseetLocationValue
+        assetLocationValue
     }
 
     console.debug('[Asset] 格式化完成:', formatted)

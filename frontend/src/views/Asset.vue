@@ -271,7 +271,7 @@ async function saveEdit(data: typeof form) {
 }
 
 function handleDelete(record: any) {
-  const dataInfo = `[${record.assetName},${record.assetTypeValue || '类型未知'},${record.amount}${record.unitValue},${record.aseetLocationValue},${formatDate(record.acquireTime)}]`
+  const dataInfo = `[${record.assetName},${record.assetTypeValue || '类型未知'},${record.amount}${record.unitValue},${record.assetLocationValue},${formatDate(record.acquireTime)}]`
   emitter.emit('confirm', {
     title: '删除确认',
     message: `确定要删除${dataInfo}这条记录吗？此操作无法撤销。`,

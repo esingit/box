@@ -21,7 +21,7 @@
         <result property="unitName" column="unit_name"/>
         <result property="unitValue" column="unit_value"/>
         <result property="assetLocationName" column="asset_location_name"/>
-        <result property="aseetLocationValue" column="location_value"/>
+        <result property="assetLocationValue" column="location_value"/>
         <result property="assetName" column="asset_name"/>
     </resultMap>
 

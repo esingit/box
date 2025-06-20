@@ -6,24 +6,26 @@
         <th
             v-for="(col, idx) in columns"
             :key="col.key"
-            class="px-3 py-2 font-medium text-left whitespace-nowrap relative group"
+            class="px-3 py-2 font-medium whitespace-nowrap relative group"
             :style="{ width: columnWidths[col.key] + 'px' }"
+            :class="headerAlignClass(col.key)"
         >
-          <div class="flex items-center justify-between">
+          <div
+              :class="['w-full', textAlignClass(col.key), 'select-none truncate pr-2']"
+          >
             {{ col.label }}
-            <div
-                v-if="col.resizable && idx < columns.length - 1"
-                class="absolute right-0 top-0 h-full w-1 cursor-col-resize group-hover:bg-gray-300"
-                @mousedown.prevent="startResize($event, col.key)"
-                @dblclick.prevent="resetColumnWidth(col.key)"
-            ></div>
           </div>
+          <div
+              v-if="col.resizable && idx < columns.length - 1"
+              class="absolute right-0 top-0 h-full w-1 cursor-col-resize group-hover:bg-gray-300"
+              @mousedown.prevent="startResize($event, col.key)"
+              @dblclick.prevent="resetColumnWidth(col.key)"
+          ></div>
         </th>
       </tr>
       </thead>
 
       <tbody>
-      <!-- 加载中 -->
       <tr v-if="loading">
         <td :colspan="columns.length" class="py-8">
           <slot name="loading">
@@ -34,7 +36,6 @@
         </td>
       </tr>
 
-      <!-- 空状态 -->
       <tr v-else-if="!data.length">
         <td :colspan="columns.length" class="py-8 text-center text-gray-400">
           <slot name="empty">
@@ -47,7 +48,6 @@
         </td>
       </tr>
 
-      <!-- 数据行 -->
       <tr
           v-else
           v-for="(row, rowIndex) in data"
@@ -59,57 +59,54 @@
             :key="col.key"
             class="px-3 py-2 truncate whitespace-nowrap"
             :style="{ width: columnWidths[col.key] + 'px' }"
-            @mouseenter="showTooltip(rowIndex, col.key)"
-            @mouseleave="hideTooltip"
+            :class="cellAlignClass(col.key)"
+            @mouseenter="col.key !== 'actions' && onMouseEnter(rowIndex, col.key, $event)"
+            @mousemove="col.key !== 'actions' && onMouseMove($event)"
+            @mouseleave="col.key !== 'actions' && onMouseLeave()"
         >
-          <!-- 操作列 -->
           <template v-if="col.key === 'actions' && col.actions">
-            <div class="text-center">
-              <BaseActions :record="row" @edit="handleEdit(row)" @delete="handleDelete(row)" />
+            <div class="flex justify-end">
+              <BaseActions
+                  :record="row"
+                  @edit="handleEdit(row)"
+                  @delete="handleDelete(row)"
+              />
             </div>
           </template>
-
-          <!-- 普通数据列 -->
           <template v-else>
             {{ formatCell(row, col.key) }}
           </template>
-
-          <!-- Tooltip -->
-          <Tooltip
-              v-if="tooltipVisible && tooltipIndex === rowIndex && tooltipField === col.key && tooltipContent"
-              :content="tooltipContent"
-          />
         </td>
       </tr>
       </tbody>
     </table>
+
+    <!-- Tooltip -->
+    <Teleport to="body">
+      <div
+          v-if="tooltipVisible"
+          class="z-50 pointer-events-none select-none bg-gray-700 text-white text-xs rounded px-2 py-1 whitespace-nowrap"
+          :style="{ position: 'fixed', top: tooltipPosition.y + 'px', left: tooltipPosition.x + 'px' }"
+      >
+        {{ tooltipContent }}
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { reactive, ref } from 'vue'
-import BaseActions from '@/components/base/BaseActions.vue'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
-import Tooltip from '@/components/base/BaseNotice.vue'
+import BaseActions from '@/components/base/BaseActions.vue'
 
 const props = defineProps({
-  columns: {
-    type: Array,
-    required: true
-  },
-  data: {
-    type: Array,
-    default: () => []
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  }
+  columns: { type: Array, required: true },
+  data: { type: Array, default: () => [] },
+  loading: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['edit', 'delete'])
 
-// 列宽初始化
 const DEFAULT_WIDTH = 100
 const columnWidths = reactive({})
 props.columns.forEach(col => {
@@ -120,7 +117,17 @@ props.columns.forEach(col => {
 let resizingKey = null
 let startX = 0
 let startWidth = 0
+let resizeTimer = null
 
+function doResize(e) {
+  if (!resizingKey) return
+  if (resizeTimer) return
+  resizeTimer = setTimeout(() => {
+    const delta = e.pageX - startX
+    columnWidths[resizingKey] = Math.max(60, startWidth + delta)
+    resizeTimer = null
+  }, 16)
+}
 function startResize(e, key) {
   resizingKey = key
   startX = e.pageX
@@ -128,79 +135,96 @@ function startResize(e, key) {
   window.addEventListener('mousemove', doResize)
   window.addEventListener('mouseup', stopResize)
 }
-
-function doResize(e) {
-  if (!resizingKey) return
-  const delta = e.pageX - startX
-  columnWidths[resizingKey] = Math.max(60, startWidth + delta)
-}
-
 function stopResize() {
   resizingKey = null
   window.removeEventListener('mousemove', doResize)
   window.removeEventListener('mouseup', stopResize)
+  if (resizeTimer) {
+    clearTimeout(resizeTimer)
+    resizeTimer = null
+  }
 }
-
 function resetColumnWidth(key) {
   const col = props.columns.find(c => c.key === key)
   columnWidths[key] = col?.defaultWidth || DEFAULT_WIDTH
 }
 
-// Tooltip 控制
-const tooltipVisible = ref(false)
-const tooltipIndex = ref(null)
-const tooltipField = ref(null)
-const tooltipContent = ref('')
-
-function showTooltip(index, field) {
-  tooltipIndex.value = index
-  tooltipField.value = field
-  tooltipVisible.value = true
-
-  const row = props.data[index]
-  if (!row) {
-    tooltipVisible.value = false
-    return
-  }
-
-  const isAmountField = ['amount', 'count'].includes(field)
-  const isDateField = ['acquireTime', 'finishTime'].includes(field)
-
-  if (isAmountField) {
-    tooltipContent.value = formatAmount(row.amount) + (row.unitValue ? ` ${row.unitValue}` : '')
-  } else if (isDateField) {
-    tooltipContent.value = formatDate(row.acquireTime)
-  } else {
-    tooltipContent.value = row[field] || '-'
-  }
+// 对齐类
+function textAlignClass(key) {
+  if (['amount', 'count'].includes(key)) return 'text-right'
+  if (['acquireTime', 'finishTime'].includes(key)) return 'text-center'
+  if (key === 'actions') return 'text-center'
+  return 'text-left'
+}
+function headerAlignClass(key) {
+  return textAlignClass(key)
+}
+function cellAlignClass(key) {
+  if (key === 'actions') return 'text-right'
+  return textAlignClass(key)
 }
 
-function hideTooltip() {
+// Tooltip 控制
+const tooltipVisible = ref(false)
+const tooltipContent = ref('')
+const tooltipPosition = reactive({ x: 0, y: 0 })
+
+let currentRow = null
+let currentField = null
+
+function onMouseEnter(index, field, event) {
+  const row = props.data[index]
+  if (!row) return
+  if (currentRow !== index || currentField !== field) {
+    tooltipContent.value = formatTooltipContent(row, field)
+    currentRow = index
+    currentField = field
+  }
+  tooltipVisible.value = true
+  onMouseMove(event)
+}
+
+function onMouseMove(event) {
+  if (!tooltipVisible.value) return
+  tooltipPosition.x = event.clientX + 12
+  tooltipPosition.y = event.clientY + 20
+}
+function onMouseLeave() {
   tooltipVisible.value = false
-  tooltipIndex.value = null
-  tooltipField.value = null
+  currentRow = null
+  currentField = null
   tooltipContent.value = ''
 }
 
-// 格式化内容
-function formatCell(row, key) {
-  if (key === 'amount') return formatAmount(row.amount) + (row.unitValue ? ` ${row.unitValue}` : '')
-  if (key === 'time') return formatDate(row.acquireTime)
+function formatTooltipContent(row, key) {
+  if (['amount', 'count'].includes(key)) {
+    return formatAmount(row[key]) + (row.unitValue ? ` ${row.unitValue}` : '')
+  }
+  if (['acquireTime', 'finishTime'].includes(key)) {
+    return formatDate(row[key])
+  }
   return row[key] ?? '-'
 }
 
-function formatAmount(amount) {
-  if (amount == null) return '0.00'
-  const abs = Math.abs(amount)
-  return (amount < 0 ? '-' : '') + abs.toFixed(2)
+function formatCell(row, key) {
+  if (key === 'amount' || key === 'count') {
+    return formatAmount(row[key]) + (row.unitValue ? ` ${row.unitValue}` : '')
+  }
+  if (key === 'acquireTime' || key === 'finishTime') {
+    return formatDate(row[key])
+  }
+  return row[key] ?? '-'
 }
-
+function formatAmount(value) {
+  if (value == null || isNaN(value)) return '0.00'
+  const abs = Math.abs(value)
+  return (value < 0 ? '-' : '') + abs.toFixed(2)
+}
 function formatDate(dateStr) {
   if (!dateStr) return '-'
   return dateStr.slice(0, 10)
 }
 
-// 事件封装
 function handleEdit(row) {
   emit('edit', row)
 }
