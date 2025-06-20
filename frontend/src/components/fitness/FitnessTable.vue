@@ -35,28 +35,28 @@ const columns = [
     key: 'count',
     label: '数量',
     resizable: true,
-    defaultWidth: 200,
+    defaultWidth: 100,
     type: 'count'
   },
   {
     key: 'finishTime',
     label: '日期',
     resizable: true,
-    defaultWidth: 300,
+    defaultWidth: 200,
     type: 'date'
   },
   {
     key: 'remark',
     label: '备注',
     resizable: true,
-    defaultWidth: 500,
+    defaultWidth: 200,
     type: 'text'
   },
   {
     key: 'actions',
     label: '操作',
     resizable: false,
-    defaultWidth: 30,
+    defaultWidth: 100,
     actions: true
   }
 ]

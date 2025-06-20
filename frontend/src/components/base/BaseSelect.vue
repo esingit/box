@@ -10,13 +10,11 @@
         <ListboxButton
             :title="showError ? (requiredMessage || '此项为必填') : selectedText"
             :class="[
-            'input-base flex justify-between items-center w-full pr-8',
-            showError ? 'msg-error' : ''
-          ]"
+              'input-base flex justify-between items-center w-full pr-8',
+              showError ? 'msg-error' : ''
+            ]"
         >
-          <span
-              class="truncate whitespace-nowrap block max-w-full"
-          >
+          <span class="truncate whitespace-nowrap block max-w-full">
             {{ showError ? (requiredMessage || '此项为必填') : selectedText }}
           </span>
 
@@ -39,9 +37,10 @@
         <!-- 下拉选项 -->
         <ListboxOptions
             :class="[
-            'absolute z-50 w-full max-h-60 overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
-            direction === 'up' ? 'mb-1 bottom-full' : 'mt-1 top-full'
-          ]"
+              'absolute z-50 w-full overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
+              direction === 'up' ? 'mb-1 bottom-full' : 'mt-1 top-full',
+              'min-h-[80px] max-h-60'
+            ]"
         >
           <ListboxOption
               v-for="item in safeOptions"
@@ -52,10 +51,10 @@
             <div
                 class="flex items-center px-3 py-2 rounded-xl cursor-pointer select-none transition-colors duration-150"
                 :class="{
-                'bg-gray-100': active,
-                'font-semibold text-black': selected,
-                'text-gray-900': !selected
-              }"
+                  'bg-gray-100': active,
+                  'font-semibold text-black': selected,
+                  'text-gray-900': !selected
+                }"
             >
               <!-- 多选勾选图标 -->
               <template v-if="multiple">
@@ -176,11 +175,11 @@ function onBlur() {
             : !modelValue.value || modelValue.value === ''
     if (empty) {
       showError.value = true
-      // 下拉打开时自动关闭
       nextTick(() => {
-        // 失焦后自动聚焦到 ListboxButton
         const btn = document.querySelector('.input-base')
-        if (btn) btn.focus()
+        if (btn instanceof HTMLElement) {
+          btn.focus()
+        }
       })
     } else {
       showError.value = false

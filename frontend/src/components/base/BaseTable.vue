@@ -1,8 +1,9 @@
 <template>
-  <div class="table-container overflow-auto border border-gray-200 rounded-xl">
-    <table class="min-w-full border-collapse table-fixed text-sm text-gray-800">
-      <thead class="bg-gray-50 select-none">
-      <tr>
+  <div class="relative overflow-auto border border-gray-200 rounded-xl min-h-[200px] max-h-[600px]">
+    <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
+      <!-- 表头固定 -->
+      <thead class="bg-gray-50 sticky top-0 z-10 block w-full select-none">
+      <tr class="table w-full table-fixed">
         <th
             v-for="(col, idx) in columns"
             :key="col.key"
@@ -10,9 +11,7 @@
             :style="{ width: columnWidths[col.key] + 'px' }"
             :class="headerAlignClass(col.key)"
         >
-          <div
-              :class="['w-full', textAlignClass(col.key), 'select-none truncate pr-2']"
-          >
+          <div :class="['w-full', textAlignClass(col.key), 'select-none truncate pr-2']">
             {{ col.label }}
           </div>
           <div
@@ -25,8 +24,8 @@
       </tr>
       </thead>
 
-      <tbody>
-      <tr v-if="loading">
+      <tbody class="block w-full">
+      <tr v-if="loading" class="table w-full table-fixed">
         <td :colspan="columns.length" class="py-8">
           <slot name="loading">
             <div class="space-y-2">
@@ -36,7 +35,7 @@
         </td>
       </tr>
 
-      <tr v-else-if="!data.length">
+      <tr v-else-if="!data.length" class="table w-full table-fixed">
         <td :colspan="columns.length" class="py-8 text-center text-gray-400">
           <slot name="empty">
             <BaseEmptyState
@@ -52,7 +51,7 @@
           v-else
           v-for="(row, rowIndex) in data"
           :key="row.id || rowIndex"
-          class="hover:bg-gray-50 transition-colors"
+          class="table w-full table-fixed hover:bg-gray-50 transition-colors"
       >
         <td
             v-for="col in columns"

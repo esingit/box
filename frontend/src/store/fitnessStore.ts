@@ -23,7 +23,7 @@ export const useFitnessStore = defineStore('fitness', () => {
 
   const pagination = reactive({
     pageNo: 1,
-    pageSize: 7,
+    pageSize: 10,
     total: 0
   })
 

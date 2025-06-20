@@ -32,7 +32,7 @@
     </button>
 
     <!-- 每页条数选择 -->
-    <div class="w-[120px]">
+    <div class="w-[130px]">
       <Field name="pageSize" v-slot="{ value, setValue }">
         <BaseSelect
             :modelValue="value"
@@ -71,7 +71,7 @@ const emit = defineEmits<{
   (e: 'page-size-change', size: number): void
 }>()
 
-const pageSizeOptions = [10, 20, 50]
+const pageSizeOptions = [10, 20, 50, 100, 300, 900]
 
 const totalPages = computed(() =>
     props.total && props.pageSize ? Math.ceil(props.total / props.pageSize) : 0
