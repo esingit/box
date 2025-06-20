@@ -1,21 +1,33 @@
-import axiosInstance from '@/utils/axios';
+import axios from 'axios';
 
 class TokenService {
+  isRefreshing: boolean;
+  waitingRequests: Array<{
+    config: any,
+    resolve: (value?: any) => void,
+    reject: (reason?: any) => void
+  }>;
+
+  clearToken() {
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+  }
+
   constructor() {
-    this.isRefreshing = false
-    this.waitingRequests = []
+    this.isRefreshing = false;
+    this.waitingRequests = [];
   }
 
-  getToken() {
-    return localStorage.getItem('token')
+  getToken(): string | null {
+    return localStorage.getItem('token');
   }
 
-  setToken(token) {
-    localStorage.setItem('token', token)
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+  setToken(token: string) {
+    localStorage.setItem('token', token);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   }
 
-  async refreshToken() {
+  async refreshToken(): Promise<string | null> {
     try {
       const token = this.getToken();
       if (!token) {
@@ -25,12 +37,9 @@ class TokenService {
       const { useUserStore } = await import('@/store/userStore');
       const userStore = useUserStore();
 
-      // 使用统一的token验证方法
       if (await userStore.verifyToken()) {
-        // verifyToken 已经处理了刷新逻辑
-        return this.getToken(); // 返回可能已经更新的token
+        return this.getToken();
       }
-      
       throw new Error('Token refresh failed');
     } catch (error) {
       console.error('刷新token失败:', error);
@@ -38,23 +47,23 @@ class TokenService {
     }
   }
 
-  addToWaitingQueue(config) {
+  addToWaitingQueue(config: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.waitingRequests.push({ config, resolve, reject })
-    })
+      this.waitingRequests.push({ config, resolve, reject });
+    });
   }
 
-  processWaitingQueue(newToken) {
+  processWaitingQueue(newToken: string) {
     this.waitingRequests.forEach(({ config, resolve }) => {
-      config.headers['Authorization'] = `Bearer ${newToken}`
-      resolve(axios(config))
-    })
-    this.waitingRequests = []
+      config.headers['Authorization'] = `Bearer ${newToken}`;
+      resolve(axios(config));
+    });
+    this.waitingRequests = [];
   }
 
   clearWaitingQueue() {
-    this.waitingRequests = []
+    this.waitingRequests = [];
   }
 }
 
-export const tokenService = new TokenService()
+export const tokenService = new TokenService();

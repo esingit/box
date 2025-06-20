@@ -1,12 +1,9 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosRequestConfig, AxiosError } from 'axios'
 
-interface AxiosRetryConfig {
-  baseURL: string;
-  timeout: number;
-  withCredentials: boolean;
-  retry: number;
-  retryDelay: number;
-  shouldRetry: (error: AxiosError) => boolean;
+export interface AxiosRetryConfig extends AxiosRequestConfig {
+  retry?: number
+  retryDelay?: number
+  shouldRetry?: (error: unknown) => boolean
 }
 
 export const axiosConfig: AxiosRetryConfig = {
@@ -15,27 +12,26 @@ export const axiosConfig: AxiosRetryConfig = {
   withCredentials: true,
   retry: 3,
   retryDelay: 1500,
-  shouldRetry: (error: AxiosError): boolean => {
-  const url = error.config?.url || '';
+  shouldRetry: (err: unknown): boolean => {
+    // 强制断言 + 类型守卫双重保险
+    const error = err as Partial<AxiosError> & { config?: any }
 
-  // 登录、注册接口或请求被取消，不重试
-  if (url.includes('/login') ||
-      url.includes('/register') ||
-      axios.isCancel(error)) {
-    return false;
+    const url = error.config?.url ?? ''
+
+    if (
+        url.includes('/login') ||
+        url.includes('/register') ||
+        axios.isCancel(error)
+    ) {
+      return false
+    }
+
+    const status = error.response?.status ?? 0
+    return (
+        error.code === 'ECONNABORTED' ||
+        !error.response ||
+        error.code === 'ERR_NETWORK' ||
+        [500, 502, 503, 504].includes(status)
+    )
   }
-
-  // 以下情况可以重试：超时、无响应、网络错误、服务错误
-  return error.code === 'ECONNABORTED' ||
-      !error.response ||
-      error.code === 'ERR_NETWORK' ||
-      [500, 502, 503, 504].includes(error.response?.status || 0);
 }
-};
-
-export const ALLOWED_DUPLICATE_ENDPOINTS: string[] = [
-  '/login',
-  '/register',
-  '/refresh-token',
-  '/verify-token'
-];

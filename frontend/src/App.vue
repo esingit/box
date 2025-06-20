@@ -62,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, provide } from 'vue'
+import { ref, provide, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store/userStore'
 import { useAuth } from '@/composable/useAuth'
@@ -94,6 +94,19 @@ const {
 
 const isUserLoading = ref(true)
 const profileSettingsRef = ref<InstanceType<typeof Profile> | null>(null)
+
+function onShowLogin() {
+  showLogin()
+}
+
+onMounted(() => {
+  emitter.on('show-login', onShowLogin)
+})
+
+onUnmounted(() => {
+  emitter.off('show-login', onShowLogin)
+})
+
 
 function notify(type: 'success' | 'error' | 'info' | 'warning', msg: string) {
   emitter.emit('notify', { message: msg, type })

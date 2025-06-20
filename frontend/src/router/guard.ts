@@ -36,7 +36,7 @@ export function setupRouterGuard(router: Router) {
     // 需要登录权限页面
     if (to.meta.requiresAuth) {
       if (!userStore.isLoggedIn) {
-        showLogin('请先登录')
+        showLogin()
         // 等待登录事件触发后跳转，暂时中断导航
         emitter.once('login-success', () => {
           router.push(to.fullPath)

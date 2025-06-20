@@ -1,12 +1,10 @@
-// useAuth.ts
 import { computed, ref } from 'vue'
 import { useUserStore } from '@/store/userStore'
 
 export function useAuth() {
   const userStore = useUserStore()
 
-  const isLoggedIn = computed(() => !!userStore.token)  // 推荐直接判断 token
-
+  const isLoggedIn = computed(() => !!userStore.token)
   const token = computed(() => userStore.token)
   const user = computed(() => userStore.user)
   const userRoles = computed(() => user.value?.roles || [])
@@ -19,6 +17,12 @@ export function useAuth() {
 
   const pendingAuthAction = ref<null | (() => Promise<void>)>(null)
 
+  const showLogin = () => {
+    import('@/utils/eventBus').then(({ default: emitter }) => {
+      emitter.emit('show-login')
+    })
+  }
+
   return {
     isLoggedIn,
     token,
@@ -26,5 +30,6 @@ export function useAuth() {
     hasRole,
     clearToken,
     pendingAuthAction,
+    showLogin,
   }
 }

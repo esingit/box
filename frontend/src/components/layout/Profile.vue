@@ -194,11 +194,5 @@ function openModal() {
   resetSuccess.value = false
 }
 
-function closeModal() {
-  isOpen.value = false
-  resetMsg.value = ''
-  resetSuccess.value = false
-}
-
-defineExpose({openModal, closeModal})
+defineExpose({openModal})
 </script>
