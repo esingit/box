@@ -2,7 +2,7 @@
 <!DOCTYPE mapper
   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.box.login.mapper.UserMapper">
+<mapper namespace="com.esin.box.mapper.UserMapper">
   <!-- MyBatis-Plus 已提供基础 CRUD, 可自定义 SQL -->
   <update id="updateLastLoginTime">
     UPDATE user SET last_login_time = #{lastLoginTime} WHERE id = #{id}

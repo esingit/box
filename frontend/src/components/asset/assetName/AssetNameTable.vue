@@ -3,6 +3,7 @@
       :columns="columns"
       :data="list"
       :loading="loadingList"
+      storage-key="assetNameTableColumnWidths"
       @edit="handleEdit"
       @delete="handleDelete"
   >

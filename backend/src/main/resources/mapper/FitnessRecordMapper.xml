@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.box.login.mapper.FitnessRecordMapper">
+<mapper namespace="com.esin.box.mapper.FitnessRecordMapper">
 
-    <resultMap id="fitnessRecordDTOMap" type="com.box.login.dto.FitnessRecordDTO">
+    <resultMap id="fitnessRecordDTOMap" type="com.esin.box.dto.FitnessRecordDTO">
         <result property="id" column="id"/>
         <result property="typeId" column="type_id"/>
         <result property="count" column="count"/>

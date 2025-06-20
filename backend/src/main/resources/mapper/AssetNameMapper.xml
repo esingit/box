@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.box.login.mapper.AssetNameMapper">
+<mapper namespace="com.esin.box.mapper.AssetNameMapper">
     <sql id="Base_Column_List">
         id, name, remark, create_time, update_time, create_user, update_user, version, deleted
     </sql>
     
-    <select id="selectByName" resultType="com.box.login.entity.AssetName">
+    <select id="selectByName" resultType="com.esin.box.entity.AssetName">
         SELECT 
         <include refid="Base_Column_List" />
         FROM asset_name

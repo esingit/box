@@ -25,9 +25,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useAssetStore } from '@/store/assetStore'
+import {watch} from 'vue'
+import {storeToRefs} from 'pinia'
+import {useAssetStore} from '@/store/assetStore'
 import AssetTable from './AssetTable.vue'
 import BasePagination from '@/components/base/BasePagination.vue'
 
@@ -40,7 +40,6 @@ const store = useAssetStore()
 const { list, pagination, loadingList } = storeToRefs(store)
 const { loadList, setPageNo, setPageSize } = store
 
-// 防止外部修改 pagination 后未刷新
 watch(
     () => [pagination.value.pageNo, pagination.value.pageSize],
     async () => {

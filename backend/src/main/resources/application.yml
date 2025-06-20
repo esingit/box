@@ -33,7 +33,7 @@ jwt:
 
 mybatis-plus:
   mapper-locations: classpath:/mapper/*.xml
-  type-aliases-package: com.box.login.entity
+  type-aliases-package: com.esin.box.entity
   configuration:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
     map-underscore-to-camel-case: true
@@ -45,7 +45,7 @@ logging:
     root: INFO
     com.box.login: DEBUG
     com.box.login.mapper: DEBUG
-    com.box.login.mapper.FitnessRecordMapper: TRACE
+    com.box.login.mapper.com.esin.box.mapper.FitnessRecordMapper: TRACE
     org.springframework.data.redis: INFO
     org.springframework.security: DEBUG
 
