@@ -24,9 +24,10 @@
     <button
         v-if="clearable && innerValue"
         @click.stop="clear"
-        class="absolute right-2 top-1/2 -translate-y-1/2 z-10 text-gray-400 hover:text-gray-600 transition"
+        class="absolute mr-sm right-2 top-1/2 -translate-y-1/2 z-10 text-gray-400 hover:text-gray-600 transition"
         title="清空"
         type="button"
+        tabindex="-1"
     >
       <LucideX class="w-4 h-4" />
     </button>

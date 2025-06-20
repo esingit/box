@@ -53,61 +53,71 @@
           <h3 class="text-xl font-semibold mb-6 text-gray-900">修改密码</h3>
           <Form
               :validation-schema="schema"
-              @submit="handlePasswordSubmit"
+              v-slot="{ handleSubmit, errors }"
               class="space-y-6 max-w-md"
-              v-slot="{ errors }"
           >
-            <div>
-              <label for="oldPassword" class="block text-sm font-medium text-gray-700 mb-2">旧密码</label>
-              <Field
-                  id="oldPassword"
-                  name="oldPassword"
-                  type="password"
-                  placeholder="请输入旧密码"
-                  class="input-base"
-              />
-              <span class="msg-error">{{ errors.oldPassword }}</span>
-            </div>
+            <form @submit.prevent="handleSubmit(handlePasswordSubmit)" autocomplete="off" novalidate>
+              <div class="mb-4">
+                <label for="oldPassword" class="block text-sm font-medium text-gray-700 mb-2">旧密码</label>
+                <Field name="oldPassword" v-slot="{ field }">
+                  <BaseInput
+                      id="oldPassword"
+                      type="password"
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="请输入旧密码"
+                      clearable
+                  />
+                </Field>
+                <span class="msg-error mt-1 block text-xs">{{ errors.oldPassword }}</span>
+              </div>
 
-            <div>
-              <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-2">新密码</label>
-              <Field
-                  id="newPassword"
-                  name="newPassword"
-                  type="password"
-                  placeholder="6-20位字母数字组合"
-                  class="input-base"
-              />
-              <span class="msg-error">{{ errors.newPassword }}</span>
-            </div>
+              <div class="mb-4">
+                <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-2">新密码</label>
+                <Field name="newPassword" v-slot="{ field }">
+                  <BaseInput
+                      id="newPassword"
+                      type="password"
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="6-20位字母数字组合"
+                      clearable
+                  />
+                </Field>
+                <span class="msg-error mt-1 block text-xs">{{ errors.newPassword }}</span>
+              </div>
 
-            <div>
-              <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">确认密码</label>
-              <Field
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  placeholder="再次确认新密码"
-                  class="input-base"
-              />
-              <span class="msg-error">{{ errors.confirmPassword }}</span>
-            </div>
+              <div class="mb-4">
+                <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">确认密码</label>
+                <Field name="confirmPassword" v-slot="{ field }">
+                  <BaseInput
+                      id="confirmPassword"
+                      type="password"
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="再次确认新密码"
+                      clearable
+                  />
+                </Field>
+                <span class="msg-error mt-1 block text-xs">{{ errors.confirmPassword }}</span>
+              </div>
 
-            <p
-                v-if="resetMsg"
-                :class="resetSuccess ? 'msg-success' : 'msg-error'"
-                class="mt-1 text-sm font-medium"
-                role="alert"
-            >
-              {{ resetMsg }}
-            </p>
+              <p
+                  v-if="resetMsg"
+                  :class="resetSuccess ? 'msg-success' : 'msg-error'"
+                  class="mt-1 text-sm font-medium"
+                  role="alert"
+              >
+                {{ resetMsg }}
+              </p>
 
-            <div class="flex gap-3">
-              <button type="submit" class="btn-primary" :disabled="loading">
-                {{ loading ? '提交中...' : '确认修改' }}
-              </button>
-              <button type="button" class="btn-outline" @click="onResetClicked">重置</button>
-            </div>
+              <div class="flex gap-3">
+                <button type="submit" class="btn-primary" :disabled="loading">
+                  {{ loading ? '提交中...' : '确认修改' }}
+                </button>
+                <button type="button" class="btn-outline" @click="onResetClicked">重置</button>
+              </div>
+            </form>
           </Form>
         </div>
       </section>
@@ -116,11 +126,12 @@
 </template>
 
 <script setup lang="ts">
-import BaseModal from '@/components/base/BaseModal.vue'
 import {ref, computed, nextTick} from 'vue'
-import {useUserStore} from '@/store/userStore'
-import {Field, Form} from 'vee-validate'
 import * as yup from 'yup'
+import {Field, Form} from 'vee-validate'
+import {useUserStore} from '@/store/userStore'
+import BaseModal from '@/components/base/BaseModal.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
 
 const isOpen = ref(false)
 const activeTab = ref<'profile' | 'security'>('profile')

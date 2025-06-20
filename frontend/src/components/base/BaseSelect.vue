@@ -3,7 +3,7 @@
     <Listbox
         v-model="modelValue"
         :multiple="multiple"
-        ref="listboxRef"
+        ref="listBoxRef"
         @blur="onBlur"
     >
       <div class="relative w-full">
@@ -26,6 +26,7 @@
                 @click.stop="clearSelection"
                 class="text-gray-400 hover:text-gray-600 transition"
                 title="清除"
+                tabindex="-1"
             >
               ✕
             </button>
@@ -111,7 +112,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits(['update:modelValue'])
 
-const listboxRef = ref<InstanceType<typeof Listbox> | null>(null)
+const listBoxRef = ref<InstanceType<typeof Listbox> | null>(null)
 
 const safeModelValue = computed(() => {
   if (props.modelValue === undefined || props.modelValue === null) {
