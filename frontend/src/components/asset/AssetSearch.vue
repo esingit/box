@@ -61,7 +61,6 @@
           type="text"
           v-model="query.remark"
           placeholder="备注关键词"
-          required
           clearable
       />
     </div>

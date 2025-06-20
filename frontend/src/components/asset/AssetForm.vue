@@ -19,7 +19,7 @@
         <!-- 资产名称 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
-            资产名称<span class="msg-error">*</span>
+            资产名称 <span class="msg-error">*</span>
           </label>
           <Field name="assetNameId" v-slot="{ value, setValue }">
             <div class="flex items-center space-x-2">
@@ -46,7 +46,7 @@
         <!-- 资产分类 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
-            资产分类<span class="msg-error">*</span>
+            资产分类 <span class="msg-error">*</span>
           </label>
           <Field name="assetTypeId" v-slot="{ value, setValue }">
             <BaseSelect
@@ -66,7 +66,7 @@
         <!-- 资产位置 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
-            资产位置<span class="msg-error">*</span>
+            资产位置 <span class="msg-error">*</span>
           </label>
           <Field name="assetLocationId" v-slot="{ value, setValue }">
             <BaseSelect
@@ -83,7 +83,7 @@
         <!-- 金额 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
-            金额<span class="msg-error">*</span>
+            金额 <span class="msg-error">*</span>
           </label>
           <Field
               name="amount"
@@ -99,7 +99,7 @@
         <!-- 货币单位 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
-            货币单位<span class="msg-error">*</span>
+            货币单位 <span class="msg-error">*</span>
           </label>
           <Field name="unitId" v-slot="{ value, setValue }">
             <BaseSelect
@@ -116,7 +116,7 @@
         <!-- 日期 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
-            日期<span class="msg-error">*</span>
+            日期 <span class="msg-error">*</span>
           </label>
           <Field name="acquireTime" type="date" class="input-base" required />
           <ErrorMessage name="acquireTime" class="msg-error mt-1" />

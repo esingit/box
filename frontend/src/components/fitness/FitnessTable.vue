@@ -29,33 +29,28 @@ const columns = [
     label: '类型',
     resizable: true,
     defaultWidth: 200,
-    type: 'text',
-    tooltip: (row: any) => row.typeValue
+    type: 'text'
   },
   {
     key: 'count',
     label: '数量',
     resizable: true,
     defaultWidth: 200,
-    type: 'count',
-    tooltip: (row: any) => `${row.count} ${row.unitValue || ''}`.trim()
+    type: 'count'
   },
   {
     key: 'finishTime',
     label: '日期',
     resizable: true,
     defaultWidth: 300,
-    type: 'date',
-    value: (row: any) => row.finishTime?.slice(0, 10) || '-',
-    tooltip: (row: any) => row.finishTime?.slice(0, 10)
+    type: 'date'
   },
   {
     key: 'remark',
     label: '备注',
     resizable: true,
     defaultWidth: 500,
-    type: 'text',
-    tooltip: (row: any) => row.remark
+    type: 'text'
   },
   {
     key: 'actions',

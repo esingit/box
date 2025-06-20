@@ -71,7 +71,7 @@ const emit = defineEmits<{
   (e: 'page-size-change', size: number): void
 }>()
 
-const pageSizeOptions = [7, 10, 20, 50]
+const pageSizeOptions = [10, 20, 50]
 
 const totalPages = computed(() =>
     props.total && props.pageSize ? Math.ceil(props.total / props.pageSize) : 0

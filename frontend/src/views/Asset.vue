@@ -1,4 +1,3 @@
-<!-- AssetPage.vue -->
 <template>
   <div class="min-h-screen bg-gray-50 p-6 max-w-6xl mx-auto flex flex-col space-y-8 rounded-xl">
     <!-- 资产统计卡片 -->
@@ -141,27 +140,24 @@ const assetLocationOptions = computed(() =>
 )
 const { assetNameOptions } = storeToRefs(assetNameStore)
 
-// --- 新增默认类型id和位置id，动态查找 ---
-const defaultTypeId = computed(() => {
+function getDefaultTypeId() {
   const list = metaStore.typeMap?.ASSET_TYPE || []
   const item = list.find(i => i.value1 === '理财')
-  return item?.id || ''
-})
+  return item?.id || list[0]?.id || ''
+}
 
-const defaultLocationId = computed(() => {
+function getDefaultLocationId() {
   const list = metaStore.typeMap?.ASSET_LOCATION || []
   const item = list.find(i => i.value1 === '工商银行')
-  return item?.id || ''
-})
+  return item?.id || list[0]?.id || ''
+}
 
-const defaultUnitId = computed(() => {
+function getDefaultUnitId() {
   const list = metaStore.typeMap?.UNIT || []
   const item = list.find(i => i.value1 === '人民币')
-  return item?.id || ''
-})
+  return item?.id || list[0]?.id || ''
+}
 
-
-// form数据，保持 reactive
 const form = reactive({
   assetNameId: '',
   assetTypeId: '',
@@ -172,7 +168,6 @@ const form = reactive({
   remark: ''
 })
 
-// 绑定record到form
 function initFormByRecord(rec: any) {
   Object.assign(form, {
     assetNameId: rec.assetNameId || '',
@@ -185,24 +180,36 @@ function initFormByRecord(rec: any) {
   })
 }
 
-// 重置表单时赋默认值
 function initEmptyForm() {
   Object.assign(form, {
     assetNameId: '',
-    assetTypeId: defaultTypeId.value,
-    assetLocationId: defaultLocationId.value,
+    assetTypeId: getDefaultTypeId(),
+    assetLocationId: getDefaultLocationId(),
     amount: '1',
-    unitId: defaultUnitId.value,
+    unitId: getDefaultUnitId(),
     acquireTime: format(new Date(), 'yyyy-MM-dd'),
     remark: ''
   })
 }
 
-// 监听编辑索引，赋初值或重置
 watch(editingIdx, idx => {
   if (idx !== null && list.value?.[idx]) initFormByRecord(list.value[idx])
   else initEmptyForm()
 })
+
+watch(
+    () => ({
+      unit: metaStore.typeMap?.UNIT,
+      type: metaStore.typeMap?.ASSET_TYPE,
+      location: metaStore.typeMap?.ASSET_LOCATION
+    }),
+    ({ unit, type, location }) => {
+      if (unit?.length && type?.length && location?.length && !form.unitId) {
+        initEmptyForm()
+      }
+    },
+    { immediate: true }
+)
 
 function notifyToast(message: string, type: 'success' | 'error' = 'success') {
   emitter.emit('notify', { message, type, duration: 3000 })
@@ -238,7 +245,7 @@ function handlePageChange(page: number) {
 }
 
 function handleAdd() {
-  initEmptyForm() // 打开新增时赋默认值
+  initEmptyForm()
   showAddModal.value = true
 }
 
@@ -326,3 +333,4 @@ onMounted(async () => {
   ])
 })
 </script>
+

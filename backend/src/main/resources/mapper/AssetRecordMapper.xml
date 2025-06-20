@@ -51,7 +51,7 @@
         FROM asset_record ar
         LEFT JOIN asset_name an ON ar.asset_name_id = an.id AND an.deleted = 0
         LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE' AND type_meta.deleted = 0
-        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'CURRENCY' AND unit_meta.deleted = 0
+        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'UNIT' AND unit_meta.deleted = 0
         LEFT JOIN common_meta location_meta ON ar.asset_location_id = location_meta.id AND location_meta.type_code = 'ASSET_LOCATION' AND location_meta.deleted = 0
         <where>
             <if test="assetNameIdList != null and assetNameIdList.size > 0">
@@ -105,7 +105,7 @@
         asset_record ar
         LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE' AND type_meta.deleted = 0
         LEFT JOIN asset_name an ON ar.asset_name_id = an.id AND an.deleted = 0
-        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'CURRENCY' AND unit_meta.deleted = 0
+        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'UNIT' AND unit_meta.deleted = 0
         WHERE
         ar.create_user = #{userId}
         AND ar.deleted = 0

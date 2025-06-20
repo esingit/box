@@ -30,7 +30,7 @@ public class FitnessRecordController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "7") Integer pageSize) {
+            @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<FitnessRecord> pageObj = new Page<>(page, pageSize);
         String currentUser = UserContextHolder.getCurrentUsername();
         IPage<FitnessRecordDTO> records = fitnessRecordService.pageByConditions(pageObj, typeIdList, remark, startDate, endDate, currentUser);

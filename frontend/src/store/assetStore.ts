@@ -5,6 +5,7 @@ import axiosInstance from '@/utils/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
 import { formatAssetRecord } from '@/utils/commonMeta'
+import { formatTime } from '@/utils/formatters'
 
 export const useAssetStore = defineStore('asset', () => {
     const list = ref<any[]>([])
@@ -60,17 +61,6 @@ export const useAssetStore = defineStore('asset', () => {
             message: `${action}失败：${err?.message || '未知错误'}`,
             type: 'error'
         })
-    }
-
-    function formatTime(data: any) {
-        const acquireTime = data?.acquireTime
-        if (typeof acquireTime !== 'string' || acquireTime.length === 0) {
-            return { ...data, acquireTime: '' }
-        }
-        return {
-            ...data,
-            acquireTime: acquireTime.includes('T') ? acquireTime : acquireTime + 'T00:00:00'
-        }
     }
 
     async function loadList() {

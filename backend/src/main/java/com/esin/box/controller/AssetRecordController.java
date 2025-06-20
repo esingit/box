@@ -40,7 +40,7 @@ public class AssetRecordController {
             @Parameter(description = "开始日期") @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期") @RequestParam(required = false) String endDate,
             @Parameter(description = "当前页码") @RequestParam(defaultValue = "1") Integer page,
-            @Parameter(description = "每页大小") @RequestParam(defaultValue = "7") Integer pageSize) {
+            @Parameter(description = "每页大小") @RequestParam(defaultValue = "10") Integer pageSize) {
         try {
             Page<AssetRecord> pageObj = new Page<>(page, pageSize);
             String currentUser = UserContextHolder.getCurrentUsername();

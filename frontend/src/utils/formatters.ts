@@ -35,3 +35,17 @@ export function formatDate(dateStr: string | null | undefined): string {
     if (isNaN(d.getTime())) return '-'
     return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
 }
+
+/**
+ * 日期格式化为 YYYY-MM-DDT00:00:00
+ */
+export function formatTime(data: any) {
+    const acquireTime = data?.acquireTime
+    if (typeof acquireTime !== 'string' || acquireTime.length === 0) {
+        return { ...data, acquireTime: '' }
+    }
+    return {
+        ...data,
+        acquireTime: acquireTime.includes('T') ? acquireTime : acquireTime + 'T00:00:00'
+    }
+}

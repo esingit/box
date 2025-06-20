@@ -4,6 +4,7 @@ import axiosInstance from '@/utils/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
 import { formatFitnessRecord } from '@/utils/commonMeta'
+import { formatTime } from '@/utils/formatters'
 
 export const useFitnessStore = defineStore('fitness', () => {
   // --- 状态 ---
@@ -63,13 +64,6 @@ export const useFitnessStore = defineStore('fitness', () => {
       message: `${action} 失败：${err?.message || '未知错误'}`,
       type: 'error'
     })
-  }
-
-  function formatTime(data: any) {
-    return {
-      ...data,
-      finishTime: data.finishTime.includes('T') ? data.finishTime : data.finishTime + 'T00:00:00'
-    }
   }
 
   // --- 列表操作 ---

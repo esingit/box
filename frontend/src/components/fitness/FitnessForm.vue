@@ -18,7 +18,9 @@
       >
         <!-- 类型 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">类型</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            类型 <span class="msg-error">*</span>
+          </label>
           <Field name="typeId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
@@ -38,7 +40,9 @@
 
         <!-- 次数 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">次数</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            次数 <span class="msg-error">*</span>
+          </label>
           <Field
               name="count"
               type="number"
@@ -50,7 +54,9 @@
 
         <!-- 单位 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">单位</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            单位 <span class="msg-error">*</span>
+          </label>
           <Field name="unitId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
@@ -67,7 +73,9 @@
 
         <!-- 完成时间 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">完成时间</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            完成时间 <span class="msg-error">*</span>
+          </label>
           <Field
               name="finishTime"
               type="date"
