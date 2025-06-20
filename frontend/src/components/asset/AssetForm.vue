@@ -29,14 +29,15 @@
                   clearable
                   @update:modelValue="val => setValue(val)"
               />
-              <button
+              <BaseButton
                   type="button"
-                  class="btn-outline"
+                  title="名称管理"
+                  color="outline"
                   @click="assetNameRef?.open()"
-              >
-                <LucideSettings :size="16" class="mr-1"/>
-                名称管理
-              </button>
+                  :icon="LucideSettings"
+                  variant="search"
+                  class="w-40"
+              />
             </div>
           </Field>
           <ErrorMessage name="assetNameId" class="msg-error mt-1"/>

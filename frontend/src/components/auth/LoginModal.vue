@@ -59,9 +59,9 @@
 
         <p v-if="error" class="msg-error">{{ error }}</p>
 
-        <button type="submit" class="btn-primary w-full" :disabled="loading">
+        <BaseButton type="submit" color="primary" :icon="LucideLogIn" :disabled="loading" class="w-full">
           {{ loading ? '登录中...' : '登录' }}
-        </button>
+        </BaseButton>
       </form>
     </Form>
 
@@ -84,6 +84,7 @@
 import { ref, computed, watch } from 'vue'
 import { Form, Field, ErrorMessage, type SubmissionHandler } from 'vee-validate'
 import * as yup from 'yup'
+import { LucideLogIn } from 'lucide-vue-next'
 import { useUserStore } from '@/store/userStore'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'

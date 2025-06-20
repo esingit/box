@@ -112,10 +112,10 @@
               </p>
 
               <div class="flex gap-3">
-                <button type="submit" class="btn-primary" :disabled="loading">
+                <BaseButton type="submit" color="primary" :disabled="loading">
                   {{ loading ? '提交中...' : '确认修改' }}
-                </button>
-                <button type="button" class="btn-outline" @click="onResetClicked">重置</button>
+                </BaseButton>
+                <BaseButton type="button" title="重置" color="outline" @click="onResetClicked"/>
               </div>
             </form>
           </Form>

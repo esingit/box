@@ -47,12 +47,8 @@
     <!-- 搜索和操作 -->
     <section class="bg-white rounded-xl hover:shadow-md p-6 space-y-4">
       <div class="flex justify-start gap-2">
-        <button @click="handleAdd" class="btn-primary rounded-full px-5 py-2 flex items-center space-x-2">
-          <LucidePlus class="w-5 h-5" /><span>添加记录</span>
-        </button>
-        <button @click="onCopyClick" class="btn-outline rounded-full px-5 py-2 flex items-center space-x-2">
-          <LucideCopy class="w-5 h-5" /><span>复制上回记录</span>
-        </button>
+        <BaseButton title="添加资产" @click="handleAdd" color="primary" :icon="LucidePlus"/>
+        <BaseButton title="复制上回记录" @click="onCopyClick" color="outline" :icon="LucideCopy"/>
       </div>
       <AssetSearch
           :query="query"

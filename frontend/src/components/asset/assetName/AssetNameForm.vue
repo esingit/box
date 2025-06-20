@@ -25,21 +25,19 @@
     </div>
 
     <div class="flex justify-end space-x-3">
-      <button
+      <BaseButton
           type="button"
+          title="取消"
           @click="closeModal"
-          class="btn-outline"
-      >
-        取消
-      </button>
-
-      <button
+          color="outline"
+      />
+      <BaseButton
           type="submit"
-          :disabled="loadingSubmit"
-          class="btn-primary"
+          :loading="loadingSubmit"
+          color="primary"
       >
         {{ isEdit ? '保存' : '新增' }}
-      </button>
+      </BaseButton>
     </div>
   </form>
 </template>
@@ -47,6 +45,7 @@
 <script setup lang="ts">
 import { reactive, watchEffect, toRefs } from 'vue'
 import BaseInput from "@/components/base/BaseInput.vue";
+import BaseButton from "@/components/base/BaseButton.vue";
 
 const props = defineProps<{
   formData: { id: number | null; name: string; description: string }

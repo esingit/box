@@ -1,23 +1,21 @@
 <!-- components/layout/UserMenuGuest.vue -->
 <template>
   <div class="menu-head">
-    <button
+    <BaseButton
+        title="登录"
+        color="text"
+        :icon="LucideLogIn"
         @click="$emit('show-login')"
-        class="menu-btn-h"
-    >
-      <LucideLogIn class="btn-icon" />
-      登录
-    </button>
+    />
 
     <div class="vertical-line"></div>
 
-    <button
+    <BaseButton
+        title="注册"
+        color="text"
+        :icon="LucideUserPlus"
         @click="$emit('show-register')"
-        class="menu-btn-h"
-    >
-      <LucideUserPlus class="btn-icon" />
-      注册
-    </button>
+    />
   </div>
 </template>
 

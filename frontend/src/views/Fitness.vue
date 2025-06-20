@@ -41,10 +41,7 @@
     <!-- 搜索和操作 -->
     <section class="bg-white rounded-xl hover:shadow-md p-6 space-y-4">
       <div class="flex justify-start">
-        <button @click="handleAdd" class="btn-primary rounded-full px-5 py-2 flex items-center space-x-2">
-          <LucidePlus class="w-5 h-5" />
-          <span>添加记录</span>
-        </button>
+        <BaseButton title="添加记录" @click="handleAdd" color="primary" :icon="LucidePlus"/>
       </div>
       <FitnessSearch
           :query="query"

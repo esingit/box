@@ -10,21 +10,19 @@
           @clear="onClear"
       />
     </div>
-    <button
+    <BaseButton
         v-if="!loading"
         @click="onAddNew"
-        class="btn-primary"
-        title="新增资产名称"
+        color="primary"
+        title="添加资产名称"
         type="button"
-    >
-      新增
-    </button>
+        :icon="LucidePlus"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import BaseInput from '@/components/base/BaseInput.vue'
+import { LucidePlus } from 'lucide-vue-next'
 
 const props = defineProps({
   searchTerm: {

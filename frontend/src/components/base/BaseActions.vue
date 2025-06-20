@@ -4,13 +4,13 @@
     <BaseButton
         @click="$emit('edit')"
         color="outline"
-        class="w-12 h-8"
+        variant="action"
         :icon="LucidePencil"
     />
     <BaseButton
         @click="$emit('delete')"
         color="danger"
-        class="w-12 h-8"
+        variant="action"
         :icon="LucideTrash2"
     />
   </div>

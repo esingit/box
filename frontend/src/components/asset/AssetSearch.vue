@@ -35,15 +35,9 @@
 
       <!-- 按钮组 -->
       <div class="flex items-center gap-2">
-        <button @click="onSearch" title="查询" class="btn-outline">
-          <LucideSearch class="w-4 h-4" />
-        </button>
-        <button @click="onReset" title="重置" class="btn-outline">
-          <LucideRotateCcw class="w-4 h-4" />
-        </button>
-        <button @click="toggleMore" title="更多" class="btn-outline">
-          <component :is="showMore ? LucideChevronUp : LucideChevronDown" class="w-4 h-4" />
-        </button>
+        <BaseButton type="button" @click="onSearch" color="outline" :icon="LucideSearch" variant="search"/>
+        <BaseButton type="button" @click="onReset" color="outline" :icon="LucideRotateCcw" variant="search"/>
+        <BaseButton type="button" @click="toggleMore" color="outline" :icon="showMore ? LucideChevronUp : LucideChevronDown" variant="search"/>
       </div>
     </div>
 

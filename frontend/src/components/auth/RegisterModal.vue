@@ -36,9 +36,9 @@
 
       <p v-if="error" class="msg-error">{{ error }}</p>
 
-      <button type="submit" class="btn-primary w-full" :disabled="loading">
+      <BaseButton type="submit" color="primary" :icon="LucideUserPlus" :disabled="loading" class="w-full">
         {{ loading ? '注册中...' : '注册' }}
-      </button>
+      </BaseButton>
     </form>
 
     <template #footer>
@@ -65,6 +65,7 @@
 import { ref, computed, watch } from 'vue'
 import { useForm, useField } from 'vee-validate'
 import * as yup from 'yup'
+import { LucideUserPlus } from 'lucide-vue-next'
 import { useUserStore } from '@/store/userStore'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'

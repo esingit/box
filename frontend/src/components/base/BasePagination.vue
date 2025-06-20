@@ -1,35 +1,36 @@
 <template>
   <div class="flex items-center space-x-3 text-gray-700 select-none justify-end">
     <!-- 上一页 -->
-    <button
-        class="btn-outline"
+    <BaseButton
+        type="button"
+        title="上一页"
+        color="outline"
         :disabled="current <= 1"
         @click="changePage(current - 1)"
-    >
-      上一页
-    </button>
+    />
 
     <!-- 页码按钮与省略号 -->
     <template v-for="(page, idx) in pagesToShow" :key="idx">
-      <button
+      <BaseButton
           v-if="page !== '...'"
-          class="px-4 py-4 rounded-full border cursor-pointer transition"
-          :class="page === current ? 'btn-primary' : 'btn-outline'"
+          :color="page === current ? 'primary' : 'outline'"
           @click="changePage(page as number)"
       >
         {{ page }}
-      </button>
+      </BaseButton>
       <span v-else class="px-2 select-none">...</span>
     </template>
 
     <!-- 下一页 -->
-    <button
-        class="btn-outline"
+    <BaseButton
+        type="button"
+        title="下一页"
+        color="outline"
         :disabled="current >= totalPages || totalPages === 0"
         @click="changePage(current + 1)"
     >
       下一页
-    </button>
+    </BaseButton>
 
     <!-- 每页条数选择 -->
     <div class="w-[130px]">
