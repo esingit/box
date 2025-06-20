@@ -4,7 +4,7 @@
       <form @submit.prevent="handleSubmit(onSubmit)" class="space-y-4" autocomplete="on">
         <div>
           <label class="modal-label">用户名</label>
-          <Field name="username" v-slot="{ field, meta }">
+          <Field name="username" v-slot="{ field }">
             <BaseInput
                 :model-value="field.value"
                 @update:model-value="field.onChange"
@@ -157,12 +157,6 @@ function close() {
     clearCaptcha()
     needCaptcha.value = false
   }, 300)
-}
-
-interface LoginForm {
-  username: string
-  password: string
-  captcha?: string
 }
 
 const onSubmit: SubmissionHandler = async (values) => {
