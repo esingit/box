@@ -35,11 +35,11 @@ const columns = [
   { key: 'actions', label: '操作', resizable: false, defaultWidth: 100, actions: true }
 ]
 
-function handleEdit(record) {
+function handleEdit(record: any) {
   emit('edit', record.id)
 }
 
-function handleDelete(record) {
+function handleDelete(record: any) {
   emit('delete', record)
 }
 </script>

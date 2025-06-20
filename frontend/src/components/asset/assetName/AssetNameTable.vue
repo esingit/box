@@ -28,17 +28,17 @@ const emit = defineEmits(['edit', 'delete'])
 
 // 列定义
 const columns = [
-  { key: 'name', label: '名称', resizable: true, defaultWidth: 200 },
-  { key: 'description', label: '描述', resizable: true, defaultWidth: 250 },
-  { key: 'actions', label: '操作', resizable: false, actions: true }
+  {key: 'name', label: '名称', resizable: true, defaultWidth: 200},
+  {key: 'description', label: '描述', resizable: true, defaultWidth: 250},
+  {key: 'actions', label: '操作', resizable: false, actions: true}
 ]
 
 // 事件处理
-function handleEdit(item) {
+function handleEdit(item: any) {
   emit('edit', item)
 }
 
-function handleDelete(item) {
+function handleDelete(item: any) {
   emit('delete', item)
 }
 </script>
