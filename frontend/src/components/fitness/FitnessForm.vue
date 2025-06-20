@@ -95,16 +95,14 @@
 
         <!-- 底部按钮区域 -->
         <div class="flex justify-end gap-4">
-          <button type="button" @click="handleClose" class="btn-outline" :disabled="loading">
-            取消
-          </button>
-          <button
+          <BaseButton type="button" title="取消" @click="handleClose" color="outline" :loading="loading"/>
+          <BaseButton
               type="submit"
-              class="btn-primary"
-              :disabled="loading"
+              color="primary"
+              :loading="loading"
           >
             {{ loading ? '处理中...' : confirmText }}
-          </button>
+          </BaseButton>
         </div>
       </form>
     </Form>
@@ -119,6 +117,7 @@ import { useMetaStore } from '@/store/metaStore'
 import { setDefaultUnit } from '@/utils/commonMeta'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
 
 const props = defineProps({
   visible: Boolean,
