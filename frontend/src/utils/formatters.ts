@@ -40,12 +40,20 @@ export function formatDate(dateStr: string | null | undefined): string {
  * 日期格式化为 YYYY-MM-DDT00:00:00
  */
 export function formatTime(data: any) {
-    const acquireTime = data?.acquireTime
-    if (typeof acquireTime !== 'string' || acquireTime.length === 0) {
-        return { ...data, acquireTime: '' }
-    }
-    return {
-        ...data,
-        acquireTime: acquireTime.includes('T') ? acquireTime : acquireTime + 'T00:00:00'
-    }
+    if (!data || typeof data !== 'object') return data;
+
+    const result = { ...data };
+
+    Object.keys(result).forEach((key) => {
+        if (key.toLowerCase().includes('time')) {
+            const val = result[key];
+            if (typeof val !== 'string' || val.length === 0) {
+                result[key] = '';
+            } else if (!val.includes('T')) {
+                result[key] = val + 'T00:00:00';
+            }
+        }
+    });
+    return result;
 }
+

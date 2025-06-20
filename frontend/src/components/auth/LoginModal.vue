@@ -165,7 +165,7 @@ interface LoginForm {
   captcha?: string
 }
 
-const onSubmit: SubmissionHandler<LoginForm> = async (values, { event }) => {
+const onSubmit: SubmissionHandler = async (values) => {
   if (loading.value) return
   error.value = ''
   loading.value = true

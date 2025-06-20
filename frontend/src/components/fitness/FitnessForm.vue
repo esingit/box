@@ -5,17 +5,13 @@
       width="500px"
       @update:visible="handleClose"
   >
-    <!-- 表单主体 -->
-    <template #default>
-      <Form
-          ref="formRef"
-          id="fitness-form"
-          :validation-schema="schema"
-          :initial-values="form"
-          @submit="handleSubmit"
-          v-slot="{ values, setFieldValue }"
-          class="space-y-6"
-      >
+    <Form
+        ref="formRef"
+        :validation-schema="schema"
+        :initial-values="form"
+        v-slot="{ handleSubmit, values, setFieldValue }"
+    >
+      <form @submit.prevent="handleSubmit(onSubmit)" class="space-y-6" id="fitness-form">
         <!-- 类型 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -24,18 +20,17 @@
           <Field name="typeId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
-                :options="fitnessTypes
-                .filter(t => t.value1 != null)
-                .map(t => ({ label: t.value1!, value: t.id }))"
+                :options="fitnessTypesFiltered"
                 placeholder="请选择"
                 @update:modelValue="val => {
                 setValue(val)
                 setDefaultUnit(val, setFieldValue, values)
               }"
                 clearable
+                :disabled="loading"
             />
           </Field>
-          <ErrorMessage name="typeId" class="msg-error"/>
+          <ErrorMessage name="typeId" class="msg-error" />
         </div>
 
         <!-- 次数 -->
@@ -48,8 +43,9 @@
               type="number"
               min="1"
               class="input-base"
+              :disabled="loading"
           />
-          <ErrorMessage name="count" class="msg-error"/>
+          <ErrorMessage name="count" class="msg-error" />
         </div>
 
         <!-- 单位 -->
@@ -60,15 +56,14 @@
           <Field name="unitId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
-                :options="units
-                          .filter(u => u.value1 != null)
-                          .map(u => ({ label: u.value1!, value: u.id }))"
+                :options="unitsFiltered"
                 placeholder="请选择"
                 @update:modelValue="val => setValue(val)"
                 clearable
+                :disabled="loading"
             />
           </Field>
-          <ErrorMessage name="unitId" class="msg-error"/>
+          <ErrorMessage name="unitId" class="msg-error" />
         </div>
 
         <!-- 完成时间 -->
@@ -80,8 +75,9 @@
               name="finishTime"
               type="date"
               class="input-base"
+              :disabled="loading"
           />
-          <ErrorMessage name="finishTime" class="msg-error"/>
+          <ErrorMessage name="finishTime" class="msg-error" />
         </div>
 
         <!-- 备注 -->
@@ -93,34 +89,34 @@
               :placeholder="remarkPlaceholder"
               rows="3"
               class="input-base"
+              :disabled="loading"
           />
         </div>
-      </Form>
-    </template>
 
-    <!-- 底部按钮区域 -->
-    <template #footer>
-      <div class="flex justify-end gap-4">
-        <button type="button" @click="handleClose" class="btn-outline">取消</button>
-        <button
-            type="submit"
-            form="fitness-form"
-            :disabled="loading"
-            class="btn-primary"
-        >
-          {{ loading ? '处理中...' : confirmText }}
-        </button>
-      </div>
-    </template>
+        <!-- 底部按钮区域 -->
+        <div class="flex justify-end gap-4">
+          <button type="button" @click="handleClose" class="btn-outline" :disabled="loading">
+            取消
+          </button>
+          <button
+              type="submit"
+              class="btn-primary"
+              :disabled="loading"
+          >
+            {{ loading ? '处理中...' : confirmText }}
+          </button>
+        </div>
+      </form>
+    </Form>
   </BaseModal>
 </template>
 
 <script setup lang="ts">
-import {Form, Field, ErrorMessage} from 'vee-validate'
+import { ref, computed, watch } from 'vue'
+import { Form, Field, ErrorMessage } from 'vee-validate'
 import * as yup from 'yup'
-import {ref, watch, computed} from 'vue'
-import {useMetaStore} from '@/store/metaStore'
-import {setDefaultUnit} from '@/utils/commonMeta'
+import { useMetaStore } from '@/store/metaStore'
+import { setDefaultUnit } from '@/utils/commonMeta'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 
@@ -136,14 +132,33 @@ const props = defineProps({
 const emit = defineEmits(['close', 'submit', 'update:form'])
 
 const formRef = ref()
-const form = ref({...props.form})
+const form = ref({ ...props.form })
 
 const metaStore = useMetaStore()
 const fitnessTypes = computed(() => metaStore.typeMap?.FITNESS_TYPE || [])
 const units = computed(() => metaStore.typeMap?.UNIT || [])
 
+// 这里确保 label 一定是字符串，避免类型不匹配
+const fitnessTypesFiltered = computed(() =>
+    fitnessTypes.value
+        .filter(t => t.value1 != null)
+        .map(t => ({
+          label: String(t.value1),
+          value: t.id,
+        }))
+)
+
+const unitsFiltered = computed(() =>
+    units.value
+        .filter(u => u.value1 != null)
+        .map(u => ({
+          label: String(u.value1),
+          value: u.id,
+        }))
+)
+
 const schema = yup.object({
-  assetTypeId: yup.string().required('请选择类型'),
+  typeId: yup.string().required('请选择类型'),
   count: yup
       .number()
       .typeError('请输入次数')
@@ -154,28 +169,27 @@ const schema = yup.object({
   remark: yup.string().nullable(),
 })
 
-// 监听 props.form 变化，同步到内部 form 和重置表单
 watch(
     () => props.form,
     val => {
-      form.value = {...val}
+      form.value = { ...val }
       if (form.value.finishTime && form.value.finishTime.length > 10) {
         form.value.finishTime = form.value.finishTime.slice(0, 10)
       }
-      formRef.value?.resetForm({values: form.value})
+      formRef.value?.resetForm({ values: form.value })
 
-      if (form.value.assetTypeId) {
-        setDefaultUnit(form.value.assetTypeId)
+      if (form.value.typeId) {
+        setDefaultUnit(form.value.typeId)
       }
     },
-    {immediate: true}
+    { immediate: true }
 )
 
 function handleClose() {
   emit('close')
 }
 
-function handleSubmit(values: any) {
+function onSubmit(values: object) {
   emit('update:form', values)
   emit('submit', values)
 }

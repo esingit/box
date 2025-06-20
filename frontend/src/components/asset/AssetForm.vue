@@ -6,16 +6,15 @@
       @update:visible="handleClose"
       :zIndex="2001"
   >
-    <template #default>
-      <Form
-          ref="formRef"
-          id="asset-form"
-          :validation-schema="schema"
-          :initial-values="form"
-          @submit="handleSubmit"
-          v-slot="{ setFieldValue }"
-          class="space-y-6"
-      >
+    <Form
+        ref="formRef"
+        id="asset-form"
+        :validation-schema="schema"
+        :initial-values="form"
+        v-slot="{ handleSubmit, setFieldValue }"
+        class="space-y-6"
+    >
+      <form @submit.prevent="handleSubmit(onSubmit)">
         <!-- 资产名称 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -35,7 +34,7 @@
                   class="btn-outline"
                   @click="assetNameRef?.open()"
               >
-                <LucideSettings size="16" class="mr-1" />
+                <LucideSettings :size="16" class="mr-1" />
                 名称管理
               </button>
             </div>
@@ -55,9 +54,9 @@
                 placeholder="请选择资产分类"
                 clearable
                 @update:modelValue="val => {
-                  setValue(val)
-                  onAssetTypeChange(val, setFieldValue)
-                }"
+                setValue(val)
+                onAssetTypeChange(val, setFieldValue)
+              }"
             />
           </Field>
           <ErrorMessage name="assetTypeId" class="msg-error mt-1" />
@@ -118,7 +117,12 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">
             日期 <span class="msg-error">*</span>
           </label>
-          <Field name="acquireTime" type="date" class="input-base" required />
+          <Field
+              name="acquireTime"
+              type="date"
+              class="input-base"
+              required
+          />
           <ErrorMessage name="acquireTime" class="msg-error mt-1" />
         </div>
 
@@ -133,19 +137,27 @@
               class="input-base"
           />
         </div>
-      </Form>
-    </template>
 
-    <template #footer>
-      <div class="flex justify-end gap-4">
-        <button type="button" class="btn-outline" @click="handleClose">
-          取消
-        </button>
-        <button type="submit" form="asset-form" class="btn-primary" :disabled="loading">
-          {{ loading ? '处理中...' : confirmText }}
-        </button>
-      </div>
-    </template>
+        <!-- 底部按钮区域 -->
+        <div class="flex justify-end gap-4 mt-4">
+          <button
+              type="button"
+              class="btn-outline"
+              @click="handleClose"
+              :disabled="loading"
+          >
+            取消
+          </button>
+          <button
+              type="submit"
+              class="btn-primary"
+              :disabled="loading"
+          >
+            {{ loading ? '处理中...' : confirmText }}
+          </button>
+        </div>
+      </form>
+    </Form>
   </BaseModal>
 
   <AssetName ref="assetNameRef" @refresh="refreshAssetNames" />
@@ -182,9 +194,9 @@ const form = ref({ ...props.form })
 const assetNameStore = useAssetNameStore()
 const metaStore = useMetaStore()
 
-const assetTypes = computed(() => metaStore.typeMap?.ASSET_TYPE?.map(i => ({ label: i.value1, value: i.id })) || [])
-const assetLocations = computed(() => metaStore.typeMap?.ASSET_LOCATION?.map(i => ({ label: i.value1, value: i.id })) || [])
-const units = computed(() => metaStore.typeMap?.UNIT?.map(i => ({ label: i.value1, value: i.id })) || [])
+const assetTypes = computed(() => metaStore.typeMap?.ASSET_TYPE?.map(i => ({ label: String(i.value1), value: i.id })) || [])
+const assetLocations = computed(() => metaStore.typeMap?.ASSET_LOCATION?.map(i => ({ label: String(i.value1), value: i.id })) || [])
+const units = computed(() => metaStore.typeMap?.UNIT?.map(i => ({ label: String(i.value1), value: i.id })) || [])
 
 const schema = yup.object({
   assetNameId: yup.string().required('请选择资产名称'),
@@ -219,7 +231,7 @@ function onAssetTypeChange(assetTypeId: string, setFieldValue: (field: string, v
   setDefaultUnit(assetTypeId, setFieldValue, { unitId: form.value.unitId })
 }
 
-function handleSubmit(values: any) {
+function onSubmit(values: any) {
   emit('update:form', values)
   emit('submit', values)
 }
