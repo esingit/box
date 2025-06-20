@@ -19,7 +19,7 @@ export interface AssetRecordRaw {
 export interface AssetRecord extends AssetRecordRaw {
     assetTypeValue?: string
     unitValue?: string
-    locationValue?: string
+    aseetLocationValue?: string
 }
 
 /**

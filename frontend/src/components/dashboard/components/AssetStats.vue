@@ -166,7 +166,7 @@ const fetchAssetName = async () => {
     assetName.value = []
     return
   }
-  const response = await axiosInstance.get('/api/asset-names/all', {
+  const response = await axiosInstance.get('/api/asset-name/all', {
     params: { assetTypeId: selectedAssetType.value.join(',') },
   })
   if (response.data?.success && Array.isArray(response.data.data)) {

@@ -1,4 +1,4 @@
-// src/store/assetNameStore.ts:170
+// src/store/assetNameStore
 import {defineStore} from 'pinia'
 import {ref, reactive, computed} from 'vue'
 import axiosInstance from '@/utils/axios'
@@ -154,7 +154,7 @@ export const useAssetNameStore = defineStore('assetName', () => {
     // 获取全部数据
     async function fetchAssetName() {
         try {
-            const res = await axiosInstance.get('/api/asset-names/all')
+            const res = await axiosInstance.get('/api/asset-name/all')
             if (res.data?.success) {
                 assetName.value = res.data.data || []
             } else {

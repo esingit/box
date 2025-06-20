@@ -20,8 +20,8 @@
         <result property="assetTypeValue" column="asset_type_value"/>
         <result property="unitName" column="unit_name"/>
         <result property="unitValue" column="unit_value"/>
-        <result property="locationName" column="location_name"/>
-        <result property="locationValue" column="location_value"/>
+        <result property="assetLocationName" column="asset_location_name"/>
+        <result property="aseetLocationValue" column="location_value"/>
         <result property="assetName" column="asset_name"/>
     </resultMap>
 
@@ -46,7 +46,7 @@
         COALESCE(type_meta.value1, '') as asset_type_value,
         COALESCE(unit_meta.type_name, '') as unit_name,
         COALESCE(unit_meta.value1, '') as unit_value,
-        COALESCE(location_meta.type_name, '') as location_name,
+        COALESCE(location_meta.type_name, '') as asset_location_name,
         COALESCE(location_meta.value1, '') as location_value
         FROM asset_record ar
         LEFT JOIN asset_name an ON ar.asset_name_id = an.id AND an.deleted = 0

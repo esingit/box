@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/asset-names")
+@RequestMapping("/api/asset-name")
 @Tag(name = "资产名称管理", description = "资产名称的增删改查接口")
 public class AssetNameController {
 

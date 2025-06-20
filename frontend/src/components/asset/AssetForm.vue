@@ -32,7 +32,7 @@
               <button
                   type="button"
                   class="btn-outline"
-                  @click="showNamesModal = true"
+                  @click="assetNameRef?.open()"
               >
                 <LucideSettings size="16" class="mr-1" />
                 名称管理
@@ -50,13 +50,13 @@
           <Field name="assetTypeId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
-                :options="types"
+                :options="assetTypes"
                 placeholder="请选择资产分类"
                 clearable
                 @update:modelValue="val => {
-                setValue(val)
-                onAssetTypeChange(val, setFieldValue)
-              }"
+                  setValue(val)
+                  onAssetTypeChange(val, setFieldValue)
+                }"
             />
           </Field>
           <ErrorMessage name="assetTypeId" class="msg-error mt-1" />
@@ -70,7 +70,7 @@
           <Field name="assetLocationId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
-                :options="locations"
+                :options="assetLocations"
                 placeholder="请选择资产位置"
                 clearable
                 @update:modelValue="val => setValue(val)"
@@ -103,7 +103,7 @@
           <Field name="unitId" v-slot="{ value, setValue }">
             <BaseSelect
                 :modelValue="value"
-                :options="filteredUnits"
+                :options="units"
                 placeholder="请选择货币单位"
                 clearable
                 @update:modelValue="val => setValue(val)"
@@ -137,7 +137,7 @@
 
     <template #footer>
       <div class="flex justify-end gap-4">
-        <button type="button" class="btn-outline" @click="handleCancel">
+        <button type="button" class="btn-outline" @click="handleClose">
           取消
         </button>
         <button type="submit" form="asset-form" class="btn-primary" :disabled="loading">
@@ -147,11 +147,7 @@
     </template>
   </BaseModal>
 
-  <AssetNameForm
-      v-if="showNamesModal"
-      :show="showNamesModal"
-      @close="handleNamesModalClose"
-  />
+  <AssetName ref="assetNameRef" @refresh="refreshAssetNames" />
 </template>
 
 <script setup lang="ts">
@@ -164,7 +160,7 @@ import { useMetaStore } from '@/store/metaStore'
 import { setDefaultUnit } from '@/utils/commonMeta'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
-import AssetNameForm from './assetName/AssetNameForm.vue'
+import AssetName from './assetName/AssetName.vue'
 
 const props = defineProps({
   visible: Boolean,
@@ -178,15 +174,16 @@ const props = defineProps({
 const emit = defineEmits(['close', 'submit', 'update:form'])
 
 const formRef = ref()
+const assetNameRef = ref()
+
 const form = ref({ ...props.form })
-const showNamesModal = ref(false)
 
 const assetNameStore = useAssetNameStore()
 const metaStore = useMetaStore()
 
-const types = computed(() => metaStore.typeMap?.ASSET_TYPE?.map(i => ({ label: i.value1, value: i.id })) || [])
-const locations = computed(() => metaStore.typeMap?.ASSET_LOCATION?.map(i => ({ label: i.value1, value: i.id })) || [])
-const filteredUnits = computed(() => metaStore.typeMap?.UNIT?.map(i => ({ label: i.value1, value: i.id })) || [])
+const assetTypes = computed(() => metaStore.typeMap?.ASSET_TYPE?.map(i => ({ label: i.value1, value: i.id })) || [])
+const assetLocations = computed(() => metaStore.typeMap?.ASSET_LOCATION?.map(i => ({ label: i.value1, value: i.id })) || [])
+const units = computed(() => metaStore.typeMap?.UNIT?.map(i => ({ label: i.value1, value: i.id })) || [])
 
 const schema = yup.object({
   assetNameId: yup.string().required('请选择资产名称'),
@@ -207,7 +204,6 @@ watch(
       }
       formRef.value?.resetForm({ values: form.value })
       if (form.value.assetTypeId) {
-        // 这里调用，传入当前unitId
         setDefaultUnit(form.value.assetTypeId, undefined, { unitId: form.value.unitId })
       }
     },
@@ -231,11 +227,7 @@ function handleClose() {
   emit('close')
 }
 
-function handleCancel() {
-  emit('close')
-}
-
-function handleNamesModalClose() {
-  showNamesModal.value = false
+function refreshAssetNames() {
+  assetNameStore.loadAssetNameOptions() // 假设这是加载名称下拉的函数
 }
 </script>
