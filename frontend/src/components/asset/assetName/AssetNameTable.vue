@@ -28,9 +28,9 @@ const emit = defineEmits(['edit', 'delete'])
 
 // 列定义
 const columns = [
-  {key: 'name', label: '名称', resizable: true, defaultWidth: 200, type: 'text'},
-  {key: 'description', label: '描述', resizable: true, defaultWidth: 250, type: 'text'},
-  {key: 'actions', label: '操作', resizable: false, defaultWidth: 30, actions: true}
+  {key: 'name', label: '名称', resizable: true, defaultWidth: 400, type: 'text'},
+  {key: 'description', label: '描述', resizable: true, defaultWidth: 200, type: 'text'},
+  {key: 'actions', label: '操作', resizable: false, defaultWidth: 100, actions: true}
 ]
 
 // 事件处理
