@@ -12,10 +12,11 @@
         :disabled="disabled"
         :title="errorTooltip"
         :class="[
-        'input-base pr-8', // 留出清除按钮空间
-        showError ? 'msg-error' : ''
-      ]"
+          'input-base pr-8',
+          showError ? 'msg-error' : ''
+        ]"
         @input="onInput"
+        @change="onInput"
         @blur="handleBlur"
     />
 
@@ -31,7 +32,7 @@
     </button>
 
     <!-- 错误提示 -->
-    <p v-if="showError" class="msg-error mt-1 text-sm text-red-500">
+    <p v-if="showError" class="msg-error">
       {{ requiredMessage || '此项为必填' }}
     </p>
   </div>
@@ -98,7 +99,7 @@ function handleBlur() {
   }
 }
 
-// 监测外部 modelValue 变化，清除错误提示
+// 监听外部值变化，清除错误
 watch(() => props.modelValue, () => {
   if (innerValue.value.trim() !== '') {
     showError.value = false

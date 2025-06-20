@@ -1,15 +1,17 @@
 <template>
   <BaseModal :visible="visible" title="欢迎回来" @update:visible="close" width="500px">
     <Form :validation-schema="schema" v-slot="{ handleSubmit }">
-      <form @submit="handleSubmit(onSubmit)" class="space-y-4" autocomplete="off">
+      <form @submit.prevent="handleSubmit(onSubmit)" class="space-y-4" autocomplete="on">
         <div>
           <label class="modal-label">用户名</label>
-          <Field name="username" v-slot="{ field }">
+          <Field name="username" v-slot="{ field, meta }">
             <BaseInput
-                v-bind="field"
-                placeholder="请输入用户名"
+                :model-value="field.value"
+                @update:model-value="field.onChange"
+                :placeholder="'请输入用户名'"
                 autocomplete="username"
                 clearable
+                :disabled="loading"
             />
           </Field>
           <ErrorMessage name="username" class="msg-error" />
@@ -17,13 +19,15 @@
 
         <div>
           <label class="modal-label">密码</label>
-          <Field name="password" v-slot="{ field }">
+          <Field name="password" v-slot="{ field, meta }">
             <BaseInput
-                v-bind="field"
+                :model-value="field.value"
+                @update:model-value="field.onChange"
                 type="password"
-                placeholder="请输入密码"
+                :placeholder="'请输入密码'"
                 autocomplete="current-password"
                 clearable
+                :disabled="loading"
             />
           </Field>
           <ErrorMessage name="password" class="msg-error" />
@@ -34,11 +38,12 @@
           <div class="flex items-center gap-2">
             <Field name="captcha" v-slot="{ field }">
               <BaseInput
-                  v-bind="field"
+                  v-model="field.value"
                   class="input-base"
                   placeholder="请输入验证码"
                   autocomplete="off"
                   clearable
+                  :disabled="loading"
               />
             </Field>
             <img
@@ -66,6 +71,7 @@
         <button
             @click="$emit('switch-to-register')"
             class="msg-strong hover:underline focus:outline-none"
+            :disabled="loading"
         >
           立即注册
         </button>
