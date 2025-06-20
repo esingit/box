@@ -23,12 +23,18 @@ export function useAuthModal() {
         isShowingRegisterModal.value = false
     }
 
+    function handleSwitchToLogin() {
+        isShowingRegisterModal.value = false
+        isShowingLoginModal.value = true
+    }
+
     return {
         isShowingLoginModal,
         isShowingRegisterModal,
         showLogin,
         hideLogin,
         showRegister,
-        hideRegister
+        hideRegister,
+        handleSwitchToLogin
     }
 }

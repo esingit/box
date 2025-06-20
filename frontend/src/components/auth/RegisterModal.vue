@@ -71,7 +71,6 @@ import BaseInput from '@/components/base/BaseInput.vue'
 
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
-  (e: 'register-success', data: any): void
   (e: 'switch-to-login'): void
 }>()
 
@@ -175,7 +174,6 @@ const onSubmit = handleSubmit(async values => {
 
     if (res.success) {
       successModalVisible.value = true
-      emit('register-success', res.data)
       close()
     } else {
       error.value = res.message || '注册失败'
@@ -200,5 +198,6 @@ const onSubmit = handleSubmit(async values => {
 
 function handleSuccessClose() {
   successModalVisible.value = false
+  emit('switch-to-login')
 }
 </script>

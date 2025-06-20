@@ -7,13 +7,12 @@
 
   <RegisterModal
       v-model:visible="showRegister"
-      @register-success="emit('register-success')"
       @switch-to-login="switchToLogin"
   />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import {computed} from 'vue'
 import LoginModal from './LoginModal.vue'
 import RegisterModal from './RegisterModal.vue'
 
@@ -26,7 +25,6 @@ const emit = defineEmits([
   'update:showLogin',
   'update:showRegister',
   'login-success',
-  'register-success'
 ])
 
 const showLogin = computed({
@@ -47,9 +45,7 @@ function switchToRegister() {
 }
 
 function switchToLogin() {
-  if (showRegister.value) {
-    showRegister.value = false
-    showLogin.value = true
-  }
+  showRegister.value = false
+  showLogin.value = true
 }
 </script>

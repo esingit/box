@@ -19,7 +19,7 @@
 
         <div>
           <label class="modal-label">密码</label>
-          <Field name="password" v-slot="{ field, meta }">
+          <Field name="password" v-slot="{ field }">
             <BaseInput
                 :model-value="field.value"
                 @update:model-value="field.onChange"
@@ -82,7 +82,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Form, Field, ErrorMessage } from 'vee-validate'
+import { Form, Field, ErrorMessage, type SubmissionHandler } from 'vee-validate'
 import * as yup from 'yup'
 import { useUserStore } from '@/store/userStore'
 import BaseModal from '@/components/base/BaseModal.vue'
@@ -119,6 +119,7 @@ const schema = yup.object({
   })
 })
 
+// 监听是否需要验证码，自动刷新或清空
 watch(needCaptcha, async val => {
   if (val && !captchaUrl.value) {
     await refreshCaptcha()
@@ -158,7 +159,13 @@ function close() {
   }, 300)
 }
 
-async function onSubmit(values: { username: string; password: string; captcha?: string }) {
+interface LoginForm {
+  username: string
+  password: string
+  captcha?: string
+}
+
+const onSubmit: SubmissionHandler<LoginForm> = async (values, { event }) => {
   if (loading.value) return
   error.value = ''
   loading.value = true
