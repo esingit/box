@@ -4,8 +4,8 @@
       :data="records"
       :loading="loading"
       storage-key="fitnessTableColumnWidths"
-      @edit="(row) => emit('edit', row.id)"
-      @delete="(row) => emit('delete', row)"
+      @edit="(row: any) => emit('edit', row.id)"
+      @delete="(row: any) => emit('delete', row)"
   >
   </BaseTable>
 </template>

@@ -4,6 +4,7 @@
       :title="title"
       width="500px"
       @update:visible="handleClose"
+      :zIndex="2001"
   >
     <template #default>
       <Form
@@ -228,6 +229,6 @@ function handleClose() {
 }
 
 function refreshAssetNames() {
-  assetNameStore.loadAssetNameOptions() // 假设这是加载名称下拉的函数
+  assetNameStore.fetchAssetName()
 }
 </script>

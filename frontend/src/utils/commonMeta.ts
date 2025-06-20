@@ -135,8 +135,8 @@ export async function formatAssetNameRecord<
     console.debug('[AssetName] 格式化记录:', record)
 
     const [name, description] = await Promise.all([
-        formatValue(record.name, record.name),
-        formatValue(record.description, record.description)
+        formatValue(String(record.name), String(record.name)),
+        formatValue(String(record.description), String(record.description))
     ])
 
     const formatted = {

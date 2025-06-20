@@ -2,34 +2,26 @@
   <form @submit.prevent="onSubmit" class="space-y-4">
     <div>
       <label for="name" class="block text-sm font-medium text-gray-700">
-        资产名称 <span class="text-red-500">*</span>
+        资产名称 <span class="msg-error">*</span>
       </label>
-      <input
-          id="name"
-          v-model="localFormData.name"
-          type="text"
+      <BaseInput
+          v-model="form.name"
           placeholder="请输入资产名称"
-          class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2
-               placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          @input="clearError"
-          autocomplete="off"
+          required
+          clearable
       />
-      <p v-if="formError" class="mt-1 text-sm text-red-600">{{ formError }}</p>
     </div>
 
     <div>
       <label for="description" class="block text-sm font-medium text-gray-700">
         资产描述
       </label>
-      <textarea
-          id="description"
-          v-model="localFormData.description"
-          rows="3"
+      <BaseInput
+          type="text"
+          v-model="form.description"
           placeholder="请输入资产描述（选填）"
-          class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2
-               placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-          @input="clearError"
-      ></textarea>
+          clearable
+      />
     </div>
 
     <div class="flex justify-end space-x-3">
@@ -53,7 +45,8 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, toRefs, watch } from 'vue'
+import { reactive, watchEffect, toRefs } from 'vue'
+import BaseInput from "@/components/base/BaseInput.vue";
 
 const props = defineProps<{
   formData: { id: number | null; name: string; description: string }
@@ -64,43 +57,34 @@ const props = defineProps<{
 
 const emit = defineEmits(['submit', 'closeModal', 'update:formData', 'clearError'])
 
-const localFormData = reactive({
-  id: props.formData.id,
-  name: props.formData.name,
-  description: props.formData.description
+const { formData } = toRefs(props)
+
+const form = reactive({
+  id: null,
+  name: '',
+  description: ''
 })
 
-// 同步props.formData变动到localFormData
-watch(
-    () => props.formData,
-    (newVal) => {
-      localFormData.id = newVal.id
-      localFormData.name = newVal.name
-      localFormData.description = newVal.description
-    },
-    { deep: true }
-)
+watchEffect(() => {
+  form.id = formData.value.id
+  form.name = formData.value.name
+  form.description = formData.value.description
+})
 
 function onSubmit() {
-  emit('submit')
+  emit('submit', {...form})
 }
 
 function closeModal() {
   emit('closeModal')
 }
 
-function clearError() {
-  if (props.formError) {
-    emit('clearError')
-  }
-}
-
-// 双向绑定外层formData，实时同步数据给父组件
 watch(
-    () => ({ ...localFormData }),
+    () => ({...form}),
     (newVal) => {
-      emit('update:formData', { ...newVal })
+      emit('update:formData', {...newVal})
     },
-    { deep: true }
+    {deep: true}
 )
 </script>
+

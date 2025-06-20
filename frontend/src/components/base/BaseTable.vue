@@ -96,7 +96,6 @@ const props = defineProps({
   columns: {
     type: Array,
     required: true
-    // 示例：[{ key: 'name', label: '名称', resizable: true, defaultWidth: 200 }]
   },
   data: {
     type: Array,
@@ -164,16 +163,15 @@ function showTooltip(index, field) {
     return
   }
 
-  switch (field) {
-    case 'amount':
-      tooltipContent.value = formatAmount(row.amount) + (row.unitValue ? ` ${row.unitValue}` : '')
-      break
-    case 'time':
-      tooltipContent.value = formatDate(row.acquireTime)
-      break
-    default:
-      tooltipContent.value = row[field] || '-'
-      break
+  const isAmountField = ['amount', 'count'].includes(field)
+  const isDateField = ['acquireTime', 'finishTime'].includes(field)
+
+  if (isAmountField) {
+    tooltipContent.value = formatAmount(row.amount) + (row.unitValue ? ` ${row.unitValue}` : '')
+  } else if (isDateField) {
+    tooltipContent.value = formatDate(row.acquireTime)
+  } else {
+    tooltipContent.value = row[field] || '-'
   }
 }
 

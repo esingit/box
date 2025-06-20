@@ -35,7 +35,7 @@ const columns = [
 
 // 事件处理
 function handleEdit(item: any) {
-  emit('edit', item)
+  emit('edit', item.id)
 }
 
 function handleDelete(item: any) {

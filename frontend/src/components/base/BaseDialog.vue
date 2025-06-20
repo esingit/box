@@ -5,6 +5,7 @@
       :title="title"
       width="400px"
       @update:visible="visible = $event"
+      :zIndex="2100"
   >
     <div class="msg-strong text-gray-700 dark:text-gray-300 whitespace-pre-line mb-6">
       <!-- 支持字符串或 VNode -->

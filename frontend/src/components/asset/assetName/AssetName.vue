@@ -5,6 +5,7 @@
       title="资产名称维护"
       width="1000px"
       @update:visible="close"
+      :zIndex="2002"
   >
     <div class="flex flex-col h-full">
       <AssetNameSearch
@@ -19,7 +20,7 @@
         :pagination="pagination"
         :totalPages="totalPages"
         @edit="openEditModal"
-        @delete="$emit('delete', $event)"
+        @delete="handleDelete"
         @changePage="changePage"
     />
     </div>
@@ -31,6 +32,7 @@
       title="新增资产名称"
       width="600px"
       @update:visible="val => (addModalVisible = val)"
+      :zIndex="2003"
   >
     <AssetNameForm
         :formData="newFormData"
@@ -50,6 +52,7 @@
       title="编辑资产名称"
       width="600px"
       @update:visible="val => (editModalVisible = val)"
+      :zIndex="2003"
   >
     <AssetNameForm
         :formData="editFormData"
@@ -73,6 +76,7 @@ import BaseModal from '@/components/base/BaseModal.vue'
 import AssetNameSearch from './AssetNameSearch.vue'
 import AssetNameForm from './AssetNameForm.vue'
 import AssetNameList from './AssetNameList.vue'
+import emitter from '@/utils/eventBus'
 
 const emit = defineEmits(['refresh', 'delete'])
 
@@ -141,13 +145,24 @@ function closeAddModal() {
 }
 
 // 编辑弹窗打开
-function openEditModal(item: any) {
-  editFormData.id = item.id
-  editFormData.name = item.name
-  editFormData.description = item.description || ''
+function openEditModal(id: number) {
+  const item = list.value.find(i => i.id === id)
+  if (!item) {
+    formError.value = '数据不存在'
+    return
+  }
+
+  // 2. 赋值给响应式编辑表单数据
+  Object.assign(editFormData, {
+    id: item.id,
+    name: item.name,
+    description: item.description || ''
+  })
+
   formError.value = ''
   editModalVisible.value = true
 }
+
 
 // 编辑弹窗关闭
 function closeEditModal() {
@@ -156,8 +171,8 @@ function closeEditModal() {
 }
 
 // 新增提交
-async function handleAddSubmit() {
-  if (!newFormData.name.trim()) {
+async function handleAddSubmit(form: { id: null; name: string; description: string }) {
+  if (!form.name.trim()) {
     formError.value = '资产名称不能为空'
     return
   }
@@ -165,8 +180,8 @@ async function handleAddSubmit() {
     loadingSubmit.value = true
     await addRecord({
       id: null,
-      name: newFormData.name.trim(),
-      description: newFormData.description.trim()
+      name: form.name.trim(),
+      description: form.description.trim()
     })
     addModalVisible.value = false
     emit('refresh')
@@ -179,17 +194,17 @@ async function handleAddSubmit() {
 }
 
 // 编辑提交
-async function handleEditSubmit() {
-  if (!editFormData.name.trim()) {
+async function handleEditSubmit(form: { id: number | null; name: string; description: string }) {
+  if (!form.name.trim()) {
     formError.value = '资产名称不能为空'
     return
   }
   try {
     loadingSubmit.value = true
     await updateRecord({
-      id: editFormData.id,
-      name: editFormData.name.trim(),
-      description: editFormData.description.trim()
+      id: form.id,
+      name: form.name.trim(),
+      description: form.description.trim()
     })
     editModalVisible.value = false
     emit('refresh')
@@ -199,6 +214,23 @@ async function handleEditSubmit() {
   } finally {
     loadingSubmit.value = false
   }
+}
+
+
+// 删除
+function handleDelete(record: any) {
+  const dataInfo = `[${record.name || '类型未知'}]`
+  emitter.emit('confirm', {
+    title: '删除确认',
+    message: `确定要删除${dataInfo}这条记录吗？此操作无法撤销。`,
+    type: 'danger',
+    confirmText: '删除',
+    cancelText: '取消',
+    async onConfirm() {
+      await assetNameStore.handleDelete(record.id)
+      await loadList()
+    }
+  })
 }
 
 function changePage(page: number) {

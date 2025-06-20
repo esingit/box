@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {useAssetNameStore} from '@/store/assetNameStore'
-import AssetTable from "@/components/asset/AssetTable.vue";
 import BasePagination from "@/components/base/BasePagination.vue";
 
 const store = useAssetNameStore()

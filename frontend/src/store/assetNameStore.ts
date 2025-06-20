@@ -106,7 +106,7 @@ export const useAssetNameStore = defineStore('assetName', () => {
     // --- 增删改 ---
     async function addRecord(data: any) {
         try {
-            const res = await axiosInstance.post('/api/asset-name/add', data)
+            const res = await axiosInstance.post('/api/asset-name', data)
             if (res.data.success) {
                 emitter.emit('notify', {message: '添加成功', type: 'success'})
                 await loadList()

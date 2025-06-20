@@ -4,34 +4,39 @@
     <transition name="fade">
       <div
           v-if="visible"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          class="fixed inset-0 flex items-center justify-center bg-black/50"
+          :style="{ zIndex: computedZIndex }"
           @click.self="close"
       >
         <div
-            class="bg-white rounded-2xl shadow-xl animate-fade-in"
+            class="bg-white rounded-2xl shadow-xl animate-fade-in dark:bg-gray-800"
             :class="widthClass"
-            :style="computedStyle"
+            :style="[computedStyle, { zIndex: computedZIndex + 10 }]"
             @click.stop
         >
           <!-- Header -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">{{ title }}</h2>
+          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ title }}</h2>
             <button
                 @click="close"
-                class="text-gray-500 hover:text-gray-900 text-xl transition-colors duration-200"
+                class="text-gray-500 hover:text-gray-900 dark:hover:text-white text-xl transition-colors duration-200"
                 aria-label="关闭弹窗"
+                type="button"
             >
               ✕
             </button>
           </div>
 
           <!-- 内容插槽 -->
-          <div class="p-6">
+          <div class="p-6 text-gray-800 dark:text-gray-200">
             <slot />
           </div>
 
           <!-- 底部插槽 -->
-          <div v-if="$slots.footer" class="px-6 py-4 border-t border-gray-200 bg-white text-right rounded-b-2xl">
+          <div
+              v-if="$slots.footer"
+              class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-right rounded-b-2xl"
+          >
             <slot name="footer" />
           </div>
         </div>
@@ -46,8 +51,9 @@ import { computed, onMounted, onBeforeUnmount } from 'vue'
 const props = defineProps<{
   visible: boolean
   title?: string
-  width?: string     // 支持内联宽度字符串，如 '500px', '80vw'
-  widthClass?: string  // 支持Tailwind宽度类，如 'max-w-lg', 'w-96'
+  width?: string
+  widthClass?: string
+  zIndex?: number // 支持传入弹窗层级，默认1050
 }>()
 
 const emit = defineEmits(['update:visible'])
@@ -56,9 +62,12 @@ const close = () => {
   emit('update:visible', false)
 }
 
-// 如果传了 width（内联样式宽度），优先使用
 const computedStyle = computed(() => {
   return props.width ? { width: props.width } : {}
+})
+
+const computedZIndex = computed(() => {
+  return props.zIndex ?? 2000
 })
 
 const handleKeyDown = (e: KeyboardEvent) => {

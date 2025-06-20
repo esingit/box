@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.esin.box.config.UserContextHolder;
 import com.esin.box.entity.AssetName;
-import com.esin.box.entity.AssetRecord;
 import com.esin.box.service.AssetNameService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,25 +23,25 @@ import java.util.List;
 public class AssetNameController {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AssetNameController.class);
-    
+
     @Autowired
     private AssetNameService assetNameService;
 
     @GetMapping("/all")
     @Operation(
-        summary = "获取所有资产名称",
-        description = "获取当前用户的所有未删除的资产名称",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "获取成功")
-        }
+            summary = "获取所有资产名称",
+            description = "获取当前用户的所有未删除的资产名称",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "获取成功")
+            }
     )
     public Result<List<AssetName>> listAll() {
         try {
             LambdaQueryWrapper<AssetName> wrapper = Wrappers.lambdaQuery(AssetName.class)
-                .eq(AssetName::getCreateUser, UserContextHolder.getCurrentUsername())
-                .eq(AssetName::getDeleted, 0)
-                .orderByDesc(AssetName::getCreateTime)
-                .select(AssetName::getId, AssetName::getName, AssetName::getDescription); // 只选择需要的字段
+                    .eq(AssetName::getCreateUser, UserContextHolder.getCurrentUsername())
+                    .eq(AssetName::getDeleted, 0)
+                    .orderByDesc(AssetName::getCreateTime)
+                    .select(AssetName::getId, AssetName::getName, AssetName::getDescription); // 只选择需要的字段
             return Result.success(assetNameService.list(wrapper));
         } catch (Exception e) {
             log.error("获取资产名称列表失败:", e);
@@ -52,12 +51,12 @@ public class AssetNameController {
 
     @PostMapping
     @Operation(
-        summary = "创建资产名称",
-        description = "创建一个新的资产名称",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "创建成功"),
-            @ApiResponse(responseCode = "400", description = "创建失败")
-        }
+            summary = "创建资产名称",
+            description = "创建一个新的资产名称",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "创建成功"),
+                    @ApiResponse(responseCode = "400", description = "创建失败")
+            }
     )
     public Result<AssetName> add(@Validated @RequestBody AssetName assetName) {
         try {
@@ -67,20 +66,17 @@ public class AssetNameController {
         }
     }
 
-    @PutMapping("/{id}")
+    @PutMapping
     @Operation(
-        summary = "更新资产名称",
-        description = "根据ID更新资产名称信息",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "更新成功"),
-            @ApiResponse(responseCode = "400", description = "更新失败")
-        }
+            summary = "更新资产名称",
+            description = "根据ID更新资产名称信息",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "更新成功"),
+                    @ApiResponse(responseCode = "400", description = "更新失败")
+            }
     )
-    public Result<AssetName> update(
-            @Parameter(description = "资产名称ID") @PathVariable Long id,
-            @Validated @RequestBody AssetName assetName) {
+    public Result<AssetName> update(@Validated @RequestBody AssetName assetName) {
         try {
-            assetName.setId(id);
             return Result.success(assetNameService.updateAssetName(assetName));
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
@@ -89,12 +85,12 @@ public class AssetNameController {
 
     @DeleteMapping("/{id}")
     @Operation(
-        summary = "删除资产名称",
-        description = "根据ID删除资产名称",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "删除成功"),
-            @ApiResponse(responseCode = "400", description = "删除失败")
-        }
+            summary = "删除资产名称",
+            description = "根据ID删除资产名称",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "删除成功"),
+                    @ApiResponse(responseCode = "400", description = "删除失败")
+            }
     )
     public Result<Void> delete(
             @Parameter(description = "资产名称ID") @PathVariable Long id) {
@@ -104,12 +100,12 @@ public class AssetNameController {
 
     @GetMapping("/{id}")
     @Operation(
-        summary = "获取资产名称详情",
-        description = "根据ID获取资产名称详情",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "获取成功"),
-            @ApiResponse(responseCode = "404", description = "资产名称不存在")
-        }
+            summary = "获取资产名称详情",
+            description = "根据ID获取资产名称详情",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "获取成功"),
+                    @ApiResponse(responseCode = "404", description = "资产名称不存在")
+            }
     )
     public Result<AssetName> getById(
             @Parameter(description = "资产名称ID") @PathVariable Long id) {
@@ -146,11 +142,11 @@ public class AssetNameController {
 
     @GetMapping("/exists")
     @Operation(
-        summary = "检查资产名称是否存在",
-        description = "检查指定的资产名称是否已经存在，可以在更新时排除当前记录",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "检查完成")
-        }
+            summary = "检查资产名称是否存在",
+            description = "检查指定的资产名称是否已经存在，可以在更新时排除当前记录",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "检查完成")
+            }
     )
     public Result<Boolean> checkNameExists(
             @Parameter(description = "资产名称") @RequestParam String name,
