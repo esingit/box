@@ -1,5 +1,5 @@
 <template>
-  <div class="relative overflow-auto border border-gray-200 rounded-xl min-h-[200px] max-h-[600px]">
+  <div class="relative overflow-auto border border-gray-200 rounded-xl min-h-[520px] max-h-[520px]">
     <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
       <!-- 表头固定 -->
       <thead class="bg-gray-50 sticky top-0 z-10 block w-full select-none">
