@@ -1,55 +1,63 @@
 <template>
   <BaseModal :visible="visible" title="欢迎回来" @update:visible="close" width="500px">
-    <Form @submit="handleSubmit" :validation-schema="schema" class="space-y-4" autocomplete="off">
-      <div>
-        <label class="modal-label">用户名</label>
-        <Field
-            name="username"
-            type="text"
-            class="input-base"
-            placeholder="请输入用户名"
-            autocomplete="username"
-        />
-        <ErrorMessage name="username" class="msg-error" />
-      </div>
-
-      <div>
-        <label class="modal-label">密码</label>
-        <Field
-            name="password"
-            type="password"
-            class="input-base"
-            placeholder="请输入密码"
-            autocomplete="current-password"
-        />
-        <ErrorMessage name="password" class="msg-error" />
-      </div>
-
-      <div v-if="needCaptcha">
-        <label class="modal-label">验证码</label>
-        <div class="flex items-center gap-2">
-          <Field
-              name="captcha"
-              type="text"
-              class="input-base"
-              placeholder="请输入验证码"
-              autocomplete="off"
-          />
-          <img
-              :src="captchaUrl"
-              @click="refreshCaptcha"
-              class="h-10 cursor-pointer border rounded"
-              :title="captchaLoading ? '加载中...' : '点击刷新验证码'"
-          />
+    <Form :validation-schema="schema" v-slot="{ handleSubmit }">
+      <form @submit="handleSubmit(onSubmit)" class="space-y-4" autocomplete="off">
+        <div>
+          <label class="modal-label">用户名</label>
+          <Field name="username" v-slot="{ field }">
+            <BaseInput
+                v-bind="field"
+                placeholder="请输入用户名"
+                autocomplete="username"
+                clearable
+            />
+          </Field>
+          <ErrorMessage name="username" class="msg-error" />
         </div>
-        <ErrorMessage name="captcha" class="msg-error" />
-      </div>
 
-      <p v-if="error" class="msg-error">{{ error }}</p>
+        <div>
+          <label class="modal-label">密码</label>
+          <Field name="password" v-slot="{ field }">
+            <BaseInput
+                v-bind="field"
+                type="password"
+                placeholder="请输入密码"
+                autocomplete="current-password"
+                clearable
+            />
+          </Field>
+          <ErrorMessage name="password" class="msg-error" />
+        </div>
 
-      <button type="submit" class="btn-primary w-full" :disabled="loading">
-        {{ loading ? '登录中...' : '登录' }}
-      </button>
+        <div v-if="needCaptcha">
+          <label class="modal-label">验证码</label>
+          <div class="flex items-center gap-2">
+            <Field name="captcha" v-slot="{ field }">
+              <BaseInput
+                  v-bind="field"
+                  class="input-base"
+                  placeholder="请输入验证码"
+                  autocomplete="off"
+                  clearable
+              />
+            </Field>
+            <img
+                :src="captchaUrl"
+                @click="refreshCaptcha"
+                class="h-10 cursor-pointer border rounded"
+                :title="captchaLoading ? '加载中...' : '点击刷新验证码'"
+                alt="图片验证码"
+            />
+          </div>
+          <ErrorMessage name="captcha" class="msg-error" />
+        </div>
+
+        <p v-if="error" class="msg-error">{{ error }}</p>
+
+        <button type="submit" class="btn-primary w-full" :disabled="loading">
+          {{ loading ? '登录中...' : '登录' }}
+        </button>
+      </form>
     </Form>
 
     <template #footer>
@@ -72,6 +80,7 @@ import { Form, Field, ErrorMessage } from 'vee-validate'
 import * as yup from 'yup'
 import { useUserStore } from '@/store/userStore'
 import BaseModal from '@/components/base/BaseModal.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
 
 const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits(['update:visible', 'login-success', 'switch-to-register'])
@@ -143,7 +152,7 @@ function close() {
   }, 300)
 }
 
-async function handleSubmit(values: { username: string; password: string; captcha?: string }) {
+async function onSubmit(values: { username: string; password: string; captcha?: string }) {
   if (loading.value) return
   error.value = ''
   loading.value = true

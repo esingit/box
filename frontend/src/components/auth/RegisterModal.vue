@@ -3,31 +3,32 @@
     <form @submit.prevent="onSubmit" class="space-y-4">
       <div>
         <label class="modal-label">用户名</label>
-       <BaseInput v-model="username" type="text" class="input-base" placeholder="请输入用户名" />
+        <BaseInput v-model="username" placeholder="请输入用户名" />
         <p v-if="errors.username" class="msg-error">{{ errors.username }}</p>
       </div>
 
       <div>
         <label class="modal-label">密码</label>
-       <BaseInput v-model="password" type="password" class="input-base" placeholder="请输入密码" />
+        <BaseInput v-model="password" type="password" placeholder="请输入密码" />
         <p v-if="errors.password" class="msg-error">{{ errors.password }}</p>
       </div>
 
       <div>
         <label class="modal-label">确认密码</label>
-       <BaseInput v-model="confirmPassword" type="password" class="input-base" placeholder="请再次输入密码" />
+        <BaseInput v-model="confirmPassword" type="password" placeholder="请再次输入密码" />
         <p v-if="errors.confirmPassword" class="msg-error">{{ errors.confirmPassword }}</p>
       </div>
 
       <div v-if="needCaptcha">
         <label class="modal-label">验证码</label>
         <div class="flex items-center gap-2">
-         <BaseInput v-model="captcha" type="text" class="input-base" placeholder="请输入验证码" />
+          <BaseInput v-model="captcha" placeholder="请输入验证码" />
           <img
               :src="captchaUrl"
               @click="refreshCaptcha"
               class="h-10 cursor-pointer border rounded"
               :title="captchaLoading ? '加载中...' : '点击刷新验证码'"
+              alt="图片验证码"
           />
         </div>
         <p v-if="errors.captcha" class="msg-error">{{ errors.captcha }}</p>
@@ -55,9 +56,7 @@
     <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm text-center">
       <h3 class="text-lg font-semibold mb-4">注册成功</h3>
       <p class="mb-6">恭喜您，注册成功！请使用您的账号登录。</p>
-      <button @click="handleSuccessClose" class="btn-primary w-full">
-        确定
-      </button>
+      <button @click="handleSuccessClose" class="btn-primary w-full">确定</button>
     </div>
   </div>
 </template>
@@ -70,10 +69,15 @@ import { useUserStore } from '@/store/userStore'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
-const props = defineProps<{ visible: boolean }>()
-const emit = defineEmits(['update:visible', 'register-success', 'switch-to-login'])
+const emit = defineEmits<{
+  (e: 'update:visible', value: boolean): void
+  (e: 'register-success', data: any): void
+  (e: 'switch-to-login'): void
+}>()
 
-const visible = computed({
+const props = defineProps<{ visible: boolean }>()
+
+const visible = computed<boolean>({
   get: () => props.visible,
   set: val => emit('update:visible', val)
 })
@@ -108,10 +112,10 @@ const schema = yup.object({
 
 const { handleSubmit, resetForm, errors } = useForm({ validationSchema: schema })
 
-const { value: username } = useField('username')
-const { value: password } = useField('password')
-const { value: confirmPassword } = useField('confirmPassword')
-const { value: captcha } = useField('captcha')
+const { value: username } = useField<string>('username')
+const { value: password } = useField<string>('password')
+const { value: confirmPassword } = useField<string>('confirmPassword')
+const { value: captcha } = useField<string>('captcha')
 
 watch(needCaptcha, async val => {
   if (val && !captchaUrl.value) await refreshCaptcha()

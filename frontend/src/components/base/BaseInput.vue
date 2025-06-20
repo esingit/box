@@ -1,38 +1,44 @@
 <template>
-  <div class="relative w-full">
+  <div
+      class="relative w-full"
+      @click="focusInputManually"
+  >
     <input
         ref="inputRef"
-        v-model="innerValue"
+        autocomplete="on"
+        :value="innerValue"
         :type="type"
         :placeholder="placeholder"
         :disabled="disabled"
         :title="errorTooltip"
         :class="[
-        'input-base pr-5',
-        showError ? 'border-red-500 ring-1 ring-red-500' : ''
+        'input-base pr-8', // 留出清除按钮空间
+        showError ? 'msg-error' : ''
       ]"
-        @blur="onBlur"
+        @input="onInput"
+        @blur="handleBlur"
     />
 
-    <!-- 清空按钮 -->
+    <!-- 清除按钮 -->
     <button
         v-if="clearable && innerValue"
-        @click="clear"
-        class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+        @click.stop="clear"
+        class="absolute right-2 top-1/2 -translate-y-1/2 z-10 text-gray-400 hover:text-gray-600 transition"
         title="清空"
+        type="button"
     >
       <LucideX class="w-4 h-4" />
     </button>
 
-    <!-- 错误提示文字 -->
-    <p v-if="showError" class="text-xs text-red-500 mt-1 select-none">
+    <!-- 错误提示 -->
+    <p v-if="showError" class="msg-error mt-1 text-sm text-red-500">
       {{ requiredMessage || '此项为必填' }}
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { LucideX } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{
@@ -44,7 +50,6 @@ const props = withDefaults(defineProps<{
   required?: boolean
   requiredMessage?: string
 }>(), {
-  modelValue: '',
   placeholder: '请输入内容',
   type: 'text',
   disabled: false,
@@ -53,39 +58,71 @@ const props = withDefaults(defineProps<{
   requiredMessage: ''
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string): void
+}>()
+
+const inputRef = ref<HTMLInputElement | null>(null)
+defineExpose({ inputRef })
 
 const innerValue = computed({
-  get: () => props.modelValue,
+  get: () => props.modelValue ?? '',
   set: val => emit('update:modelValue', val)
 })
 
-const inputRef = ref<HTMLInputElement | null>(null)
-
-const isEmpty = computed(() => innerValue.value.trim?.() === '')
-
 const showError = ref(false)
 
-const errorTooltip = computed(() => (showError.value ? (props.requiredMessage || '此项为必填') : ''))
+const errorTooltip = computed(() =>
+    showError.value ? (props.requiredMessage || '此项为必填') : ''
+)
 
+// 清空并聚焦
 function clear() {
   emit('update:modelValue', '')
   showError.value = false
+  inputRef.value?.focus()
 }
 
-// 失焦时触发校验
-function onBlur() {
-  if (props.required && isEmpty.value) {
+// 输入事件
+function onInput(e: Event) {
+  const val = (e.target as HTMLInputElement).value
+  emit('update:modelValue', val)
+}
+
+// 失焦校验
+function handleBlur() {
+  if (props.required && innerValue.value.trim() === '') {
     showError.value = true
-    // 自动聚焦
-    nextTick(() => inputRef.value?.focus())
   } else {
     showError.value = false
   }
 }
 
-// 如果外部 modelValue 改变了，自动重置错误状态
+// 监测外部 modelValue 变化，清除错误提示
 watch(() => props.modelValue, () => {
-  if (!isEmpty.value) showError.value = false
+  if (innerValue.value.trim() !== '') {
+    showError.value = false
+  }
 })
+
+// 解决自动填充内容无法同步的问题
+onMounted(() => {
+  nextTick(() => {
+    const el = inputRef.value
+    if (el && el.value && el.value !== innerValue.value) {
+      emit('update:modelValue', el.value)
+    }
+  })
+})
+
+// 点击外层时强制聚焦和光标
+function focusInputManually() {
+  const el = inputRef.value
+  if (!el || props.disabled) return
+  el.focus()
+  // hack：强制光标显示，解决部分浏览器点击无光标问题
+  const val = el.value
+  el.value = ''
+  el.value = val
+}
 </script>
