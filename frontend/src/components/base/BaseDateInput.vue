@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, defineExpose } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, defineExpose, watch } from 'vue'
 import dayjs from 'dayjs'
 import { LucideX, LucideCalendar } from 'lucide-vue-next'
 import BaseButton from './BaseButton.vue'
@@ -212,6 +212,14 @@ function togglePopover() {
   if (props.disabled) return
   open.value = !open.value
 }
+
+// 新增：弹窗关闭时同步数据到外层，保证点击空白关闭弹窗时同步
+watch(open, (val, oldVal) => {
+  if (oldVal === true && val === false) {
+    // 弹窗从开变关，主动同步当前值给外层
+    emit('update:modelValue', displayValue.value)
+  }
+})
 
 function clearAll() {
   if (props.range) {

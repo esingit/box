@@ -64,3 +64,27 @@ export function formatTime(data: any) {
     return result;
 }
 
+// 日期范围查询格式化
+export function joinRangeDates(start: string, end: string): string {
+    if (start && end) {
+        return `${start} ~ ${end}`
+    } else if (start) {
+        return start
+    } else if (end) {
+        return end
+    }
+    return ''
+}
+
+export function splitRangeDates(rangeStr: string): { start: string; end: string } {
+    if (!rangeStr) return { start: '', end: '' }
+    const parts = rangeStr.split('~').map(v => v.trim())
+    if (parts.length === 2) {
+        return { start: parts[0], end: parts[1] }
+    } else if (parts.length === 1) {
+        return { start: parts[0], end: parts[0] }
+    }
+    return { start: '', end: '' }
+}
+
+

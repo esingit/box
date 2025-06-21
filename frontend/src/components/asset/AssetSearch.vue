@@ -46,15 +46,20 @@
 
     <!-- 更多条件 -->
     <div v-if="showMore" class="flex flex-col md:flex-row md:items-center md:gap-3 gap-2">
-      <!-- 日期范围 -->
-      <div class="flex items-center gap-2">
-        <input type="date" v-model="query.startDate" class="input-base" />
-        <span class="text-gray-400">至</span>
-        <input type="date" v-model="query.endDate" class="input-base" />
+      <!-- 日期范围，改为使用 BaseDateInput -->
+      <div>
+        <BaseDateInput
+            v-model="rangeValue"
+            type="date"
+            range
+            clearable
+            class="w-[300px]"
+            placeholder="请选择日期范围"
+        />
       </div>
 
       <!-- 备注关键词 -->
-     <BaseInput
+      <BaseInput
           type="text"
           v-model="query.remark"
           placeholder="备注关键词"
@@ -68,6 +73,7 @@
 import { ref, watch } from 'vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
+import BaseDateInput from '@/components/base/BaseDateInput.vue'
 import {
   LucideChevronDown,
   LucideChevronUp,
@@ -95,7 +101,6 @@ const emit = defineEmits(['search', 'reset'])
 // 本地响应式变量，解决首次为空的问题
 const localAssetNameOptions = ref<Array<{ label: string; value: string | number }>>([])
 
-// 监听 props.assetNameOptions 变化
 watch(
     () => props.assetNameOptions,
     (val) => {
@@ -109,6 +114,42 @@ const toggleMore = () => {
   showMore.value = !showMore.value
 }
 
+// 日期范围字符串，格式形如 '2023-01-01 ~ 2023-01-31'
+const rangeValue = ref('')
+
+// 工具函数：把start和end拼成range字符串
+function joinRangeDates(start: string, end: string) {
+  if (!start && !end) return ''
+  if (start && end) return `${start} ~ ${end}`
+  return start || end || ''
+}
+
+// 工具函数：拆分range字符串为start和end
+function splitRangeDates(rangeStr: string) {
+  if (!rangeStr) return { start: '', end: '' }
+  const parts = rangeStr.split('~').map(s => s.trim())
+  return {
+    start: parts[0] || '',
+    end: parts[1] || ''
+  }
+}
+
+// 监听 props.query.startDate 和 endDate，同步给 rangeValue 显示
+watch(
+    () => [props.query.startDate, props.query.endDate],
+    ([start, end]) => {
+      rangeValue.value = joinRangeDates(start, end)
+    },
+    { immediate: true }
+)
+
+// 监听 rangeValue，拆分回 startDate 和 endDate，赋值给 props.query
+watch(rangeValue, (val) => {
+  const { start, end } = splitRangeDates(val)
+  props.query.startDate = start
+  props.query.endDate = end
+})
+
 function onSearch() {
   emit('search', { ...props.query })
 }
@@ -117,4 +158,3 @@ function onReset() {
   emit('reset')
 }
 </script>
-
