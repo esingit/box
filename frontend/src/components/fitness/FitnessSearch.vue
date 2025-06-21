@@ -5,7 +5,7 @@
       <div class="flex-1 min-w-[200px]">
         <BaseSelect
             title="健身类型"
-            v-model="query.typeIdList"
+            v-model="localQuery.typeIdList"
             :options="fitnessTypeOptions"
             multiple
             clearable
@@ -41,13 +41,13 @@
 
     <!-- 第二行 -->
     <div v-if="showMore" class="flex flex-wrap gap-3">
-      <BaseInput v-model="query.remark" placeholder="备注关键词" type="text" clearable />
+      <BaseInput v-model="localQuery.remark" placeholder="备注关键词" type="text" clearable />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, reactive } from 'vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseDateInput from '@/components/base/BaseDateInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -73,26 +73,46 @@ const toggleMore = () => {
   showMore.value = !showMore.value
 }
 
-const rangeValue = ref('')
-
-// 监听 props.query.startDate、endDate，自动拼接成 rangeValue 字符串
-watch(
-    () => [props.query.startDate, props.query.endDate],
-    ([start, end]) => {
-      rangeValue.value = joinRangeDates(start, end)
-    },
-    { immediate: true }
-)
-
-// 监听 rangeValue，拆分后赋值给 props.query.startDate 和 endDate
-watch(rangeValue, (val) => {
-  const { start, end } = splitRangeDates(val)
-  props.query.startDate = start
-  props.query.endDate = end
+// 用响应式localQuery复制props.query，避免直接修改props
+const localQuery = reactive({
+  typeIdList: Array.isArray(props.query.typeIdList) ? [...props.query.typeIdList] : [],
+  startDate: props.query.startDate,
+  endDate: props.query.endDate,
+  remark: props.query.remark
 })
 
+// rangeValue 用于绑定日期范围选择组件
+const rangeValue = ref(joinRangeDates(localQuery.startDate, localQuery.endDate))
+
+// 监听 localQuery.startDate/endDate，更新 rangeValue
+watch(
+    () => [localQuery.startDate, localQuery.endDate],
+    ([start, end]) => {
+      rangeValue.value = joinRangeDates(start, end)
+    }
+)
+
+// 监听 rangeValue，拆分赋值给 localQuery.startDate/endDate
+watch(rangeValue, (val) => {
+  const { start, end } = splitRangeDates(val)
+  localQuery.startDate = start
+  localQuery.endDate = end
+})
+
+// 监听 props.query 变化，保持 localQuery 同步，深拷贝typeIdList避免引用问题
+watch(
+    () => props.query,
+    (newVal) => {
+      localQuery.typeIdList = Array.isArray(newVal.typeIdList) ? [...newVal.typeIdList] : []
+      localQuery.startDate = newVal.startDate
+      localQuery.endDate = newVal.endDate
+      localQuery.remark = newVal.remark
+    },
+    { deep: true }
+)
+
 function onSearch() {
-  emit('search', { ...props.query })
+  emit('search', { ...localQuery })
 }
 
 function onReset() {

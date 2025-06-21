@@ -136,12 +136,12 @@ function formatAmount(value: any) {
 
 const echartOptions = computed(() => {
   const list = fitnessStore.allList
-  if (!list?.length) return null
-
-  // 如果没有选择健身类型，默认使用所有健身类型
+  // 这里用fetchData里传给后端的 typeIdList，不用query.value.typeIdList
   const selected = query.value.typeIdList.length > 0
       ? query.value.typeIdList
-      : Array.from(new Set(list.map(i => i.typeId)))
+      : props.fitnessTypeOptions.map(i => i.value)
+
+  if (!list?.length || !selected.length) return null
 
   const dates = [...new Set(list.map(i => i.finishTime.split('T')[0]))].sort()
   const formattedDates = dates.map(d => {
@@ -159,7 +159,7 @@ const echartOptions = computed(() => {
             .reduce((sum, r) => sum + Number(r.count || 0), 0)
     )
 
-    const hue = (index * 60) % 360
+    const hue = index * 60 % 360
     return {
       name: meta.value1 || `类型${typeId}`,
       type: 'line',
@@ -211,18 +211,17 @@ function getDefaultDateRange() {
 
 async function fetchData() {
   fitnessError.value = ''
-
   if (!query.value.startDate || !query.value.endDate) {
     emitter.emit('notify', { message: '请选择日期范围', type: 'error' })
     return
   }
 
-  // 如果没有选中任何健身类型，查询所有类型数据
-  if (query.value.typeIdList.length === 0) {
-    query.value.typeIdList = props.fitnessTypeOptions.map(i => i.value)
-  }
+  // 如果没选类型，给后端传全部类型，不修改query.typeIdList，保持界面空状态
+  const queryTypeIds = query.value.typeIdList.length > 0
+      ? query.value.typeIdList
+      : props.fitnessTypeOptions.map(i => i.value)
 
-  fitnessStore.updateQuery(query.value)
+  fitnessStore.updateQuery({ ...query.value, typeIdList: queryTypeIds })
 
   try {
     await fitnessStore.loadAllRecords()
@@ -247,7 +246,7 @@ function onSearch() {
 function onReset() {
   const { startDate, endDate } = getDefaultDateRange()
   query.value = {
-    typeIdList: [], // 重置为空，表示查询所有类型
+    typeIdList: [],  // 重置为空数组，界面不选中任何类型
     startDate,
     endDate,
     remark: ''
@@ -262,7 +261,7 @@ onMounted(() => {
   query.value.startDate = startDate
   query.value.endDate = endDate
   rangeValue.value = joinRangeDates(startDate, endDate)
-  query.value.typeIdList = [] // 默认无选中，表示查询所有
+  query.value.typeIdList = []  // 初始不默认选中任何类型
   fetchData()
 })
 </script>
