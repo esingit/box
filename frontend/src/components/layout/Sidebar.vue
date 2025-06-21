@@ -1,9 +1,9 @@
-<!-- components/layout/Sidebar.vue -->
 <template>
+  <!-- 折叠侧边栏 -->
   <aside :class="sidebarClass">
-    <!-- Logo -->
+    <!-- 顶部 Logo 区 -->
     <div
-        class="h-12 flex items-center justify-center border-gray-200 cursor-pointer relative"
+        class="h-12 flex items-center justify-center cursor-pointer relative"
         @click="toggleSidebar"
     >
       <Package
@@ -12,24 +12,27 @@
       />
     </div>
 
-    <!-- Menu -->
-    <nav class="flex-1 overflow-y-auto space-y-1">
+    <!-- 菜单列表 -->
+    <nav class="flex-1 overflow-y-auto space-y-1 mt-2">
       <router-link
           v-for="(item, index) in menuItems"
           :key="index"
           :to="item.path"
-          class="menu-btn m-2"
+          class="menu-btn m-2 gap-2"
           :class="getItemClass(item.path)"
       >
-        <component :is="item.icon" :size="20"
-                   :class="{ 'opacity-0 scale-0 transition-all duration-500': isCollapsed }"
-        />
-        <span class="whitespace-nowrap">{{ item.title }}</span>
+        <component :is="item.icon" :size="20" />
+        <span
+            class="whitespace-nowrap transition-all"
+            :class="{ 'opacity-0 w-0 scale-0': isCollapsed }"
+        >
+          {{ item.title }}
+        </span>
       </router-link>
     </nav>
   </aside>
 
-  <!-- 悬浮的箱子图标 -->
+  <!-- 悬浮图标：收起时展示 -->
   <div
       v-if="isCollapsed"
       class="fixed top-3 left-3 z-50 cursor-pointer animate-bounce-in"
@@ -45,58 +48,55 @@
 <script setup lang="ts">
 import { ref, computed, inject } from 'vue'
 import { useRoute } from 'vue-router'
-import {
-  LucideHome,
-  Package,
-  LucideDumbbell,
-  LucideWallet
-} from 'lucide-vue-next'
+import { Package, LucideHome, LucideDumbbell, LucideWallet } from 'lucide-vue-next'
 
+// 注入登录状态
 const props = defineProps<{ isLoggedIn: boolean }>()
 
 const route = useRoute()
-const isRotating = ref(false)
 const isCollapsed = ref(false)
+const isRotating = ref(false)
 
-// 注入父组件的方法
+// 通知父组件的 inject 函数
 const setSidebarCollapsed = inject('setSidebarCollapsed') as (collapsed: boolean) => void
 
+// 菜单数据
 const menuItems = [
   { path: '/', title: '首页', icon: LucideHome },
   { path: '/fitness', title: '健身', icon: LucideDumbbell },
   { path: '/asset', title: '资产', icon: LucideWallet }
 ]
 
-const sidebarClass = computed(() =>
-    [
-      'h-full bg-[var(--bg-sub)] text-gray-800 flex flex-col transition-all duration-500 ease-in-out border-r border-gray-200 fixed z-40',
-      isCollapsed.value ? 'w-0  overflow-visible' : 'w-48'
-    ].join(' ')
-)
+// 容器样式
+const sidebarClass = computed(() => [
+  'h-full bg-white border-r border-gray-200 text-gray-800 flex flex-col transition-all duration-300 ease-in-out fixed z-40',
+  isCollapsed.value ? 'w-0 overflow-visible' : 'w-48'
+].join(' '))
 
+// Logo 图标样式
 const logoClass = computed(() => [
-  'text-gray-800 transition-all duration-500',
+  'text-gray-800 transition-all duration-300',
   isRotating.value && 'animate-spin',
   isCollapsed.value && 'opacity-0 scale-0'
 ].filter(Boolean).join(' '))
 
+// 当前激活菜单项
 const getItemClass = (path: string) => ({
   'bg-[var(--bg-btn-hover)]': route.path === path,
 })
 
+// 切换收起/展开
 function toggleSidebar() {
   if (!props.isLoggedIn) return
-  isRotating.value = true
   isCollapsed.value = !isCollapsed.value
+  isRotating.value = true
 
-  // 通知父组件侧边栏状态变化
-  if (setSidebarCollapsed) {
-    setSidebarCollapsed(isCollapsed.value)
-  }
+  // 通知父组件
+  setSidebarCollapsed?.(isCollapsed.value)
 
   setTimeout(() => {
     isRotating.value = false
-  }, 500)
+  }, 400)
 }
 </script>
 
@@ -115,8 +115,7 @@ function toggleSidebar() {
     opacity: 1;
   }
 }
-
 .animate-bounce-in {
-  animation: bounce-in 0.6s ease-out forwards;
+  animation: bounce-in 0.5s ease-out forwards;
 }
 </style>

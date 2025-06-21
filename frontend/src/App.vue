@@ -1,19 +1,14 @@
+<!-- App.vue -->
 <template>
   <div class="app-wrapper">
-    <!-- 加载中提示 -->
     <div v-if="isUserLoading" class="loading">加载中...</div>
-
-    <!-- 登录状态判断 -->
     <div v-else>
-      <!-- 已登录 -->
       <template v-if="isLoggedIn">
         <div class="layout flex h-screen relative">
           <Sidebar :isLoggedIn="isLoggedIn" />
-          <div
-              class="flex-1 flex flex-col transition-all duration-500 ease-in-out"
+          <div class="flex-1 flex flex-col transition-all duration-200 ease-in-out"
               :class="{ 'ml-0': sidebarCollapsed, 'ml-32': !sidebarCollapsed }"
           >
-            <!-- 顶部用户信息栏 -->
             <div class="menu-container">
               <UserMenuAuthenticated
                   :user="user"
@@ -21,40 +16,32 @@
                   @open-profile="handleOpenProfile"
               />
             </div>
-            <!-- 主内容区域 -->
             <div class="app-content">
               <RouterView />
             </div>
           </div>
         </div>
       </template>
-
-      <!-- 未登录部分保持不变 -->
       <template v-else>
         <div class="flex flex-col min-h-screen">
-          <!-- 顶部访客菜单 -->
           <div class="menu-container">
             <UserMenuGuest
                 @show-login="showLogin()"
                 @show-register="showRegister()"
             />
           </div>
-          <!-- 路由内容区域 -->
           <div class="app-content">
             <RouterView />
           </div>
         </div>
       </template>
     </div>
-
-    <!-- 登录 / 注册弹窗 -->
     <AuthModals
         v-model:showLogin="isShowingLoginModal"
         v-model:showRegister="isShowingRegisterModal"
         @login-success="handleLoginSuccess"
         @register-success="handleLoginSuccess"
     />
-
     <Profile ref="profileSettingsRef" />
     <BaseNotice />
     <BaseDialog />
@@ -89,24 +76,26 @@ const {
   showLogin,
   showRegister,
   hideLogin,
-  hideRegister,
+  hideRegister
 } = authModal
 
 const isUserLoading = ref(true)
 const profileSettingsRef = ref<InstanceType<typeof Profile> | null>(null)
 
+const sidebarCollapsed = ref(false)
+provide('setSidebarCollapsed', (collapsed: boolean) => {
+  sidebarCollapsed.value = collapsed
+})
+
 function onShowLogin() {
   showLogin()
 }
-
 onMounted(() => {
   emitter.on('show-login', onShowLogin)
 })
-
 onUnmounted(() => {
   emitter.off('show-login', onShowLogin)
 })
-
 
 function notify(type: 'success' | 'error' | 'info' | 'warning', msg: string) {
   emitter.emit('notify', { message: msg, type })
@@ -151,7 +140,7 @@ async function initializeUser(retryCount = 3) {
       notify('error', '用户数据加载失败，正在重试...')
       setTimeout(() => initializeUser(retryCount - 1), 2000)
     } else {
-      handleError(error, '无法加载用户数据，请检查您的网络连接或稍后再试')
+      handleError(error, '无法加载用户数据，请检查网络连接或稍后再试')
     }
   } finally {
     isUserLoading.value = false
@@ -163,14 +152,4 @@ function handleOpenProfile() {
 }
 
 initializeUser()
-
-
-const sidebarCollapsed = ref(false)
-
-// 提供给子组件的方法
-provide('setSidebarCollapsed', (collapsed: boolean) => {
-  sidebarCollapsed.value = collapsed
-})
-
 </script>
-

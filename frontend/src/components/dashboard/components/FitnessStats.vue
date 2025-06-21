@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-white border rounded-md p-4 shadow animate-fade max-w-6xl mx-auto space-y-6">
+  <div class="bg-white rounded-xl p-6 hover:shadow-md w-full space-y-6">
     <h2 class="text-lg font-semibold">健身统计</h2>
 
-    <!-- 查询区域 -->
-    <div class="border rounded-xl p-4 space-y-4">
+    <!-- 查询条件 -->
+    <div class="border rounded-xl p-4 space-y-4 hover:shadow-md">
       <div class="flex flex-wrap items-center gap-3">
-        <!-- 多选健身类型 -->
+        <!-- 健身类型 固定宽度 -->
         <div class="flex-1 min-w-[200px]">
           <BaseSelect
               title="健身类型"
@@ -18,8 +18,8 @@
           />
         </div>
 
-        <!-- 日期范围 -->
-        <div class="flex gap-2 items-center flex-shrink-0">
+        <!-- 日期范围 固定宽度 -->
+        <div class="w-[300px] flex-shrink-0 flex gap-2 items-center">
           <BaseDateInput
               v-model="rangeValue"
               type="date"
@@ -27,7 +27,7 @@
               clearable
               required
               placeholder="请选择日期范围"
-              class="w-[300px]"
+              class="w-full"
           />
         </div>
 
@@ -76,8 +76,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick, type PropType } from 'vue'
 import * as echarts from 'echarts'
-import { useFitnessStore } from '@/store/fitnessStore'
 import emitter from '@/utils/eventBus'
+import { useFitnessStore } from '@/store/fitnessStore'
 import { joinRangeDates, splitRangeDates } from '@/utils/formatters'
 import {
   LucideChevronDown,
@@ -105,6 +105,12 @@ const props = defineProps({
 })
 
 const fitnessStore = useFitnessStore()
+const chartRef = ref<HTMLDivElement | null>(null)
+let chartInstance: echarts.ECharts | null = null
+
+const showMore = ref(false)
+const fitnessError = ref('')
+const rangeValue = ref('')
 const query = ref({
   typeIdList: [] as number[],
   startDate: '',
@@ -112,15 +118,11 @@ const query = ref({
   remark: ''
 })
 
-const rangeValue = ref('')
-const showMore = ref(false)
-const fitnessError = ref('')
-const chartRef = ref<HTMLDivElement | null>(null)
-let chartInstance: echarts.ECharts | null = null
+function toggleMore() {
+  showMore.value = !showMore.value
+}
 
-const toggleMore = () => (showMore.value = !showMore.value)
-
-watch(rangeValue, val => {
+watch(rangeValue, (val) => {
   const { start, end } = splitRangeDates(val)
   query.value.startDate = start
   query.value.endDate = end
@@ -130,13 +132,12 @@ function getEmptyDescription(type: string) {
   return `暂无相关${type}统计数据`
 }
 
-function formatAmount(value: any) {
-  return value == null ? '-' : Number(value).toFixed(2)
+function formatAmount(val: any) {
+  return val == null ? '-' : Number(val).toFixed(2)
 }
 
 const echartOptions = computed(() => {
   const list = fitnessStore.allList
-  // 这里用fetchData里传给后端的 typeIdList，不用query.value.typeIdList
   const selected = query.value.typeIdList.length > 0
       ? query.value.typeIdList
       : props.fitnessTypeOptions.map(i => i.value)
@@ -216,7 +217,6 @@ async function fetchData() {
     return
   }
 
-  // 如果没选类型，给后端传全部类型，不修改query.typeIdList，保持界面空状态
   const queryTypeIds = query.value.typeIdList.length > 0
       ? query.value.typeIdList
       : props.fitnessTypeOptions.map(i => i.value)
@@ -246,7 +246,7 @@ function onSearch() {
 function onReset() {
   const { startDate, endDate } = getDefaultDateRange()
   query.value = {
-    typeIdList: [],  // 重置为空数组，界面不选中任何类型
+    typeIdList: [],
     startDate,
     endDate,
     remark: ''
@@ -261,7 +261,7 @@ onMounted(() => {
   query.value.startDate = startDate
   query.value.endDate = endDate
   rangeValue.value = joinRangeDates(startDate, endDate)
-  query.value.typeIdList = []  // 初始不默认选中任何类型
+  query.value.typeIdList = []
   fetchData()
 })
 </script>

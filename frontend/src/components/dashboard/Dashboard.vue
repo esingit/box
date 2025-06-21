@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-wrapper px-4 py-6">
+  <div class="min-h-screen bg-gray-50 p-6 max-w-6xl mx-auto flex flex-col space-y-8 rounded-xl">
     <div class="grid gap-12">
       <!-- 加上 :key 强制刷新组件 -->
       <FitnessStats :key="route.fullPath" :fitnessTypeOptions="fitnessTypeOptions" />

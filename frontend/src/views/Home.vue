@@ -1,6 +1,6 @@
 <!-- src/views/Home.vue -->
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex-col h-full">
     <header class="flex items-center justify-center gap-2 px-4 py-3">
     <Package
           class="cursor-pointer transition-transform duration-500"
