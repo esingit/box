@@ -2,8 +2,10 @@
   <div class="bg-white border rounded-md p-4 shadow animate-fade max-w-3xl mx-auto space-y-6">
     <h2 class="text-lg font-semibold">健身统计</h2>
 
+    <!-- 查询看板 -->
     <div class="relative w-full border rounded-xl p-4 space-y-4 transition">
       <div class="flex flex-wrap items-center gap-3">
+        <!-- 健身类型多选 -->
         <div class="flex-1 min-w-[200px]">
           <BaseSelect
               title="健身类型"
@@ -16,6 +18,7 @@
           />
         </div>
 
+        <!-- 日期范围 -->
         <div class="flex gap-2 items-center flex-shrink-0">
           <BaseDateInput
               v-model="rangeValue"
@@ -27,6 +30,7 @@
           />
         </div>
 
+        <!-- 操作按钮 -->
         <div class="flex gap-2 flex-shrink-0 ml-auto">
           <BaseButton @click="onSearch" color="outline" :icon="LucideSearch" variant="search" />
           <BaseButton @click="onReset" color="outline" :icon="LucideRotateCcw" variant="search" />
@@ -39,11 +43,13 @@
         </div>
       </div>
 
+      <!-- 更多查询项 -->
       <div v-if="showMore" class="flex flex-wrap gap-3">
         <BaseInput v-model="query.remark" placeholder="备注关键词" type="text" clearable />
       </div>
     </div>
 
+    <!-- ECharts 图表区域 -->
     <div class="relative h-72">
       <template v-if="fitnessError">
         <div class="flex flex-col items-center justify-center h-full text-red-600">
@@ -148,7 +154,7 @@ const echartOptions = computed(() => {
 
   const series = query.value.typeIdList
       .map((typeId, index) => {
-        const typeMeta = fitnessStore.metaTypes?.find?.(t => t.id === typeId)
+        const typeMeta = fitnessStore.metaTypes.find(t => t.id === typeId)
         if (!typeMeta) return null
 
         const data = dates.map(date => {
@@ -202,7 +208,7 @@ const echartOptions = computed(() => {
 function getDefaultDateRange() {
   const end = new Date()
   const start = new Date()
-  start.setDate(end.getDate() - 29)
+  start.setDate(end.getDate() - 29) // 最近30天包含今天
   const format = (d: Date) => d.toISOString().slice(0, 10)
   return {
     startDate: format(start),
@@ -226,10 +232,7 @@ async function fetchData() {
   })
 
   try {
-    await fitnessStore.loadList({ pageNo: 1, pageSize: 999999 })
-    if (fitnessStore.list.length === 0) {
-      fitnessError.value = '暂无符合条件的数据'
-    }
+    await fitnessStore.loadList()
   } catch {
     fitnessError.value = '获取健身数据失败，请稍后重试'
   }
