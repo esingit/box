@@ -417,4 +417,6 @@ onBeforeUnmount(() => {
 defineExpose({
   validate,
 })
+
+watch(() => props.modelValue, () => syncFromModel())
 </script>

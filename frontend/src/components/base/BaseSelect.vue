@@ -125,7 +125,7 @@ const safeModelValue = computed(() => {
 })
 
 const modelValue = computed({
-  get: () => safeModelValue.value,
+  get: () => props.modelValue,
   set: val => {
     emit('update:modelValue', val)
     showError.value = false

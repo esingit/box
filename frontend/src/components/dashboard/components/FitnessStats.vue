@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white border rounded-md p-4 shadow animate-fade max-w-3xl mx-auto space-y-6">
+  <div class="bg-white border rounded-md p-4 shadow animate-fade max-w-6xl mx-auto space-y-6">
     <h2 class="text-lg font-semibold">健身统计</h2>
 
     <!-- 查询区域 -->
@@ -8,6 +8,7 @@
         <!-- 多选健身类型 -->
         <div class="flex-1 min-w-[200px]">
           <BaseSelect
+              title="健身类型"
               v-model="query.typeIdList"
               :options="fitnessTypeOptions"
               multiple
@@ -24,6 +25,7 @@
               type="date"
               range
               clearable
+              required
               placeholder="请选择日期范围"
               class="w-[300px]"
           />
@@ -49,7 +51,7 @@
     </div>
 
     <!-- 图表区域 -->
-    <div class="relative h-72">
+    <div class="relative min-h-[400px] h-[calc(100vh-300px)]">
       <template v-if="fitnessError">
         <div class="flex flex-col items-center justify-center h-full text-red-600">
           <p class="mb-2 font-semibold">{{ fitnessError }}</p>
@@ -89,7 +91,6 @@ import BaseDateInput from '@/components/base/BaseDateInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
-// Props 类型定义
 interface FitnessOption {
   label: string
   value: number
@@ -135,8 +136,12 @@ function formatAmount(value: any) {
 
 const echartOptions = computed(() => {
   const list = fitnessStore.allList
-  const selected = query.value.typeIdList
-  if (!list?.length || !selected.length) return null
+  if (!list?.length) return null
+
+  // 如果没有选择健身类型，默认使用所有健身类型
+  const selected = query.value.typeIdList.length > 0
+      ? query.value.typeIdList
+      : Array.from(new Set(list.map(i => i.typeId)))
 
   const dates = [...new Set(list.map(i => i.finishTime.split('T')[0]))].sort()
   const formattedDates = dates.map(d => {
@@ -154,14 +159,15 @@ const echartOptions = computed(() => {
             .reduce((sum, r) => sum + Number(r.count || 0), 0)
     )
 
+    const hue = (index * 60) % 360
     return {
       name: meta.value1 || `类型${typeId}`,
       type: 'line',
       data,
       smooth: true,
-      lineStyle: { color: `hsl(${index * 60}, 70%, 50%)` },
-      itemStyle: { color: `hsl(${index * 60}, 70%, 40%)` },
-      areaStyle: { color: `hsla(${index * 60}, 70%, 50%, 0.3)` }
+      lineStyle: { color: `hsl(${hue}, 30%, 50%)` },
+      itemStyle: { color: `hsl(${hue}, 30%, 50%)` },
+      areaStyle: { color: `hsla(${hue}, 30%, 50%, 0.2)` }
     }
   }).filter(Boolean)
 
@@ -169,7 +175,7 @@ const echartOptions = computed(() => {
     tooltip: {
       trigger: 'axis',
       formatter: (params: any[]) =>
-          params.map((p: any) => `${p.marker} ${p.seriesName}: ${formatAmount(p.data)}`).join('<br/>')
+          params.map(p => `${p.marker} ${p.seriesName}: ${formatAmount(p.data)}`).join('<br/>')
     },
     legend: {
       data: series.map(s => s.name),
@@ -186,7 +192,7 @@ const echartOptions = computed(() => {
       type: 'value',
       name: '次数',
       axisLine: { lineStyle: { color: '#ccc' } },
-      splitLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } },
+      splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } },
       minInterval: 1
     },
     series
@@ -205,20 +211,21 @@ function getDefaultDateRange() {
 
 async function fetchData() {
   fitnessError.value = ''
+
   if (!query.value.startDate || !query.value.endDate) {
     emitter.emit('notify', { message: '请选择日期范围', type: 'error' })
     return
+  }
+
+  // 如果没有选中任何健身类型，查询所有类型数据
+  if (query.value.typeIdList.length === 0) {
+    query.value.typeIdList = props.fitnessTypeOptions.map(i => i.value)
   }
 
   fitnessStore.updateQuery(query.value)
 
   try {
     await fitnessStore.loadAllRecords()
-
-    if (!query.value.typeIdList.length) {
-      query.value.typeIdList = props.fitnessTypeOptions.map(i => i.value)
-    }
-
     await nextTick()
     renderChart()
   } catch {
@@ -228,7 +235,6 @@ async function fetchData() {
 
 function renderChart() {
   if (!chartRef.value || !echartOptions.value) return
-
   chartInstance?.dispose()
   chartInstance = echarts.init(chartRef.value)
   chartInstance.setOption(echartOptions.value)
@@ -241,7 +247,7 @@ function onSearch() {
 function onReset() {
   const { startDate, endDate } = getDefaultDateRange()
   query.value = {
-    typeIdList: props.fitnessTypeOptions.map(i => i.value),
+    typeIdList: [], // 重置为空，表示查询所有类型
     startDate,
     endDate,
     remark: ''
@@ -256,7 +262,7 @@ onMounted(() => {
   query.value.startDate = startDate
   query.value.endDate = endDate
   rangeValue.value = joinRangeDates(startDate, endDate)
-
+  query.value.typeIdList = [] // 默认无选中，表示查询所有
   fetchData()
 })
 </script>

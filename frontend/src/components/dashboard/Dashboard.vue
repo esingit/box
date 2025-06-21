@@ -1,8 +1,10 @@
 <template>
   <div class="dashboard-wrapper px-4 py-6">
     <div class="grid gap-12">
-      <FitnessStats :fitnessTypeOptions="fitnessTypeOptions" />
+      <!-- 加上 :key 强制刷新组件 -->
+      <FitnessStats :key="route.fullPath" :fitnessTypeOptions="fitnessTypeOptions" />
       <AssetStats
+          :key="route.fullPath"
           :assetNameOptions="assetNameOptions"
           :assetTypeOptions="assetTypeOptions"
           :assetLocationOptions="assetLocationOptions"
@@ -13,6 +15,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useMetaStore } from '@/store/metaStore'
 import { useAssetNameStore } from '@/store/assetNameStore'
@@ -23,6 +26,7 @@ import AssetStats from './components/AssetStats.vue'
 
 const metaStore = useMetaStore()
 const assetNameStore = useAssetNameStore()
+const route = useRoute()
 
 // 健身类型下拉框选项
 const fitnessTypeOptions = computed(() =>
@@ -35,12 +39,17 @@ const fitnessTypeOptions = computed(() =>
 
 // 资产相关下拉选项
 const assetTypeOptions = computed(() =>
-    (metaStore.typeMap?.ASSET_TYPE || []).map(i => ({ label: i.value1 || '', value: i.id }))
+    (metaStore.typeMap?.ASSET_TYPE || []).map(i => ({
+      label: i.value1 || '',
+      value: i.id
+    }))
 )
 const assetLocationOptions = computed(() =>
-    (metaStore.typeMap?.ASSET_LOCATION || []).map(i => ({ label: i.value1 || '', value: i.id }))
+    (metaStore.typeMap?.ASSET_LOCATION || []).map(i => ({
+      label: i.value1 || '',
+      value: i.id
+    }))
 )
-
 const { assetNameOptions } = storeToRefs(assetNameStore)
 
 onMounted(async () => {
