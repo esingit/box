@@ -11,7 +11,7 @@
         :initial-values="form"
         v-slot="{ handleSubmit, values, setFieldValue }"
     >
-      <form @submit.prevent="handleSubmit(onSubmit)" class="space-y-6" id="fitness-form">
+      <form @submit.prevent="handleSubmit(onSubmit)" class="space-y-3 px-1" id="fitness-form">
         <!-- 类型 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -88,12 +88,10 @@
         <!-- 备注 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
-          <Field
-              as="textarea"
-              name="remark"
-              :placeholder="remarkPlaceholder"
-              rows="3"
-              class="input-base"
+          <BaseInput
+              title="备注"
+              type="textarea"
+              clearable
               :disabled="loading"
           />
         </div>
@@ -130,7 +128,6 @@ const props = defineProps({
   loading: Boolean,
   title: String,
   confirmText: String,
-  remarkPlaceholder: String,
 })
 
 const emit = defineEmits(['close', 'submit', 'update:form'])

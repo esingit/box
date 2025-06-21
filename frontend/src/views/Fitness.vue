@@ -2,11 +2,9 @@
   <div class="min-h-screen bg-gray-50 p-6 max-w-6xl mx-auto flex flex-col space-y-8 rounded-xl">
     <!-- 统计卡片 -->
     <section class="bg-white rounded-xl hover:shadow-md p-6">
-      <header class="flex justify-between items-center mb-6">
+      <header class="flex justify-between items-center mb-3">
         <h2 class="text-xl font-semibold text-gray-900">健身统计</h2>
-        <button @click="refreshData" class="text-gray-500 hover:text-gray-900 transition" title="刷新数据">
-          <LucideRefreshCw class="w-6 h-6" />
-        </button>
+        <BaseButton type="button" @click="refreshData" color="outline" :icon="LucideRefreshCw" class="w-7 h-7"/>
       </header>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -148,14 +146,14 @@ const isNextWorkoutOverdue = computed(() => {
 function initEmptyForm() {
   // 默认类型“俯卧撑”
   const defaultType = fitnessTypeOptions.value.find(item => item.label === '俯卧撑')
-  form.typeId = defaultType ? defaultType.value : (fitnessTypeOptions.value[0]?.value || '')
+  form.typeId = defaultType ? String(defaultType.value) : String(fitnessTypeOptions.value[0]?.value || '')
 
   // 默认单位“个”
   const defaultUnit = fitnessUnitOptions.value.find(item => item.label === '个')
-  form.unitId = defaultUnit ? defaultUnit.value : (fitnessUnitOptions.value[0]?.value || '')
+  form.unitId = defaultUnit ? String(defaultUnit.value) : String(fitnessUnitOptions.value[0]?.value || '')
 
   form.count = '1'
-  form.finishTime = formatDate(new Date(), 'yyyy-MM-dd')
+  form.finishTime = formatDate(new Date())
   form.remark = ''
 }
 

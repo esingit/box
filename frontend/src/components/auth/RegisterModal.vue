@@ -56,7 +56,7 @@
     <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm text-center">
       <h3 class="text-lg font-semibold mb-4">注册成功</h3>
       <p class="mb-6">恭喜您，注册成功！请使用您的账号登录。</p>
-      <button @click="handleSuccessClose" class="btn-primary w-full">确定</button>
+      <BaseButton type="button" title="立即登录" @click="handleSuccessClose" color="primary" class="w-full"/>
     </div>
   </div>
 </template>

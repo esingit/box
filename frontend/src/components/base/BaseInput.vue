@@ -1,9 +1,10 @@
 <template>
   <div class="relative w-full" @click="focusInput">
-    <input
+    <component
+        :is="isTextareaType ? 'textarea' : 'input'"
         ref="inputRef"
         :value="inputDisplayValue"
-        :type="type"
+        :type="isTextareaType ? undefined : type"
         :placeholder="computedPlaceholder"
         :disabled="disabled"
         :title="errorTooltip || title"
@@ -14,10 +15,13 @@
         @input="handleInput"
         @blur="validate"
         class="input-base pr-12 appearance-none"
-        :class="{ 'msg-error': showError }"
+        :class="{
+        'msg-error': showError,
+        'min-h-[80px] resize-y': isTextareaType
+      }"
     />
 
-    <!-- 清除按钮，位置根据是否数字类型调节 -->
+    <!-- 清除按钮（支持 textarea） -->
     <button
         v-if="clearable && !disabled && hasValue"
         @click.stop="clearInput"
@@ -25,14 +29,15 @@
         tabindex="-1"
         title="清空"
         :class="[
-        'absolute top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition',
-        isNumberType ? 'right-8' : 'right-5'
+        'absolute text-gray-400 hover:text-gray-600 transition',
+        isTextareaType ? 'top-2 right-2' : 'top-1/2 -translate-y-1/2',
+        isNumberType && !isTextareaType ? 'right-8' : 'right-5'
       ]"
     >
       <LucideX class="w-4 h-4" />
     </button>
 
-    <!-- 数字上下调节按钮 -->
+    <!-- 数字调节按钮 -->
     <div
         v-if="isNumberType"
         class="absolute top-1/2 right-2 -translate-y-1/2 flex flex-col justify-center"
@@ -74,7 +79,7 @@ const props = withDefaults(defineProps<{
   modelValue?: string | number
   title?: string
   placeholder?: string
-  type?: 'text' | 'number'
+  type?: 'text' | 'number' | 'textarea'
   disabled?: boolean
   clearable?: boolean
   required?: boolean
@@ -97,10 +102,11 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string | number): void
 }>()
 
-const inputRef = ref<HTMLInputElement | null>(null)
+const inputRef = ref<HTMLInputElement | HTMLTextAreaElement | null>(null)
 defineExpose({ inputRef })
 
 const isNumberType = computed(() => props.type === 'number')
+const isTextareaType = computed(() => props.type === 'textarea')
 
 const innerValue = ref(props.modelValue ?? '')
 
@@ -139,7 +145,7 @@ function clearInput() {
 
 function handleInput(e: Event) {
   if (props.disabled) return
-  const val = (e.target as HTMLInputElement).value
+  const val = (e.target as HTMLInputElement | HTMLTextAreaElement).value
   if (val === '') {
     innerValue.value = ''
     emit('update:modelValue', '')

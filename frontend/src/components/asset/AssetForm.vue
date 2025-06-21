@@ -12,16 +12,15 @@
         :validation-schema="schema"
         :initial-values="form"
         v-slot="{ handleSubmit, setFieldValue }"
-        class="space-y-6"
     >
-      <form @submit.prevent="handleSubmit(onSubmit)">
+      <form @submit.prevent="handleSubmit(onSubmit)" class="space-y-3 px-1">
         <!-- 资产名称 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label class="text-sm font-medium text-gray-700 mb-1 block">
             资产名称 <span class="msg-error">*</span>
           </label>
           <Field name="assetNameId" v-slot="{ value, setValue }">
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center gap-2">
               <BaseSelect
                   title="资产名称"
                   :modelValue="value"
@@ -45,7 +44,7 @@
 
         <!-- 资产分类 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label class="text-sm font-medium text-gray-700 mb-1 block">
             资产分类 <span class="msg-error">*</span>
           </label>
           <Field name="assetTypeId" v-slot="{ value, setValue }">
@@ -55,9 +54,9 @@
                 :options="assetTypes"
                 clearable
                 @update:modelValue="val => {
-                setValue(val)
-                onAssetTypeChange(val, setFieldValue)
-              }"
+                  setValue(val)
+                  onAssetTypeChange(val, setFieldValue)
+                }"
             />
           </Field>
           <ErrorMessage name="assetTypeId" class="msg-error mt-1"/>
@@ -65,7 +64,7 @@
 
         <!-- 资产位置 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label class="text-sm font-medium text-gray-700 mb-1 block">
             资产位置 <span class="msg-error">*</span>
           </label>
           <Field name="assetLocationId" v-slot="{ value, setValue }">
@@ -82,7 +81,7 @@
 
         <!-- 金额 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label class="text-sm font-medium text-gray-700 mb-1 block">
             金额 <span class="msg-error">*</span>
           </label>
           <Field
@@ -98,14 +97,14 @@
 
         <!-- 货币单位 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label class="text-sm font-medium text-gray-700 mb-1 block">
             货币单位 <span class="msg-error">*</span>
           </label>
           <Field name="unitId" v-slot="{ value, setValue }">
             <BaseSelect
+                title="货币单位"
                 :modelValue="value"
                 :options="units"
-                placeholder="请选择货币单位"
                 clearable
                 @update:modelValue="val => setValue(val)"
             />
@@ -115,7 +114,7 @@
 
         <!-- 日期 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label class="text-sm font-medium text-gray-700 mb-1 block">
             日期 <span class="msg-error">*</span>
           </label>
           <Field
@@ -129,24 +128,21 @@
 
         <!-- 备注 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
-          <Field
-              name="remark"
-              as="textarea"
-              rows="3"
-              :placeholder="remarkPlaceholder"
-              class="input-base"
-          />
+          <label class="text-sm font-medium text-gray-700 mb-1 block">备注</label>
+          <Field name="remark">
+            <BaseInput
+                title="备注"
+                type="textarea"
+                clearable
+                :disabled="loading"
+            />
+          </Field>
         </div>
 
         <!-- 底部按钮区域 -->
-        <div class="flex justify-end gap-4 mt-4">
+        <div class="flex justify-end gap-4 mt-6">
           <BaseButton type="button" title="取消" @click="handleClose" color="outline" :loading="loading"/>
-          <BaseButton
-              type="submit"
-              color="primary"
-              :loading="loading"
-          >
+          <BaseButton type="submit" color="primary" :loading="loading">
             {{ loading ? '处理中...' : confirmText }}
           </BaseButton>
         </div>
@@ -167,8 +163,9 @@ import {useMetaStore} from '@/store/metaStore'
 import {setDefaultUnit} from '@/utils/commonMeta'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
 import AssetName from './assetName/AssetName.vue'
-import BaseButton from "@/components/base/BaseButton.vue";
+import BaseButton from "@/components/base/BaseButton.vue"
 
 const props = defineProps({
   visible: Boolean,
@@ -197,7 +194,10 @@ const assetLocations = computed(() => metaStore.typeMap?.ASSET_LOCATION?.map(i =
   label: String(i.value1),
   value: i.id
 })) || [])
-const units = computed(() => metaStore.typeMap?.UNIT?.map(i => ({label: String(i.value1), value: i.id})) || [])
+const units = computed(() => metaStore.typeMap?.UNIT?.map(i => ({
+  label: String(i.value1),
+  value: i.id
+})) || [])
 
 const schema = yup.object({
   assetNameId: yup.string().required('请选择资产名称'),

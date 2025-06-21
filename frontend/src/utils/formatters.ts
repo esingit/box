@@ -28,13 +28,20 @@ export function getChangeClass(change: number, isLiability = false): string {
 
 /**
  * 日期格式化为 YYYY-MM-DD
+ * 支持 Date、字符串、时间戳
  */
-export function formatDate(dateStr: string | null | undefined): string {
-    if (!dateStr) return '-'
-    const d = new Date(dateStr)
+export function formatDate(dateInput: string | number | Date | null | undefined): string {
+    if (!dateInput) return '-'
+
+    const d = new Date(dateInput)
     if (isNaN(d.getTime())) return '-'
-    return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`
+
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
 }
+
 
 /**
  * 日期格式化为 YYYY-MM-DDT00:00:00
