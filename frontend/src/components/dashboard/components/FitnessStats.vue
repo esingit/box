@@ -1,146 +1,296 @@
 <template>
-  <div class="fitness-stats p-4 bg-white rounded-md shadow space-y-4 max-w-4xl mx-auto">
-    <div class="flex items-center gap-4">
-      <BaseSelect
-          v-model="query.typeIdList"
-          :options="fitnessTypeOptions"
-          multiple
-          clearable
-          placeholder="全部健身类型"
-          class="flex-1 min-w-[180px]"
-      />
-      <BaseDateInput
-          v-model="rangeValue"
-          type="date"
-          range
-          clearable
-          placeholder="选择日期范围"
-          class="w-[320px]"
-      />
-      <BaseButton @click="onSearch" color="primary" icon="LucideSearch">查询</BaseButton>
-      <BaseButton @click="onReset" color="outline" icon="LucideRotateCcw">重置</BaseButton>
+  <div class="bg-white border rounded-md p-4 shadow animate-fade max-w-3xl mx-auto space-y-6">
+    <h2 class="text-lg font-semibold">健身统计</h2>
+
+    <div class="relative w-full border rounded-xl p-4 space-y-4 transition">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex-1 min-w-[200px]">
+          <BaseSelect
+              title="健身类型"
+              v-model="query.typeIdList"
+              :options="fitnessTypeOptions"
+              multiple
+              clearable
+              placeholder="全部健身类型"
+              class="w-full"
+          />
+        </div>
+
+        <div class="flex gap-2 items-center flex-shrink-0">
+          <BaseDateInput
+              v-model="rangeValue"
+              type="date"
+              range
+              clearable
+              placeholder="请选择日期范围"
+              class="w-[300px]"
+          />
+        </div>
+
+        <div class="flex gap-2 flex-shrink-0 ml-auto">
+          <BaseButton @click="onSearch" color="outline" :icon="LucideSearch" variant="search" />
+          <BaseButton @click="onReset" color="outline" :icon="LucideRotateCcw" variant="search" />
+          <BaseButton
+              @click="toggleMore"
+              color="outline"
+              :icon="showMore ? LucideChevronUp : LucideChevronDown"
+              variant="search"
+          />
+        </div>
+      </div>
+
+      <div v-if="showMore" class="flex flex-wrap gap-3">
+        <BaseInput v-model="query.remark" placeholder="备注关键词" type="text" clearable />
+      </div>
     </div>
 
-    <div v-if="loadingList" class="text-center text-gray-500">加载中...</div>
-    <div v-else-if="list.length === 0" class="text-center text-gray-400">暂无数据</div>
-    <div v-else ref="chartRef" class="w-full h-64"></div>
+    <div class="relative h-72">
+      <template v-if="fitnessError">
+        <div class="flex flex-col items-center justify-center h-full text-red-600">
+          <p class="mb-2 font-semibold">{{ fitnessError }}</p>
+          <p class="text-sm text-gray-500">{{ getEmptyDescription('健身') }}</p>
+        </div>
+      </template>
+
+      <template v-else-if="echartOptions && echartOptions.series.length">
+        <div ref="chartRef" class="w-full h-full"></div>
+      </template>
+
+      <template v-else>
+        <div class="flex flex-col items-center justify-center h-full text-gray-400">
+          <p class="mb-2">暂无数据</p>
+          <p class="text-sm">{{ getEmptyDescription('健身') }}</p>
+        </div>
+      </template>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick, defineProps } from 'vue'
 import * as echarts from 'echarts'
 import { useFitnessStore } from '@/store/fitnessStore'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseDateInput from '@/components/base/BaseDateInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
-import { LucideSearch, LucideRotateCcw } from 'lucide-vue-next'
+import BaseInput from '@/components/base/BaseInput.vue'
+import {
+  LucideChevronDown,
+  LucideChevronUp,
+  LucideRotateCcw,
+  LucideSearch
+} from 'lucide-vue-next'
+import emitter from '@/utils/eventBus'
 import { joinRangeDates, splitRangeDates } from '@/utils/formatters'
 
-defineProps({
+const props = defineProps({
   fitnessTypeOptions: {
-    type: Array,
+    type: Array as () => { label: string; value: number }[],
     required: true
   }
 })
 
 const fitnessStore = useFitnessStore()
-const query = fitnessStore.query
+
+const query = ref({
+  typeIdList: [] as number[],
+  startDate: '',
+  endDate: '',
+  remark: ''
+})
+
+const showMore = ref(false)
+const toggleMore = () => {
+  showMore.value = !showMore.value
+}
 
 const rangeValue = ref('')
 
-// 绑定组件多选和日期范围
 watch(
-    () => [query.startDate, query.endDate],
+    () => [query.value.startDate, query.value.endDate],
     ([start, end]) => {
       rangeValue.value = joinRangeDates(start, end)
     },
     { immediate: true }
 )
+
 watch(rangeValue, val => {
   const { start, end } = splitRangeDates(val)
-  query.startDate = start
-  query.endDate = end
+  query.value.startDate = start
+  query.value.endDate = end
 })
 
-const list = computed(() => fitnessStore.list)
-const loadingList = computed(() => fitnessStore.loadingList)
-
-const chartRef = ref(null)
+const fitnessError = ref('')
+const chartRef = ref<HTMLDivElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
 
-function renderChart() {
-  if (!chartRef.value) return
-  if (chartInstance) {
-    chartInstance.dispose()
-  }
-  if (list.value.length === 0) return
+function getEmptyDescription(type: string) {
+  return `暂无相关${type}统计数据`
+}
 
-  chartInstance = echarts.init(chartRef.value)
+function formatAmount(value: any) {
+  if (value == null) return '-'
+  return new Intl.NumberFormat('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value)
+}
 
-  const dates = Array.from(new Set(list.value.map(i => i.finishTime.slice(0, 10)))).sort()
+const echartOptions = computed(() => {
+  if (!fitnessStore.list.length || !query.value.typeIdList.length) return null
+
+  const dates = [...new Set(fitnessStore.list.map(i => i.finishTime.split('T')[0]))].sort()
+
   const formattedDates = dates.map(d => {
     const dt = new Date(d)
     return `${dt.getMonth() + 1}/${dt.getDate()}`
   })
 
-  const series = query.typeIdList.map((typeId, idx) => {
-    const data = dates.map(date => {
-      const rec = list.value.find(r => r.typeId === typeId && r.finishTime.startsWith(date))
-      return rec ? rec.count : 0
-    })
-    return {
-      name: `类型 ${typeId}`,
-      type: 'line',
-      data,
-      smooth: true,
-      lineStyle: { color: `hsl(${idx * 60}, 70%, 50%)` },
-      itemStyle: { color: `hsl(${idx * 60}, 70%, 40%)` },
-      areaStyle: { color: `hsla(${idx * 60}, 70%, 50%, 0.3)` }
-    }
-  })
+  const series = query.value.typeIdList
+      .map((typeId, index) => {
+        const typeMeta = fitnessStore.metaTypes?.find?.(t => t.id === typeId)
+        if (!typeMeta) return null
 
-  chartInstance.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { data: series.map(s => s.name) },
+        const data = dates.map(date => {
+          const record = fitnessStore.list.find(
+              r => r.typeId === typeId && r.finishTime.startsWith(date)
+          )
+          return record ? Number(record.count) : 0
+        })
+
+        return {
+          name: typeMeta.value1 || '未知类型',
+          type: 'line',
+          data,
+          smooth: true,
+          lineStyle: { color: `hsl(${index * 60}, 70%, 50%)` },
+          itemStyle: { color: `hsl(${index * 60}, 70%, 40%)` },
+          areaStyle: { color: `hsla(${index * 60}, 70%, 50%, 0.3)` }
+        }
+      })
+      .filter(Boolean)
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      formatter: params =>
+          params.map(p => `${p.marker} ${p.seriesName}: ${formatAmount(p.data)}`).join('<br/>')
+    },
+    legend: {
+      data: series.map(s => s.name),
+      bottom: 0,
+      textStyle: { color: '#555' }
+    },
+    grid: { left: 30, right: 30, top: 20, bottom: 40 },
     xAxis: {
       type: 'category',
-      data: formattedDates
+      data: formattedDates,
+      axisLine: { lineStyle: { color: '#ccc' } },
+      axisTick: { alignWithLabel: true }
     },
     yAxis: {
       type: 'value',
+      name: '次数',
+      axisLine: { lineStyle: { color: '#ccc' } },
+      splitLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } },
       minInterval: 1
     },
     series
-  })
-}
-
-async function onSearch() {
-  if (!query.startDate || !query.endDate) {
-    alert('请选择日期范围')
-    return
   }
-  await fitnessStore.loadList()
-  nextTick(renderChart)
-}
+})
 
-function onReset() {
+function getDefaultDateRange() {
   const end = new Date()
   const start = new Date()
   start.setDate(end.getDate() - 29)
-  query.startDate = start.toISOString().slice(0, 10)
-  query.endDate = end.toISOString().slice(0, 10)
-  query.typeIdList = props.fitnessTypeOptions.map(i => i.value)
-  fitnessStore.resetQuery()
-  onSearch()
+  const format = (d: Date) => d.toISOString().slice(0, 10)
+  return {
+    startDate: format(start),
+    endDate: format(end)
+  }
 }
 
-onMounted(() => {
-  // 默认初始化
-  if (!query.startDate || !query.endDate) {
-    onReset()
-  } else {
-    onSearch()
+async function fetchData() {
+  fitnessError.value = ''
+
+  if (!query.value.startDate || !query.value.endDate) {
+    emitter.emit('notify', { message: '请选择开始日期和结束日期', type: 'error' })
+    return
   }
+
+  fitnessStore.updateQuery({
+    typeIdList: query.value.typeIdList,
+    startDate: query.value.startDate,
+    endDate: query.value.endDate,
+    remark: query.value.remark
+  })
+
+  try {
+    await fitnessStore.loadList({ pageNo: 1, pageSize: 999999 })
+    if (fitnessStore.list.length === 0) {
+      fitnessError.value = '暂无符合条件的数据'
+    }
+  } catch {
+    fitnessError.value = '获取健身数据失败，请稍后重试'
+  }
+}
+
+function onSearch() {
+  fetchData()
+}
+
+function onReset() {
+  const { startDate, endDate } = getDefaultDateRange()
+
+  query.value = {
+    typeIdList: props.fitnessTypeOptions.map(i => i.value),
+    startDate,
+    endDate,
+    remark: ''
+  }
+  rangeValue.value = joinRangeDates(startDate, endDate)
+
+  fitnessStore.resetQuery()
+  fetchData()
+}
+
+function renderChart() {
+  if (!chartRef.value) return
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
+  }
+  if (!echartOptions.value) return
+
+  chartInstance = echarts.init(chartRef.value)
+  chartInstance.setOption(echartOptions.value)
+}
+
+watch(echartOptions, () => {
+  nextTick(renderChart)
+})
+
+onMounted(() => {
+  query.value.typeIdList = props.fitnessTypeOptions.map(i => i.value)
+
+  const { startDate, endDate } = getDefaultDateRange()
+  query.value.startDate = startDate
+  query.value.endDate = endDate
+
+  fetchData().then(() => nextTick(renderChart))
 })
 </script>
+
+<style scoped>
+.animate-fade {
+  animation: fadeIn 0.3s ease forwards;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+</style>
