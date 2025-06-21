@@ -18,7 +18,6 @@ const props = defineProps<{
 const slots = useSlots()
 
 const baseClasses = computed(() => {
-  // 主色类
   const colorClass = {
     primary: 'btn-primary',
     outline: 'btn-outline',
@@ -26,31 +25,32 @@ const baseClasses = computed(() => {
     danger: 'btn-danger',
   }[props.color ?? 'primary']
 
-  // variant 类（宽高控制）
   const variantClass = {
     default: '',
     action: 'btn-action',
     search: 'btn-search',
   }[props.variant ?? 'default']
 
-  // 尺寸类
   const sizeClass = props.size === 'sm' ? 'btn-sm' : ''
-
-  // 宽度全占
   const blockClass = props.block ? 'w-full' : ''
 
-  // 有无文字判断，用于控制 icon-only 状态
   const hasText = !!props.title || !!slots.default
   const gapClass = hasText ? 'gap-2' : ''
   const iconOnlyClass = hasText ? '' : 'p-2'
 
+  // 对齐类：如果 block = true，则靠左，否则居中
+  const alignClass = props.block ? 'justify-start text-left' : 'justify-center text-center'
+
   return [
+    'inline-flex items-center',
+    alignClass,
     colorClass,
     variantClass,
     sizeClass,
     blockClass,
     gapClass,
     iconOnlyClass,
+    'whitespace-nowrap',
   ].join(' ')
 })
 </script>
@@ -59,9 +59,9 @@ const baseClasses = computed(() => {
   <button
       :type="type ?? 'button'"
       :disabled="disabled || loading"
-      :class="['inline-flex items-center justify-center whitespace-nowrap', baseClasses]"
+      :class="baseClasses"
   >
-    <!-- 图标（左） -->
+    <!-- 左图标 -->
     <component
         v-if="icon && !loading && iconPosition !== 'right'"
         :is="icon"
@@ -81,11 +81,11 @@ const baseClasses = computed(() => {
             d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16z" />
     </svg>
 
-    <!-- 文字内容 -->
+    <!-- 内容 -->
     <span v-if="title">{{ title }}</span>
     <slot v-else />
 
-    <!-- 图标（右） -->
+    <!-- 右图标 -->
     <component
         v-if="icon && !loading && iconPosition === 'right'"
         :is="icon"

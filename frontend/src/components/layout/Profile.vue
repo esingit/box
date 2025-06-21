@@ -2,28 +2,28 @@
   <BaseModal
       v-model:visible="isOpen"
       title="设置"
-      width="800px"
+      width="700px"
   >
     <!-- 主体内容 -->
     <div class="flex overflow-hidden">
       <!-- 左侧菜单 -->
-      <nav class="w-48 space-y-1" aria-label="设置菜单">
-        <button
+      <nav class="w-40 space-y-1" aria-label="设置菜单">
+        <BaseButton
             type="button"
-            class="w-full menu-btn"
+            title="个人信息"
+            block
+            color="text"
             :class="activeTab === 'profile' ? 'active' : ''"
             @click="switchTab('profile')"
-        >
-          个人信息
-        </button>
-        <button
+        />
+        <BaseButton
             type="button"
-            class="w-full menu-btn"
+            title="安全设置"
+            block
+            color="text"
             :class="activeTab === 'security' ? 'active' : ''"
             @click="switchTab('security')"
-        >
-          安全设置
-        </button>
+        />
       </nav>
 
       <!-- 右侧内容区 -->
@@ -62,7 +62,6 @@
                 <Field name="oldPassword" v-slot="{ field }">
                   <BaseInput
                       id="oldPassword"
-                      type="password"
                       :model-value="field.value"
                       @update:model-value="field.onChange"
                       placeholder="请输入旧密码"
@@ -77,7 +76,6 @@
                 <Field name="newPassword" v-slot="{ field }">
                   <BaseInput
                       id="newPassword"
-                      type="password"
                       :model-value="field.value"
                       @update:model-value="field.onChange"
                       placeholder="6-20位字母数字组合"
@@ -92,7 +90,6 @@
                 <Field name="confirmPassword" v-slot="{ field }">
                   <BaseInput
                       id="confirmPassword"
-                      type="password"
                       :model-value="field.value"
                       @update:model-value="field.onChange"
                       placeholder="再次确认新密码"

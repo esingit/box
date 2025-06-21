@@ -20,27 +20,25 @@
     <transition name="fade-scale">
       <div
           v-if="showMenu"
-          class="absolute right-0 mt-2 w-36 bg-white shadow-lg rounded-xl z-50 p-2"
+          class="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-xl z-50 p-2"
           role="menu"
       >
-        <button
+        <BaseButton
             type="button"
+            title="设置"
+            color="text"
+            block
+            :icon="LucideUserCircle"
             @click="onOpenProfile"
-            class="menu-btn w-full h-10"
-            role="menuitem"
-        >
-          <LucideUserCircle class="btn-icon"/>
-          设置
-        </button>
-        <button
+        />
+        <BaseButton
             type="button"
+            title="注销"
+            color="text"
+            block
+            :icon="LucideLogOut"
             @click="onLogout"
-            class="menu-btn w-full h-10"
-            role="menuitem"
-        >
-          <LucideLogOut class="btn-icon"/>
-          注销
-        </button>
+        />
       </div>
     </transition>
   </div>

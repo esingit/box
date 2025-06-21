@@ -14,16 +14,16 @@
     </div>
 
     <template #footer>
-      <button
-          class="ml-4 btn-outline"
+      <BaseButton
           @click="onCancel"
           :disabled="loading"
           type="button"
+          color="outline"
       >
         {{ cancelText }}
-      </button>
-      <button
-          class="ml-4 btn-primary"
+      </BaseButton>
+      <BaseButton
+          color="primary"
           :class="[
           loading ? 'opacity-50 cursor-not-allowed' : '',
           type === 'danger' ? 'btn-danger' : ''
@@ -33,7 +33,7 @@
           type="button"
       >
         {{ loading ? '处理中...' : confirmText }}
-      </button>
+      </BaseButton>
     </template>
   </BaseModal>
 </template>

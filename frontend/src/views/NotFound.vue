@@ -3,12 +3,13 @@
     <div class="max-w-md w-full">
       <div class="text-9xl font-extrabold mb-4 select-none text-gray-300">{{ codeDisplay }}</div>
       <h1 class="text-2xl font-semibold mb-2">{{ message }}</h1>
-      <button
+      <BaseButton
+          type="button"
+          title="返回首页"
+          color="primary"
           @click="goHome"
           class="btn-primary"
-      >
-        返回首页
-      </button>
+      />
     </div>
   </div>
 </template>
