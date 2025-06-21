@@ -37,15 +37,12 @@
       <Field name="pageSize" v-slot="{ value, setValue }">
         <BaseSelect
             title="每页条数"
-            :modelValue="value"
+            :modelValue="props.pageSize"
             direction="up"
             :options="pageSizeOptions.map(n => ({ label: `每页${n}条`, value: n }))"
             placeholder="每页条数"
             clearable
-            @update:modelValue="val => {
-              setValue(val)
-              emit('page-size-change', val)
-            }"
+            @update:modelValue="val => emit('page-size-change', val)"
         />
       </Field>
     </div>

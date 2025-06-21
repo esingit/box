@@ -13,12 +13,12 @@
     </div>
 
     <!-- Menu -->
-    <nav class="flex-1 overflow-y-auto py-2">
+    <nav class="flex-1 overflow-y-auto space-y-1">
       <router-link
           v-for="(item, index) in menuItems"
           :key="index"
           :to="item.path"
-          class="menu-btn"
+          class="menu-btn m-2"
           :class="getItemClass(item.path)"
       >
         <component :is="item.icon" :size="20"
@@ -70,7 +70,7 @@ const menuItems = [
 const sidebarClass = computed(() =>
     [
       'h-full bg-[var(--bg-sub)] text-gray-800 flex flex-col transition-all duration-500 ease-in-out border-r border-gray-200 fixed z-40',
-      isCollapsed.value ? 'w-0  overflow-visible' : 'w-32'
+      isCollapsed.value ? 'w-0  overflow-visible' : 'w-48'
     ].join(' ')
 )
 
@@ -81,7 +81,7 @@ const logoClass = computed(() => [
 ].filter(Boolean).join(' '))
 
 const getItemClass = (path: string) => ({
-  'bg-gray-100': route.path === path,
+  'bg-[var(--bg-btn-hover)]': route.path === path,
 })
 
 function toggleSidebar() {

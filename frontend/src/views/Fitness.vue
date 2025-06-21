@@ -3,7 +3,7 @@
     <!-- 统计卡片 -->
     <section class="bg-white rounded-xl hover:shadow-md p-6">
       <header class="flex justify-between items-center mb-3">
-        <h2 class="text-xl font-semibold text-gray-900">健身统计</h2>
+        <h2 class="text-xl font-semibold text-gray-800">健身统计</h2>
         <BaseButton type="button" @click="refreshData" color="outline" :icon="LucideRefreshCw" class="w-7 h-7"/>
       </header>
 
@@ -21,14 +21,14 @@
           <BaseStatCard
               title="上次运动"
               :amount="`${stats.lastWorkoutDays} 天前`"
-              :highlight-class="isWorkoutOverdue ? 'text-red-500' : 'text-gray-900'"
+              :highlight-class="isWorkoutOverdue ? 'text-red-500' : 'text-gray-800 '"
               :change="`下次 ${formatDate(stats.nextWorkoutDay)}`"
               :change-class="isNextWorkoutOverdue ? 'text-red-500' : 'text-gray-400'"
           />
           <BaseStatCard
               title="今日蛋白"
               :amount="`${stats.proteinIntake} 克`"
-              :highlight-class="stats.proteinIntake >= 80 ? 'text-green-600' : 'text-gray-900'"
+              :highlight-class="stats.proteinIntake >= 80 ? 'text-green-600' : 'text-gray-800 '"
               :change="stats.proteinIntake >= 80 ? '✓' : `差 ${80 - stats.proteinIntake} 克`"
               :change-class="stats.proteinIntake >= 80 ? 'text-green-500' : 'text-yellow-500'"
           />

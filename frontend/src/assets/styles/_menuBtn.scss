@@ -16,18 +16,18 @@
 }
 
 .menu-btn:hover:not(.active) {
-  background-color: var(--menu-item-active);
+  background-color: var(--bg-btn-hover);
   color: var(--color-primary-hover);
 }
 
 .menu-btn:focus-visible {
   box-shadow: var(--shadow-focus);
-  background-color: var(--menu-item-active);
+  background-color: var(--bg-btn-hover);
   color: var(--color-primary);
 }
 
 .menu-btn.active {
-  background-color: var(--menu-item-active);
+  background-color: var(--bg-btn-hover);
   color: var(--color-primary);
   font-weight: var(--font-semibold);
   pointer-events: none;

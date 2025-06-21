@@ -13,7 +13,7 @@
             title="个人信息"
             block
             color="text"
-            :class="activeTab === 'profile' ? 'active' : ''"
+            :class="activeTab === 'profile' ? 'bg-[var(--bg-btn-hover)]' : ''"
             @click="switchTab('profile')"
         />
         <BaseButton
@@ -21,7 +21,7 @@
             title="安全设置"
             block
             color="text"
-            :class="activeTab === 'security' ? 'active' : ''"
+            :class="activeTab === 'security' ? 'bg-[var(--bg-btn-hover)]' : ''"
             @click="switchTab('security')"
         />
       </nav>
@@ -34,7 +34,7 @@
           aria-live="polite"
       >
         <div v-if="activeTab === 'profile'">
-          <h3 class="text-xl font-semibold mb-6 text-gray-900">个人信息</h3>
+          <h3 class="text-xl font-semibold mb-6 text-gray-800 ">个人信息</h3>
           <table class="w-full text-sm text-gray-700 border-collapse">
             <tbody>
             <tr class="border-b last:border-b-0">
@@ -50,7 +50,7 @@
         </div>
 
         <div v-else-if="activeTab === 'security'">
-          <h3 class="text-xl font-semibold mb-6 text-gray-900">修改密码</h3>
+          <h3 class="text-xl font-semibold mb-6 text-gray-800 ">修改密码</h3>
           <Form
               :validation-schema="schema"
               v-slot="{ handleSubmit, errors }"

@@ -16,10 +16,10 @@
         >
           <!-- Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ title }}</h2>
+            <h2 class="text-lg font-semibold text-gray-800  dark:text-gray-100">{{ title }}</h2>
             <button
                 @click="close"
-                class="text-gray-500 hover:text-gray-900 dark:hover:text-white text-xl transition-colors duration-200"
+                class="text-gray-500 hover:text-gray-800  dark:hover:text-white text-xl transition-colors duration-200"
                 aria-label="关闭弹窗"
                 type="button"
             >

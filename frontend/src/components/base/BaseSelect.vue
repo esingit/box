@@ -57,7 +57,7 @@
                 :class="{
                 'bg-gray-100': active,
                 'font-semibold text-black': selected,
-                'text-gray-900': !selected
+                'text-gray-800 ': !selected
               }"
             >
               <template v-if="multiple">
