@@ -21,9 +21,9 @@
           <BaseStatCard
               title="上次运动"
               :amount="`${stats.lastWorkoutDays} 天前`"
-              :highlight-class="isWorkoutOverdue ? 'text-red-500' : 'text-gray-800 '"
+              :highlight-class="isWorkoutOverdue ? 'msg-error' : 'text-gray-800 '"
               :change="`下次 ${formatDate(stats.nextWorkoutDay)}`"
-              :change-class="isNextWorkoutOverdue ? 'text-red-500' : 'text-gray-400'"
+              :change-class="isNextWorkoutOverdue ? 'msg-error' : 'text-gray-400'"
           />
           <BaseStatCard
               title="今日蛋白"
