@@ -201,6 +201,8 @@ import {useAssetStore} from '@/store/assetStore'
 interface Option {
   label: string
   value: string | number
+  id?: string
+  name?: string
 }
 
 interface AssetRecord {
@@ -250,6 +252,89 @@ const showLocationDimension = ref(true)
 
 let chartInstance: echarts.ECharts | null = null
 let resizeObserver: ResizeObserver | null = null
+
+// 创建资产名称映射
+const assetNameMap = computed(() => {
+  const map: Record<string, string> = {}
+  props.assetNameOptions.forEach(option => {
+    // 兼容不同的数据结构
+    const id = option.id || option.value
+    const name = option.name || option.label
+    if (id && name) {
+      map[String(id)] = String(name)
+    }
+  })
+  console.log('Asset name map:', map)
+  return map
+})
+
+// 创建资产类型映射
+const assetTypeMap = computed(() => {
+  const map: Record<string, string> = {}
+  props.assetTypeOptions.forEach(option => {
+    const id = option.id || option.value
+    const name = option.name || option.label
+    if (id && name) {
+      map[String(id)] = String(name)
+    }
+  })
+  return map
+})
+
+// 创建资产位置映射
+const assetLocationMap = computed(() => {
+  const map: Record<string, string> = {}
+  props.assetLocationOptions.forEach(option => {
+    const id = option.id || option.value
+    const name = option.name || option.label
+    if (id && name) {
+      map[String(id)] = String(name)
+    }
+  })
+  return map
+})
+
+// 获取资产名称
+function getAssetName(assetNameId: string, fallbackName?: string | null): string {
+  // 优先使用映射中的名称
+  if (assetNameMap.value[assetNameId]) {
+    return assetNameMap.value[assetNameId]
+  }
+  // 其次使用记录中的名称
+  if (fallbackName) {
+    return fallbackName
+  }
+  // 最后使用 ID
+  return `资产${assetNameId}`
+}
+
+// 获取资产类型名称
+function getAssetTypeName(assetTypeId: string, fallbackName?: string | null, fallbackValue?: string): string {
+  if (assetTypeMap.value[assetTypeId]) {
+    return assetTypeMap.value[assetTypeId]
+  }
+  if (fallbackName) {
+    return fallbackName
+  }
+  if (fallbackValue) {
+    return fallbackValue
+  }
+  return `类型${assetTypeId}`
+}
+
+// 获取资产位置名称
+function getAssetLocationName(assetLocationId: string, fallbackName?: string | null, fallbackValue?: string): string {
+  if (assetLocationMap.value[assetLocationId]) {
+    return assetLocationMap.value[assetLocationId]
+  }
+  if (fallbackName) {
+    return fallbackName
+  }
+  if (fallbackValue) {
+    return fallbackValue
+  }
+  return `位置${assetLocationId}`
+}
 
 // 日期格式化
 function formatDate(date: Date): string {
@@ -329,8 +414,8 @@ const amountByNameDate = computed(() => {
     if (!item.acquireTime) return
 
     const date = item.acquireTime.split('T')[0]
-    // 优先使用 assetName，如果没有则用 ID
-    const nameKey = item.assetName || `资产${item.assetNameId}`
+    // 使用翻译后的资产名称
+    const nameKey = getAssetName(item.assetNameId, item.assetName)
     const amount = parseFloat(item.amount) || 0
 
     if (!map[nameKey]) map[nameKey] = {}
@@ -349,8 +434,8 @@ const amountByTypeDate = computed(() => {
     if (!item.acquireTime) return
 
     const date = item.acquireTime.split('T')[0]
-    // 优先使用 assetTypeName，然后 assetTypeValue，最后用 ID
-    const typeKey = item.assetTypeName || item.assetTypeValue || `类型${item.assetTypeId}`
+    // 使用翻译后的资产类型名称
+    const typeKey = getAssetTypeName(item.assetTypeId, item.assetTypeName, item.assetTypeValue)
     const amount = parseFloat(item.amount) || 0
 
     if (!map[typeKey]) map[typeKey] = {}
@@ -369,8 +454,8 @@ const amountByLocationDate = computed(() => {
     if (!item.acquireTime) return
 
     const date = item.acquireTime.split('T')[0]
-    // 优先使用 assetLocationName，然后 assetLocationValue，最后用 ID
-    const locationKey = item.assetLocationName || item.assetLocationValue || `位置${item.assetLocationId}`
+    // 使用翻译后的资产位置名称
+    const locationKey = getAssetLocationName(item.assetLocationId, item.assetLocationName, item.assetLocationValue)
     const amount = parseFloat(item.amount) || 0
 
     if (!map[locationKey]) map[locationKey] = {}
@@ -487,11 +572,28 @@ async function initChart() {
       locationSeriesCount: locationSeries.length
     })
 
-    // 配置颜色方案
+    // 低饱和度颜色方案 - 更加柔和的颜色
     const colors = [
-      '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899',
-      '#14b8a6', '#f97316', '#06b6d4', '#84cc16', '#f43f5e', '#6366f1',
-      '#8b5a2b', '#dc2626', '#059669', '#7c3aed', '#db2777', '#0891b2'
+      '#6B7F96',  // 蓝灰色
+      '#8D9C8D',  // 灰绿色
+      '#B19C7D',  // 米色
+      '#A88080',  // 玫瑰灰
+      '#8C7BA8',  // 薰衣草灰
+      '#9E8C9E',  // 紫灰色
+      '#7B9E9E',  // 青灰色
+      '#B8936B',  // 暖棕色
+      '#7B9DB8',  // 淡蓝色
+      '#9BB87B',  // 淡绿色
+      '#B87B9D',  // 淡粉色
+      '#7B7BB8',  // 淡紫色
+      '#8B9B8B',  // 橄榄灰
+      '#B8898B',  // 粉灰色
+      '#89B8B8',  // 淡青色
+      '#A8A87B',  // 米黄色
+      '#9E7B8C',  // 褐色
+      '#7B8C9E',  // 石板蓝
+      '#A8937B',  // 卡其色
+      '#8C8C7B'   // 灰褐色
     ]
 
     // 构建系列数据
@@ -509,12 +611,17 @@ async function initChart() {
         data: totalData,
         lineStyle: {
           width: 4,
-          color: colors[colorIndex]
+          color: '#4A5568', // 深一点的颜色作为主线
+          shadowColor: 'rgba(74, 85, 104, 0.3)',
+          shadowBlur: 4,
+          shadowOffsetY: 2
         },
         itemStyle: {
-          color: colors[colorIndex],
+          color: '#4A5568',
           borderWidth: 2,
-          borderColor: '#fff'
+          borderColor: '#fff',
+          shadowColor: 'rgba(74, 85, 104, 0.3)',
+          shadowBlur: 4
         },
         emphasis: {
           focus: 'series',
@@ -533,14 +640,18 @@ async function initChart() {
           type: 'line',
           smooth: true,
           symbol: 'circle',
-          symbolSize: 6,
+          symbolSize: 5,
           data: item.data,
           lineStyle: {
             width: 2,
-            color: colors[(colorIndex + index) % colors.length]
+            color: colors[(colorIndex + index) % colors.length],
+            shadowColor: `${colors[(colorIndex + index) % colors.length]}33`,
+            shadowBlur: 2
           },
           itemStyle: {
-            color: colors[(colorIndex + index) % colors.length]
+            color: colors[(colorIndex + index) % colors.length],
+            borderWidth: 1,
+            borderColor: '#fff'
           },
           emphasis: {
             focus: 'series'
@@ -558,15 +669,19 @@ async function initChart() {
           type: 'line',
           smooth: true,
           symbol: 'triangle',
-          symbolSize: 6,
+          symbolSize: 5,
           data: item.data,
           lineStyle: {
             width: 2,
             type: 'dashed',
-            color: colors[(colorIndex + index) % colors.length]
+            color: colors[(colorIndex + index) % colors.length],
+            shadowColor: `${colors[(colorIndex + index) % colors.length]}33`,
+            shadowBlur: 2
           },
           itemStyle: {
-            color: colors[(colorIndex + index) % colors.length]
+            color: colors[(colorIndex + index) % colors.length],
+            borderWidth: 1,
+            borderColor: '#fff'
           },
           emphasis: {
             focus: 'series'
@@ -584,15 +699,19 @@ async function initChart() {
           type: 'line',
           smooth: true,
           symbol: 'diamond',
-          symbolSize: 6,
+          symbolSize: 5,
           data: item.data,
           lineStyle: {
             width: 2,
             type: 'dotted',
-            color: colors[(colorIndex + index) % colors.length]
+            color: colors[(colorIndex + index) % colors.length],
+            shadowColor: `${colors[(colorIndex + index) % colors.length]}33`,
+            shadowBlur: 2
           },
           itemStyle: {
-            color: colors[(colorIndex + index) % colors.length]
+            color: colors[(colorIndex + index) % colors.length],
+            borderWidth: 1,
+            borderColor: '#fff'
           },
           emphasis: {
             focus: 'series'
@@ -616,11 +735,11 @@ async function initChart() {
         textStyle: {
           fontSize: 18,
           fontWeight: 'bold',
-          color: '#374151'
+          color: '#2D3748'
         },
         subtextStyle: {
           fontSize: 12,
-          color: '#6b7280'
+          color: '#718096'
         }
       },
       tooltip: {
@@ -628,19 +747,21 @@ async function initChart() {
         axisPointer: {
           type: 'cross',
           label: {
-            backgroundColor: '#6a7985'
+            backgroundColor: '#718096'
           }
         },
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderColor: '#e5e7eb',
+        backgroundColor: 'rgba(255, 255, 255, 0.96)',
+        borderColor: '#E2E8F0',
         borderWidth: 1,
+        borderRadius: 8,
         textStyle: {
-          color: '#374151'
+          color: '#2D3748'
         },
+        extraCssText: 'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);',
         formatter: (params: any) => {
           if (!Array.isArray(params)) return ''
 
-          let result = `<div style="font-weight: bold; margin-bottom: 8px; color: #1f2937">${params[0]?.axisValue}</div>`
+          let result = `<div style="font-weight: bold; margin-bottom: 8px; color: #1A202C; font-size: 14px">${params[0]?.axisValue}</div>`
 
           // 按系列类型分组显示
           const totalSeries = params.filter((p: any) => p.seriesName.includes('总金额'))
@@ -650,22 +771,22 @@ async function initChart() {
 
           const renderSeries = (series: any[], title: string) => {
             if (series.length === 0) return ''
-            let html = `<div style="margin-top: 6px; font-weight: 600; color: #4b5563">${title}</div>`
+            let html = `<div style="margin-top: 8px; font-weight: 600; color: #4A5568; font-size: 13px">${title}</div>`
             series.forEach((item: any) => {
               if (item.value !== undefined && item.value > 0) {
-                html += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 3px">
-                  <span style="display: inline-block; width: 8px; height: 8px; background: ${item.color}; border-radius: 50%"></span>
-                  <span style="color: #374151">${item.seriesName.replace(/[💰🏷️📍📈]/g, '').trim()}: ￥${item.value.toFixed(2)}</span>
+                html += `<div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; padding: 2px 0">
+                  <span style="display: inline-block; width: 8px; height: 8px; background: ${item.color}; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.1)"></span>
+                  <span style="color: #2D3748; font-size: 12px">${item.seriesName.replace(/[💰🏷️📍📈]/g, '').trim()}: <strong>￥${item.value.toFixed(2)}</strong></span>
                 </div>`
               }
             })
             return html
           }
 
-          result += renderSeries(totalSeries, '总计')
-          result += renderSeries(nameSeries, '按资产名称')
-          result += renderSeries(typeSeries, '按资产类型')
-          result += renderSeries(locationSeries, '按资产位置')
+          result += renderSeries(totalSeries, '💰 总计')
+          result += renderSeries(nameSeries, '📊 按资产名称')
+          result += renderSeries(typeSeries, '🏷️ 按资产类型')
+          result += renderSeries(locationSeries, '📍 按资产位置')
 
           return result
         }
@@ -679,10 +800,12 @@ async function initChart() {
         pageButtonGap: 20,
         pageIconSize: 14,
         pageTextStyle: {
-          fontSize: 12
+          fontSize: 11,
+          color: '#718096'
         },
         textStyle: {
-          fontSize: 12
+          fontSize: 11,
+          color: '#4A5568'
         },
         itemWidth: 12,
         itemHeight: 12
@@ -692,7 +815,10 @@ async function initChart() {
         right: 50,
         bottom: 120,
         top: 80,
-        containLabel: true
+        containLabel: true,
+        backgroundColor: 'rgba(0, 0, 0, 0.02)',
+        borderColor: '#E2E8F0',
+        borderWidth: 1
       },
       xAxis: {
         type: 'category',
@@ -702,7 +828,7 @@ async function initChart() {
           rotate: 45,
           interval: 0,
           fontSize: 11,
-          color: '#6b7280',
+          color: '#718096',
           formatter: (value: string) => {
             const parts = value.split('-')
             return `${parts[1]}/${parts[2]}`
@@ -710,13 +836,13 @@ async function initChart() {
         },
         axisLine: {
           lineStyle: {
-            color: '#d1d5db'
+            color: '#CBD5E0'
           }
         },
         axisTick: {
           alignWithLabel: true,
           lineStyle: {
-            color: '#d1d5db'
+            color: '#CBD5E0'
           }
         }
       },
@@ -727,7 +853,7 @@ async function initChart() {
         nameGap: 60,
         nameTextStyle: {
           fontSize: 12,
-          color: '#6b7280'
+          color: '#718096'
         },
         axisLabel: {
           formatter: (value: number) => {
@@ -738,12 +864,12 @@ async function initChart() {
             }
           },
           fontSize: 11,
-          color: '#6b7280'
+          color: '#718096'
         },
         splitLine: {
           lineStyle: {
             type: 'dashed',
-            color: '#e5e7eb'
+            color: '#E2E8F0'
           }
         },
         axisLine: {
@@ -772,15 +898,25 @@ async function initChart() {
           height: 25,
           bottom: 60,
           handleStyle: {
-            color: '#3b82f6'
+            color: '#4A5568',
+            borderColor: '#CBD5E0'
           },
           textStyle: {
-            fontSize: 11
+            fontSize: 11,
+            color: '#718096'
+          },
+          dataBackground: {
+            lineStyle: {
+              color: '#CBD5E0'
+            },
+            areaStyle: {
+              color: '#F7FAFC'
+            }
           }
         }
       ],
       animation: true,
-      animationDuration: 1000,
+      animationDuration: 1200,
       animationEasing: 'cubicOut'
     }
 
@@ -1020,13 +1156,13 @@ defineExpose({
 input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #3b82f6;
+  accent-color: #4A5568;
 }
 
 /* 自定义滚动条样式 */
 :deep(.echarts-legend-scroll) {
   scrollbar-width: thin;
-  scrollbar-color: #e5e7eb #f3f4f6;
+  scrollbar-color: #CBD5E0 #F7FAFC;
 }
 
 :deep(.echarts-legend-scroll::-webkit-scrollbar) {
@@ -1034,16 +1170,16 @@ input[type="checkbox"] {
 }
 
 :deep(.echarts-legend-scroll::-webkit-scrollbar-track) {
-  background: #f3f4f6;
+  background: #F7FAFC;
   border-radius: 4px;
 }
 
 :deep(.echarts-legend-scroll::-webkit-scrollbar-thumb) {
-  background: #e5e7eb;
+  background: #CBD5E0;
   border-radius: 4px;
 }
 
 :deep(.echarts-legend-scroll::-webkit-scrollbar-thumb:hover) {
-  background: #d1d5db;
+  background: #A0AEC0;
 }
 </style>
