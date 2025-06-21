@@ -93,13 +93,19 @@
 
         <!-- 备注 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
-          <BaseInput
-              title="备注"
-              type="textarea"
-              clearable
-              :disabled="loading"
-          />
+          <label class="text-sm font-medium text-gray-700 mb-1">
+            备注
+          </label>
+          <Field name="remark" v-slot="{ value, setValue }">
+            <BaseInput
+                :modelValue="value"
+                @update:modelValue="setValue"
+                title="备注"
+                type="textarea"
+                clearable
+                :disabled="loading"
+            />
+          </Field>
         </div>
 
         <!-- 底部按钮区域 -->

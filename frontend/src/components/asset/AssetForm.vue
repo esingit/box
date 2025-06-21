@@ -136,9 +136,13 @@
 
         <!-- 备注 -->
         <div>
-          <label class="text-sm font-medium text-gray-700 mb-1 block">备注</label>
-          <Field name="remark">
+          <label class="text-sm font-medium text-gray-700 mb-1">
+            备注
+          </label>
+          <Field name="remark" v-slot="{ value, setValue }">
             <BaseInput
+                :modelValue="value"
+                @update:modelValue="setValue"
                 title="备注"
                 type="textarea"
                 clearable
