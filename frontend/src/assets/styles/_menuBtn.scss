@@ -1,5 +1,5 @@
 .menu-btn {
-  @apply text-left px-5 py-3 rounded-xl transition-shadow duration-150 ease-in-out;
+  @apply text-left px-5 py-3 rounded-full transition-shadow duration-150 ease-in-out flex items-center gap-3;
 
   height: var(--menu-h);
   font-family: var(--font-family);
@@ -16,18 +16,18 @@
 }
 
 .menu-btn:hover:not(.active) {
-  background-color: var(--bg-hover);
-  color: var(--color-primary-hover); /* 加强 hover 字色区分 */
+  background-color: var(--menu-item-active);
+  color: var(--color-primary-hover);
 }
 
 .menu-btn:focus-visible {
   box-shadow: var(--shadow-focus);
-  background-color: var(--bg-hover);
+  background-color: var(--menu-item-active);
   color: var(--color-primary);
 }
 
 .menu-btn.active {
-  background-color: var(--bg-hover);
+  background-color: var(--menu-item-active);
   color: var(--color-primary);
   font-weight: var(--font-semibold);
   pointer-events: none;

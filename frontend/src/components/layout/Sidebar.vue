@@ -18,7 +18,7 @@
           v-for="(item, index) in menuItems"
           :key="index"
           :to="item.path"
-          class="flex font-semibold items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100 rounded-xl transition-colors text-gray-800"
+          class="menu-btn"
           :class="getItemClass(item.path)"
       >
         <component :is="item.icon" :size="20"

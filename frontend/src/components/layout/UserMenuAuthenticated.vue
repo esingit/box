@@ -3,7 +3,7 @@
     <div class="menu-head">
       <button
           @click="toggleMenu"
-          class="menu-btn-h"
+          class="menu-btn"
           type="button"
           aria-haspopup="true"
           :aria-expanded="showMenu"
@@ -26,7 +26,7 @@
         <button
             type="button"
             @click="onOpenProfile"
-            class="menu-btn-h w-full"
+            class="menu-btn w-full h-10"
             role="menuitem"
         >
           <LucideUserCircle class="btn-icon"/>
@@ -35,7 +35,7 @@
         <button
             type="button"
             @click="onLogout"
-            class="menu-btn-h w-full"
+            class="menu-btn w-full h-10"
             role="menuitem"
         >
           <LucideLogOut class="btn-icon"/>
