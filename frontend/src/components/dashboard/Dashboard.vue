@@ -29,7 +29,7 @@ const fitnessTypeOptions = computed(() =>
     (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
       label: item.value1 || '',
       value: item.id,
-      value1: item.value1 // 补全用于图表名称展示
+      value1: item.value1
     }))
 )
 
