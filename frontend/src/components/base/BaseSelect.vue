@@ -25,7 +25,7 @@
           </span>
 
           <!-- 图标区域：清空按钮 + 下拉箭头 -->
-          <div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-[2px]">
+          <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-[15px]">
             <button
                 v-if="clearable && hasValue"
                 @click.stop="clearSelection"

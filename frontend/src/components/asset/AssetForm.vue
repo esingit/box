@@ -84,14 +84,18 @@
           <label class="text-sm font-medium text-gray-700 mb-1 block">
             金额 <span class="msg-error">*</span>
           </label>
-          <Field
-              name="amount"
-              type="number"
-              min="0"
-              step="0.01"
-              class="input-base"
-              required
-          />
+          <Field name="amount" v-slot="{ value, setValue }">
+            <BaseInput
+                title="金额"
+                type="number"
+                :min="1"
+                required
+                clearable
+                :disabled="loading"
+                :modelValue="value"
+                @update:modelValue="setValue"
+            />
+          </Field>
           <ErrorMessage name="amount" class="msg-error mt-1"/>
         </div>
 
@@ -112,18 +116,22 @@
           <ErrorMessage name="unitId" class="msg-error mt-1"/>
         </div>
 
-        <!-- 日期 -->
+        <!-- 登记日期 -->
         <div>
           <label class="text-sm font-medium text-gray-700 mb-1 block">
-            日期 <span class="msg-error">*</span>
+            登记日期 <span class="msg-error">*</span>
           </label>
-          <Field
-              name="acquireTime"
-              type="date"
-              class="input-base"
-              required
-          />
-          <ErrorMessage name="acquireTime" class="msg-error mt-1"/>
+          <Field name="acquireTime" v-slot="{ value, setValue }">
+            <BaseDateInput
+                :modelValue="value"
+                @update:modelValue="setValue"
+                title="登记日期"
+                type="date"
+                required
+                clearable
+            />
+          </Field>
+          <ErrorMessage name="acquireTime" class="msg-error mt-1" />
         </div>
 
         <!-- 备注 -->
@@ -163,7 +171,7 @@ import {useMetaStore} from '@/store/metaStore'
 import {setDefaultUnit} from '@/utils/commonMeta'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
-import BaseInput from '@/components/base/BaseInput.vue'
+import BaseDateInput from '@/components/base/BaseDateInput.vue'
 import AssetName from './assetName/AssetName.vue'
 import BaseButton from "@/components/base/BaseButton.vue"
 

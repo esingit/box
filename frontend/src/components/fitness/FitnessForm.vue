@@ -63,6 +63,7 @@
                 title="单位"
                 :modelValue="value"
                 clearable
+                required
                 :disabled="loading"
                 :options="unitsFiltered"
                 @update:modelValue="setValue"
@@ -73,15 +74,20 @@
 
         <!-- 完成时间 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label class="text-sm font-medium text-gray-700 mb-1">
             完成时间 <span class="msg-error">*</span>
           </label>
-          <Field
-              name="finishTime"
-              type="date"
-              class="input-base"
-              :disabled="loading"
-          />
+          <Field name="finishTime" v-slot="{ value, setValue }">
+            <BaseDateInput
+                :modelValue="value"
+                @update:modelValue="setValue"
+                title="完成时间"
+                type="date"
+                required
+                clearable
+                :disabled="loading"
+            />
+          </Field>
           <ErrorMessage name="finishTime" class="msg-error" />
         </div>
 
@@ -121,6 +127,7 @@ import { setDefaultUnit } from '@/utils/commonMeta'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import BaseDateInput from "@/components/base/BaseDateInput.vue";
 
 const props = defineProps({
   visible: Boolean,

@@ -31,7 +31,7 @@
         :class="[
         'absolute text-gray-400 hover:text-gray-600 transition',
         isTextareaType ? 'top-2 right-2' : 'top-1/2 -translate-y-1/2',
-        isNumberType && !isTextareaType ? 'right-8' : 'right-5'
+        isNumberType && !isTextareaType ? 'right-10' : 'right-5'
       ]"
     >
       <LucideX class="w-4 h-4" />
@@ -50,6 +50,7 @@
           @mouseleave="stopHold"
           class="flex-1 flex items-center justify-center text-gray-400 hover:text-gray-600"
           :disabled="disabled"
+          tabindex="-1"
       >
         <LucideChevronUp class="w-4 h-4" />
       </button>
@@ -60,6 +61,7 @@
           @mouseleave="stopHold"
           class="flex-1 flex items-center justify-center text-gray-400 hover:text-gray-600"
           :disabled="disabled"
+          tabindex="-1"
       >
         <LucideChevronDown class="w-4 h-4" />
       </button>
