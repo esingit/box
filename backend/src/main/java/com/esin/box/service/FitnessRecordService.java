@@ -10,8 +10,18 @@ import java.util.List;
 
 public interface FitnessRecordService {
     void addRecord(FitnessRecord record);
+
     void updateRecord(FitnessRecord record);
+
     void deleteRecord(Long id);
+
     IPage<FitnessRecordDTO> pageByConditions(Page<FitnessRecord> page, List<Long> typeIdList, String remark, String startDate, String endDate, String createUser);
+
     FitnessStatsDTO getStats(String createUser);
+
+    List<FitnessRecordDTO> listByConditions(List<Long> typeIdList,
+                                            String remark,
+                                            String startDate,
+                                            String endDate,
+                                            String username);
 }

@@ -10,11 +10,25 @@ import java.util.List;
 
 public interface AssetRecordService {
     void addRecord(AssetRecord record);
+
     void updateRecord(AssetRecord record);
+
     void deleteRecord(Long id);
+
     IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, List<Long> assetNameIdList, List<Long> assetLocationIdList,
                                            List<Long> assetTypeIdList, String remark, String startDate, String endDate,
                                            String createUser);
+
     void copyLastRecords(boolean force);
+
     AssetStatsDTO getLatestStats(String createUser, Integer offset);
+
+    List<AssetRecordDTO> listByConditions(List<Long> assetNameIdList,
+                                          List<Long> assetLocationIdList,
+                                          List<Long> assetTypeIdList,
+                                          String remark,
+                                          String startDate,
+                                          String endDate,
+                                          String createUser);
+
 }

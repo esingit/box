@@ -16,5 +16,19 @@ public interface FitnessRecordMapper extends BaseMapper<FitnessRecord> {
                                                @Param("remark") String remark, @Param("startDate") String startDate,
                                                @Param("endDate") String endDate, @Param("createUser") String createUser);
 
-    List<Map<String, Object>> getStatistics(@Param("userId") String userId);
+    Integer getMonthlyCount(@Param("createUser") String createUser);
+
+    Integer getTotalCount(@Param("createUser") String createUser);
+
+    Integer getWeeklyCount(@Param("createUser") String createUser);
+
+    Integer getCarbsIntake(@Param("createUser") String createUser);
+
+    Integer getProteinIntake(@Param("createUser") String createUser);
+
+    Integer getLastWorkoutDays(@Param("createUser") String createUser);
+
+    String getNextWorkoutDay(@Param("createUser") String createUser);
+
+    Integer getStreakDays(@Param("createUser") String createUser);
 }

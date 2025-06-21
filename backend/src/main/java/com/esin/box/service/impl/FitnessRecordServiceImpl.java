@@ -1,14 +1,15 @@
 package com.esin.box.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.esin.box.config.UserContextHolder;
+import com.esin.box.converter.FitnessRecordConverter;
 import com.esin.box.dto.FitnessRecordDTO;
 import com.esin.box.dto.FitnessStatsDTO;
 import com.esin.box.entity.FitnessRecord;
 import com.esin.box.mapper.FitnessRecordMapper;
-import com.esin.box.mapper.FitnessStatsMapper;
 import com.esin.box.service.FitnessRecordService;
-import com.esin.box.config.UserContextHolder;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,9 +22,9 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
 
     @Autowired
     private FitnessRecordMapper fitnessRecordMapper;
-    
+
     @Autowired
-    private FitnessStatsMapper fitnessStatsMapper;
+    private FitnessRecordConverter fitnessRecordConverter;
 
     @Override
     public void addRecord(FitnessRecord record) {
@@ -56,8 +57,7 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
 
     @Override
     @Transactional(readOnly = true)
-    public IPage<FitnessRecordDTO> pageByConditions(Page<FitnessRecord> page, List<Long> typeIdList, String remark,
-                                                   String startDate, String endDate, String createUser) {
+    public IPage<FitnessRecordDTO> pageByConditions(Page<FitnessRecord> page, List<Long> typeIdList, String remark, String startDate, String endDate, String createUser) {
         return fitnessRecordMapper.selectPageWithMeta(page, typeIdList, remark, startDate, endDate, createUser);
     }
 
@@ -65,13 +65,40 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
     @Transactional(readOnly = true)
     public FitnessStatsDTO getStats(String createUser) {
         FitnessStatsDTO stats = new FitnessStatsDTO();
-        stats.setMonthlyCount(fitnessStatsMapper.getMonthlyCount(createUser));
-        stats.setLastWorkoutDays(fitnessStatsMapper.getLastWorkoutDays(createUser));
-        stats.setTotalCount(fitnessStatsMapper.getTotalCount(createUser));
-        stats.setWeeklyCount(fitnessStatsMapper.getWeeklyCount(createUser));
-        stats.setNextWorkoutDay(fitnessStatsMapper.getNextWorkoutDay(createUser));
-        stats.setCarbsIntake(fitnessStatsMapper.getCarbsIntake(createUser));
-        stats.setProteinIntake(fitnessStatsMapper.getProteinIntake(createUser));
+        stats.setMonthlyCount(fitnessRecordMapper.getMonthlyCount(createUser));
+        stats.setLastWorkoutDays(fitnessRecordMapper.getLastWorkoutDays(createUser));
+        stats.setTotalCount(fitnessRecordMapper.getTotalCount(createUser));
+        stats.setWeeklyCount(fitnessRecordMapper.getWeeklyCount(createUser));
+        stats.setNextWorkoutDay(fitnessRecordMapper.getNextWorkoutDay(createUser));
+        stats.setCarbsIntake(fitnessRecordMapper.getCarbsIntake(createUser));
+        stats.setProteinIntake(fitnessRecordMapper.getProteinIntake(createUser));
         return stats;
+    }
+
+
+    @Override
+    public List<FitnessRecordDTO> listByConditions(List<Long> typeIdList, String remark, String startDate, String endDate, String username) {
+        QueryWrapper<FitnessRecord> wrapper = buildQueryWrapper(typeIdList, remark, startDate, endDate, username);
+        List<FitnessRecord> entities = fitnessRecordMapper.selectList(wrapper);
+        return fitnessRecordConverter.toDTOList(entities);
+    }
+
+    private QueryWrapper<FitnessRecord> buildQueryWrapper(List<Long> typeIdList, String remark, String startDate, String endDate, String username) {
+        QueryWrapper<FitnessRecord> wrapper = new QueryWrapper<>();
+        if (typeIdList != null && !typeIdList.isEmpty()) {
+            wrapper.in("type_id", typeIdList);
+        }
+        if (remark != null && !remark.isBlank()) {
+            wrapper.like("remark", remark);
+        }
+        if (startDate != null && !startDate.isBlank()) {
+            wrapper.ge("date", startDate);
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            wrapper.le("date", endDate);
+        }
+        wrapper.eq("username", username);
+        wrapper.orderByDesc("date");
+        return wrapper;
     }
 }

@@ -50,9 +50,12 @@
         COALESCE(location_meta.value1, '') as location_value
         FROM asset_record ar
         LEFT JOIN asset_name an ON ar.asset_name_id = an.id AND an.deleted = 0
-        LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE' AND type_meta.deleted = 0
-        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'UNIT' AND unit_meta.deleted = 0
-        LEFT JOIN common_meta location_meta ON ar.asset_location_id = location_meta.id AND location_meta.type_code = 'ASSET_LOCATION' AND location_meta.deleted = 0
+        LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE' AND
+        type_meta.deleted = 0
+        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'UNIT' AND
+        unit_meta.deleted = 0
+        LEFT JOIN common_meta location_meta ON ar.asset_location_id = location_meta.id AND location_meta.type_code =
+        'ASSET_LOCATION' AND location_meta.deleted = 0
         <where>
             <if test="assetNameIdList != null and assetNameIdList.size > 0">
                 AND ar.asset_name_id IN
@@ -87,42 +90,5 @@
             AND ar.deleted = 0
         </where>
         ORDER BY ar.acquire_time DESC
-    </select>
-
-    <select id="getDetailedStatistics" resultType="com.esin.box.dto.AssetDetailDTO">
-        SELECT
-        DATE_FORMAT(ar.acquire_time, '%Y-%m-%d') as date,
-        ar.asset_type_id as assetTypeId,
-        type_meta.value1 as assetTypeValue,
-        ar.asset_name_id as assetNameId,
-        an.name as assetName,
-        SUM(CASE
-        WHEN unit_meta.value1 = 'CNY' THEN ar.amount
-        WHEN unit_meta.value1 = 'USD' THEN ar.amount * 7.2  -- 假设汇率 1 USD = 7.2 CNY
-        ELSE ar.amount
-        END) as amount
-        FROM
-        asset_record ar
-        LEFT JOIN common_meta type_meta ON ar.asset_type_id = type_meta.id AND type_meta.type_code = 'ASSET_TYPE' AND type_meta.deleted = 0
-        LEFT JOIN asset_name an ON ar.asset_name_id = an.id AND an.deleted = 0
-        LEFT JOIN common_meta unit_meta ON ar.unit_id = unit_meta.id AND unit_meta.type_code = 'UNIT' AND unit_meta.deleted = 0
-        WHERE
-        ar.create_user = #{userId}
-        AND ar.deleted = 0
-        AND ar.acquire_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        <if test="assetTypeId != null">
-            AND ar.asset_type_id = #{assetTypeId}
-        </if>
-        <if test="assetNameId != null">
-            AND ar.asset_name_id = #{assetNameId}
-        </if>
-        GROUP BY
-        DATE_FORMAT(ar.acquire_time, '%Y-%m-%d'),
-        ar.asset_type_id,
-        ar.asset_name_id
-        ORDER BY
-        date ASC,
-        assetTypeValue ASC,
-        an.name ASC
     </select>
 </mapper>

@@ -55,21 +55,112 @@
         ORDER BY fr.finish_time DESC
     </select>
 
-    <select id="getStatistics" resultType="java.util.HashMap">
-        SELECT
-            DATE_FORMAT(fr.finish_time, '%Y-%m-%d') as date,
-            type_meta.value1 as type,
-            fr.count as value
-        FROM
-            fitness_record fr
-            LEFT JOIN
-            common_meta type_meta ON fr.type_id = type_meta.id AND type_meta.deleted = 0
-        WHERE
-            fr.create_user = #{userId}
+    <select id="getMonthlyCount" resultType="int">
+        SELECT COUNT(*)
+        FROM fitness_record fr
+                 LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+          AND fr.finish_time &gt;= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+          AND cm.type_code = 'FITNESS_TYPE'
+          AND cm.key2 = 'EXERCISE'
           AND fr.deleted = 0
-          AND fr.finish_time &gt;= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        ORDER BY
-            fr.finish_time ASC, type_meta.value1
+          AND cm.deleted = 0
     </select>
 
+    <select id="getTotalCount" resultType="int">
+        SELECT COUNT(*)
+        FROM fitness_record fr
+                 LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+          AND cm.type_code = 'FITNESS_TYPE'
+          AND cm.key2 = 'EXERCISE'
+          AND fr.deleted = 0
+          AND cm.deleted = 0
+    </select>
+
+    <select id="getWeeklyCount" resultType="int">
+        SELECT COUNT(DISTINCT DATE(fr.finish_time))
+        FROM fitness_record fr
+                 LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+          AND YEARWEEK(fr.finish_time) = YEARWEEK(NOW())
+          AND cm.type_code = 'FITNESS_TYPE'
+          AND cm.key2 = 'EXERCISE'
+          AND fr.deleted = 0
+          AND cm.deleted = 0
+    </select>
+
+    <select id="getCarbsIntake" resultType="int">
+        SELECT COALESCE(SUM(fr.count), 0)
+        FROM fitness_record fr
+                 LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+          AND DATE(fr.finish_time) = CURRENT_DATE
+          AND cm.type_code = 'FITNESS_TYPE'
+          AND cm.key2 = 'INTAKE'
+          AND cm.key1 = 'CARBOHYDRATE'
+          AND fr.deleted = 0
+          AND cm.deleted = 0
+    </select>
+
+    <select id="getProteinIntake" resultType="int">
+        SELECT COALESCE(SUM(fr.count), 0)
+        FROM fitness_record fr
+                 LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+          AND DATE(fr.finish_time) = CURRENT_DATE
+          AND cm.type_code = 'FITNESS_TYPE'
+          AND cm.key2 = 'INTAKE'
+          AND cm.key1 = 'PROTEIN'
+          AND fr.deleted = 0
+          AND cm.deleted = 0
+    </select>
+
+    <select id="getLastWorkoutDays" resultType="int">
+        SELECT DATEDIFF(CURRENT_DATE, MAX(DATE(fr.finish_time)))
+        FROM fitness_record fr
+                 LEFT JOIN common_meta cm ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+          AND cm.type_code = 'FITNESS_TYPE'
+          AND cm.key2 = 'EXERCISE'
+          AND fr.deleted = 0
+          AND cm.deleted = 0
+    </select>
+
+    <select id="getNextWorkoutDay" resultType="string">
+        SELECT DATE_FORMAT(
+                       DATE_ADD(MAX(DATE (fr.finish_time)), INTERVAL 3 DAY),
+                       '%Y-%m-%d'
+               ) AS next_workout_day
+        FROM fitness_record fr
+                 JOIN common_meta cm
+                      ON fr.type_id = cm.id
+        WHERE fr.create_user = #{createUser}
+          AND fr.deleted = 0
+          AND cm.deleted = 0
+          AND cm.type_code = 'FITNESS_TYPE'
+          AND cm.key2 = 'EXERCISE';
+    </select>
+
+    <select id="getStreakDays" resultType="int">
+        WITH RECURSIVE days AS (
+            SELECT DATE(finish_time) AS date
+        FROM fitness_record fr
+        WHERE fr.create_user = #{createUser}
+          AND fr.deleted = 0
+        GROUP BY DATE(finish_time)
+        ORDER BY date DESC
+            ),
+            streak AS (
+        SELECT date, 1 AS streak, date AS start_date
+        FROM days
+        WHERE date = CURRENT_DATE
+        UNION ALL
+        SELECT d.date, s.streak + 1, s.start_date
+        FROM days d
+            INNER JOIN streak s ON d.date = DATE_SUB(s.date, INTERVAL 1 DAY)
+            )
+        SELECT IFNULL(MAX(streak), 0) AS streak_days
+        FROM streak
+    </select>
 </mapper>

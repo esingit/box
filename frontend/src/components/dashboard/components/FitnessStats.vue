@@ -37,10 +37,11 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import { LucideSearch, LucideRotateCcw } from 'lucide-vue-next'
 import { joinRangeDates, splitRangeDates } from '@/utils/formatters'
 
-defineProps({
+const props = defineProps({
   fitnessTypeOptions: {
     type: Array,
-    required: true
+    required: true,
+    default: () => []
   }
 })
 
@@ -130,17 +131,45 @@ function onReset() {
   start.setDate(end.getDate() - 29)
   query.startDate = start.toISOString().slice(0, 10)
   query.endDate = end.toISOString().slice(0, 10)
-  query.typeIdList = props.fitnessTypeOptions.map(i => i.value)
+  
+  // 如果fitnessTypeOptions有数据，则使用它们初始化typeIdList
+  if (props.fitnessTypeOptions && props.fitnessTypeOptions.length > 0) {
+    query.typeIdList = props.fitnessTypeOptions.map(i => i.value)
+  } else {
+    query.typeIdList = []
+  }
+  
   fitnessStore.resetQuery()
   onSearch()
 }
 
-onMounted(() => {
-  // 默认初始化
+onMounted(async () => {
+  // 确保fitnessTypeOptions已经加载
+  if (!props.fitnessTypeOptions || props.fitnessTypeOptions.length === 0) {
+    // 如果fitnessTypeOptions未定义或为空，从metaStore获取
+    const metaStore = useMetaStore()
+    
+    // 如果metaStore中没有FITNESS_TYPE数据，则调用initAll初始化
+    if (!metaStore.typeMap?.FITNESS_TYPE || metaStore.typeMap.FITNESS_TYPE.length === 0) {
+      await metaStore.initAll()
+    }
+    
+    // 使用metaStore中的FITNESS_TYPE作为回退
+    if (metaStore.typeMap?.FITNESS_TYPE && metaStore.typeMap.FITNESS_TYPE.length > 0) {
+      query.typeIdList = metaStore.typeMap.FITNESS_TYPE.map(i => i.id)
+    }
+  }
+  
+  // 初始化日期范围和typeIdList
   if (!query.startDate || !query.endDate) {
     onReset()
+  } else if (query.typeIdList.length === 0) {
+    if (props.fitnessTypeOptions && props.fitnessTypeOptions.length > 0) {
+      query.typeIdList = props.fitnessTypeOptions.map(i => i.value)
+    }
+    await onSearch()
   } else {
-    onSearch()
+    await onSearch()
   }
 })
 </script>

@@ -115,4 +115,31 @@ public class AssetRecordController {
             return ApiResponse.error(e.getMessage());
         }
     }
+    @Operation(summary = "查询全部资产记录（不分页）")
+    @GetMapping("/listAll")
+    public ApiResponse<List<AssetRecordDTO>> listAllRecords(
+            @Parameter(description = "资产名称ID") @RequestParam(required = false) List<Long> assetNameIdList,
+            @Parameter(description = "资产位置ID") @RequestParam(required = false) List<Long> assetLocationIdList,
+            @Parameter(description = "资产类型ID") @RequestParam(required = false) List<Long> assetTypeIdList,
+            @Parameter(description = "备注关键词") @RequestParam(required = false) String remark,
+            @Parameter(description = "开始日期") @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期") @RequestParam(required = false) String endDate) {
+        try {
+            String currentUser = UserContextHolder.getCurrentUsername();
+            List<AssetRecordDTO> records = assetRecordService.listByConditions(
+                    assetNameIdList,
+                    assetLocationIdList,
+                    assetTypeIdList,
+                    remark,
+                    startDate,
+                    endDate,
+                    currentUser
+            );
+            return ApiResponse.success(records);
+        } catch (Exception e) {
+            log.error("Failed to list all asset records:", e);
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
 }

@@ -112,6 +112,30 @@
       <version>4.0.1</version>
       <scope>provided</scope>
     </dependency>
+
+    <!-- MapStruct 核心 -->
+    <dependency>
+      <groupId>org.mapstruct</groupId>
+      <artifactId>mapstruct</artifactId>
+      <version>1.5.3.Final</version>
+    </dependency>
+
+    <!-- 编译期注解处理器 -->
+    <dependency>
+      <groupId>org.mapstruct</groupId>
+      <artifactId>mapstruct-processor</artifactId>
+      <version>1.5.3.Final</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- 可选：Lombok 支持（如果你用 @Data/@Builder 等） -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.18.28</version>
+      <scope>provided</scope>
+    </dependency>
+
   </dependencies>
 
   <build>

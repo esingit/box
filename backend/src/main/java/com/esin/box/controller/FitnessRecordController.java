@@ -1,5 +1,6 @@
 package com.esin.box.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.esin.box.dto.FitnessRecordDTO;
 import com.esin.box.dto.FitnessStatsDTO;
 import com.esin.box.entity.FitnessRecord;
@@ -60,5 +61,17 @@ public class FitnessRecordController {
         String currentUser = UserContextHolder.getCurrentUsername();
         FitnessStatsDTO stats = fitnessRecordService.getStats(currentUser);
         return ApiResponse.success(stats);
+    }
+
+    @GetMapping("/listAll")
+    public ApiResponse<List<FitnessRecordDTO>> listAllRecords(
+            @RequestParam(required = false) List<Long> typeIdList,
+            @RequestParam(required = false) String remark,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+
+        String currentUser = UserContextHolder.getCurrentUsername();
+        List<FitnessRecordDTO> records = fitnessRecordService.listByConditions(typeIdList, remark, startDate, endDate, currentUser);
+        return ApiResponse.success(records);
     }
 }

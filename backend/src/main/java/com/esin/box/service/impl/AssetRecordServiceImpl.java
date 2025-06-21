@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.esin.box.config.UserContextHolder;
+import com.esin.box.converter.AssetRecordConverter;
 import com.esin.box.dto.AssetRecordDTO;
 import com.esin.box.dto.AssetStatsDTO;
 import com.esin.box.entity.AssetRecord;
@@ -33,6 +34,9 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
     @Autowired
     private CommonMetaService commonMetaService;
+
+    @Autowired
+    private AssetRecordConverter assetRecordConverter;
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AssetRecordServiceImpl.class);
 
@@ -316,5 +320,39 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                 .assetsChange(assetsChange.doubleValue())
                 .liabilitiesChange(liabilitiesChange.doubleValue())
                 .build();
+    }
+
+    @Override
+    public List<AssetRecordDTO> listByConditions(List<Long> assetNameIdList,
+                                                 List<Long> assetLocationIdList,
+                                                 List<Long> assetTypeIdList,
+                                                 String remark,
+                                                 String startDate,
+                                                 String endDate,
+                                                 String createUser) {
+        QueryWrapper<AssetRecord> wrapper = new QueryWrapper<>();
+        if (assetNameIdList != null && !assetNameIdList.isEmpty()) {
+            wrapper.in("asset_name_id", assetNameIdList);
+        }
+        if (assetLocationIdList != null && !assetLocationIdList.isEmpty()) {
+            wrapper.in("asset_location_id", assetLocationIdList);
+        }
+        if (assetTypeIdList != null && !assetTypeIdList.isEmpty()) {
+            wrapper.in("asset_type_id", assetTypeIdList);
+        }
+        if (remark != null && !remark.isBlank()) {
+            wrapper.like("remark", remark);
+        }
+        if (startDate != null && !startDate.isBlank()) {
+            wrapper.ge("date", startDate);
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            wrapper.le("date", endDate);
+        }
+        wrapper.eq("create_user", createUser);
+        wrapper.orderByDesc("date");
+
+        List<AssetRecord> entityList = assetRecordMapper.selectList(wrapper);
+        return assetRecordConverter.toDTOList(entityList);
     }
 }
