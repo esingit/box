@@ -12,7 +12,7 @@
     </header>
 
     <main class="flex-1 overflow-auto p-4">
-      <Dashboard v-if="userStore.isLoggedIn" />
+      <Dashboard/>
     </main>
   </div>
 </template>
@@ -21,9 +21,7 @@
 import { ref } from 'vue'
 import { Package } from 'lucide-vue-next'
 import Dashboard from '@/components/dashboard/Dashboard.vue'
-import { useUserStore } from '@/store/userStore'
 
-const userStore = useUserStore()
 const isRotating = ref(false)
 
 function applyRotationAnimation(duration = 1000) {
