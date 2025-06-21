@@ -36,6 +36,7 @@
     <div class="w-[130px]">
       <Field name="pageSize" v-slot="{ value, setValue }">
         <BaseSelect
+            title="每页条数"
             :modelValue="value"
             direction="up"
             :options="pageSizeOptions.map(n => ({ label: `每页${n}条`, value: n }))"

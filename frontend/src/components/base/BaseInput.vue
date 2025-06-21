@@ -1,130 +1,221 @@
 <template>
-  <div
-      class="relative w-full"
-      @click="focusInputManually"
-  >
+  <div class="relative w-full" @click="focusInput">
     <input
         ref="inputRef"
-        autocomplete="on"
-        :value="innerValue"
+        :value="inputDisplayValue"
         :type="type"
-        :placeholder="placeholder"
+        :placeholder="computedPlaceholder"
         :disabled="disabled"
-        :title="errorTooltip"
-        :class="[
-          'input-base pr-8',
-          showError ? 'msg-error' : ''
-        ]"
-        @input="onInput"
-        @change="onInput"
-        @blur="handleBlur"
+        :title="errorTooltip || title"
+        :min="isNumberType ? min : undefined"
+        :max="isNumberType ? max : undefined"
+        :step="isNumberType ? step : undefined"
+        autocomplete="on"
+        @input="handleInput"
+        @blur="validate"
+        class="input-base pr-12 appearance-none"
+        :class="{ 'msg-error': showError }"
     />
 
-    <!-- 清除按钮 -->
+    <!-- 清除按钮，位置根据是否数字类型调节 -->
     <button
-        v-if="clearable && innerValue"
-        @click.stop="clear"
-        class="absolute mr-sm right-2 top-1/2 -translate-y-1/2 z-10 text-gray-400 hover:text-gray-600 transition"
-        title="清空"
+        v-if="clearable && !disabled && hasValue"
+        @click.stop="clearInput"
         type="button"
         tabindex="-1"
+        title="清空"
+        :class="[
+        'absolute top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition',
+        isNumberType ? 'right-8' : 'right-5'
+      ]"
     >
       <LucideX class="w-4 h-4" />
     </button>
 
-    <!-- 错误提示 -->
-    <p v-if="showError" class="msg-error">
-      {{ requiredMessage || '此项为必填' }}
-    </p>
+    <!-- 数字上下调节按钮 -->
+    <div
+        v-if="isNumberType"
+        class="absolute top-1/2 right-2 -translate-y-1/2 flex flex-col justify-center"
+        style="width: 28px; height: 32px;"
+    >
+      <button
+          type="button"
+          @mousedown.prevent="stepHeld('up')"
+          @mouseup="stopHold"
+          @mouseleave="stopHold"
+          class="flex-1 flex items-center justify-center text-gray-400 hover:text-gray-600"
+          :disabled="disabled"
+      >
+        <LucideChevronUp class="w-4 h-4" />
+      </button>
+      <button
+          type="button"
+          @mousedown.prevent="stepHeld('down')"
+          @mouseup="stopHold"
+          @mouseleave="stopHold"
+          class="flex-1 flex items-center justify-center text-gray-400 hover:text-gray-600"
+          :disabled="disabled"
+      >
+        <LucideChevronDown class="w-4 h-4" />
+      </button>
+    </div>
   </div>
+
+  <p v-if="showError" class="msg-error mt-1 ml-1">
+    {{ requiredMessage || `请输入${title || '内容'}` }}
+  </p>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { LucideX } from 'lucide-vue-next'
+import { LucideX, LucideChevronUp, LucideChevronDown } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{
-  modelValue?: string
+  modelValue?: string | number
+  title?: string
   placeholder?: string
-  type?: string
+  type?: 'text' | 'number'
   disabled?: boolean
   clearable?: boolean
   required?: boolean
   requiredMessage?: string
+  min?: number
+  max?: number
+  step?: number
 }>(), {
-  placeholder: '请输入内容',
+  title: '',
+  placeholder: '',
   type: 'text',
   disabled: false,
   clearable: true,
   required: false,
-  requiredMessage: ''
+  requiredMessage: '',
+  step: 1
 })
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
+  (e: 'update:modelValue', value: string | number): void
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
 defineExpose({ inputRef })
 
-const innerValue = computed({
-  get: () => props.modelValue ?? '',
-  set: val => emit('update:modelValue', val)
-})
+const isNumberType = computed(() => props.type === 'number')
+
+const innerValue = ref(props.modelValue ?? '')
+
+const inputDisplayValue = computed(() =>
+    innerValue.value === null || innerValue.value === undefined ? '' : String(innerValue.value)
+)
+
+const hasValue = computed(() =>
+    innerValue.value !== '' && innerValue.value !== null && innerValue.value !== undefined
+)
 
 const showError = ref(false)
 
 const errorTooltip = computed(() =>
-    showError.value ? (props.requiredMessage || '此项为必填') : ''
+    showError.value ? (props.requiredMessage || `请输入${props.title || '内容'}`) : ''
 )
 
-// 清空并聚焦
-function clear() {
+const computedPlaceholder = computed(() =>
+    props.placeholder || `请输入${props.title || '内容'}`
+)
+
+watch(() => props.modelValue, (val) => {
+  innerValue.value = val ?? ''
+  if (val !== '' && val !== null && val !== undefined) {
+    showError.value = false
+  }
+})
+
+function clearInput() {
+  if (props.disabled) return
+  innerValue.value = ''
   emit('update:modelValue', '')
   showError.value = false
   inputRef.value?.focus()
 }
 
-// 输入事件
-function onInput(e: Event) {
+function handleInput(e: Event) {
+  if (props.disabled) return
   const val = (e.target as HTMLInputElement).value
-  emit('update:modelValue', val)
-}
-
-// 失焦校验
-function handleBlur() {
-  if (props.required && innerValue.value.trim() === '') {
-    showError.value = true
+  if (val === '') {
+    innerValue.value = ''
+    emit('update:modelValue', '')
+    return
+  }
+  if (isNumberType.value) {
+    const num = Number(val)
+    if (isNaN(num)) return
+    let final = num
+    if (props.min !== undefined && final < props.min) final = props.min
+    if (props.max !== undefined && final > props.max) final = props.max
+    innerValue.value = final
+    emit('update:modelValue', final)
   } else {
-    showError.value = false
+    innerValue.value = val
+    emit('update:modelValue', val)
   }
 }
 
-// 监听外部值变化，清除错误
-watch(() => props.modelValue, () => {
-  if (innerValue.value.trim() !== '') {
-    showError.value = false
+let interval: number | null = null
+
+function stepOnce(direction: 'up' | 'down') {
+  const current = Number(innerValue.value) || 0
+  const step = props.step ?? 1
+  const next = direction === 'up' ? current + step : current - step
+  if (props.max !== undefined && next > props.max) return
+  if (props.min !== undefined && next < props.min) return
+  innerValue.value = next
+  emit('update:modelValue', next)
+}
+
+function stepHeld(direction: 'up' | 'down') {
+  stepOnce(direction)
+  stopHold()
+  interval = window.setInterval(() => stepOnce(direction), 150)
+}
+
+function stopHold() {
+  if (interval !== null) {
+    clearInterval(interval)
+    interval = null
   }
-})
+}
 
-// 解决自动填充内容无法同步的问题
-onMounted(() => {
-  nextTick(() => {
-    const el = inputRef.value
-    if (el && el.value && el.value !== innerValue.value) {
-      emit('update:modelValue', el.value)
-    }
-  })
-})
+function validate() {
+  const val = innerValue.value
+  showError.value = props.required && (val === '' || val === null || val === undefined)
+}
 
-// 点击外层时强制聚焦和光标
-function focusInputManually() {
+function focusInput() {
+  if (props.disabled) return
   const el = inputRef.value
-  if (!el || props.disabled) return
+  if (!el) return
   el.focus()
-  // hack：强制光标显示，解决部分浏览器点击无光标问题
   const val = el.value
   el.value = ''
   el.value = val
 }
+
+onMounted(() => {
+  nextTick(() => {
+    const el = inputRef.value
+    if (el?.value && el.value !== inputDisplayValue.value) {
+      handleInput({ target: el } as unknown as Event)
+    }
+  })
+})
 </script>
+
+<style scoped>
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+</style>

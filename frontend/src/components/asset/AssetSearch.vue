@@ -4,6 +4,7 @@
     <div class="flex flex-wrap items-center gap-3">
       <div class="flex-1 min-w-[200px]">
         <BaseSelect
+            title="资产名称"
             v-model="query.assetNameIdList"
             :options="localAssetNameOptions"
             placeholder="全部资产名称"
@@ -15,6 +16,7 @@
 
       <!-- 资产类型 -->
       <BaseSelect
+          title="资产类型"
           v-model="query.assetTypeIdList"
           :options="assetTypeOptions"
           placeholder="全部资产类型"
@@ -25,6 +27,7 @@
 
       <!-- 资产位置 -->
       <BaseSelect
+          title="资产位置"
           v-model="query.assetLocationIdList"
           :options="assetLocationOptions"
           placeholder="全部资产位置"

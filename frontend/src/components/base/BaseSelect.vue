@@ -10,17 +10,22 @@
         <ListboxButton
             :title="showError ? (requiredMessage || '此项为必填') : selectedText"
             :class="[
-              'input-base flex justify-between items-center w-full pr-8',
-              showError ? 'msg-error' : ''
-            ]"
+            'input-base flex justify-between items-center w-full pr-8',
+            showError ? 'msg-error' : ''
+          ]"
         >
-          <span class="truncate whitespace-nowrap block max-w-full">
+          <span
+              class="truncate whitespace-nowrap block max-w-full"
+              :class="{
+              'text-gray-400': !selectedLabels.length && !showError,
+              'text-black': selectedLabels.length || showError
+            }"
+          >
             {{ showError ? (requiredMessage || '此项为必填') : selectedText }}
           </span>
 
           <!-- 图标区域：清空按钮 + 下拉箭头 -->
           <div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-[2px]">
-            <!-- 清空按钮 -->
             <button
                 v-if="clearable && hasValue"
                 @click.stop="clearSelection"
@@ -30,18 +35,16 @@
             >
               ✕
             </button>
-            <!-- 下拉图标 -->
             <LucideChevronDown class="w-4 h-4 text-gray-400" />
           </div>
         </ListboxButton>
 
-        <!-- 下拉选项 -->
         <ListboxOptions
             :class="[
-              'absolute z-50 w-full overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
-              direction === 'up' ? 'mb-1 bottom-full' : 'mt-1 top-full',
-              'min-h-[80px] max-h-60'
-            ]"
+            'absolute z-50 w-full overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
+            direction === 'up' ? 'mb-1 bottom-full' : 'mt-1 top-full',
+            'min-h-[80px] max-h-60'
+          ]"
         >
           <ListboxOption
               v-for="item in safeOptions"
@@ -52,12 +55,11 @@
             <div
                 class="flex items-center px-3 py-2 rounded-xl cursor-pointer select-none transition-colors duration-150"
                 :class="{
-                  'bg-gray-100': active,
-                  'font-semibold text-black': selected,
-                  'text-gray-900': !selected
-                }"
+                'bg-gray-100': active,
+                'font-semibold text-black': selected,
+                'text-gray-900': !selected
+              }"
             >
-              <!-- 多选勾选图标 -->
               <template v-if="multiple">
                 <span class="mr-2 flex items-center justify-center w-5 h-5">
                   <component
@@ -95,6 +97,7 @@ const props = withDefaults(defineProps<{
   modelValue?: string | number | (string | number)[]
   options?: Option[]
   placeholder?: string
+  title: string
   multiple?: boolean
   direction?: 'up' | 'down'
   clearable?: boolean
@@ -102,7 +105,7 @@ const props = withDefaults(defineProps<{
   requiredMessage?: string
 }>(), {
   options: () => [],
-  placeholder: '请选择',
+  placeholder: '',
   multiple: false,
   direction: 'down',
   clearable: false,
@@ -147,10 +150,12 @@ const selectedLabels = computed(() => {
   }
 })
 
+const computedPlaceholder = computed(() => props.placeholder || `请输入${props.title}`)
+
 const selectedText = computed(() =>
     selectedLabels.value.length
         ? selectedLabels.value.join('、')
-        : props.placeholder
+        : computedPlaceholder.value
 )
 
 const direction = computed(() => props.direction ?? 'down')

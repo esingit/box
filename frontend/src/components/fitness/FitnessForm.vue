@@ -15,19 +15,19 @@
         <!-- 类型 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
-            类型 <span class="msg-error">*</span>
+            健身类型 <span class="msg-error">*</span>
           </label>
           <Field name="typeId" v-slot="{ value, setValue }">
             <BaseSelect
+                title="健身类型"
                 :modelValue="value"
-                :options="fitnessTypesFiltered"
-                placeholder="请选择"
-                @update:modelValue="val => {
-                setValue(val)
-                setDefaultUnit(val, setFieldValue, values)
-              }"
                 clearable
                 :disabled="loading"
+                :options="fitnessTypesFiltered"
+                @update:modelValue="val => {
+                  setValue(val)
+                  setDefaultUnit(val, setFieldValue, values)
+                }"
             />
           </Field>
           <ErrorMessage name="typeId" class="msg-error" />
@@ -38,12 +38,14 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">
             次数 <span class="msg-error">*</span>
           </label>
-          <Field
+          <BaseInput
+              title="数值"
               name="count"
               type="number"
-              min="1"
-              class="input-base"
+              :min="1"
               :disabled="loading"
+              required
+              clearable
           />
           <ErrorMessage name="count" class="msg-error" />
         </div>
@@ -55,12 +57,12 @@
           </label>
           <Field name="unitId" v-slot="{ value, setValue }">
             <BaseSelect
+                title="单位"
                 :modelValue="value"
-                :options="unitsFiltered"
-                placeholder="请选择"
-                @update:modelValue="val => setValue(val)"
                 clearable
                 :disabled="loading"
+                :options="unitsFiltered"
+                @update:modelValue="val => setValue(val)"
             />
           </Field>
           <ErrorMessage name="unitId" class="msg-error" />

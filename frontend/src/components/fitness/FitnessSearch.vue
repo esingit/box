@@ -4,11 +4,12 @@
     <div class="flex flex-wrap items-center gap-3">
       <div class="flex-1 min-w-[200px]">
         <BaseSelect
+            title="健身类型"
             v-model="query.typeIdList"
             :options="fitnessTypeOptions"
             multiple
             clearable
-            placeholder="全部类型"
+            placeholder="全部健身类型"
             class="w-full"
         />
       </div>

@@ -23,9 +23,9 @@
           <Field name="assetNameId" v-slot="{ value, setValue }">
             <div class="flex items-center space-x-2">
               <BaseSelect
+                  title="资产名称"
                   :modelValue="value"
                   :options="assetNameStore.assetNameOptions"
-                  placeholder="请选择资产名称"
                   clearable
                   @update:modelValue="val => setValue(val)"
               />
@@ -50,9 +50,9 @@
           </label>
           <Field name="assetTypeId" v-slot="{ value, setValue }">
             <BaseSelect
+                title="资产分类"
                 :modelValue="value"
                 :options="assetTypes"
-                placeholder="请选择资产分类"
                 clearable
                 @update:modelValue="val => {
                 setValue(val)
@@ -70,9 +70,9 @@
           </label>
           <Field name="assetLocationId" v-slot="{ value, setValue }">
             <BaseSelect
+                title="资产位置"
                 :modelValue="value"
                 :options="assetLocations"
-                placeholder="请选择资产位置"
                 clearable
                 @update:modelValue="val => setValue(val)"
             />
