@@ -25,9 +25,9 @@
                 :disabled="loading"
                 :options="fitnessTypesFiltered"
                 @update:modelValue="val => {
-                  setValue(val)
-                  setDefaultUnit(val, setFieldValue, values)
-                }"
+                setValue(val)
+                setDefaultUnit(val, setFieldValue, values)
+              }"
             />
           </Field>
           <ErrorMessage name="typeId" class="msg-error" />
@@ -38,15 +38,18 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">
             次数 <span class="msg-error">*</span>
           </label>
-          <BaseInput
-              title="数值"
-              name="count"
-              type="number"
-              :min="1"
-              :disabled="loading"
-              required
-              clearable
-          />
+          <Field name="count" v-slot="{ value, setValue }">
+            <BaseInput
+                :modelValue="value"
+                @update:modelValue="setValue"
+                title="数值"
+                type="number"
+                :min="1"
+                :disabled="loading"
+                required
+                clearable
+            />
+          </Field>
           <ErrorMessage name="count" class="msg-error" />
         </div>
 
@@ -62,7 +65,7 @@
                 clearable
                 :disabled="loading"
                 :options="unitsFiltered"
-                @update:modelValue="val => setValue(val)"
+                @update:modelValue="setValue"
             />
           </Field>
           <ErrorMessage name="unitId" class="msg-error" />
@@ -97,7 +100,7 @@
 
         <!-- 底部按钮区域 -->
         <div class="flex justify-end gap-4">
-          <BaseButton type="button" title="取消" @click="handleClose" color="outline" :loading="loading"/>
+          <BaseButton type="button" title="取消" @click="handleClose" color="outline" :loading="loading" />
           <BaseButton
               type="submit"
               color="primary"

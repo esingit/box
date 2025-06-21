@@ -66,7 +66,7 @@
       />
     </section>
 
-    <!-- 弹窗 -->
+    <!-- 添加弹窗 -->
     <FitnessForm
         v-if="showAddModal"
         :visible="showAddModal"
@@ -74,9 +74,12 @@
         title="添加记录"
         confirm-text="确定"
         remark-placeholder="备注（可选）"
+        :fitnessTypeOptions="fitnessTypeOptions"
+        :fitnessUnitOptions="fitnessUnitOptions"
         @submit="handleAddRecord"
         @close="closeAddModal"
     />
+    <!-- 编辑弹窗 -->
     <FitnessForm
         v-if="editingIdx !== null"
         :visible="true"
@@ -85,6 +88,8 @@
         title="编辑记录"
         confirm-text="保存"
         remark-placeholder="备注（可选）"
+        :fitnessTypeOptions="fitnessTypeOptions"
+        :fitnessUnitOptions="fitnessUnitOptions"
         @submit="saveEdit"
         @close="cancelEdit"
     />
@@ -114,7 +119,14 @@ const showAddModal = ref(false)
 const editingIdx = ref<null | number>(null)
 const resultCount = ref<number | null>(null)
 
+// 类型选项
 const fitnessTypeOptions = computed(() => (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
+  label: item.value1 || '',
+  value: item.id
+})))
+
+// 单位选项
+const fitnessUnitOptions = computed(() => (metaStore.typeMap?.UNIT || []).map(item => ({
   label: item.value1 || '',
   value: item.id
 })))
@@ -134,10 +146,16 @@ const isNextWorkoutOverdue = computed(() => {
 })
 
 function initEmptyForm() {
-  form.typeId = ''
+  // 默认类型“俯卧撑”
+  const defaultType = fitnessTypeOptions.value.find(item => item.label === '俯卧撑')
+  form.typeId = defaultType ? defaultType.value : (fitnessTypeOptions.value[0]?.value || '')
+
+  // 默认单位“个”
+  const defaultUnit = fitnessUnitOptions.value.find(item => item.label === '个')
+  form.unitId = defaultUnit ? defaultUnit.value : (fitnessUnitOptions.value[0]?.value || '')
+
   form.count = '1'
-  form.unitId = ''
-  form.finishTime = ''
+  form.finishTime = formatDate(new Date(), 'yyyy-MM-dd')
   form.remark = ''
 }
 
