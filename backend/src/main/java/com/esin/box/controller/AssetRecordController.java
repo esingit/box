@@ -115,7 +115,7 @@ public class AssetRecordController {
             return ApiResponse.error(e.getMessage());
         }
     }
-    @Operation(summary = "查询全部资产记录（不分页）")
+    @Operation(summary = "查询全部资产记录")
     @GetMapping("/listAll")
     public ApiResponse<List<AssetRecordDTO>> listAllRecords(
             @Parameter(description = "资产名称ID") @RequestParam(required = false) List<Long> assetNameIdList,

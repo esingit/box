@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard-wrapper px-4 py-6">
     <div class="grid gap-12">
-      <FitnessStats :fitnessTypeOptions="fitnessTypeOptions"/>
+      <FitnessStats :fitnessTypeOptions="fitnessTypeOptions" />
       <AssetStats
           :assetNameOptions="assetNameOptions"
           :assetTypeOptions="assetTypeOptions"
@@ -11,30 +11,39 @@
   </div>
 </template>
 
-<script setup="ts">
-import {useMetaStore} from '@/store/metaStore'
-import {useAssetNameStore} from "@/store/assetNameStore";
+<script setup lang="ts">
+import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useMetaStore } from '@/store/metaStore'
+import { useAssetNameStore } from '@/store/assetNameStore'
+
+// 引入子组件
+import FitnessStats from './components/FitnessStats.vue'
+import AssetStats from './components/AssetStats.vue'
 
 const metaStore = useMetaStore()
 const assetNameStore = useAssetNameStore()
 
-// 类型选项
-const fitnessTypeOptions = computed(() => (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
-  label: item.value1 || '',
-  value: item.id
-})))
+// 健身类型下拉框选项
+const fitnessTypeOptions = computed(() =>
+    (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
+      label: item.value1 || '',
+      value: item.id,
+      value1: item.value1 // 补全用于图表名称展示
+    }))
+)
 
+// 资产相关下拉选项
 const assetTypeOptions = computed(() =>
-    (metaStore.typeMap?.ASSET_TYPE || []).map(i => ({label: i.value1 || '', value: i.id}))
+    (metaStore.typeMap?.ASSET_TYPE || []).map(i => ({ label: i.value1 || '', value: i.id }))
 )
 const assetLocationOptions = computed(() =>
-    (metaStore.typeMap?.ASSET_LOCATION || []).map(i => ({label: i.value1 || '', value: i.id}))
+    (metaStore.typeMap?.ASSET_LOCATION || []).map(i => ({ label: i.value1 || '', value: i.id }))
 )
-const {assetNameOptions} = storeToRefs(assetNameStore)
+
+const { assetNameOptions } = storeToRefs(assetNameStore)
 
 onMounted(async () => {
-  await Promise.all([
-    metaStore.initAll(),
-  ])
+  await Promise.all([metaStore.initAll()])
 })
 </script>

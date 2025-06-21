@@ -1,4 +1,4 @@
-// 修改后的 assetStore.ts（含 assetNameOptions）
+// assetStore.ts
 import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
 import axiosInstance from '@/utils/axios'
@@ -204,6 +204,41 @@ export const useAssetStore = defineStore('asset', () => {
             throw error
         }
     }
+    async function loadAllRecords() {
+        if (recordController) recordController.abort()
+        recordController = new AbortController()
+        loadingList.value = true
+
+        try {
+            const res = await axiosInstance.get('/api/asset-record/listAll', {
+                params: {
+                    assetNameIdList: query.assetNameIdList.length ? query.assetNameIdList : undefined,
+                    assetLocationIdList: query.assetLocationIdList.length ? query.assetLocationIdList : undefined,
+                    assetTypeIdList: query.assetTypeIdList.length ? query.assetTypeIdList : undefined,
+                    startDate: query.startDate ? query.startDate + 'T00:00:00' : undefined,
+                    endDate: query.endDate ? query.endDate + 'T23:59:59' : undefined,
+                    remark: query.remark.trim() || undefined
+                },
+                signal: recordController.signal,
+                paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
+            })
+
+            if (res.data.success) {
+                const raw = res.data.data || []
+                list.value = await Promise.all(raw.map(formatAssetRecord))
+                pagination.total = raw.length
+                pagination.pageNo = 1
+                pagination.pageSize = raw.length || 10
+            } else {
+                emitter.emit('notify', { message: res.data.message || '获取全部记录失败', type: 'error' })
+            }
+        } catch (err) {
+            await handleError(err, '获取全部资产记录')
+        } finally {
+            loadingList.value = false
+            recordController = null
+        }
+    }
 
     return {
         list,
@@ -215,6 +250,7 @@ export const useAssetStore = defineStore('asset', () => {
         hasRecords,
         recordCount,
         loadList,
+        loadAllRecords,
         updateQuery,
         setPageNo,
         setPageSize,

@@ -344,13 +344,13 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             wrapper.like("remark", remark);
         }
         if (startDate != null && !startDate.isBlank()) {
-            wrapper.ge("date", startDate);
+            wrapper.ge("acquire_time", startDate);
         }
         if (endDate != null && !endDate.isBlank()) {
-            wrapper.le("date", endDate);
+            wrapper.le("acquire_time", endDate);
         }
         wrapper.eq("create_user", createUser);
-        wrapper.orderByDesc("date");
+        wrapper.orderByDesc("acquire_time");
 
         List<AssetRecord> entityList = assetRecordMapper.selectList(wrapper);
         return assetRecordConverter.toDTOList(entityList);

@@ -92,13 +92,13 @@ public class FitnessRecordServiceImpl implements FitnessRecordService {
             wrapper.like("remark", remark);
         }
         if (startDate != null && !startDate.isBlank()) {
-            wrapper.ge("date", startDate);
+            wrapper.ge("finish_time", startDate);
         }
         if (endDate != null && !endDate.isBlank()) {
-            wrapper.le("date", endDate);
+            wrapper.le("finish_time", endDate);
         }
-        wrapper.eq("username", username);
-        wrapper.orderByDesc("date");
+        wrapper.eq("create_user", username);
+        wrapper.orderByDesc("finish_time");
         return wrapper;
     }
 }
