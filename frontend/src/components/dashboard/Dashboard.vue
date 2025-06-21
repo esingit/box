@@ -54,5 +54,6 @@ const { assetNameOptions } = storeToRefs(assetNameStore)
 
 onMounted(async () => {
   await Promise.all([metaStore.initAll()])
+  await assetNameStore.fetchAssetName()
 })
 </script>

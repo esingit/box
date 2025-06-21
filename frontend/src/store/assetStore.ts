@@ -9,6 +9,7 @@ import { formatTime } from '@/utils/formatters'
 
 export const useAssetStore = defineStore('asset', () => {
     const list = ref<any[]>([])
+    const allList = ref<any[]>([])
     const query = reactive({
         assetNameIdList: [],
         assetLocationIdList: [],
@@ -225,7 +226,7 @@ export const useAssetStore = defineStore('asset', () => {
 
             if (res.data.success) {
                 const raw = res.data.data || []
-                list.value = await Promise.all(raw.map(formatAssetRecord))
+                allList.value = await Promise.all(raw.map(formatAssetRecord))
                 pagination.total = raw.length
                 pagination.pageNo = 1
                 pagination.pageSize = raw.length || 10
@@ -242,6 +243,7 @@ export const useAssetStore = defineStore('asset', () => {
 
     return {
         list,
+        allList,
         query,
         pagination,
         loadingList,

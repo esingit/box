@@ -5,7 +5,6 @@
     <!-- 查询条件 -->
     <div class="border rounded-xl p-4 space-y-4 hover:shadow-md">
       <div class="flex flex-wrap items-center gap-3">
-        <!-- 健身类型 固定宽度 -->
         <div class="flex-1 min-w-[200px]">
           <BaseSelect
               title="健身类型"
@@ -18,7 +17,6 @@
           />
         </div>
 
-        <!-- 日期范围 固定宽度 -->
         <div class="w-[300px] flex-shrink-0 flex gap-2 items-center">
           <BaseDateInput
               v-model="rangeValue"
@@ -31,12 +29,11 @@
           />
         </div>
 
-        <!-- 操作按钮 -->
         <div class="flex gap-2 ml-auto flex-shrink-0">
-          <BaseButton @click="onSearch" color="outline" :icon="LucideSearch" variant="search" />
-          <BaseButton @click="onReset" color="outline" :icon="LucideRotateCcw" variant="search" />
+          <BaseButton @click="fetchData" color="outline" :icon="LucideSearch" variant="search" />
+          <BaseButton @click="resetForm" color="outline" :icon="LucideRotateCcw" variant="search" />
           <BaseButton
-              @click="toggleMore"
+              @click="showMore = !showMore"
               color="outline"
               :icon="showMore ? LucideChevronUp : LucideChevronDown"
               variant="search"
@@ -44,7 +41,6 @@
         </div>
       </div>
 
-      <!-- 更多条件 -->
       <div v-if="showMore" class="flex flex-wrap gap-3">
         <BaseInput v-model="query.remark" placeholder="备注关键词" type="text" clearable />
       </div>
@@ -53,13 +49,13 @@
     <!-- 图表区域 -->
     <div class="relative min-h-[400px] h-[calc(100vh-300px)]">
       <template v-if="fitnessError">
-        <div class="flex flex-col items-center justify-center h-full text-red-600">
+        <div class="flex flex-col items-center justify-center h-full msg-error">
           <p class="mb-2 font-semibold">{{ fitnessError }}</p>
           <p class="text-sm text-gray-500">{{ getEmptyDescription('健身') }}</p>
         </div>
       </template>
 
-      <template v-else-if="echartOptions && echartOptions.series.length">
+      <template v-else-if="echartOptions">
         <div ref="chartRef" class="w-full h-full"></div>
       </template>
 
@@ -111,6 +107,7 @@ let chartInstance: echarts.ECharts | null = null
 const showMore = ref(false)
 const fitnessError = ref('')
 const rangeValue = ref('')
+
 const query = ref({
   typeIdList: [] as number[],
   startDate: '',
@@ -118,10 +115,7 @@ const query = ref({
   remark: ''
 })
 
-function toggleMore() {
-  showMore.value = !showMore.value
-}
-
+// 监听日期范围变化，同步拆分给 startDate 和 endDate
 watch(rangeValue, (val) => {
   const { start, end } = splitRangeDates(val)
   query.value.startDate = start
@@ -132,24 +126,32 @@ function getEmptyDescription(type: string) {
   return `暂无相关${type}统计数据`
 }
 
-function formatAmount(val: any) {
-  return val == null ? '-' : Number(val).toFixed(2)
-}
+// 格式化数字，保留两位小数，空值显示 '-'
+const formatAmount = (val: any) => (val == null ? '-' : Number(val).toFixed(2))
 
+// 计算当前图表配置
 const echartOptions = computed(() => {
   const list = fitnessStore.allList
+  if (!list?.length) return null
+
+  // 如果没选类型，默认全选
   const selected = query.value.typeIdList.length > 0
       ? query.value.typeIdList
       : props.fitnessTypeOptions.map(i => i.value)
 
-  if (!list?.length || !selected.length) return null
+  if (!selected.length) return null
 
+  // 获取日期，排序
   const dates = [...new Set(list.map(i => i.finishTime.split('T')[0]))].sort()
+  if (!dates.length) return null
+
+  // 格式化日期显示 MM/DD
   const formattedDates = dates.map(d => {
     const dt = new Date(d)
     return `${dt.getMonth() + 1}/${dt.getDate()}`
   })
 
+  // 组装series
   const series = selected.map((typeId, index) => {
     const meta = props.fitnessTypeOptions.find(i => i.value === typeId)
     if (!meta) return null
@@ -160,17 +162,21 @@ const echartOptions = computed(() => {
             .reduce((sum, r) => sum + Number(r.count || 0), 0)
     )
 
-    const hue = index * 60 % 360
+    const hue = (index * 60) % 360
+    const color = `hsl(${hue}, 30%, 50%)`
+
     return {
       name: meta.value1 || `类型${typeId}`,
       type: 'line',
       data,
       smooth: true,
-      lineStyle: { color: `hsl(${hue}, 30%, 50%)` },
-      itemStyle: { color: `hsl(${hue}, 30%, 50%)` },
+      lineStyle: { color },
+      itemStyle: { color },
       areaStyle: { color: `hsla(${hue}, 30%, 50%, 0.2)` }
     }
   }).filter(Boolean)
+
+  if (!series.length) return null
 
   return {
     tooltip: {
@@ -178,10 +184,7 @@ const echartOptions = computed(() => {
       formatter: (params: any[]) =>
           params.map(p => `${p.marker} ${p.seriesName}: ${formatAmount(p.data)}`).join('<br/>')
     },
-    legend: {
-      data: series.map(s => s.name),
-      bottom: 0
-    },
+    legend: { data: series.map(s => s.name), bottom: 0 },
     grid: { left: 30, right: 30, top: 20, bottom: 40 },
     xAxis: {
       type: 'category',
@@ -200,6 +203,7 @@ const echartOptions = computed(() => {
   }
 })
 
+// 默认日期范围：最近30天
 function getDefaultDateRange() {
   const end = new Date()
   const start = new Date()
@@ -210,13 +214,16 @@ function getDefaultDateRange() {
   }
 }
 
+// 加载数据并渲染图表
 async function fetchData() {
   fitnessError.value = ''
+
   if (!query.value.startDate || !query.value.endDate) {
     emitter.emit('notify', { message: '请选择日期范围', type: 'error' })
     return
   }
 
+  // 传入查询参数
   const queryTypeIds = query.value.typeIdList.length > 0
       ? query.value.typeIdList
       : props.fitnessTypeOptions.map(i => i.value)
@@ -232,18 +239,16 @@ async function fetchData() {
   }
 }
 
+// 渲染 ECharts
 function renderChart() {
   if (!chartRef.value || !echartOptions.value) return
+
   chartInstance?.dispose()
   chartInstance = echarts.init(chartRef.value)
   chartInstance.setOption(echartOptions.value)
 }
 
-function onSearch() {
-  fetchData()
-}
-
-function onReset() {
+function resetForm() {
   const { startDate, endDate } = getDefaultDateRange()
   query.value = {
     typeIdList: [],
@@ -271,11 +276,7 @@ onMounted(() => {
   animation: fadeIn 0.3s ease forwards;
 }
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>

@@ -1,221 +1,347 @@
 <template>
-  <div class="border rounded-lg shadow p-6 animate-fade">
+  <div class="border rounded-xl shadow p-6 animate-fade w-full space-y-6 bg-white">
     <h2 class="text-lg font-semibold mb-4">资产统计</h2>
-    <div class="flex flex-col space-y-4 mb-6">
-      <select
-          multiple
-          v-model="selectedAssetType"
-          @change="handleAssetTypeChange"
-          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-      >
-        <option v-for="option in assetTypeOptions" :key="option.value" :value="option.value">
-          {{ option.label }}
-        </option>
-      </select>
 
-      <select
-          v-if="selectedAssetType.length"
-          multiple
-          v-model="selectedAssetName"
-          @change="handleAssetNameChange"
-          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-      >
-        <option v-for="option in filteredAssetNameOptions" :key="option.value" :value="option.value">
-          {{ option.label }}
-        </option>
-      </select>
+    <!-- 查询条件 -->
+    <div class="border rounded-xl p-4 space-y-4 hover:shadow-md">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex-1 w-full">
+          <BaseSelect
+              title="资产名称"
+              v-model="selectedNameIds"
+              :options="props.assetNameOptions"
+              multiple
+              clearable
+              placeholder="请选择资产名称"
+              class="w-full"
+          />
+        </div>
+        <div class="w-[220px] flex-shrink-0">
+          <BaseSelect
+              title="资产类型"
+              v-model="selectedTypeIds"
+              :options="props.assetTypeOptions"
+              multiple
+              clearable
+              placeholder="请选择资产类型"
+              class="w-full"
+              @change="handleTypeChange"
+          />
+        </div>
+        <div class="w-[220px] flex-shrink-0">
+          <BaseSelect
+              title="资产位置"
+              v-model="selectedLocationIds"
+              :options="props.assetLocationOptions"
+              multiple
+              clearable
+              placeholder="请选择资产位置"
+              class="w-full"
+          />
+        </div>
+
+        <div class="flex gap-2 ml-auto flex-shrink-0">
+          <BaseButton
+              :disabled="!isRangeValid"
+              @click="onSearch"
+              color="outline"
+              :icon="LucideSearch"
+              variant="search"
+          />
+          <BaseButton
+              @click="onReset"
+              color="outline"
+              :icon="LucideRotateCcw"
+              variant="search"
+          />
+          <BaseButton
+              @click="toggleMore"
+              color="outline"
+              :icon="showMore ? LucideChevronUp : LucideChevronDown"
+              variant="search"
+          />
+        </div>
+      </div>
+
+      <div v-if="showMore" class="flex flex-wrap items-center gap-3 mt-3">
+        <div class="w-[300px] flex-shrink-0">
+          <BaseDateInput
+              v-model="rangeValue"
+              type="date"
+              range
+              clearable
+              required
+              placeholder="请选择日期范围"
+              class="w-full"
+          />
+        </div>
+        <div class="flex-1 min-w-[240px]">
+          <BaseInput
+              v-model="remark"
+              placeholder="备注关键词"
+              type="text"
+              clearable
+              class="w-full"
+          />
+        </div>
+      </div>
     </div>
 
-    <div class="min-h-[250px] flex items-center justify-center border border-gray-200 rounded">
-      <template v-if="assetError">
-        <div class="text-red-600 text-center px-4">
-          {{ getEmptyDescription('资产') }}<br />
-          <span class="font-semibold">{{ assetError }}</span>
-        </div>
-      </template>
-      <template v-else-if="assetChartData">
-        <Line :data="assetChartData" :options="chartOptions" class="w-full h-64" />
-      </template>
-      <template v-else>
-        <div class="text-gray-400 text-center px-4">
-          {{ getEmptyDescription('资产') }}
-        </div>
-      </template>
+    <!-- 图表 -->
+    <div class="relative min-h-[400px] h-[calc(100vh-300px)]">
+      <div v-if="dates.length === 0" class="flex items-center justify-center h-full text-gray-400">
+        暂无数据
+      </div>
+      <div v-else ref="chartRef" class="w-full h-full"></div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { Line } from 'vue-chartjs'
-import axiosInstance from '@/utils/axios';
-import { useUserStore } from '@/store/userStore'
+<script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import * as echarts from 'echarts'
+import BaseSelect from '@/components/base/BaseSelect.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseDateInput from '@/components/base/BaseDateInput.vue'
+import {
+  LucideChevronDown,
+  LucideChevronUp,
+  LucideRotateCcw,
+  LucideSearch,
+} from 'lucide-vue-next'
+import { useAssetStore } from '@/store/assetStore'
 
-const userStore = useUserStore()
-const selectedAssetType = ref([])
-const selectedAssetName = ref([])
-const assetTypes = ref([])
-const assetName = ref([])
-const assetData = ref([])
-const assetError = ref('')
-
-const assetTypeOptions = computed(() =>
-    assetTypes.value.map(type => ({ label: type.value1, value: type.id }))
-)
-const filteredAssetNameOptions = computed(() =>
-    assetName.value.map(name => ({ label: name.name, value: name.id }))
-)
-
-function getEmptyDescription(type) {
-  return `暂无相关${type}统计数据`
+interface Option {
+  label: string
+  value: string | number
 }
 
-function formatAmount(value) {
-  return value == null
-      ? '-'
-      : new Intl.NumberFormat('zh-CN', {
-        style: 'decimal',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(value)
+const props = defineProps<{
+  assetNameOptions: Option[]
+  assetTypeOptions: Option[]
+  assetLocationOptions: Option[]
+}>()
+
+const assetStore = useAssetStore()
+
+const selectedTypeIds = ref<(string | number)[]>([])
+const selectedNameIds = ref<(string | number)[]>([])
+const selectedLocationIds = ref<(string | number)[]>([])
+const remark = ref('')
+const rangeValue = ref('')
+const showMore = ref(false)
+const chartRef = ref<HTMLDivElement | null>(null)
+let chartInstance: echarts.ECharts | null = null
+
+function formatDate(date: Date): string {
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${m}-${d}`
 }
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      labels: {
-        position: 'top',
-        generateLabels: chart =>
-            chart.data.datasets.map((dataset, i) => ({
-              text: dataset.label,
-              fillStyle: 'rgba(0, 0, 0, 0)',
-              strokeStyle: '#d1d5db',
-              lineWidth: 1,
-              hidden: !chart.getDatasetMeta(i).visible,
-              index: i,
-              datasetIndex: i,
-            })),
-      },
-    },
-    tooltip: {
-      mode: 'index',
-      intersect: false,
-      callbacks: {
-        label: ctx => {
-          const label = ctx.dataset.label ? ctx.dataset.label + ': ' : ''
-          return ctx.parsed.y != null ? label + `￥${formatAmount(ctx.parsed.y)}` : label
-        },
-      },
-    },
-  },
-  scales: {
-    x: { title: { display: true, text: '日期' }, grid: { color: 'rgba(0,0,0,0.1)' } },
-    y: { title: { display: true, text: '金额' }, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.1)' } },
-  },
+function getLastMonthRange(): string {
+  const end = new Date()
+  const start = new Date()
+  start.setMonth(end.getMonth() - 1)
+  return `${formatDate(start)} ~ ${formatDate(end)}`
 }
 
-const assetChartData = computed(() => {
-  if (!assetData.value.length) return null
+rangeValue.value = getLastMonthRange()
 
-  const dates = [...new Set(assetData.value.map(item => item.date))].sort()
-  const groupedMap = new Map()
+const isRangeValid = computed(() => {
+  if (!rangeValue.value) return false
+  const parts = rangeValue.value.split('~').map(s => s.trim())
+  return parts.length === 2 && parts[0] !== '' && parts[1] !== ''
+})
 
-  const selectedNameSet = new Set(selectedAssetName.value)
-  const nameMap = new Map(assetName.value.map(n => [n.id, n.name]))
+// 统一取资产记录，避免多次调用
+const records = computed(() => assetStore.allList || [])
 
-  if (selectedAssetName.value.length > 0) {
-    assetData.value.forEach(item => {
-      if (!selectedNameSet.has(item.assetNameId)) return
-      const label = nameMap.get(item.assetNameId) || '未知资产'
-      if (!groupedMap.has(label)) groupedMap.set(label, {})
-      groupedMap.get(label)[item.date] = item.amount
+/**
+ * 按维度（资产名称/类型/位置）和日期汇总金额
+ * @param dimensionKey 维度字段名，例如 'assetName' / 'assetType' / 'assetLocation'
+ * @returns Record<维度值, Record<日期, 金额>>
+ */
+function summarizeByDimension(dimensionKey: keyof typeof records.value[0]) {
+  const map: Record<string, Record<string, number>> = {}
+  records.value.forEach((item) => {
+    const date = item.recordDate?.split('T')[0]
+    if (!date) return
+    const dimVal = item[dimensionKey] || `未知${dimensionKey}`
+    if (!map[dimVal]) map[dimVal] = {}
+    map[dimVal][date] = (map[dimVal][date] || 0) + (item.amount || 0)
+  })
+  return map
+}
+
+// 总金额按日期汇总
+const totalAmountByDate = computed<Record<string, number>>(() => {
+  const map: Record<string, number> = {}
+  records.value.forEach(item => {
+    const date = item.recordDate?.split('T')[0]
+    if (!date) return
+    map[date] = (map[date] || 0) + (item.amount || 0)
+  })
+  return map
+})
+
+const amountByNameDate = computed(() => summarizeByDimension('assetName'))
+const amountByTypeDate = computed(() => summarizeByDimension('assetType'))
+const amountByLocationDate = computed(() => summarizeByDimension('assetLocation'))
+
+const dates = computed(() => {
+  const dateSet = new Set<string>()
+  // 收集所有日期
+  Object.keys(totalAmountByDate.value).forEach(d => dateSet.add(d))
+  ;[amountByNameDate.value, amountByTypeDate.value, amountByLocationDate.value].forEach(dimMap => {
+    Object.values(dimMap).forEach(dateMap => {
+      Object.keys(dateMap).forEach(d => dateSet.add(d))
     })
-  } else {
-    const totalMap = {}
-    dates.forEach(date => {
-      totalMap[date] = assetData.value
-          .filter(item => item.date === date)
-          .reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
-    })
-    groupedMap.set('总额', totalMap)
-  }
+  })
+  return Array.from(dateSet).sort()
+})
 
-  const datasets = [...groupedMap.entries()].map(([label, data]) => ({
-    label,
-    data: dates.map(date => data[date] || 0),
-    borderColor: '#8e8ea0',
-    backgroundColor: '#acacbe',
-    pointRadius: 3,
-    pointBackgroundColor: '#999',
-    tension: 0.4,
-    fill: false,
+// 填充数据，缺失日期补0
+function fillSeriesData(
+    dates: string[],
+    dataMap: Record<string, Record<string, number>>,
+    keys: string[]
+) {
+  return keys.map(key => ({
+    name: key,
+    data: dates.map(d => dataMap[key]?.[d] ?? 0)
   }))
+}
 
-  const formattedDates = dates.map(date => {
-    const d = new Date(date)
-    return `${d.getMonth() + 1}/${d.getDate()}`
+function fillSimpleData(dates: string[], dataMap: Record<string, number>) {
+  return dates.map(d => dataMap[d] ?? 0)
+}
+
+function initChart() {
+  if (!chartRef.value) return
+  if (!chartInstance) chartInstance = echarts.init(chartRef.value)
+
+  const totalData = fillSimpleData(dates.value, totalAmountByDate.value)
+  const nameKeys = Object.keys(amountByNameDate.value)
+  const typeKeys = Object.keys(amountByTypeDate.value)
+  const locKeys = Object.keys(amountByLocationDate.value)
+
+  const nameSeries = fillSeriesData(dates.value, amountByNameDate.value, nameKeys)
+  const typeSeries = fillSeriesData(dates.value, amountByTypeDate.value, typeKeys)
+  const locSeries = fillSeriesData(dates.value, amountByLocationDate.value, locKeys)
+
+  const series = [
+    {
+      name: '总金额',
+      type: 'line',
+      smooth: true,
+      data: totalData,
+      lineStyle: { color: '#3b82f6' },
+      itemStyle: { color: '#3b82f6' }
+    },
+    ...nameSeries.map(item => ({
+      name: `资产名称: ${item.name}`,
+      type: 'line',
+      smooth: true,
+      data: item.data,
+      lineStyle: { width: 1 }
+    })),
+    ...typeSeries.map(item => ({
+      name: `资产类型: ${item.name}`,
+      type: 'line',
+      smooth: true,
+      data: item.data,
+      lineStyle: { width: 1 }
+    })),
+    ...locSeries.map(item => ({
+      name: `资产位置: ${item.name}`,
+      type: 'line',
+      smooth: true,
+      data: item.data,
+      lineStyle: { width: 1 }
+    }))
+  ]
+
+  chartInstance.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { type: 'scroll', orient: 'horizontal', bottom: 0 },
+    xAxis: {
+      type: 'category',
+      data: dates.value,
+      boundaryGap: false,
+      axisLabel: { rotate: 45 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { formatter: val => `￥${val.toFixed(2)}` },
+      minInterval: 1,
+      splitLine: { lineStyle: { type: 'dashed', color: '#eee' } }
+    },
+    grid: { left: 50, right: 30, bottom: 80, top: 40 },
+    series
   })
+}
 
-  return { labels: formattedDates, datasets }
+function loadData() {
+  if (!isRangeValid.value) return
+  const [start, end] = rangeValue.value.split('~').map(s => s.trim())
+  assetStore.updateQuery({
+    assetTypeIdList: selectedTypeIds.value,
+    assetNameIdList: selectedNameIds.value,
+    assetLocationIdList: selectedLocationIds.value,
+    startDate: start,
+    endDate: end,
+    remark: remark.value.trim(),
+  })
+  assetStore.loadAllRecords()
+}
+
+function onSearch() {
+  loadData()
+}
+
+function onReset() {
+  selectedTypeIds.value = []
+  selectedNameIds.value = []
+  selectedLocationIds.value = []
+  remark.value = ''
+  rangeValue.value = getLastMonthRange()
+  assetStore.allList = []
+  loadData()
+}
+
+function toggleMore() {
+  showMore.value = !showMore.value
+}
+
+function handleTypeChange() {
+  selectedNameIds.value = []
+}
+
+watch(
+    () => assetStore.allList,
+    () => {
+      nextTick(() => {
+        initChart()
+      })
+    },
+    { deep: true }
+)
+
+onMounted(() => {
+  loadData()
+  initChart()
+  window.addEventListener('resize', onResize)
 })
 
-const fetchAssetName = async () => {
-  if (!selectedAssetType.value.length) {
-    assetName.value = []
-    return
-  }
-  const response = await axiosInstance.get('/api/asset-name/all', {
-    params: { assetTypeId: selectedAssetType.value.join(',') },
-  })
-  if (response.data?.success && Array.isArray(response.data.data)) {
-    assetName.value = response.data.data
-  } else {
-    assetName.value = []
-  }
-}
-
-const fetchAssetData = async () => {
-  try {
-    assetError.value = ''
-    assetData.value = []
-    const params = {}
-    if (selectedAssetType.value.length) params.assetTypeId = selectedAssetType.value.join(',')
-    if (selectedAssetName.value.length) params.assetNameId = selectedAssetName.value.join(',')
-    const response = await axiosInstance.get('/api/asset/statistics', { params })
-    if (Array.isArray(response.data)) {
-      assetData.value = response.data
-    }
-  } catch {
-    assetError.value = '获取资产数据失败，请稍后重试'
-  }
-}
-
-const handleAssetTypeChange = async () => {
-  selectedAssetName.value = []
-  await fetchAssetName()
-  await fetchAssetData()
-}
-const handleAssetNameChange = async () => {
-  await fetchAssetData()
-}
-
-onMounted(async () => {
-  if (!userStore.isLoggedIn || !userStore.token) return
-  const res = await axiosInstance.get('/api/common-meta/by-type', {
-    params: { typeCode: 'ASSET_TYPE' },
-  })
-  if (res.data?.success) {
-    assetTypes.value = res.data.data || []
-    const finance = assetTypes.value.find(t => t.key1 === 'FINANCE')
-    if (finance) {
-      selectedAssetType.value = [finance.id]
-      await fetchAssetName()
-      await fetchAssetData()
-    }
-  }
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onResize)
 })
+
+function onResize() {
+  chartInstance?.resize()
+}
 </script>
 
 <style scoped>
