@@ -154,6 +154,7 @@ import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import {useFitnessStore} from '@/store/fitnessStore'
 import {useChart, useDateRange} from '@/utils/common'
 import emitter from '@/utils/eventBus'
+import type { EChartsOption } from 'echarts'
 import {CommonMetaVO} from "@/store/metaStore";
 
 interface FitnessRecord {

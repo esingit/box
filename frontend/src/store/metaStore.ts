@@ -14,8 +14,8 @@ export interface CommonMetaVO extends Required<Pick<CommonMetaQueryDTO, 'typeCod
     id: number
     typeCode: string
     typeName: string
-    value?: string
-    label?: string
+    value: string | number
+    label: string
     key1?: string
     key2?: string
     key3?: string
