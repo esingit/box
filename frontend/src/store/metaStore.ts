@@ -12,6 +12,7 @@ export interface CommonMetaQueryDTO {
 // 元数据返回 VO 类型
 export interface CommonMetaVO extends Required<Pick<CommonMetaQueryDTO, 'typeCode'>> {
     id: number
+    typeCode: string
     typeName: string
     value?: string
     label?: string
