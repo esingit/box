@@ -1,19 +1,18 @@
 <!-- src/views/Home.vue -->
 <template>
-  <div class="flex-col h-full">
-    <header class="flex items-center justify-center gap-2 px-4 py-3">
-      <Package
-          class="cursor-pointer transition-transform duration-500"
-          :class="{ 'rotate-[360deg]': isRotating }"
-          :size="40"
-          @click="rotateBox"
-      />
-      <h1 class="text-2xl font-bold">BOX</h1>
-    </header>
-
-    <main class="flex-1 overflow-auto p-4">
+  <header class="flex bg-white items-center justify-center gap-2 px-4 py-2">
+    <Package
+        class="cursor-pointer transition-transform duration-500"
+        :class="{ 'rotate-[360deg]': isRotating }"
+        :size="40"
+        @click="rotateBox"
+    />
+    <h1 class="text-2xl font-bold">BOX</h1>
+  </header>
+  <div v-if="isLoggedIn" class="bg-gray-50 rounded-xl p-6 w-full space-y-4">
+    <main class="flex-1 overflow-auto">
       <!-- 用户已登录时显示看板 -->
-      <Dashboard v-if="isLoggedIn"/>
+      <Dashboard/>
     </main>
   </div>
 </template>

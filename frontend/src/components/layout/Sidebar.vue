@@ -70,7 +70,7 @@ const menuItems = [
 // 容器样式
 const sidebarClass = computed(() => [
   'h-full bg-white border-r border-gray-200 text-gray-800 flex flex-col transition-all duration-300 ease-in-out fixed z-40',
-  isCollapsed.value ? 'w-0 overflow-visible' : 'w-48'
+  isCollapsed.value ? 'w-0 overflow-visible' : 'w-40'
 ].join(' '))
 
 // Logo 图标样式

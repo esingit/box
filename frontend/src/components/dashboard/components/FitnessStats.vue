@@ -99,7 +99,7 @@ import FitnessSearch from '@/components/fitness/FitnessSearch.vue'
 import {useFitnessStore} from '@/store/fitnessStore'
 import {useChart, useDateRange} from '@/utils/common'
 import emitter from '@/utils/eventBus'
-import type { EChartsOption } from 'echarts'
+import type {EChartsOption} from 'echarts'
 import {CommonMetaVO} from "@/store/metaStore";
 
 interface FitnessRecord {
@@ -739,7 +739,7 @@ async function handleResetFromComponent(): Promise<void> {
 
   // 设置默认日期范围
   const defaultRange = getDefaultRange()
-  const { startDate, endDate } = parseDateRange(defaultRange)
+  const {startDate, endDate} = parseDateRange(defaultRange)
   searchQuery.startDate = startDate
   searchQuery.endDate = endDate
 
@@ -761,7 +761,7 @@ onMounted(async () => {
 
   // 初始化默认日期范围
   const defaultRange = getDefaultRange()
-  const { startDate, endDate } = parseDateRange(defaultRange)
+  const {startDate, endDate} = parseDateRange(defaultRange)
   searchQuery.startDate = startDate
   searchQuery.endDate = endDate
 

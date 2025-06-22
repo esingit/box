@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-6 max-w-6xl mx-auto flex flex-col space-y-8 rounded-xl">
+  <div class="min-h-screen bg-gray-50 max-w-6xl mx-auto flex flex-col space-y-8 rounded-xl">
     <!-- 加载状态 -->
     <div v-if="isLoading" class="flex items-center justify-center py-12">
       <div class="flex items-center gap-3 text-gray-500">
