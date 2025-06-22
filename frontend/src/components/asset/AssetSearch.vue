@@ -23,7 +23,7 @@
           placeholder="全部资产类型"
           multiple
           clearable
-          class="w-full max-w-[180px]"
+          class="w-full max-w-[200px]"
       />
 
       <!-- 资产位置 -->
@@ -34,7 +34,7 @@
           placeholder="全部资产位置"
           multiple
           clearable
-          class="w-full max-w-[180px]"
+          class="w-full max-w-[200px]"
       />
 
       <!-- 按钮组 -->
@@ -54,7 +54,7 @@
             type="date"
             range
             clearable
-            class="w-[320px]"
+            class="w-[515px]"
             placeholder="请选择日期范围"
         />
       </div>

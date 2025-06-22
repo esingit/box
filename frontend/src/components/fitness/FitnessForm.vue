@@ -2,7 +2,7 @@
   <BaseModal
       :visible="visible"
       :title="title"
-      width="500px"
+      width="590px"
       @update:visible="handleClose"
   >
     <Form
@@ -86,6 +86,7 @@
                 required
                 clearable
                 :disabled="loading"
+                :max="today"
             />
           </Field>
           <ErrorMessage name="finishTime" class="msg-error" />
@@ -133,7 +134,7 @@ import { setDefaultUnit } from '@/utils/commonMeta'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
-import BaseDateInput from "@/components/base/BaseDateInput.vue";
+import BaseDateInput from "@/components/base/BaseDateInput.vue"
 
 const props = defineProps({
   visible: Boolean,
@@ -148,11 +149,12 @@ const emit = defineEmits(['close', 'submit', 'update:form'])
 const formRef = ref()
 const form = ref({ ...props.form })
 
+const today = new Date().toISOString().slice(0, 10)  // 获取今天 yyyy-mm-dd 格式
+
 const metaStore = useMetaStore()
 const fitnessTypes = computed(() => metaStore.typeMap?.FITNESS_TYPE || [])
 const units = computed(() => metaStore.typeMap?.UNIT || [])
 
-// 这里确保 label 一定是字符串，避免类型不匹配
 const fitnessTypesFiltered = computed(() =>
     fitnessTypes.value
         .filter(t => t.value1 != null)
@@ -179,7 +181,13 @@ const schema = yup.object({
       .required('请输入次数')
       .min(1, '次数不能小于1'),
   unitId: yup.string().required('请选择单位'),
-  finishTime: yup.string().required('请输入完成时间'),
+  finishTime: yup
+      .string()
+      .required('请输入完成时间')
+      .test('is-not-future', '完成时间不能大于今天', val => {
+        if (!val) return false
+        return val <= today
+      }),
   remark: yup.string().nullable(),
 })
 

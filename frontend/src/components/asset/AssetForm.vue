@@ -2,7 +2,7 @@
   <BaseModal
       :visible="visible"
       :title="title"
-      width="500px"
+      width="590px"
       @update:visible="handleClose"
       :zIndex="2001"
   >
@@ -129,6 +129,7 @@
                 type="date"
                 required
                 clearable
+                :max="today"
             />
           </Field>
           <ErrorMessage name="acquireTime" class="msg-error mt-1" />
@@ -192,11 +193,12 @@ const emit = defineEmits(['close', 'submit', 'update:form'])
 
 const formRef = ref()
 const assetNameRef = ref()
-
 const form = ref({...props.form})
 
 const assetNameStore = useAssetNameStore()
 const metaStore = useMetaStore()
+
+const today = new Date().toISOString().slice(0, 10) // 格式: 'YYYY-MM-DD'
 
 const assetTypes = computed(() => metaStore.typeMap?.ASSET_TYPE?.map(i => ({
   label: String(i.value1),
@@ -217,7 +219,13 @@ const schema = yup.object({
   assetLocationId: yup.string().required('请选择资产位置'),
   amount: yup.number().typeError('请输入正确金额').required('请输入金额').min(0, '金额不能小于0'),
   unitId: yup.string().required('请选择货币单位'),
-  acquireTime: yup.string().required('请选择日期'),
+  acquireTime: yup
+      .string()
+      .required('请选择日期')
+      .test('is-not-future', '日期不能大于今日', val => {
+        if (!val) return false
+        return val <= today
+      }),
   remark: yup.string().nullable()
 })
 
