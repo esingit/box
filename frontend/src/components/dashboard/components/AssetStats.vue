@@ -127,25 +127,25 @@
 
     <!-- 统计信息 -->
     <div v-if="hasData" class="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
-      <div class="bg-blue-50 p-3 rounded-lg">
-        <div class="text-blue-600 font-medium">总记录数</div>
-        <div class="text-lg font-bold text-blue-800">{{ assetRecords.length }}</div>
-      </div>
-      <div class="bg-green-50 p-3 rounded-lg">
-        <div class="text-green-600 font-medium">资产名称数</div>
-        <div class="text-lg font-bold text-green-800">{{ nameCount }}</div>
-      </div>
-      <div class="bg-yellow-50 p-3 rounded-lg">
-        <div class="text-yellow-600 font-medium">资产类型数</div>
-        <div class="text-lg font-bold text-yellow-800">{{ typeCount }}</div>
-      </div>
-      <div class="bg-purple-50 p-3 rounded-lg">
-        <div class="text-purple-600 font-medium">资产位置数</div>
-        <div class="text-lg font-bold text-purple-800">{{ locationCount }}</div>
-      </div>
       <div class="bg-red-50 p-3 rounded-lg">
         <div class="text-red-600 font-medium">总金额</div>
         <div class="text-lg font-bold text-red-800">{{ totalAmountDisplay }}</div>
+      </div>
+      <div class="bg-green-50 p-3 rounded-lg">
+        <div class="text-green-600 font-medium">储蓄类型总额</div>
+        <div class="text-lg font-bold text-green-800">{{ savingsTotalDisplay }}</div>
+      </div>
+      <div class="bg-yellow-50 p-3 rounded-lg">
+        <div class="text-yellow-600 font-medium">理财类型总额</div>
+        <div class="text-lg font-bold text-yellow-800">{{ financeTotalDisplay }}</div>
+      </div>
+      <div class="bg-purple-50 p-3 rounded-lg">
+        <div class="text-purple-600 font-medium">基金类型总额</div>
+        <div class="text-lg font-bold text-purple-800">{{ fundTotalDisplay }}</div>
+      </div>
+      <div class="bg-blue-50 p-3 rounded-lg">
+        <div class="text-blue-600 font-medium">负债总额</div>
+        <div class="text-lg font-bold text-blue-800">{{ debtTotalDisplay }}</div>
       </div>
     </div>
 
@@ -222,8 +222,9 @@ interface Option {
   value: string | number
   id?: string
   name?: string
-  value1?: string  // 添加 value1 字段
-  key1?: string    // 添加 key1 字段
+  value1?: string
+  key1?: string    // 类型标识（SAVINGS, FINANCE, FUND等）
+  key2?: string    // 资产性质标识（DEBT等）
   key3?: string    // 默认单位类型
 }
 
@@ -253,12 +254,12 @@ interface AssetRecord {
   remark?: string
 }
 
-// Props - 添加 unitOptions
+// Props
 const props = defineProps<{
   assetNameOptions: Option[]
   assetTypeOptions: Option[]
   assetLocationOptions: Option[]
-  unitOptions: UnitOption[]  // 新增
+  unitOptions: UnitOption[]
 }>()
 
 // Composables
@@ -324,7 +325,7 @@ const unitMapping = computed(() => {
   return map
 })
 
-// 创建名称映射 - 添加空值检查
+// 创建名称映射
 const nameMapping = computed(() => {
   const map: Record<string, string> = {}
   if (!props.assetNameOptions || !Array.isArray(props.assetNameOptions)) {
@@ -386,16 +387,25 @@ function getDefaultUnitForAssetType(typeId: string | number): string {
   )
 
   if (!assetType?.key3) {
-    return '￥'
+    return '¥'
   }
 
   // 根据 key3 找到对应的单位（key1 匹配）
   const defaultUnit = props.unitOptions?.find(unit => unit.key1 === assetType.key3)
   if (!defaultUnit) {
-    return '￥'
+    return '¥'
   }
 
-  return defaultUnit.value1 || '￥'
+  return normalizeUnitSymbol(defaultUnit.value1 || '¥')
+}
+
+// 标准化单位符号 - 统一人民币符号显示
+function normalizeUnitSymbol(unitSymbol: string): string {
+  // 如果是人民币相关的符号，统一使用 ¥
+  if (unitSymbol === '￥' || unitSymbol === 'CNY' || unitSymbol === '人民币' || unitSymbol === 'RMB') {
+    return '¥'
+  }
+  return unitSymbol
 }
 
 // 获取记录的单位符号
@@ -404,13 +414,13 @@ function getUnitSymbol(record: AssetRecord): string {
   if (record.unitId) {
     const unitSymbol = unitMapping.value[String(record.unitId)]
     if (unitSymbol) {
-      return unitSymbol
+      return normalizeUnitSymbol(unitSymbol)
     }
   }
 
   // 其次使用记录中的单位信息
   if (record.unitValue) {
-    return record.unitValue
+    return normalizeUnitSymbol(record.unitValue)
   }
 
   // 最后使用默认单位
@@ -418,8 +428,10 @@ function getUnitSymbol(record: AssetRecord): string {
 }
 
 // 格式化金额显示（带单位）
-function formatAmountWithUnit(amount: number, unitSymbol: string = '￥'): string {
-  if (amount === 0) return `${unitSymbol}0.00`
+function formatAmountWithUnit(amount: number, unitSymbol: string = '¥'): string {
+  if (amount === 0) return `${normalizeUnitSymbol(unitSymbol)}0.00`
+
+  const normalizedSymbol = normalizeUnitSymbol(unitSymbol)
 
   let formattedAmount: string
   if (amount >= 10000) {
@@ -430,7 +442,7 @@ function formatAmountWithUnit(amount: number, unitSymbol: string = '￥'): strin
     formattedAmount = amount.toFixed(2)
   }
 
-  return `${unitSymbol}${formattedAmount}`
+  return `${normalizedSymbol}${formattedAmount}`
 }
 
 // 格式化数值（不带单位）
@@ -456,7 +468,17 @@ function getRecordUnitForDate(date: string): string {
     return getUnitSymbol(records[0])
   }
 
-  return '￥'
+  return '¥'
+}
+
+// 获取各类型的单位符号（假设同类型使用相同单位）
+function getTypeUnitSymbol(typeKey: string): string {
+  // 找到该类型的第一个选项
+  const typeOption = props.assetTypeOptions?.find(type => type.key1 === typeKey || type.key2 === typeKey)
+  if (!typeOption) return '¥'
+
+  // 获取该类型的默认单位
+  return getDefaultUnitForAssetType(typeOption.id || typeOption.value)
 }
 
 // 工具函数
@@ -464,13 +486,47 @@ function getDisplayName(id: string, mapping: Record<string, string>, fallback?: 
   return mapping[id] || fallback || `${prefix}${id}`
 }
 
-// 计算属性 - 添加空值检查
+// 计算属性
 const assetRecords = computed<AssetRecord[]>(() => {
   const list = assetStore.allList
   if (!list || !Array.isArray(list)) {
     return []
   }
   return list as AssetRecord[]
+})
+
+// 获取所有有记录的日期并排序
+const allDates = computed(() => {
+  const dateSet = new Set<string>()
+
+  if (!assetRecords.value || !Array.isArray(assetRecords.value)) {
+    return []
+  }
+
+  assetRecords.value.forEach(record => {
+    if (record && record.acquireTime) {
+      const date = record.acquireTime.split('T')[0]
+      if (date) {
+        dateSet.add(date)
+      }
+    }
+  })
+  return Array.from(dateSet).sort()
+})
+
+// 获取最后一天有记录的日期
+const lastDateWithRecords = computed(() => {
+  if (!allDates.value.length) return ''
+  return allDates.value[allDates.value.length - 1]
+})
+
+// 获取最后一天的记录
+const lastDateRecords = computed(() => {
+  if (!lastDateWithRecords.value) return []
+
+  return assetRecords.value.filter(record =>
+      record && record.acquireTime?.startsWith(lastDateWithRecords.value)
+  )
 })
 
 const hasData = computed(() => {
@@ -496,25 +552,6 @@ const emptyStateDescription = computed(() => {
   return `${dateRangeDisplay.value}期间暂无资产记录`
 })
 
-// 获取所有日期并排序 - 添加空值检查
-const allDates = computed(() => {
-  const dateSet = new Set<string>()
-
-  if (!assetRecords.value || !Array.isArray(assetRecords.value)) {
-    return []
-  }
-
-  assetRecords.value.forEach(record => {
-    if (record && record.acquireTime) {
-      const date = record.acquireTime.split('T')[0]
-      if (date) {
-        dateSet.add(date)
-      }
-    }
-  })
-  return Array.from(dateSet).sort()
-})
-
 // 格式化日期显示
 const formattedDates = computed(() => {
   if (!allDates.value || !Array.isArray(allDates.value)) {
@@ -527,7 +564,7 @@ const formattedDates = computed(() => {
   })
 })
 
-// 按日期汇总总金额 - 添加空值检查
+// 按日期汇总总金额（用于图表）
 const totalAmountByDate = computed(() => {
   const map: Record<string, number> = {}
 
@@ -544,7 +581,7 @@ const totalAmountByDate = computed(() => {
   return map
 })
 
-// 按维度汇总数据 - 添加空值检查
+// 按维度汇总数据（用于图表）
 const amountByNameDate = computed(() => {
   const map: Record<string, Record<string, number>> = {}
 
@@ -609,33 +646,98 @@ const amountByLocationDate = computed(() => {
   return map
 })
 
-// 统计信息 - 添加空值检查
-const nameCount = computed(() => {
-  return amountByNameDate.value ? Object.keys(amountByNameDate.value).length : 0
+// 计算各类型的总额（基于最后一天的记录）
+const savingsTotal = computed(() => {
+  if (!lastDateRecords.value.length) return 0
+
+  // 找出所有储蓄类型的ID
+  const savingsTypeIds = props.assetTypeOptions
+      ?.filter(type => type.key1 === 'SAVINGS')
+      ?.map(type => String(type.id || type.value)) || []
+
+  // 计算最后一天储蓄类型的总额
+  return lastDateRecords.value
+      .filter(record => savingsTypeIds.includes(String(record.assetTypeId)))
+      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
 })
 
-const typeCount = computed(() => {
-  return amountByTypeDate.value ? Object.keys(amountByTypeDate.value).length : 0
+const financeTotal = computed(() => {
+  if (!lastDateRecords.value.length) return 0
+
+  // 找出所有理财类型的ID
+  const financeTypeIds = props.assetTypeOptions
+      ?.filter(type => type.key1 === 'FINANCE')
+      ?.map(type => String(type.id || type.value)) || []
+
+  // 计算最后一天理财类型的总额
+  return lastDateRecords.value
+      .filter(record => financeTypeIds.includes(String(record.assetTypeId)))
+      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
 })
 
-const locationCount = computed(() => {
-  return amountByLocationDate.value ? Object.keys(amountByLocationDate.value).length : 0
+const fundTotal = computed(() => {
+  if (!lastDateRecords.value.length) return 0
+
+  // 找出所有基金类型的ID
+  const fundTypeIds = props.assetTypeOptions
+      ?.filter(type => type.key1 === 'FUND')
+      ?.map(type => String(type.id || type.value)) || []
+
+  // 计算最后一天基金类型的总额
+  return lastDateRecords.value
+      .filter(record => fundTypeIds.includes(String(record.assetTypeId)))
+      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
 })
 
+// 计算负债总额（基于最后一天的记录）
+const debtTotal = computed(() => {
+  if (!lastDateRecords.value.length) return 0
+
+  // 找出所有负债类型的ID（根据key2=DEBT筛选）
+  const debtTypeIds = props.assetTypeOptions
+      ?.filter(type => type.key2 === 'DEBT')
+      ?.map(type => String(type.id || type.value)) || []
+
+  // 计算最后一天负债类型的总额
+  return lastDateRecords.value
+      .filter(record => debtTypeIds.includes(String(record.assetTypeId)))
+      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
+})
+
+// 总金额（基于最后一天的记录）
 const totalAmount = computed(() => {
-  if (!assetRecords.value || !Array.isArray(assetRecords.value)) {
-    return 0
-  }
+  if (!lastDateRecords.value.length) return 0
 
-  return assetRecords.value
-      .reduce((sum, record) => sum + (parseFloat(record?.amount || '0') || 0), 0)
+  return lastDateRecords.value
+      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
+})
+
+// 格式化各类型总额的显示
+const savingsTotalDisplay = computed(() => {
+  const unitSymbol = getTypeUnitSymbol('SAVINGS')
+  return formatAmountWithUnit(savingsTotal.value, unitSymbol)
+})
+
+const financeTotalDisplay = computed(() => {
+  const unitSymbol = getTypeUnitSymbol('FINANCE')
+  return formatAmountWithUnit(financeTotal.value, unitSymbol)
+})
+
+const fundTotalDisplay = computed(() => {
+  const unitSymbol = getTypeUnitSymbol('FUND')
+  return formatAmountWithUnit(fundTotal.value, unitSymbol)
+})
+
+const debtTotalDisplay = computed(() => {
+  const unitSymbol = getTypeUnitSymbol('DEBT')
+  return formatAmountWithUnit(debtTotal.value, unitSymbol)
 })
 
 const totalAmountDisplay = computed(() => {
-  // 获取第一条记录的单位作为总金额的单位（假设所有记录使用相同单位）
-  const unitSymbol = assetRecords.value.length > 0
-      ? getUnitSymbol(assetRecords.value[0])
-      : '￥'
+  // 获取最后一天记录的单位符号
+  const unitSymbol = lastDateRecords.value.length > 0
+      ? getUnitSymbol(lastDateRecords.value[0])
+      : '¥'
 
   return formatAmountWithUnit(totalAmount.value, unitSymbol)
 })
@@ -796,7 +898,7 @@ const echartConfig = computed(() => {
     return {
       title: {
         text: '资产金额趋势分析',
-        subtext: `统计期间: ${dateRangeDisplay.value}`,
+        subtext: `统计期间: ${dateRangeDisplay.value} | 汇总基准: ${lastDateWithRecords.value}`,
         left: 'center',
         top: 15,
         textStyle: { fontSize: 18, fontWeight: 'bold', color: '#2D3748' },
@@ -884,9 +986,9 @@ const echartConfig = computed(() => {
           color: '#718096',
           formatter: (value: number) => {
             // 使用第一条记录的单位符号
-            const unitSymbol = assetRecords.value.length > 0
-                ? getUnitSymbol(assetRecords.value[0])
-                : '￥'
+            const unitSymbol = lastDateRecords.value.length > 0
+                ? getUnitSymbol(lastDateRecords.value[0])
+                : '¥'
             return formatAmountWithUnit(value, unitSymbol)
           }
         },
@@ -972,6 +1074,7 @@ async function loadData(): Promise<void> {
     await assetStore.loadAllRecords()
 
     console.log('Data loaded, records count:', assetRecords.value.length)
+    console.log('Last date with records:', lastDateWithRecords.value)
 
     // 等待数据更新到计算属性后再初始化图表
     await nextTick()
