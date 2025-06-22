@@ -90,62 +90,22 @@
       <!-- 图表显示选项 -->
       <div v-if="hasData" class="flex flex-wrap items-center gap-4 pt-3 border-t">
         <span class="text-sm font-medium text-gray-600">显示维度:</span>
-        <label class="flex items-center gap-2 cursor-pointer">
+        <label v-for="option in chartOptionsConfig" :key="option.key" class="flex items-center gap-2 cursor-pointer">
           <input
               type="checkbox"
-              v-model="chartOptions.showTotalTrend"
-              class="rounded"
+              v-model="chartOptions[option.key]"
+              class="rounded checkbox-input"
           />
-          <span class="text-sm">总金额趋势</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input
-              type="checkbox"
-              v-model="chartOptions.showNameDimension"
-              class="rounded"
-          />
-          <span class="text-sm">按资产名称</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input
-              type="checkbox"
-              v-model="chartOptions.showTypeDimension"
-              class="rounded"
-          />
-          <span class="text-sm">按资产类型</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input
-              type="checkbox"
-              v-model="chartOptions.showLocationDimension"
-              class="rounded"
-          />
-          <span class="text-sm">按资产位置</span>
+          <span class="text-sm">{{ option.label }}</span>
         </label>
       </div>
     </div>
 
     <!-- 统计信息 -->
     <div v-if="hasData" class="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
-      <div class="bg-red-50 p-3 rounded-lg">
-        <div class="text-red-600 font-medium">总金额</div>
-        <div class="text-lg font-bold text-red-800">{{ totalAmountDisplay }}</div>
-      </div>
-      <div class="bg-green-50 p-3 rounded-lg">
-        <div class="text-green-600 font-medium">储蓄类型总额</div>
-        <div class="text-lg font-bold text-green-800">{{ savingsTotalDisplay }}</div>
-      </div>
-      <div class="bg-yellow-50 p-3 rounded-lg">
-        <div class="text-yellow-600 font-medium">理财类型总额</div>
-        <div class="text-lg font-bold text-yellow-800">{{ financeTotalDisplay }}</div>
-      </div>
-      <div class="bg-purple-50 p-3 rounded-lg">
-        <div class="text-purple-600 font-medium">基金类型总额</div>
-        <div class="text-lg font-bold text-purple-800">{{ fundTotalDisplay }}</div>
-      </div>
-      <div class="bg-blue-50 p-3 rounded-lg">
-        <div class="text-blue-600 font-medium">负债总额</div>
-        <div class="text-lg font-bold text-blue-800">{{ debtTotalDisplay }}</div>
+      <div v-for="stat in statisticsCards" :key="stat.title" :class="stat.cardClass">
+        <div :class="stat.titleClass">{{ stat.title }}</div>
+        <div :class="stat.valueClass">{{ stat.value }}</div>
       </div>
     </div>
 
@@ -169,7 +129,7 @@
         <div class="flex justify-center mt-4">
           <button
               @click="handleRetry"
-              class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+              class="action-button bg-red-500 hover:bg-red-600"
           >
             重新加载
           </button>
@@ -186,7 +146,7 @@
         <div v-if="hasSearchConditions" class="flex justify-center mt-4">
           <button
               @click="handleReset"
-              class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
+              class="action-button bg-blue-500 hover:bg-blue-600"
           >
             重置筛选条件
           </button>
@@ -207,6 +167,7 @@ import {
   LucideRotateCcw,
   LucideSearch,
 } from 'lucide-vue-next'
+import type { EChartsOption } from 'echarts'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
@@ -216,24 +177,24 @@ import { useAssetStore } from '@/store/assetStore'
 import { useDateRange, useChart } from '@/utils/common'
 import emitter from '@/utils/eventBus'
 
-// 接口定义
+// 类型定义
 interface Option {
   label: string
   value: string | number
   id?: string
   name?: string
   value1?: string
-  key1?: string    // 类型标识（SAVINGS, FINANCE, FUND等）
-  key2?: string    // 资产性质标识（DEBT等）
-  key3?: string    // 默认单位类型
+  key1?: string
+  key2?: string
+  key3?: string
 }
 
 interface UnitOption {
   id: string | number
   label: string
   value: string | number
-  value1?: string  // 单位符号
-  key1?: string    // 单位类型标识
+  value1?: string
+  key1?: string
 }
 
 interface AssetRecord {
@@ -264,19 +225,8 @@ const props = defineProps<{
 
 // Composables
 const assetStore = useAssetStore()
-const {
-  dateRange,
-  isDateRangeValid,
-  getDefaultRange,
-  parseDateRange,
-  dateRangeDisplay
-} = useDateRange()
-const {
-  chartRef,
-  initChart,
-  destroyChart,
-  resizeChart
-} = useChart()
+const { dateRange, isDateRangeValid, getDefaultRange, parseDateRange, dateRangeDisplay } = useDateRange()
+const { chartRef, initChart, destroyChart, resizeChart } = useChart()
 
 // 响应式状态
 const selectedTypeIds = ref<(string | number)[]>([])
@@ -288,7 +238,14 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const isChartReady = ref(false)
 
-// 图表选项
+// 图表选项配置
+const chartOptionsConfig = [
+  { key: 'showTotalTrend', label: '总金额趋势' },
+  { key: 'showNameDimension', label: '按资产名称' },
+  { key: 'showTypeDimension', label: '按资产类型' },
+  { key: 'showLocationDimension', label: '按资产位置' }
+] as const
+
 const chartOptions = reactive({
   showTotalTrend: true,
   showNameDimension: true,
@@ -304,136 +261,36 @@ const CHART_COLORS = [
   '#A8937B', '#8C8C7B'
 ]
 
-// 创建单位映射
-const unitMapping = computed(() => {
+// 工具函数
+function createMapping(options: any[], valueKey = 'value1', fallbackKey = 'label'): Record<string, string> {
   const map: Record<string, string> = {}
-  if (!props.unitOptions || !Array.isArray(props.unitOptions)) {
-    return map
-  }
+  if (!options || !Array.isArray(options)) return map
 
-  props.unitOptions.forEach(option => {
-    if (option) {
-      // 同时支持 id 和 value 作为键
-      if (option.id && option.value1) {
-        map[String(option.id)] = option.value1
-      }
-      if (option.value && option.value1) {
-        map[String(option.value)] = option.value1
-      }
-    }
-  })
-  return map
-})
-
-// 创建名称映射
-const nameMapping = computed(() => {
-  const map: Record<string, string> = {}
-  if (!props.assetNameOptions || !Array.isArray(props.assetNameOptions)) {
-    return map
-  }
-
-  props.assetNameOptions.forEach(option => {
+  options.forEach(option => {
     if (option) {
       const id = option.id || option.value
-      const name = option.value1 || option.name || option.label
+      const name = option[valueKey] || option.name || option[fallbackKey]
       if (id && name) {
         map[String(id)] = String(name)
       }
     }
   })
   return map
-})
-
-const typeMapping = computed(() => {
-  const map: Record<string, string> = {}
-  if (!props.assetTypeOptions || !Array.isArray(props.assetTypeOptions)) {
-    return map
-  }
-
-  props.assetTypeOptions.forEach(option => {
-    if (option) {
-      const id = option.id || option.value
-      const name = option.value1 || option.name || option.label
-      if (id && name) {
-        map[String(id)] = String(name)
-      }
-    }
-  })
-  return map
-})
-
-const locationMapping = computed(() => {
-  const map: Record<string, string> = {}
-  if (!props.assetLocationOptions || !Array.isArray(props.assetLocationOptions)) {
-    return map
-  }
-
-  props.assetLocationOptions.forEach(option => {
-    if (option) {
-      const id = option.id || option.value
-      const name = option.value1 || option.name || option.label
-      if (id && name) {
-        map[String(id)] = String(name)
-      }
-    }
-  })
-  return map
-})
-
-// 获取资产类型的默认单位
-function getDefaultUnitForAssetType(typeId: string | number): string {
-  const assetType = props.assetTypeOptions?.find(type =>
-      String(type.value) === String(typeId) || String(type.id) === String(typeId)
-  )
-
-  if (!assetType?.key3) {
-    return '¥'
-  }
-
-  // 根据 key3 找到对应的单位（key1 匹配）
-  const defaultUnit = props.unitOptions?.find(unit => unit.key1 === assetType.key3)
-  if (!defaultUnit) {
-    return '¥'
-  }
-
-  return normalizeUnitSymbol(defaultUnit.value1 || '¥')
 }
 
-// 标准化单位符号 - 统一人民币符号显示
 function normalizeUnitSymbol(unitSymbol: string): string {
-  // 如果是人民币相关的符号，统一使用 ¥
-  if (unitSymbol === '￥' || unitSymbol === 'CNY' || unitSymbol === '人民币' || unitSymbol === 'RMB') {
+  if (['￥', 'CNY', '人民币', 'RMB'].includes(unitSymbol)) {
     return '¥'
   }
   return unitSymbol
 }
 
-// 获取记录的单位符号
-function getUnitSymbol(record: AssetRecord): string {
-  // 优先使用单位映射
-  if (record.unitId) {
-    const unitSymbol = unitMapping.value[String(record.unitId)]
-    if (unitSymbol) {
-      return normalizeUnitSymbol(unitSymbol)
-    }
-  }
-
-  // 其次使用记录中的单位信息
-  if (record.unitValue) {
-    return normalizeUnitSymbol(record.unitValue)
-  }
-
-  // 最后使用默认单位
-  return getDefaultUnitForAssetType(record.assetTypeId)
-}
-
-// 格式化金额显示（带单位）
-function formatAmountWithUnit(amount: number, unitSymbol: string = '¥'): string {
+function formatAmountWithUnit(amount: number, unitSymbol = '¥'): string {
   if (amount === 0) return `${normalizeUnitSymbol(unitSymbol)}0.00`
 
   const normalizedSymbol = normalizeUnitSymbol(unitSymbol)
-
   let formattedAmount: string
+
   if (amount >= 10000) {
     formattedAmount = `${(amount / 10000).toFixed(1)}万`
   } else if (amount >= 1000) {
@@ -445,87 +302,66 @@ function formatAmountWithUnit(amount: number, unitSymbol: string = '¥'): string
   return `${normalizedSymbol}${formattedAmount}`
 }
 
-// 格式化数值（不带单位）
-function formatValue(value: number): string {
-  if (value === 0) return '0.00'
-
-  if (value >= 10000) {
-    return `${(value / 10000).toFixed(1)}万`
-  } else if (value >= 1000) {
-    return value.toFixed(0)
-  } else {
-    return value.toFixed(2)
-  }
-}
-
-// 获取特定日期的记录单位
-function getRecordUnitForDate(date: string): string {
-  const records = assetRecords.value.filter(record =>
-      record && record.acquireTime?.startsWith(date)
-  )
-
-  if (records.length > 0) {
-    return getUnitSymbol(records[0])
-  }
-
-  return '¥'
-}
-
-// 获取各类型的单位符号（假设同类型使用相同单位）
-function getTypeUnitSymbol(typeKey: string): string {
-  // 找到该类型的第一个选项
-  const typeOption = props.assetTypeOptions?.find(type => type.key1 === typeKey || type.key2 === typeKey)
-  if (!typeOption) return '¥'
-
-  // 获取该类型的默认单位
-  return getDefaultUnitForAssetType(typeOption.id || typeOption.value)
-}
-
-// 工具函数
 function getDisplayName(id: string, mapping: Record<string, string>, fallback?: string | null, prefix = '未知'): string {
   return mapping[id] || fallback || `${prefix}${id}`
 }
 
-// 计算属性
+function getDefaultUnitForAssetType(typeId: string | number): string {
+  const assetType = props.assetTypeOptions?.find(type =>
+      String(type.value) === String(typeId) || String(type.id) === String(typeId)
+  )
+
+  if (!assetType?.key3) return '¥'
+
+  const defaultUnit = props.unitOptions?.find(unit => unit.key1 === assetType.key3)
+  return defaultUnit ? normalizeUnitSymbol(defaultUnit.value1 || '¥') : '¥'
+}
+
+function getUnitSymbol(record: AssetRecord): string {
+  if (record.unitId && unitMapping.value[String(record.unitId)]) {
+    return normalizeUnitSymbol(unitMapping.value[String(record.unitId)])
+  }
+  if (record.unitValue) {
+    return normalizeUnitSymbol(record.unitValue)
+  }
+  return getDefaultUnitForAssetType(record.assetTypeId)
+}
+
+function showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') {
+  emitter.emit('notify', { message, type })
+}
+
+// 创建映射
+const nameMapping = computed(() => createMapping(props.assetNameOptions))
+const typeMapping = computed(() => createMapping(props.assetTypeOptions))
+const locationMapping = computed(() => createMapping(props.assetLocationOptions))
+const unitMapping = computed(() => createMapping(props.unitOptions, 'value1'))
+
+// 基础数据
 const assetRecords = computed<AssetRecord[]>(() => {
   const list = assetStore.allList
-  if (!list || !Array.isArray(list)) {
-    return []
-  }
-  return list as AssetRecord[]
+  return (list && Array.isArray(list) ? list : []) as AssetRecord[]
 })
 
-// 获取所有有记录的日期并排序
 const allDates = computed(() => {
   const dateSet = new Set<string>()
-
-  if (!assetRecords.value || !Array.isArray(assetRecords.value)) {
-    return []
-  }
-
   assetRecords.value.forEach(record => {
-    if (record && record.acquireTime) {
+    if (record?.acquireTime) {
       const date = record.acquireTime.split('T')[0]
-      if (date) {
-        dateSet.add(date)
-      }
+      if (date) dateSet.add(date)
     }
   })
   return Array.from(dateSet).sort()
 })
 
-// 获取最后一天有记录的日期
 const lastDateWithRecords = computed(() => {
-  if (!allDates.value.length) return ''
-  return allDates.value[allDates.value.length - 1]
+  return allDates.value.length ? allDates.value[allDates.value.length - 1] : ''
 })
 
-// 获取最后一天的记录
 const lastDateRecords = computed(() => {
   if (!lastDateWithRecords.value) return []
-
   return assetRecords.value.filter(record =>
-      record && record.acquireTime?.startsWith(lastDateWithRecords.value)
+      record?.acquireTime?.startsWith(lastDateWithRecords.value)
   )
 })
 
@@ -533,7 +369,6 @@ const hasData = computed(() => {
   return assetRecords.value.length > 0 && allDates.value.length > 0 && !errorMessage.value
 })
 
-// 检查是否有搜索条件
 const hasSearchConditions = computed(() => {
   return selectedTypeIds.value.length > 0 ||
       selectedNameIds.value.length > 0 ||
@@ -541,7 +376,6 @@ const hasSearchConditions = computed(() => {
       remark.value.trim() !== ''
 })
 
-// 空状态描述
 const emptyStateDescription = computed(() => {
   if (!isDateRangeValid.value) {
     return '请选择日期范围查看资产数据'
@@ -552,28 +386,87 @@ const emptyStateDescription = computed(() => {
   return `${dateRangeDisplay.value}期间暂无资产记录`
 })
 
-// 格式化日期显示
-const formattedDates = computed(() => {
-  if (!allDates.value || !Array.isArray(allDates.value)) {
-    return []
-  }
+// 统计数据
+const getTypeTotal = (typeKey: string) => {
+  const typeIds = props.assetTypeOptions
+      ?.filter(type => type.key1 === typeKey)
+      ?.map(type => String(type.id || type.value)) || []
 
+  return lastDateRecords.value
+      .filter(record => typeIds.includes(String(record.assetTypeId)))
+      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
+}
+
+const totalAmount = computed(() => {
+  return lastDateRecords.value.reduce((sum, record) =>
+      sum + (parseFloat(record.amount || '0') || 0), 0)
+})
+
+const statisticsData = computed(() => {
+  const unitSymbol = lastDateRecords.value.length > 0
+      ? getUnitSymbol(lastDateRecords.value[0])
+      : '¥'
+
+  return {
+    totalAmount: totalAmount.value,
+    savingsTotal: getTypeTotal('SAVINGS'),
+    financeTotal: getTypeTotal('FINANCE'),
+    fundTotal: getTypeTotal('FUND'),
+    debtTotal: getTypeTotal('DEBT'),
+    unitSymbol
+  }
+})
+
+const statisticsCards = computed(() => [
+  {
+    title: '总金额',
+    value: formatAmountWithUnit(statisticsData.value.totalAmount, statisticsData.value.unitSymbol),
+    cardClass: 'bg-red-50 p-3 rounded-lg',
+    titleClass: 'text-red-600 font-medium',
+    valueClass: 'text-lg font-bold text-red-800'
+  },
+  {
+    title: '储蓄类型总额',
+    value: formatAmountWithUnit(statisticsData.value.savingsTotal, statisticsData.value.unitSymbol),
+    cardClass: 'bg-green-50 p-3 rounded-lg',
+    titleClass: 'text-green-600 font-medium',
+    valueClass: 'text-lg font-bold text-green-800'
+  },
+  {
+    title: '理财类型总额',
+    value: formatAmountWithUnit(statisticsData.value.financeTotal, statisticsData.value.unitSymbol),
+    cardClass: 'bg-yellow-50 p-3 rounded-lg',
+    titleClass: 'text-yellow-600 font-medium',
+    valueClass: 'text-lg font-bold text-yellow-800'
+  },
+  {
+    title: '基金类型总额',
+    value: formatAmountWithUnit(statisticsData.value.fundTotal, statisticsData.value.unitSymbol),
+    cardClass: 'bg-purple-50 p-3 rounded-lg',
+    titleClass: 'text-purple-600 font-medium',
+    valueClass: 'text-lg font-bold text-purple-800'
+  },
+  {
+    title: '负债总额',
+    value: formatAmountWithUnit(statisticsData.value.debtTotal, statisticsData.value.unitSymbol),
+    cardClass: 'bg-blue-50 p-3 rounded-lg',
+    titleClass: 'text-blue-600 font-medium',
+    valueClass: 'text-lg font-bold text-blue-800'
+  }
+])
+
+// 图表数据处理
+const formattedDates = computed(() => {
   return allDates.value.map(date => {
     const [year, month, day] = date.split('-')
     return `${month}/${day}`
   })
 })
 
-// 按日期汇总总金额（用于图表）
 const totalAmountByDate = computed(() => {
   const map: Record<string, number> = {}
-
-  if (!assetRecords.value || !Array.isArray(assetRecords.value)) {
-    return map
-  }
-
   assetRecords.value.forEach(record => {
-    if (!record || !record.acquireTime) return
+    if (!record?.acquireTime) return
     const date = record.acquireTime.split('T')[0]
     const amount = parseFloat(record.amount) || 0
     map[date] = (map[date] || 0) + amount
@@ -581,180 +474,50 @@ const totalAmountByDate = computed(() => {
   return map
 })
 
-// 按维度汇总数据（用于图表）
-const amountByNameDate = computed(() => {
-  const map: Record<string, Record<string, number>> = {}
-
-  if (!assetRecords.value || !Array.isArray(assetRecords.value)) {
-    return map
-  }
+const amountByDimension = computed(() => {
+  const byName: Record<string, Record<string, number>> = {}
+  const byType: Record<string, Record<string, number>> = {}
+  const byLocation: Record<string, Record<string, number>> = {}
 
   assetRecords.value.forEach(record => {
-    if (!record || !record.acquireTime) return
+    if (!record?.acquireTime) return
     const date = record.acquireTime.split('T')[0]
-    const nameKey = getDisplayName(record.assetNameId, nameMapping.value, record.assetName, '资产')
     const amount = parseFloat(record.amount) || 0
-    if (!map[nameKey]) map[nameKey] = {}
-    map[nameKey][date] = (map[nameKey][date] || 0) + amount
-  })
-  return map
-})
 
-const amountByTypeDate = computed(() => {
-  const map: Record<string, Record<string, number>> = {}
+    // 按资产名称
+    const nameKey = getDisplayName(record.assetNameId, nameMapping.value, record.assetName, '资产')
+    if (!byName[nameKey]) byName[nameKey] = {}
+    byName[nameKey][date] = (byName[nameKey][date] || 0) + amount
 
-  if (!assetRecords.value || !Array.isArray(assetRecords.value)) {
-    return map
-  }
-
-  assetRecords.value.forEach(record => {
-    if (!record || !record.acquireTime) return
-    const date = record.acquireTime.split('T')[0]
+    // 按资产类型
     const typeKey = getDisplayName(
         record.assetTypeId,
         typeMapping.value,
         record.assetTypeName || record.assetTypeValue,
         '类型'
     )
-    const amount = parseFloat(record.amount) || 0
-    if (!map[typeKey]) map[typeKey] = {}
-    map[typeKey][date] = (map[typeKey][date] || 0) + amount
-  })
-  return map
-})
+    if (!byType[typeKey]) byType[typeKey] = {}
+    byType[typeKey][date] = (byType[typeKey][date] || 0) + amount
 
-const amountByLocationDate = computed(() => {
-  const map: Record<string, Record<string, number>> = {}
-
-  if (!assetRecords.value || !Array.isArray(assetRecords.value)) {
-    return map
-  }
-
-  assetRecords.value.forEach(record => {
-    if (!record || !record.acquireTime) return
-    const date = record.acquireTime.split('T')[0]
+    // 按资产位置
     const locationKey = getDisplayName(
         record.assetLocationId,
         locationMapping.value,
         record.assetLocationName || record.assetLocationValue,
         '位置'
     )
-    const amount = parseFloat(record.amount) || 0
-    if (!map[locationKey]) map[locationKey] = {}
-    map[locationKey][date] = (map[locationKey][date] || 0) + amount
+    if (!byLocation[locationKey]) byLocation[locationKey] = {}
+    byLocation[locationKey][date] = (byLocation[locationKey][date] || 0) + amount
   })
-  return map
+
+  return { byName, byType, byLocation }
 })
 
-// 计算各类型的总额（基于最后一天的记录）
-const savingsTotal = computed(() => {
-  if (!lastDateRecords.value.length) return 0
-
-  // 找出所有储蓄类型的ID
-  const savingsTypeIds = props.assetTypeOptions
-      ?.filter(type => type.key1 === 'SAVINGS')
-      ?.map(type => String(type.id || type.value)) || []
-
-  // 计算最后一天储蓄类型的总额
-  return lastDateRecords.value
-      .filter(record => savingsTypeIds.includes(String(record.assetTypeId)))
-      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
-})
-
-const financeTotal = computed(() => {
-  if (!lastDateRecords.value.length) return 0
-
-  // 找出所有理财类型的ID
-  const financeTypeIds = props.assetTypeOptions
-      ?.filter(type => type.key1 === 'FINANCE')
-      ?.map(type => String(type.id || type.value)) || []
-
-  // 计算最后一天理财类型的总额
-  return lastDateRecords.value
-      .filter(record => financeTypeIds.includes(String(record.assetTypeId)))
-      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
-})
-
-const fundTotal = computed(() => {
-  if (!lastDateRecords.value.length) return 0
-
-  // 找出所有基金类型的ID
-  const fundTypeIds = props.assetTypeOptions
-      ?.filter(type => type.key1 === 'FUND')
-      ?.map(type => String(type.id || type.value)) || []
-
-  // 计算最后一天基金类型的总额
-  return lastDateRecords.value
-      .filter(record => fundTypeIds.includes(String(record.assetTypeId)))
-      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
-})
-
-// 计算负债总额（基于最后一天的记录）
-const debtTotal = computed(() => {
-  if (!lastDateRecords.value.length) return 0
-
-  // 找出所有负债类型的ID（根据key2=DEBT筛选）
-  const debtTypeIds = props.assetTypeOptions
-      ?.filter(type => type.key2 === 'DEBT')
-      ?.map(type => String(type.id || type.value)) || []
-
-  // 计算最后一天负债类型的总额
-  return lastDateRecords.value
-      .filter(record => debtTypeIds.includes(String(record.assetTypeId)))
-      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
-})
-
-// 总金额（基于最后一天的记录）
-const totalAmount = computed(() => {
-  if (!lastDateRecords.value.length) return 0
-
-  return lastDateRecords.value
-      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
-})
-
-// 格式化各类型总额的显示
-const savingsTotalDisplay = computed(() => {
-  const unitSymbol = getTypeUnitSymbol('SAVINGS')
-  return formatAmountWithUnit(savingsTotal.value, unitSymbol)
-})
-
-const financeTotalDisplay = computed(() => {
-  const unitSymbol = getTypeUnitSymbol('FINANCE')
-  return formatAmountWithUnit(financeTotal.value, unitSymbol)
-})
-
-const fundTotalDisplay = computed(() => {
-  const unitSymbol = getTypeUnitSymbol('FUND')
-  return formatAmountWithUnit(fundTotal.value, unitSymbol)
-})
-
-const debtTotalDisplay = computed(() => {
-  const unitSymbol = getTypeUnitSymbol('DEBT')
-  return formatAmountWithUnit(debtTotal.value, unitSymbol)
-})
-
-const totalAmountDisplay = computed(() => {
-  // 获取最后一天记录的单位符号
-  const unitSymbol = lastDateRecords.value.length > 0
-      ? getUnitSymbol(lastDateRecords.value[0])
-      : '¥'
-
-  return formatAmountWithUnit(totalAmount.value, unitSymbol)
-})
-
-// 生成图表系列数据
-function createSeriesData(
-    dates: string[],
-    dataMap: Record<string, Record<string, number>>,
-    keys: string[]
-): Array<{ name: string; data: number[] }> {
-  if (!dates || !Array.isArray(dates) || !dataMap || !keys || !Array.isArray(keys)) {
-    return []
-  }
-
+// 图表系列生成
+function createSeriesData(dataMap: Record<string, Record<string, number>>, keys: string[]): Array<{ name: string; data: number[] }> {
   return keys.map(key => ({
     name: key,
-    data: dates.map(date => dataMap[key]?.[date] ?? 0)
+    data: allDates.value.map(date => dataMap[key]?.[date] ?? 0)
   }))
 }
 
@@ -763,10 +526,11 @@ const chartSeries = computed(() => {
 
   const series: any[] = []
   let colorIndex = 0
+  const { byName, byType, byLocation } = amountByDimension.value
 
   try {
     // 总金额趋势线
-    if (chartOptions.showTotalTrend && totalAmountByDate.value) {
+    if (chartOptions.showTotalTrend) {
       const totalData = allDates.value.map(date => totalAmountByDate.value[date] ?? 0)
       if (totalData.some(v => v > 0)) {
         series.push({
@@ -776,103 +540,46 @@ const chartSeries = computed(() => {
           symbol: 'circle',
           symbolSize: 8,
           data: totalData,
-          seriesType: 'total',
-          lineStyle: {
-            width: 4,
-            color: '#4A5568',
-            shadowColor: 'rgba(74, 85, 104, 0.3)',
-            shadowBlur: 4
-          },
-          itemStyle: {
-            color: '#4A5568',
-            borderWidth: 2,
-            borderColor: '#fff'
-          },
-          emphasis: {
-            focus: 'series',
-            scale: true
-          },
+          lineStyle: { width: 4, color: '#4A5568', shadowColor: 'rgba(74, 85, 104, 0.3)', shadowBlur: 4 },
+          itemStyle: { color: '#4A5568', borderWidth: 2, borderColor: '#fff' },
+          emphasis: { focus: 'series', scale: true },
           z: 10
         })
       }
       colorIndex++
     }
 
-    // 按资产名称维度
-    if (chartOptions.showNameDimension && amountByNameDate.value) {
-      const nameKeys = Object.keys(amountByNameDate.value)
-      const nameSeries = createSeriesData(allDates.value, amountByNameDate.value, nameKeys)
-      nameSeries.forEach((item, index) => {
-        if (item.data.some(v => v > 0)) {
-          const color = CHART_COLORS[(colorIndex + index) % CHART_COLORS.length]
-          series.push({
-            name: `💰 ${item.name}`,
-            type: 'line',
-            smooth: true,
-            symbol: 'circle',
-            symbolSize: 5,
-            data: item.data,
-            seriesType: 'name',
-            nameKey: item.name,
-            lineStyle: { width: 2, color, shadowColor: `${color}33`, shadowBlur: 2 },
-            itemStyle: { color, borderWidth: 1, borderColor: '#fff' },
-            emphasis: { focus: 'series' }
-          })
-        }
-      })
-      colorIndex += nameSeries.length
-    }
+    // 按维度添加系列
+    const dimensionConfigs = [
+      { condition: chartOptions.showNameDimension, data: byName, prefix: '💰', symbol: 'circle', lineType: 'solid' },
+      { condition: chartOptions.showTypeDimension, data: byType, prefix: '🏷️', symbol: 'triangle', lineType: 'dashed' },
+      { condition: chartOptions.showLocationDimension, data: byLocation, prefix: '📍', symbol: 'diamond', lineType: 'dotted' }
+    ]
 
-    // 按资产类型维度
-    if (chartOptions.showTypeDimension && amountByTypeDate.value) {
-      const typeKeys = Object.keys(amountByTypeDate.value)
-      const typeSeries = createSeriesData(allDates.value, amountByTypeDate.value, typeKeys)
-      typeSeries.forEach((item, index) => {
-        if (item.data.some(v => v > 0)) {
-          const color = CHART_COLORS[(colorIndex + index) % CHART_COLORS.length]
-          series.push({
-            name: `🏷️ ${item.name}`,
-            type: 'line',
-            smooth: true,
-            symbol: 'triangle',
-            symbolSize: 5,
-            data: item.data,
-            seriesType: 'type',
-            typeKey: item.name,
-            lineStyle: { width: 2, type: 'dashed', color, shadowColor: `${color}33`, shadowBlur: 2 },
-            itemStyle: { color, borderWidth: 1, borderColor: '#fff' },
-            emphasis: { focus: 'series' }
-          })
-        }
-      })
-      colorIndex += typeSeries.length
-    }
+    dimensionConfigs.forEach(config => {
+      if (config.condition && config.data) {
+        const keys = Object.keys(config.data)
+        const seriesData = createSeriesData(config.data, keys)
+        seriesData.forEach((item, index) => {
+          if (item.data.some(v => v > 0)) {
+            const color = CHART_COLORS[(colorIndex + index) % CHART_COLORS.length]
+            series.push({
+              name: `${config.prefix} ${item.name}`,
+              type: 'line',
+              smooth: true,
+              symbol: config.symbol,
+              symbolSize: 5,
+              data: item.data,
+              lineStyle: { width: 2, type: config.lineType, color, shadowColor: `${color}33`, shadowBlur: 2 },
+              itemStyle: { color, borderWidth: 1, borderColor: '#fff' },
+              emphasis: { focus: 'series' }
+            })
+          }
+        })
+        colorIndex += seriesData.length
+      }
+    })
 
-    // 按资产位置维度
-    if (chartOptions.showLocationDimension && amountByLocationDate.value) {
-      const locationKeys = Object.keys(amountByLocationDate.value)
-      const locationSeries = createSeriesData(allDates.value, amountByLocationDate.value, locationKeys)
-      locationSeries.forEach((item, index) => {
-        if (item.data.some(v => v > 0)) {
-          const color = CHART_COLORS[(colorIndex + index) % CHART_COLORS.length]
-          series.push({
-            name: `📍 ${item.name}`,
-            type: 'line',
-            smooth: true,
-            symbol: 'diamond',
-            symbolSize: 5,
-            data: item.data,
-            seriesType: 'location',
-            locationKey: item.name,
-            lineStyle: { width: 2, type: 'dotted', color, shadowColor: `${color}33`, shadowBlur: 2 },
-            itemStyle: { color, borderWidth: 1, borderColor: '#fff' },
-            emphasis: { focus: 'series' }
-          })
-        }
-      })
-    }
-
-    console.log('Generated chart series:', series.length)
     return series
   } catch (error) {
     console.error('Error generating chart series:', error)
@@ -880,20 +587,15 @@ const chartSeries = computed(() => {
   }
 })
 
-// 生成 ECharts 配置
+// 图表配置
 const echartConfig = computed(() => {
-  if (!hasData.value || !chartSeries.value.length || !allDates.value.length) {
-    console.log('No chart config - hasData:', hasData.value, 'series length:', chartSeries.value.length, 'dates:', allDates.value.length)
-    return null
-  }
+  if (!hasData.value || !chartSeries.value.length || !allDates.value.length) return null
 
   try {
     const hasMultipleDates = allDates.value.length > 7
     const allValues = chartSeries.value.flatMap(s => s.data || [])
     const maxValue = Math.max(...allValues)
     const yAxisMax = maxValue > 0 ? Math.ceil(maxValue * 1.1) : 100
-
-    console.log('Generating chart config with series:', chartSeries.value.length)
 
     return {
       title: {
@@ -918,9 +620,7 @@ const echartConfig = computed(() => {
 
           const dataIndex = params[0]?.dataIndex
           const date = allDates.value[dataIndex] || ''
-
-          // 获取该日期的单位
-          const unitSymbol = getRecordUnitForDate(date)
+          const unitSymbol = statisticsData.value.unitSymbol
 
           let result = `<div style="font-weight: bold; margin-bottom: 8px; color: #1A202C">${date}</div>`
 
@@ -984,13 +684,7 @@ const echartConfig = computed(() => {
         axisLabel: {
           fontSize: 11,
           color: '#718096',
-          formatter: (value: number) => {
-            // 使用第一条记录的单位符号
-            const unitSymbol = lastDateRecords.value.length > 0
-                ? getUnitSymbol(lastDateRecords.value[0])
-                : '¥'
-            return formatAmountWithUnit(value, unitSymbol)
-          }
+          formatter: (value: number) => formatAmountWithUnit(value, statisticsData.value.unitSymbol)
         },
         splitLine: { lineStyle: { type: 'dashed', color: '#E2E8F0' } },
         axisLine: { show: false },
@@ -1006,40 +700,22 @@ const echartConfig = computed(() => {
       animation: true,
       animationDuration: 1200,
       animationEasing: 'cubicOut'
-    }
+    } as EChartsOption  // 添加类型断言
   } catch (error) {
     console.error('Error generating chart config:', error)
     return null
   }
 })
 
-// 通知函数
-function showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') {
-  emitter.emit('notify', { message, type })
-}
-
-// 初始化图表的函数
+// 图表初始化
 async function initializeChart(): Promise<void> {
-  console.log('=== initializeChart called ===')
-  console.log('Chart ready:', isChartReady.value)
-  console.log('Has data:', hasData.value)
-  console.log('Chart config exists:', !!echartConfig.value)
-  console.log('Chart ref exists:', !!chartRef.value)
-
-  if (!isChartReady.value || !hasData.value || !echartConfig.value) {
-    console.log('Chart initialization skipped - conditions not met')
-    return
-  }
+  if (!isChartReady.value || !hasData.value || !echartConfig.value) return
 
   try {
-    // 多次等待确保DOM完全准备好
     await nextTick()
     await new Promise(resolve => setTimeout(resolve, 100))
 
-    if (!chartRef.value) {
-      console.warn('Chart container not found after waiting')
-      return
-    }
+    if (!chartRef.value) return
 
     await initChart(echartConfig.value)
     console.log('Chart initialized successfully')
@@ -1063,9 +739,9 @@ async function loadData(): Promise<void> {
     const { startDate, endDate } = parseDateRange(dateRange.value)
 
     assetStore.updateQuery({
-      assetTypeIdList: selectedTypeIds.value,
-      assetNameIdList: selectedNameIds.value,
-      assetLocationIdList: selectedLocationIds.value,
+      assetTypeIdList: selectedTypeIds.value.map(id => Number(id)),
+      assetNameIdList: selectedNameIds.value.map(id => Number(id)),
+      assetLocationIdList: selectedLocationIds.value.map(id => Number(id)),
       startDate,
       endDate,
       remark: remark.value.trim()
@@ -1073,16 +749,10 @@ async function loadData(): Promise<void> {
 
     await assetStore.loadAllRecords()
 
-    console.log('Data loaded, records count:', assetRecords.value.length)
-    console.log('Last date with records:', lastDateWithRecords.value)
-
-    // 等待数据更新到计算属性后再初始化图表
     await nextTick()
     if (hasData.value) {
       showNotification('资产数据加载成功', 'success')
       await initializeChart()
-    } else {
-      console.log('No data after loading')
     }
   } catch (error) {
     console.error('Failed to load asset data:', error)
@@ -1104,12 +774,13 @@ async function handleReset(): Promise<void> {
   selectedLocationIds.value = []
   remark.value = ''
   dateRange.value = getDefaultRange()
-  chartOptions.showTotalTrend = true
-  chartOptions.showNameDimension = true
-  chartOptions.showTypeDimension = true
-  chartOptions.showLocationDimension = true
+  Object.assign(chartOptions, {
+    showTotalTrend: true,
+    showNameDimension: true,
+    showTypeDimension: true,
+    showLocationDimension: true
+  })
   errorMessage.value = ''
-
   assetStore.allList = []
   await loadData()
 }
@@ -1124,21 +795,10 @@ function handleTypeChange(): void {
 
 // 生命周期
 onMounted(async () => {
-  console.log('=== Component mounted ===')
-
-  // 等待DOM完全渲染
   await nextTick()
-
-  // 标记图表容器准备好
   isChartReady.value = true
-
-  // 设置默认日期范围
   dateRange.value = getDefaultRange()
-
-  // 加载数据
   await loadData()
-
-  // 监听窗口大小变化
   window.addEventListener('resize', resizeChart)
 })
 
@@ -1147,16 +807,10 @@ onBeforeUnmount(() => {
   destroyChart()
 })
 
-// 监听图表选项变化
+// 监听器
 watch(
-    () => [
-      chartOptions.showTotalTrend,
-      chartOptions.showNameDimension,
-      chartOptions.showTypeDimension,
-      chartOptions.showLocationDimension
-    ],
+    () => [chartOptions.showTotalTrend, chartOptions.showNameDimension, chartOptions.showTypeDimension, chartOptions.showLocationDimension],
     async () => {
-      console.log('Chart options changed')
       if (isChartReady.value && !isLoading.value) {
         await initializeChart()
       }
@@ -1164,11 +818,9 @@ watch(
     { deep: true }
 )
 
-// 监听数据变化
 watch(
     () => assetStore.allList,
     async () => {
-      console.log('Asset store data changed')
       if (isChartReady.value && !isLoading.value) {
         await nextTick()
         await initializeChart()
@@ -1177,9 +829,7 @@ watch(
     { deep: true }
 )
 
-// 监听图表容器变化
 watch(chartRef, async (newRef) => {
-  console.log('Chart ref changed:', !!newRef)
   if (newRef && isChartReady.value && hasData.value && !isLoading.value) {
     await nextTick()
     await initializeChart()
@@ -1207,14 +857,16 @@ watch(chartRef, async (newRef) => {
   min-height: 400px;
 }
 
-/* 自定义复选框样式 */
-input[type="checkbox"] {
+.checkbox-input {
   width: 16px;
   height: 16px;
   accent-color: #4A5568;
 }
 
-/* 按钮样式优化 */
+.action-button {
+  @apply px-6 py-2 text-white rounded-lg transition-colors shadow-sm;
+}
+
 button {
   transition: all 0.2s ease;
   font-weight: 500;
