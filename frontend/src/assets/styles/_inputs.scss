@@ -76,3 +76,14 @@ select {
   color: var(--color-error);
 }
 
+
+/* 自定义复选框样式 */
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+}
+
+.chart-container {
+  min-height: 400px;
+}

@@ -823,33 +823,6 @@ const pushUpCount = computed(() => {
 
 <style scoped>
 .chart-container {
-  min-height: 300px;
-}
-
-/* 自定义复选框样式 */
-input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #4A5568;
-}
-
-/* 过渡动画 */
-.chart-container {
   transition: all 0.3s ease;
-}
-
-/* 按钮样式优化 */
-button {
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-button:active {
-  transform: translateY(0);
 }
 </style>

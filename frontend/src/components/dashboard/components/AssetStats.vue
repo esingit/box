@@ -769,10 +769,6 @@ async function handleReset(): Promise<void> {
   await loadData()
 }
 
-async function handleRetry(): Promise<void> {
-  await loadData()
-}
-
 function handleTypeChange(): void {
   selectedNameIds.value = []
 }
@@ -835,33 +831,5 @@ watch(chartRef, async (newRef) => {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.chart-container {
-  min-height: 400px;
-}
-
-.checkbox-input {
-  width: 16px;
-  height: 16px;
-  accent-color: #4A5568;
-}
-
-.action-button {
-  @apply px-6 py-2 text-white rounded-lg transition-colors shadow-sm;
-}
-
-button {
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-button:active {
-  transform: translateY(0);
 }
 </style>
