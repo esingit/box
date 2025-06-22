@@ -27,6 +27,13 @@ spring:
     time-zone: GMT+8
     generator:
       write-numbers-as-strings: true
+  # 添加文件上传配置
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+      file-size-threshold: 0
 
 jwt:
   secret: RjFk8V2p9X7mN3qL5tYzA4wQ1cB6vE0sH8uD2xG4nJ7bK9mP3rT5
@@ -56,3 +63,22 @@ cors:
   allowed-headers: "*"
   allow-credentials: true
   max-age: 3600
+
+# OCR 相关配置
+app:
+  upload:
+    # 文件上传路径
+    path: ${user.home}/box-uploads
+    # 允许的文件类型
+    allowed-types: image/jpeg,image/jpg,image/png,image/gif,image/bmp
+  ocr:
+    tesseract:
+      # Mac 上 Homebrew 安装的 Tesseract 默认路径
+      # 如果是其他安装方式，请修改此路径
+      data-path: /opt/homebrew/share/tessdata
+      # 支持中英文识别
+      language: chi_sim+eng
+      # OCR 引擎模式：1=LSTM神经网络，0=传统Tesseract，2=两者结合
+      ocr-engine-mode: 1
+      # 页面分割模式：1=自动页面分割with OSD，3=全自动页面分割(默认)
+      page-seg-mode: 3

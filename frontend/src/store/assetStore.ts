@@ -10,14 +10,21 @@ import { formatTime } from '@/utils/formatters'
 export const useAssetStore = defineStore('asset', () => {
     const list = ref<any[]>([])
     const allList = ref<any[]>([])
-    const query = reactive({
+    const query = reactive<{
+        assetNameIdList: number[];
+        assetLocationIdList: number[];
+        assetTypeIdList: number[];
+        startDate: string;
+        endDate: string;
+        remark: string;
+    }>({
         assetNameIdList: [],
         assetLocationIdList: [],
         assetTypeIdList: [],
         startDate: '',
         endDate: '',
         remark: ''
-    })
+    });
 
     const pagination = reactive({
         pageNo: 1,

@@ -126,14 +126,6 @@
             :message="errorMessage"
             description="请检查网络连接或稍后重试"
         />
-        <div class="flex justify-center mt-4">
-          <button
-              @click="handleRetry"
-              class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
-          >
-            重新加载
-          </button>
-        </div>
       </div>
 
       <!-- 空数据状态 -->
@@ -143,14 +135,6 @@
             message="暂无健身数据"
             :description="emptyStateDescription"
         />
-        <div v-if="hasSearchConditions" class="flex justify-center mt-4">
-          <button
-              @click="handleReset"
-              class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
-          >
-            重置筛选条件
-          </button>
-        </div>
       </div>
 
       <!-- 图表容器 -->
@@ -170,25 +154,7 @@ import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import {useFitnessStore} from '@/store/fitnessStore'
 import {useChart, useDateRange} from '@/utils/common'
 import emitter from '@/utils/eventBus'
-
-// 接口定义
-interface FitnessOption {
-  id: string | number
-  label: string
-  value: string | number
-  value1?: string
-  key1?: string   // 类型标识
-  key2?: string   // 运动类型标识
-  key3?: string   // 默认单位类型
-}
-
-interface UnitOption {
-  id: string | number
-  label: string
-  value: string | number
-  value1?: string         // 单位名称
-  key1?: string          // 单位类型标识
-}
+import {CommonMetaVO} from "@/store/metaStore";
 
 interface FitnessRecord {
   id: string
@@ -204,8 +170,8 @@ const EXERCISE_TYPE_KEY = 'EXERCISE'
 
 // Props
 const props = defineProps<{
-  fitnessTypeOptions: FitnessOption[]
-  unitOptions: UnitOption[]
+  fitnessTypeOptions: CommonMetaVO[]
+  unitOptions: CommonMetaVO[]
 }>()
 
 // Composables
@@ -720,7 +686,7 @@ async function initializeChart(): Promise<void> {
       return
     }
 
-    await initChart(echartConfig.value)
+    await initChart(echartConfig.value as EChartsOption)
   } catch (error) {
     console.error('Failed to initialize chart:', error)
     errorMessage.value = '图表初始化失败'
@@ -741,7 +707,7 @@ async function loadData(): Promise<void> {
     const {startDate, endDate} = parseDateRange(dateRange.value)
 
     fitnessStore.updateQuery({
-      typeIdList: effectiveTypeIds.value,
+      typeIdList: effectiveTypeIds.value.map(id => Number(id)),
       startDate,
       endDate,
       remark: remark.value.trim()
@@ -778,10 +744,6 @@ async function handleReset(): Promise<void> {
   errorMessage.value = ''
 
   fitnessStore.resetQuery()
-  await loadData()
-}
-
-async function handleRetry(): Promise<void> {
   await loadData()
 }
 

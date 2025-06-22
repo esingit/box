@@ -126,14 +126,6 @@
             :message="errorMessage"
             description="请检查网络连接或稍后重试"
         />
-        <div class="flex justify-center mt-4">
-          <button
-              @click="handleRetry"
-              class="action-button bg-red-500 hover:bg-red-600"
-          >
-            重新加载
-          </button>
-        </div>
       </div>
 
       <!-- 空数据状态 -->
@@ -143,14 +135,6 @@
             message="暂无资产数据"
             :description="emptyStateDescription"
         />
-        <div v-if="hasSearchConditions" class="flex justify-center mt-4">
-          <button
-              @click="handleReset"
-              class="action-button bg-blue-500 hover:bg-blue-600"
-          >
-            重置筛选条件
-          </button>
-        </div>
       </div>
 
       <!-- 图表容器 -->
