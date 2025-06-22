@@ -26,7 +26,7 @@ declare module 'vue' {
     BaseActions: typeof import('./components/base/BaseActions.vue')['default']
     BaseButton: typeof import('./components/base/BaseButton.vue')['default']
     BaseCalendar: typeof import('./components/base/BaseCalendar.vue')['default']
-    BaseDateInput: typeof import('./components/base/baseDateInput.vue')['default']
+    BaseDateInput: typeof import('./components/base/BaseDateInput.vue')['default']
     BaseDialog: typeof import('./components/base/BaseDialog.vue')['default']
     BaseEmptyState: typeof import('./components/base/BaseEmptyState.vue')['default']
     BaseInput: typeof import('./components/base/BaseInput.vue')['default']

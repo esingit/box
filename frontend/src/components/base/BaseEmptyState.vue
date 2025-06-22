@@ -1,3 +1,4 @@
+<!--src/components/base/BaseEmptyState.vue-->
 <template>
   <div
       class="flex flex-col items-center justify-center text-center space-y-2 py-12
