@@ -2,7 +2,7 @@
 <template>
   <div class="flex-col h-full">
     <header class="flex items-center justify-center gap-2 px-4 py-3">
-    <Package
+      <Package
           class="cursor-pointer transition-transform duration-500"
           :class="{ 'rotate-[360deg]': isRotating }"
           :size="40"
@@ -12,16 +12,21 @@
     </header>
 
     <main class="flex-1 overflow-auto p-4">
-      <Dashboard/>
+      <!-- 用户已登录时显示看板 -->
+      <Dashboard v-if="isLoggedIn"/>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { Package } from 'lucide-vue-next'
+import {ref} from 'vue'
+import {Package} from 'lucide-vue-next'
 import Dashboard from '@/components/dashboard/Dashboard.vue'
+import {useAuth} from "@/composable/useAuth";
 
+const auth = useAuth()
+
+const {isLoggedIn} = auth
 const isRotating = ref(false)
 
 function applyRotationAnimation(duration = 1000) {
