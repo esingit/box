@@ -145,7 +145,7 @@
       </div>
       <div class="bg-red-50 p-3 rounded-lg">
         <div class="text-red-600 font-medium">总金额</div>
-        <div class="text-lg font-bold text-red-800">￥{{ totalAmount }}</div>
+        <div class="text-lg font-bold text-red-800">{{ totalAmountDisplay }}</div>
       </div>
     </div>
 
@@ -222,6 +222,17 @@ interface Option {
   value: string | number
   id?: string
   name?: string
+  value1?: string  // 添加 value1 字段
+  key1?: string    // 添加 key1 字段
+  key3?: string    // 默认单位类型
+}
+
+interface UnitOption {
+  id: string | number
+  label: string
+  value: string | number
+  value1?: string  // 单位符号
+  key1?: string    // 单位类型标识
 }
 
 interface AssetRecord {
@@ -242,11 +253,12 @@ interface AssetRecord {
   remark?: string
 }
 
-// Props
+// Props - 添加 unitOptions
 const props = defineProps<{
   assetNameOptions: Option[]
   assetTypeOptions: Option[]
   assetLocationOptions: Option[]
+  unitOptions: UnitOption[]  // 新增
 }>()
 
 // Composables
@@ -291,6 +303,27 @@ const CHART_COLORS = [
   '#A8937B', '#8C8C7B'
 ]
 
+// 创建单位映射
+const unitMapping = computed(() => {
+  const map: Record<string, string> = {}
+  if (!props.unitOptions || !Array.isArray(props.unitOptions)) {
+    return map
+  }
+
+  props.unitOptions.forEach(option => {
+    if (option) {
+      // 同时支持 id 和 value 作为键
+      if (option.id && option.value1) {
+        map[String(option.id)] = option.value1
+      }
+      if (option.value && option.value1) {
+        map[String(option.value)] = option.value1
+      }
+    }
+  })
+  return map
+})
+
 // 创建名称映射 - 添加空值检查
 const nameMapping = computed(() => {
   const map: Record<string, string> = {}
@@ -301,7 +334,7 @@ const nameMapping = computed(() => {
   props.assetNameOptions.forEach(option => {
     if (option) {
       const id = option.id || option.value
-      const name = option.name || option.label
+      const name = option.value1 || option.name || option.label
       if (id && name) {
         map[String(id)] = String(name)
       }
@@ -319,7 +352,7 @@ const typeMapping = computed(() => {
   props.assetTypeOptions.forEach(option => {
     if (option) {
       const id = option.id || option.value
-      const name = option.name || option.label
+      const name = option.value1 || option.name || option.label
       if (id && name) {
         map[String(id)] = String(name)
       }
@@ -337,7 +370,7 @@ const locationMapping = computed(() => {
   props.assetLocationOptions.forEach(option => {
     if (option) {
       const id = option.id || option.value
-      const name = option.name || option.label
+      const name = option.value1 || option.name || option.label
       if (id && name) {
         map[String(id)] = String(name)
       }
@@ -345,6 +378,86 @@ const locationMapping = computed(() => {
   })
   return map
 })
+
+// 获取资产类型的默认单位
+function getDefaultUnitForAssetType(typeId: string | number): string {
+  const assetType = props.assetTypeOptions?.find(type =>
+      String(type.value) === String(typeId) || String(type.id) === String(typeId)
+  )
+
+  if (!assetType?.key3) {
+    return '￥'
+  }
+
+  // 根据 key3 找到对应的单位（key1 匹配）
+  const defaultUnit = props.unitOptions?.find(unit => unit.key1 === assetType.key3)
+  if (!defaultUnit) {
+    return '￥'
+  }
+
+  return defaultUnit.value1 || '￥'
+}
+
+// 获取记录的单位符号
+function getUnitSymbol(record: AssetRecord): string {
+  // 优先使用单位映射
+  if (record.unitId) {
+    const unitSymbol = unitMapping.value[String(record.unitId)]
+    if (unitSymbol) {
+      return unitSymbol
+    }
+  }
+
+  // 其次使用记录中的单位信息
+  if (record.unitValue) {
+    return record.unitValue
+  }
+
+  // 最后使用默认单位
+  return getDefaultUnitForAssetType(record.assetTypeId)
+}
+
+// 格式化金额显示（带单位）
+function formatAmountWithUnit(amount: number, unitSymbol: string = '￥'): string {
+  if (amount === 0) return `${unitSymbol}0.00`
+
+  let formattedAmount: string
+  if (amount >= 10000) {
+    formattedAmount = `${(amount / 10000).toFixed(1)}万`
+  } else if (amount >= 1000) {
+    formattedAmount = amount.toFixed(0)
+  } else {
+    formattedAmount = amount.toFixed(2)
+  }
+
+  return `${unitSymbol}${formattedAmount}`
+}
+
+// 格式化数值（不带单位）
+function formatValue(value: number): string {
+  if (value === 0) return '0.00'
+
+  if (value >= 10000) {
+    return `${(value / 10000).toFixed(1)}万`
+  } else if (value >= 1000) {
+    return value.toFixed(0)
+  } else {
+    return value.toFixed(2)
+  }
+}
+
+// 获取特定日期的记录单位
+function getRecordUnitForDate(date: string): string {
+  const records = assetRecords.value.filter(record =>
+      record && record.acquireTime?.startsWith(date)
+  )
+
+  if (records.length > 0) {
+    return getUnitSymbol(records[0])
+  }
+
+  return '￥'
+}
 
 // 工具函数
 function getDisplayName(id: string, mapping: Record<string, string>, fallback?: string | null, prefix = '未知'): string {
@@ -511,12 +624,20 @@ const locationCount = computed(() => {
 
 const totalAmount = computed(() => {
   if (!assetRecords.value || !Array.isArray(assetRecords.value)) {
-    return '0.00'
+    return 0
   }
 
   return assetRecords.value
       .reduce((sum, record) => sum + (parseFloat(record?.amount || '0') || 0), 0)
-      .toFixed(2)
+})
+
+const totalAmountDisplay = computed(() => {
+  // 获取第一条记录的单位作为总金额的单位（假设所有记录使用相同单位）
+  const unitSymbol = assetRecords.value.length > 0
+      ? getUnitSymbol(assetRecords.value[0])
+      : '￥'
+
+  return formatAmountWithUnit(totalAmount.value, unitSymbol)
 })
 
 // 生成图表系列数据
@@ -553,6 +674,7 @@ const chartSeries = computed(() => {
           symbol: 'circle',
           symbolSize: 8,
           data: totalData,
+          seriesType: 'total',
           lineStyle: {
             width: 4,
             color: '#4A5568',
@@ -588,6 +710,8 @@ const chartSeries = computed(() => {
             symbol: 'circle',
             symbolSize: 5,
             data: item.data,
+            seriesType: 'name',
+            nameKey: item.name,
             lineStyle: { width: 2, color, shadowColor: `${color}33`, shadowBlur: 2 },
             itemStyle: { color, borderWidth: 1, borderColor: '#fff' },
             emphasis: { focus: 'series' }
@@ -611,6 +735,8 @@ const chartSeries = computed(() => {
             symbol: 'triangle',
             symbolSize: 5,
             data: item.data,
+            seriesType: 'type',
+            typeKey: item.name,
             lineStyle: { width: 2, type: 'dashed', color, shadowColor: `${color}33`, shadowBlur: 2 },
             itemStyle: { color, borderWidth: 1, borderColor: '#fff' },
             emphasis: { focus: 'series' }
@@ -634,6 +760,8 @@ const chartSeries = computed(() => {
             symbol: 'diamond',
             symbolSize: 5,
             data: item.data,
+            seriesType: 'location',
+            locationKey: item.name,
             lineStyle: { width: 2, type: 'dotted', color, shadowColor: `${color}33`, shadowBlur: 2 },
             itemStyle: { color, borderWidth: 1, borderColor: '#fff' },
             emphasis: { focus: 'series' }
@@ -686,7 +814,12 @@ const echartConfig = computed(() => {
         formatter: (params: any[]) => {
           if (!Array.isArray(params)) return ''
 
-          const date = allDates.value[params[0]?.dataIndex] || ''
+          const dataIndex = params[0]?.dataIndex
+          const date = allDates.value[dataIndex] || ''
+
+          // 获取该日期的单位
+          const unitSymbol = getRecordUnitForDate(date)
+
           let result = `<div style="font-weight: bold; margin-bottom: 8px; color: #1A202C">${date}</div>`
 
           const groupedParams = {
@@ -702,9 +835,10 @@ const echartConfig = computed(() => {
               result += `<div style="margin-top: 8px; font-weight: 600; color: #4A5568; font-size: 13px">${titles[key as keyof typeof titles]}</div>`
               series.forEach(item => {
                 if (item.value > 0) {
+                  const formattedAmount = formatAmountWithUnit(item.value, unitSymbol)
                   result += `<div style="display: flex; align-items: center; gap: 8px; margin-top: 4px">
                     <span style="display: inline-block; width: 8px; height: 8px; background: ${item.color}; border-radius: 50%"></span>
-                    <span>${item.seriesName.replace(/[💰🏷️📍📈]/g, '').trim()}: <strong>￥${item.value.toFixed(2)}</strong></span>
+                    <span>${item.seriesName.replace(/[💰🏷️📍📈]/g, '').trim()}: <strong>${formattedAmount}</strong></span>
                   </div>`
                 }
               })
@@ -743,12 +877,18 @@ const echartConfig = computed(() => {
       },
       yAxis: {
         type: 'value',
-        name: '金额（元）',
+        name: '金额',
         nameTextStyle: { fontSize: 12, color: '#718096' },
         axisLabel: {
           fontSize: 11,
           color: '#718096',
-          formatter: (value: number) => value >= 10000 ? `￥${(value / 10000).toFixed(1)}万` : `￥${value.toFixed(0)}`
+          formatter: (value: number) => {
+            // 使用第一条记录的单位符号
+            const unitSymbol = assetRecords.value.length > 0
+                ? getUnitSymbol(assetRecords.value[0])
+                : '￥'
+            return formatAmountWithUnit(value, unitSymbol)
+          }
         },
         splitLine: { lineStyle: { type: 'dashed', color: '#E2E8F0' } },
         axisLine: { show: false },

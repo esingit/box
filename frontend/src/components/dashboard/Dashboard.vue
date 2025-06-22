@@ -39,10 +39,10 @@
       <!-- 资产统计组件 -->
       <AssetStats
           :key="`asset-${route.fullPath}`"
-          :unitOptions="unitOptions"
-          :assetNameOptions="safeAssetNameOptions"
-          :assetTypeOptions="assetTypeOptions"
-          :assetLocationOptions="assetLocationOptions"
+          :asset-name-options="assetNameOptions"
+          :asset-type-options="assetTypeOptions"
+          :asset-location-options="assetLocationOptions"
+          :unit-options="unitOptions"
       />
     </div>
   </div>
