@@ -456,7 +456,7 @@ const chartSeries = computed(() => {
           )
           const typeName = typeOption?.value1 || typeOption?.label || `类型${typeId}`
 
-// 按日期汇总该类型的数据
+          // 按日期汇总该类型的数据
           const data = allDates.value.map(date => {
             return fitnessRecords.value
                 .filter(record =>
@@ -467,7 +467,7 @@ const chartSeries = computed(() => {
                 .reduce((sum, record) => sum + Number(record.count || 0), 0)
           })
 
-// 过滤掉没有数据的系列
+          // 过滤掉没有数据的系列
           if (!data.some(value => value > 0)) return null
 
           const color = CHART_COLORS[index % CHART_COLORS.length]
@@ -476,6 +476,8 @@ const chartSeries = computed(() => {
             name: typeName,
             type: 'line',
             data,
+            // 添加自定义属性存储 typeId
+            typeId: typeId,
             smooth: chartOptions.smoothCurve,
             symbol: 'circle',
             symbolSize: 6,
@@ -518,7 +520,7 @@ const chartSeries = computed(() => {
   }
 })
 
-// 生成 ECharts 配置
+// 修改 tooltip formatter
 const echartConfig = computed(() => {
   if (!hasData.value || !chartSeries.value.length || !allDates.value.length) {
     return null
@@ -560,7 +562,7 @@ const echartConfig = computed(() => {
         },
         extraCssText: 'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);',
         formatter: (params: any[]) => {
-          if (!Array.isArray(params)) return ''
+          if (!Array.isArray(params) || params.length === 0) return ''
 
           const dataIndex = params[0]?.dataIndex
           const date = allDates.value[dataIndex] || ''
@@ -568,9 +570,10 @@ const echartConfig = computed(() => {
 
           params.forEach((param) => {
             if (param.value > 0) {
-              const seriesIndex = chartSeries.value.findIndex(s => s.name === param.seriesName)
-              if (seriesIndex >= 0) {
-                const typeId = effectiveTypeIds.value[seriesIndex]
+              // 从系列中查找 typeId
+              const series = chartSeries.value.find(s => s.name === param.seriesName)
+              if (series && series.typeId) {
+                const typeId = series.typeId
 
                 // 获取该类型在该日期的单位
                 const unit = getRecordUnit(typeId, date)
@@ -580,16 +583,16 @@ const echartConfig = computed(() => {
                 const displayValue = unit ? `${formattedValue}${unit}` : formattedValue
 
                 result += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 3px">
-            <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
-            <span>${param.seriesName}: <strong>${displayValue}</strong></span>
-          </div>`
+                  <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
+                  <span>${param.seriesName}: <strong>${displayValue}</strong></span>
+                </div>`
               } else {
                 // 如果找不到对应的系列，显示不带单位的数值
                 const formattedValue = formatValue(param.value)
                 result += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 3px">
-            <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
-            <span>${param.seriesName}: <strong>${formattedValue}</strong></span>
-          </div>`
+                  <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
+                  <span>${param.seriesName}: <strong>${formattedValue}</strong></span>
+                </div>`
               }
             }
           })
