@@ -43,7 +43,7 @@
     </section>
 
     <!-- 搜索和操作 -->
-    <section class="bg-white rounded-xl hover:shadow-md p-6 space-y-4">
+    <section class="bg-white rounded-xl hover:shadow-md p-6 w-full space-y-4">
       <div class="flex justify-start gap-2">
         <BaseButton title="添加资产" @click="handleAdd" color="primary" :icon="LucidePlus"/>
         <BaseButton title="复制上回记录" @click="onCopyClick" color="outline" :icon="LucideCopy"/>
@@ -56,7 +56,6 @@
           :resultCount="resultCount"
           @search="handleQuery"
           @reset="resetQuery"
-          class="flex-grow"
       />
     </section>
 

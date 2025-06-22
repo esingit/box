@@ -1,94 +1,21 @@
 <template>
-  <div class="border rounded-xl shadow p-6 animate-fade w-full space-y-6 bg-white">
+  <div class="bg-white rounded-xl p-6 hover:shadow-md w-full space-y-4">
     <h2 class="text-lg font-semibold mb-4">资产统计</h2>
 
-    <!-- 查询条件 -->
-    <div class="border rounded-xl p-4 space-y-4 hover:shadow-md">
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="flex-1 w-full">
-          <BaseSelect
-              title="资产名称"
-              v-model="selectedNameIds"
-              :options="props.assetNameOptions"
-              multiple
-              clearable
-              placeholder="请选择资产名称"
-              class="w-full"
-          />
-        </div>
-        <div class="w-[220px] flex-shrink-0">
-          <BaseSelect
-              title="资产类型"
-              v-model="selectedTypeIds"
-              :options="props.assetTypeOptions"
-              multiple
-              clearable
-              placeholder="请选择资产类型"
-              class="w-full"
-              @change="handleTypeChange"
-          />
-        </div>
-        <div class="w-[220px] flex-shrink-0">
-          <BaseSelect
-              title="资产位置"
-              v-model="selectedLocationIds"
-              :options="props.assetLocationOptions"
-              multiple
-              clearable
-              placeholder="请选择资产位置"
-              class="w-full"
-          />
-        </div>
+    <!-- 使用 AssetSearch 组件，传入独立的查询对象 -->
+    <AssetSearch
+        :query="localSearchQuery"
+        :asset-name-options="props.assetNameOptions"
+        :asset-type-options="props.assetTypeOptions"
+        :asset-location-options="props.assetLocationOptions"
+        :result-count="assetRecords.length"
+        @search="handleSearchFromComponent"
+        @reset="handleResetFromComponent"
+    />
 
-        <div class="flex gap-2 ml-auto flex-shrink-0">
-          <BaseButton
-              :disabled="!isDateRangeValid || isLoading"
-              @click="handleSearch"
-              color="outline"
-              :icon="LucideSearch"
-              variant="search"
-          />
-          <BaseButton
-              :disabled="isLoading"
-              @click="handleReset"
-              color="outline"
-              :icon="LucideRotateCcw"
-              variant="search"
-          />
-          <BaseButton
-              @click="showMore = !showMore"
-              color="outline"
-              :icon="showMore ? LucideChevronUp : LucideChevronDown"
-              variant="search"
-          />
-        </div>
-      </div>
-
-      <div v-if="showMore" class="flex flex-wrap items-center gap-3 mt-3">
-        <div class="w-[300px] flex-shrink-0">
-          <BaseDateInput
-              v-model="dateRange"
-              type="date"
-              range
-              clearable
-              required
-              placeholder="请选择日期范围"
-              class="w-full"
-          />
-        </div>
-        <div class="flex-1 min-w-[240px]">
-          <BaseInput
-              v-model="remark"
-              placeholder="备注关键词"
-              type="text"
-              clearable
-              class="w-full"
-          />
-        </div>
-      </div>
-
-      <!-- 图表显示选项 -->
-      <div v-if="hasData" class="flex flex-wrap items-center gap-4 pt-3 border-t">
+    <!-- 图表显示选项 -->
+    <div v-if="hasData" class="border rounded-xl p-4">
+      <div class="flex flex-wrap items-center gap-4">
         <span class="text-sm font-medium text-gray-600">显示维度:</span>
         <label v-for="option in chartOptionsConfig" :key="option.key" class="flex items-center gap-2 cursor-pointer">
           <input
@@ -145,17 +72,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, reactive, nextTick } from 'vue'
-import {
-  LucideChevronDown,
-  LucideChevronUp,
-  LucideRotateCcw,
-  LucideSearch,
-} from 'lucide-vue-next'
 import type { EChartsOption } from 'echarts'
-import BaseSelect from '@/components/base/BaseSelect.vue'
-import BaseButton from '@/components/base/BaseButton.vue'
-import BaseInput from '@/components/base/BaseInput.vue'
-import BaseDateInput from '@/components/base/BaseDateInput.vue'
+import AssetSearch from '@/components/asset/AssetSearch.vue'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import { useAssetStore } from '@/store/assetStore'
 import { useDateRange, useChart } from '@/utils/common'
@@ -199,6 +117,15 @@ interface AssetRecord {
   remark?: string
 }
 
+interface SearchQuery {
+  assetNameIdList: (string | number)[]
+  assetTypeIdList: (string | number)[]
+  assetLocationIdList: (string | number)[]
+  startDate: string
+  endDate: string
+  remark: string
+}
+
 // Props
 const props = defineProps<{
   assetNameOptions: Option[]
@@ -209,18 +136,26 @@ const props = defineProps<{
 
 // Composables
 const assetStore = useAssetStore()
-const { dateRange, isDateRangeValid, getDefaultRange, parseDateRange, dateRangeDisplay } = useDateRange()
+const { getDefaultRange } = useDateRange()
 const { chartRef, initChart, destroyChart, resizeChart } = useChart()
 
 // 响应式状态
-const selectedTypeIds = ref<(string | number)[]>([])
-const selectedNameIds = ref<(string | number)[]>([])
-const selectedLocationIds = ref<(string | number)[]>([])
-const remark = ref('')
-const showMore = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
 const isChartReady = ref(false)
+
+// 独立的资产记录列表，不使用 store 中的共享数据
+const localAssetRecords = ref<AssetRecord[]>([])
+
+// 创建本地独立的查询对象，不影响其他页面
+const localSearchQuery = reactive<SearchQuery>({
+  assetNameIdList: [],
+  assetTypeIdList: [],
+  assetLocationIdList: [],
+  startDate: '',
+  endDate: '',
+  remark: ''
+})
 
 // 图表选项配置
 const chartOptionsConfig = [
@@ -321,10 +256,9 @@ const typeMapping = computed(() => createMapping(props.assetTypeOptions))
 const locationMapping = computed(() => createMapping(props.assetLocationOptions))
 const unitMapping = computed(() => createMapping(props.unitOptions, 'value1'))
 
-// 基础数据
+// 使用本地的资产记录而不是 store 中的
 const assetRecords = computed<AssetRecord[]>(() => {
-  const list = assetStore.allList
-  return (list && Array.isArray(list) ? list : []) as AssetRecord[]
+  return localAssetRecords.value
 })
 
 const allDates = computed(() => {
@@ -354,10 +288,19 @@ const hasData = computed(() => {
 })
 
 const hasSearchConditions = computed(() => {
-  return selectedTypeIds.value.length > 0 ||
-      selectedNameIds.value.length > 0 ||
-      selectedLocationIds.value.length > 0 ||
-      remark.value.trim() !== ''
+  return localSearchQuery.assetTypeIdList.length > 0 ||
+      localSearchQuery.assetNameIdList.length > 0 ||
+      localSearchQuery.assetLocationIdList.length > 0 ||
+      localSearchQuery.remark.trim() !== ''
+})
+
+const isDateRangeValid = computed(() => {
+  return localSearchQuery.startDate && localSearchQuery.endDate
+})
+
+const dateRangeDisplay = computed(() => {
+  if (!localSearchQuery.startDate || !localSearchQuery.endDate) return ''
+  return `${localSearchQuery.startDate} ~ ${localSearchQuery.endDate}`
 })
 
 const emptyStateDescription = computed(() => {
@@ -439,7 +382,7 @@ const statisticsCards = computed(() => [
   }
 ])
 
-// 图表数据处理
+// 图表数据处理（保持原有逻辑）
 const formattedDates = computed(() => {
   return allDates.value.map(date => {
     const [year, month, day] = date.split('-')
@@ -684,7 +627,7 @@ const echartConfig = computed(() => {
       animation: true,
       animationDuration: 1200,
       animationEasing: 'cubicOut'
-    } as EChartsOption  // 添加类型断言
+    } as EChartsOption
   } catch (error) {
     console.error('Error generating chart config:', error)
     return null
@@ -709,8 +652,8 @@ async function initializeChart(): Promise<void> {
   }
 }
 
-// 数据加载
-async function loadData(): Promise<void> {
+// 使用 store 提供的独立方法加载数据
+async function loadLocalData(): Promise<void> {
   if (!isDateRangeValid.value) {
     showNotification('请选择有效的日期范围', 'error')
     return
@@ -720,20 +663,22 @@ async function loadData(): Promise<void> {
   errorMessage.value = ''
 
   try {
-    const { startDate, endDate } = parseDateRange(dateRange.value)
+    // 构建查询参数
+    const queryParams = {
+      assetTypeIdList: localSearchQuery.assetTypeIdList.map(id => Number(id)),
+      assetNameIdList: localSearchQuery.assetNameIdList.map(id => Number(id)),
+      assetLocationIdList: localSearchQuery.assetLocationIdList.map(id => Number(id)),
+      startDate: localSearchQuery.startDate,
+      endDate: localSearchQuery.endDate,
+      remark: localSearchQuery.remark.trim()
+    }
 
-    assetStore.updateQuery({
-      assetTypeIdList: selectedTypeIds.value.map(id => Number(id)),
-      assetNameIdList: selectedNameIds.value.map(id => Number(id)),
-      assetLocationIdList: selectedLocationIds.value.map(id => Number(id)),
-      startDate,
-      endDate,
-      remark: remark.value.trim()
-    })
-
-    await assetStore.loadAllRecords()
+    // 使用 store 的独立方法获取数据，不影响 store 的状态
+    const data = await assetStore.loadAllRecordsIndependent(queryParams)
+    localAssetRecords.value = data || []
 
     await nextTick()
+
     if (hasData.value) {
       showNotification('资产数据加载成功', 'success')
       await initializeChart()
@@ -747,38 +692,51 @@ async function loadData(): Promise<void> {
   }
 }
 
-// 事件处理
-async function handleSearch(): Promise<void> {
-  await loadData()
+// 处理来自 AssetSearch 组件的搜索事件
+async function handleSearchFromComponent(query: SearchQuery): Promise<void> {
+  // 查询对象已经通过双向绑定更新，直接加载数据即可
+  await loadLocalData()
 }
 
-async function handleReset(): Promise<void> {
-  selectedTypeIds.value = []
-  selectedNameIds.value = []
-  selectedLocationIds.value = []
-  remark.value = ''
-  dateRange.value = getDefaultRange()
+// 处理来自 AssetSearch 组件的重置事件
+async function handleResetFromComponent(): Promise<void> {
+  // 重置查询条件
+  localSearchQuery.assetNameIdList = []
+  localSearchQuery.assetTypeIdList = []
+  localSearchQuery.assetLocationIdList = []
+  localSearchQuery.remark = ''
+
+  // 重置日期范围到默认值
+  const defaultRange = getDefaultRange()
+  const [startDate, endDate] = defaultRange.split(' ~ ')
+  localSearchQuery.startDate = startDate
+  localSearchQuery.endDate = endDate
+
+  // 重置图表选项
   Object.assign(chartOptions, {
     showTotalTrend: true,
     showNameDimension: true,
     showTypeDimension: true,
     showLocationDimension: true
   })
-  errorMessage.value = ''
-  assetStore.allList = []
-  await loadData()
-}
 
-function handleTypeChange(): void {
-  selectedNameIds.value = []
+  errorMessage.value = ''
+  localAssetRecords.value = []
+  await loadLocalData()
 }
 
 // 生命周期
 onMounted(async () => {
   await nextTick()
   isChartReady.value = true
-  dateRange.value = getDefaultRange()
-  await loadData()
+
+  // 设置默认日期范围
+  const defaultRange = getDefaultRange()
+  const [startDate, endDate] = defaultRange.split(' ~ ')
+  localSearchQuery.startDate = startDate
+  localSearchQuery.endDate = endDate
+
+  await loadLocalData()
   window.addEventListener('resize', resizeChart)
 })
 
@@ -798,16 +756,13 @@ watch(
     { deep: true }
 )
 
-watch(
-    () => assetStore.allList,
-    async () => {
-      if (isChartReady.value && !isLoading.value) {
-        await nextTick()
-        await initializeChart()
-      }
-    },
-    { deep: true }
-)
+// 监听本地资产记录变化
+watch(localAssetRecords, async () => {
+  if (isChartReady.value && !isLoading.value) {
+    await nextTick()
+    await initializeChart()
+  }
+}, { deep: true })
 
 watch(chartRef, async (newRef) => {
   if (newRef && isChartReady.value && hasData.value && !isLoading.value) {
@@ -815,6 +770,14 @@ watch(chartRef, async (newRef) => {
     await initializeChart()
   }
 })
+
+// 监听 localSearchQuery 中的 assetTypeIdList 变化，清空 assetNameIdList
+watch(
+    () => localSearchQuery.assetTypeIdList,
+    () => {
+      localSearchQuery.assetNameIdList = []
+    }
+)
 </script>
 
 <style scoped>

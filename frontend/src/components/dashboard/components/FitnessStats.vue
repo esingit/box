@@ -1,70 +1,19 @@
 <template>
-  <div class="bg-white rounded-xl p-6 hover:shadow-md w-full space-y-6">
+  <div class="bg-white rounded-xl p-6 hover:shadow-md w-full space-y-4">
     <h2 class="text-lg font-semibold">健身统计</h2>
 
-    <!-- 查询条件 -->
-    <div class="border rounded-xl p-4 space-y-4 hover:shadow-md">
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="flex-1 min-w-[200px]">
-          <BaseSelect
-              title="健身类型"
-              v-model="selectedTypeIds"
-              :options="props.fitnessTypeOptions"
-              multiple
-              clearable
-              placeholder="全部健身类型"
-              class="w-full"
-          />
-        </div>
+    <!-- 使用健身查询组件替换原有查询条件 -->
+    <FitnessSearch
+        :query="searchQuery"
+        :fitness-type-options="fitnessTypeOptions"
+        :result-count="fitnessRecords.length"
+        @search="handleSearchFromComponent"
+        @reset="handleResetFromComponent"
+    />
 
-        <div class="w-[300px] flex-shrink-0">
-          <BaseDateInput
-              v-model="dateRange"
-              type="date"
-              range
-              clearable
-              required
-              placeholder="请选择日期范围"
-              class="w-full"
-          />
-        </div>
-
-        <div class="flex gap-2 ml-auto flex-shrink-0">
-          <BaseButton
-              @click="handleSearch"
-              :disabled="isLoading || !isDateRangeValid"
-              color="outline"
-              :icon="LucideSearch"
-              variant="search"
-          />
-          <BaseButton
-              @click="handleReset"
-              :disabled="isLoading"
-              color="outline"
-              :icon="LucideRotateCcw"
-              variant="search"
-          />
-          <BaseButton
-              @click="showMore = !showMore"
-              color="outline"
-              :icon="showMore ? LucideChevronUp : LucideChevronDown"
-              variant="search"
-          />
-        </div>
-      </div>
-
-      <div v-if="showMore" class="flex flex-wrap gap-3">
-        <BaseInput
-            v-model="remark"
-            placeholder="备注关键词"
-            type="text"
-            clearable
-            class="w-full max-w-sm"
-        />
-      </div>
-
-      <!-- 图表显示选项 -->
-      <div v-if="hasData" class="flex flex-wrap items-center gap-4 pt-3 border-t">
+    <!-- 图表显示选项 -->
+    <div v-if="hasData" class="border rounded-xl p-4">
+      <div class="flex flex-wrap items-center gap-4">
         <span class="text-sm font-medium text-gray-600">显示选项:</span>
         <label class="flex items-center gap-2 cursor-pointer">
           <input
@@ -145,12 +94,8 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
-import {LucideChevronDown, LucideChevronUp, LucideRotateCcw, LucideSearch} from 'lucide-vue-next'
-import BaseSelect from '@/components/base/BaseSelect.vue'
-import BaseDateInput from '@/components/base/BaseDateInput.vue'
-import BaseButton from '@/components/base/BaseButton.vue'
-import BaseInput from '@/components/base/BaseInput.vue'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
+import FitnessSearch from '@/components/fitness/FitnessSearch.vue'
 import {useFitnessStore} from '@/store/fitnessStore'
 import {useChart, useDateRange} from '@/utils/common'
 import emitter from '@/utils/eventBus'
@@ -178,11 +123,8 @@ const props = defineProps<{
 // Composables
 const fitnessStore = useFitnessStore()
 const {
-  dateRange,
-  isDateRangeValid,
   getDefaultRange,
-  parseDateRange,
-  dateRangeDisplay
+  parseDateRange
 } = useDateRange()
 const {
   chartRef,
@@ -192,12 +134,17 @@ const {
 } = useChart()
 
 // 响应式状态
-const selectedTypeIds = ref<(string | number)[]>([])
-const remark = ref('')
-const showMore = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
 const isChartReady = ref(false)
+
+// 搜索查询状态 - 用于传递给 FitnessSearch 组件
+const searchQuery = reactive({
+  typeIdList: [] as (string | number)[],
+  startDate: '',
+  endDate: '',
+  remark: ''
+})
 
 // 图表选项
 const chartOptions = reactive({
@@ -212,6 +159,42 @@ const CHART_COLORS = [
   '#7B9E9E', '#B8936B', '#7B9DB8', '#9BB87B', '#B87B9D', '#7B7BB8',
   '#8B9B8B', '#B8898B', '#89B8B8', '#A8A87B', '#9E7B8C', '#7B8C9E'
 ]
+
+// 转换 fitnessTypeOptions 格式以适配 FitnessSearch 组件
+const fitnessTypeOptions = computed(() => {
+  if (!props.fitnessTypeOptions || !Array.isArray(props.fitnessTypeOptions)) {
+    return []
+  }
+
+  return props.fitnessTypeOptions.map(option => ({
+    label: option.value1 || option.label || `类型${option.value}`,
+    value: option.value || option.id
+  }))
+})
+
+// 格式化日期范围显示
+function formatDateRange(startDate: string, endDate: string): string {
+  if (!startDate || !endDate) {
+    return ''
+  }
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const start = formatDate(startDate)
+  const end = formatDate(endDate)
+
+  if (start === end) {
+    return start
+  }
+
+  return `${start} ~ ${end}`
+}
 
 // 创建单位映射
 const unitMapping = computed(() => {
@@ -276,12 +259,17 @@ const hasData = computed(() => {
 
 // 检查是否有搜索条件
 const hasSearchConditions = computed(() => {
-  return selectedTypeIds.value.length > 0 || remark.value.trim() !== ''
+  return searchQuery.typeIdList.length > 0 || searchQuery.remark.trim() !== ''
+})
+
+// 日期范围显示
+const dateRangeDisplay = computed(() => {
+  return formatDateRange(searchQuery.startDate, searchQuery.endDate)
 })
 
 // 空状态描述
 const emptyStateDescription = computed(() => {
-  if (!isDateRangeValid.value) {
+  if (!searchQuery.startDate || !searchQuery.endDate) {
     return '请选择日期范围查看健身数据'
   }
   if (hasSearchConditions.value) {
@@ -296,8 +284,8 @@ const effectiveTypeIds = computed(() => {
     return []
   }
 
-  return selectedTypeIds.value.length > 0
-      ? selectedTypeIds.value
+  return searchQuery.typeIdList.length > 0
+      ? searchQuery.typeIdList
       : props.fitnessTypeOptions.map(item => item.value || item.id)
 })
 
@@ -696,7 +684,7 @@ async function initializeChart(): Promise<void> {
 
 // 数据加载
 async function loadData(): Promise<void> {
-  if (!isDateRangeValid.value) {
+  if (!searchQuery.startDate || !searchQuery.endDate) {
     showNotification('请选择有效的日期范围', 'error')
     return
   }
@@ -705,13 +693,11 @@ async function loadData(): Promise<void> {
   errorMessage.value = ''
 
   try {
-    const {startDate, endDate} = parseDateRange(dateRange.value)
-
     fitnessStore.updateQuery({
       typeIdList: effectiveTypeIds.value.map(id => Number(id)),
-      startDate,
-      endDate,
-      remark: remark.value.trim()
+      startDate: searchQuery.startDate,
+      endDate: searchQuery.endDate,
+      remark: searchQuery.remark.trim()
     })
 
     await fitnessStore.loadAllRecords()
@@ -730,19 +716,32 @@ async function loadData(): Promise<void> {
   }
 }
 
-// 事件处理
-async function handleSearch(): Promise<void> {
+// 处理 FitnessSearch 组件的搜索事件
+async function handleSearchFromComponent(query: typeof searchQuery): Promise<void> {
+  // 更新搜索查询状态
+  Object.assign(searchQuery, query)
   await loadData()
 }
 
-async function handleReset(): Promise<void> {
-  selectedTypeIds.value = []
-  remark.value = ''
-  dateRange.value = getDefaultRange()
+// 处理 FitnessSearch 组件的重置事件
+async function handleResetFromComponent(): Promise<void> {
+  // 重置搜索查询状态
+  searchQuery.typeIdList = []
+  searchQuery.startDate = ''
+  searchQuery.endDate = ''
+  searchQuery.remark = ''
+
+  // 重置图表选项
   chartOptions.showDataLabels = false
   chartOptions.showAreaFill = true
   chartOptions.smoothCurve = true
   errorMessage.value = ''
+
+  // 设置默认日期范围
+  const defaultRange = getDefaultRange()
+  const { startDate, endDate } = parseDateRange(defaultRange)
+  searchQuery.startDate = startDate
+  searchQuery.endDate = endDate
 
   fitnessStore.resetQuery()
   await loadData()
@@ -759,7 +758,13 @@ async function updateChart(): Promise<void> {
 onMounted(async () => {
   await nextTick()
   isChartReady.value = true
-  dateRange.value = getDefaultRange()
+
+  // 初始化默认日期范围
+  const defaultRange = getDefaultRange()
+  const { startDate, endDate } = parseDateRange(defaultRange)
+  searchQuery.startDate = startDate
+  searchQuery.endDate = endDate
+
   await loadData()
 
   window.addEventListener('resize', resizeChart)
@@ -798,6 +803,7 @@ watch(chartRef, async (newRef) => {
     await initializeChart()
   }
 })
+
 // 计算俯卧撑总数
 const pushUpCount = computed(() => {
   if (!fitnessRecords.value?.length || !props.fitnessTypeOptions?.length) {

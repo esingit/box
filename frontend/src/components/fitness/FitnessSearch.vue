@@ -1,3 +1,4 @@
+<!--src/components/fitness/FitnessSearch.vue-->
 <template>
   <div class="relative w-full bg-white border rounded-xl p-4 space-y-4 transition">
     <!-- 搜索行 -->
@@ -22,7 +23,7 @@
             range
             clearable
             placeholder="请选择日期范围"
-            class="w-[300px]"
+            class="w-[320px]"
         />
       </div>
 

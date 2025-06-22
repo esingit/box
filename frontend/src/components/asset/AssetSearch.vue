@@ -1,3 +1,4 @@
+<!--src/components/asset/AssetSearch.vue-->
 <template>
   <div class="relative w-full bg-white border rounded-xl p-4 space-y-4 transition">
     <!-- 搜索行 -->
@@ -22,7 +23,7 @@
           placeholder="全部资产类型"
           multiple
           clearable
-          class="w-full max-w-[240px]"
+          class="w-full max-w-[180px]"
       />
 
       <!-- 资产位置 -->
@@ -33,7 +34,7 @@
           placeholder="全部资产位置"
           multiple
           clearable
-          class="w-full max-w-[240px]"
+          class="w-full max-w-[180px]"
       />
 
       <!-- 按钮组 -->
@@ -53,7 +54,7 @@
             type="date"
             range
             clearable
-            class="w-[300px]"
+            class="w-[320px]"
             placeholder="请选择日期范围"
         />
       </div>

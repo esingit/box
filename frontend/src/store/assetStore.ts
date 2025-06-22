@@ -212,6 +212,8 @@ export const useAssetStore = defineStore('asset', () => {
             throw error
         }
     }
+
+    // 原有的 loadAllRecords 方法，会更新 store 的 allList
     async function loadAllRecords() {
         if (recordController) recordController.abort()
         recordController = new AbortController()
@@ -248,6 +250,46 @@ export const useAssetStore = defineStore('asset', () => {
         }
     }
 
+    // 新增：独立的获取数据方法，不更新 store 状态，返回数据供报表使用
+    async function loadAllRecordsIndependent(queryParams: {
+        assetNameIdList?: number[];
+        assetLocationIdList?: number[];
+        assetTypeIdList?: number[];
+        startDate?: string;
+        endDate?: string;
+        remark?: string;
+    }) {
+        const controller = new AbortController()
+
+        try {
+            const res = await axiosInstance.get('/api/asset-record/listAll', {
+                params: {
+                    assetNameIdList: queryParams.assetNameIdList?.length ? queryParams.assetNameIdList : undefined,
+                    assetLocationIdList: queryParams.assetLocationIdList?.length ? queryParams.assetLocationIdList : undefined,
+                    assetTypeIdList: queryParams.assetTypeIdList?.length ? queryParams.assetTypeIdList : undefined,
+                    startDate: queryParams.startDate ? queryParams.startDate + 'T00:00:00' : undefined,
+                    endDate: queryParams.endDate ? queryParams.endDate + 'T23:59:59' : undefined,
+                    remark: queryParams.remark?.trim() || undefined
+                },
+                signal: controller.signal,
+                paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
+            })
+
+            if (res.data.success) {
+                const raw = res.data.data || []
+                return await Promise.all(raw.map(formatAssetRecord))
+            } else {
+                throw new Error(res.data.message || '获取全部记录失败')
+            }
+        } catch (err: any) {
+            if (err?.code === 'ERR_CANCELED') return []
+            console.error('[获取全部资产记录(独立)] 出错:', err)
+            throw err
+        } finally {
+            controller.abort()
+        }
+    }
+
     return {
         list,
         allList,
@@ -260,6 +302,7 @@ export const useAssetStore = defineStore('asset', () => {
         recordCount,
         loadList,
         loadAllRecords,
+        loadAllRecordsIndependent, // 新增导出
         updateQuery,
         setPageNo,
         setPageSize,
