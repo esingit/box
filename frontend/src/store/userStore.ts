@@ -1,3 +1,4 @@
+// src/store/userStore.ts
 import { defineStore } from 'pinia'
 import axios, { AxiosInstance } from 'axios'
 import type { Router } from 'vue-router'
@@ -78,7 +79,6 @@ export const useUserStore = defineStore('user', {
                 return state.user.lastLoginTime
             }
         },
-        // 方便判断是否登录
         isAuthenticated: state => state.isLoggedIn && !!state.token,
     },
 
@@ -101,11 +101,15 @@ export const useUserStore = defineStore('user', {
 
         async hydrate(): Promise<boolean> {
             if (this.isInitialized) {
+                console.log('hydrate 已初始化，isLoggedIn:', this.isLoggedIn)
                 return this.isLoggedIn
             }
 
             this.token = tokenService.getToken()
+            console.log('hydrate token:', this.token)
+
             if (!this.token) {
+                console.log('无token，清除登录状态')
                 await this.clearAuth(false)
                 this.isInitialized = true
                 return false
@@ -115,18 +119,23 @@ export const useUserStore = defineStore('user', {
 
             try {
                 const valid = await this.verifyToken()
+                console.log('verifyToken 结果:', valid)
                 if (!valid) {
+                    console.log('token无效，清除登录状态')
                     await this.clearAuth(false)
                     this.isInitialized = true
                     return false
                 }
 
-                if (!this.user || Object.keys(this.user).length === 0) {
-                    await this.fetchUser()
-                }
+                // 等待 fetchUser 完成，确保用户信息加载
+                await this.fetchUser()
+
+                const loggedIn = this.isLoggedIn
+                console.log('hydrate 完成，isLoggedIn:', loggedIn)
                 this.isInitialized = true
-                return true
-            } catch {
+                return loggedIn
+            } catch (e) {
+                console.error('hydrate异常', e)
                 await this.clearAuth(false)
                 this.isInitialized = true
                 return false
@@ -179,6 +188,7 @@ export const useUserStore = defineStore('user', {
                 return
             }
 
+            // 如果已登录且有用户数据，直接返回
             if (this.user && Object.keys(this.user).length > 0 && this.isLoggedIn) {
                 return
             }
@@ -186,15 +196,18 @@ export const useUserStore = defineStore('user', {
             this.initApiClient()
             try {
                 const res = await this.apiClient!.get<ApiResponse<User>>('/profile')
+                console.log('fetchUser res:', res)
                 if (res.data.success && res.data.data) {
                     this.user = res.data.data
                     localStorage.setItem('user', JSON.stringify(this.user))
                     this.isLoggedIn = true
                 } else {
+                    console.log('fetchUser失败，清除登录')
                     this.user = {}
                     await this.clearAuth(false)
                 }
-            } catch {
+            } catch (e) {
+                console.error('fetchUser异常', e)
                 this.user = {}
                 await this.clearAuth(false)
             }
@@ -246,24 +259,6 @@ export const useUserStore = defineStore('user', {
                 await this.apiClient!.post('/logout')
             } catch (error) {
                 console.warn('登出API调用失败', error)
-            }
-        },
-
-        async fetchCaptcha(): Promise<{ imageUrl: string; captchaId: string } | null> {
-            try {
-                const { data } = await axios.get('/api/captcha', {
-                    params: { t: Date.now() },
-                });
-
-                const { captchaId, captchaUrl } = data;
-
-                return {
-                    captchaId,
-                    imageUrl: `/api${captchaUrl}`,
-                };
-            } catch (error) {
-                console.error('获取验证码失败:', error);
-                return null;
             }
         },
 
@@ -327,6 +322,5 @@ export const useUserStore = defineStore('user', {
                 }
             }
         }
-
     }
 })

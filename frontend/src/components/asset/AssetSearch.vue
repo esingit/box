@@ -48,16 +48,14 @@
     <!-- 更多条件 -->
     <div v-if="showMore" class="flex flex-col md:flex-row md:items-center md:gap-3 gap-2">
       <!-- 日期范围，改为使用 BaseDateInput -->
-      <div>
         <BaseDateInput
             v-model="rangeValue"
             type="date"
             range
             clearable
-            class="w-[525px]"
+            class="w-full"
             placeholder="请选择日期范围"
         />
-      </div>
 
       <!-- 备注关键词 -->
       <BaseInput

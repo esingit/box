@@ -16,16 +16,14 @@
       </div>
 
       <!-- 日期范围 -->
-      <div class="flex gap-2 items-center flex-shrink-0">
-        <BaseDateInput
-            v-model="rangeValue"
-            type="date"
-            range
-            clearable
-            placeholder="请选择日期范围"
-            class="w-[320px]"
-        />
-      </div>
+      <BaseDateInput
+          v-model="rangeValue"
+          type="date"
+          range
+          clearable
+          placeholder="请选择日期范围"
+          class="w-full"
+      />
 
       <!-- 按钮组 -->
       <div class="flex gap-2 flex-shrink-0 ml-auto">
