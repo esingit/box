@@ -44,13 +44,13 @@
 
     <!-- 统计信息 -->
     <div v-if="hasData" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-      <div class="bg-purple-50 p-3 rounded-lg">
-        <div class="text-purple-600 font-medium">日期范围</div>
-        <div class="text-lg font-bold text-purple-800">{{ dateRangeDisplay }}</div>
-      </div>
       <div class="bg-green-50 p-3 rounded-lg">
         <div class="text-green-600 font-medium">运动天数</div>
         <div class="text-lg font-bold text-green-800">{{ exerciseDaysCount }}</div>
+      </div>
+      <div class="bg-purple-50 p-3 rounded-lg">
+        <div class="text-purple-600 font-medium">蛋白质汇总</div>
+        <div class="text-lg font-bold text-purple-800">{{ proteinCount }}g</div>
       </div>
       <div class="bg-blue-50 p-3 rounded-lg">
         <div class="text-blue-600 font-medium">俯卧撑总数</div>
@@ -825,10 +825,28 @@ const pushUpCount = computed(() => {
     return sum + (isNaN(count) ? 0 : count)
   }, 0)
 })
-</script>
 
-<style scoped>
-.chart-container {
-  transition: all 0.3s ease;
-}
-</style>
+// 计算蛋白质总量
+const proteinCount = computed(() => {
+  if (!fitnessRecords.value?.length || !props.fitnessTypeOptions?.length) {
+    return 0
+  }
+
+  return fitnessRecords.value.filter(record => {
+    if (!record || !record.typeId) return false
+
+    // 通过typeId找到对应的健身类型
+    const fitnessType = props.fitnessTypeOptions.find(type =>
+        String(type.value) === String(record.typeId) || String(type.id) === String(record.typeId)
+    )
+
+    // 检查是否为蛋白质类型（根据您的数据结构调整条件）
+    // 这里假设蛋白质类型的 key1 === 'PROTEIN' 或者 value1 包含"蛋白"
+    return fitnessType?.key1 === 'PROTEIN' ||
+        fitnessType?.value1?.includes('蛋白')
+  }).reduce((sum, record) => {
+    const count = Number(record.count || 0)
+    return sum + (isNaN(count) ? 0 : count)
+  }, 0)
+})
+</script>
