@@ -10,18 +10,15 @@
 
     <!-- 错误状态 -->
     <div v-else-if="loadError" class="py-12 text-center">
-      <svg class="mx-auto w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
+      <AlertCircle class="mx-auto w-16 h-16 mb-4" />
       <h3 class="mb-2 text-lg font-semibold text-gray-800">数据加载失败</h3>
       <p class="mb-4 text-gray-600">{{ loadError }}</p>
-      <button
+      <BaseButton
+          type="button"
+          title="重新加载"
+          color="primary"
           @click="initializeData"
-          class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
-      >
-        重新加载
-      </button>
+      />
     </div>
 
     <!-- 主内容 -->
@@ -47,6 +44,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { AlertCircle } from 'lucide-vue-next'
 import { useMetaStore, type CommonMetaVO } from '@/store/metaStore'
 import { useAssetNameStore } from '@/store/assetNameStore'
 
