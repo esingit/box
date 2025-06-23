@@ -54,7 +54,7 @@
             type="date"
             range
             clearable
-            class="w-[515px]"
+            class="w-[525px]"
             placeholder="请选择日期范围"
         />
       </div>

@@ -2,9 +2,9 @@
   <div class="bg-white rounded-xl p-6 hover:shadow-md w-full space-y-4">
     <h2 class="text-lg font-semibold mb-4">资产统计</h2>
 
-    <!-- 使用 AssetSearch 组件，传入独立的查询对象 -->
+    <!-- 使用 AssetSearch 组件替代原查询条件 -->
     <AssetSearch
-        :query="localSearchQuery"
+        :query="searchQuery"
         :asset-name-options="props.assetNameOptions"
         :asset-type-options="props.assetTypeOptions"
         :asset-location-options="props.assetLocationOptions"
@@ -144,11 +144,8 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const isChartReady = ref(false)
 
-// 独立的资产记录列表，不使用 store 中的共享数据
-const localAssetRecords = ref<AssetRecord[]>([])
-
-// 创建本地独立的查询对象，不影响其他页面
-const localSearchQuery = reactive<SearchQuery>({
+// 创建查询对象供 AssetSearch 组件使用
+const searchQuery = reactive<SearchQuery>({
   assetNameIdList: [],
   assetTypeIdList: [],
   assetLocationIdList: [],
@@ -256,9 +253,10 @@ const typeMapping = computed(() => createMapping(props.assetTypeOptions))
 const locationMapping = computed(() => createMapping(props.assetLocationOptions))
 const unitMapping = computed(() => createMapping(props.unitOptions, 'value1'))
 
-// 使用本地的资产记录而不是 store 中的
+// 基础数据
 const assetRecords = computed<AssetRecord[]>(() => {
-  return localAssetRecords.value
+  const list = assetStore.allList
+  return (list && Array.isArray(list) ? list : []) as AssetRecord[]
 })
 
 const allDates = computed(() => {
@@ -288,19 +286,19 @@ const hasData = computed(() => {
 })
 
 const hasSearchConditions = computed(() => {
-  return localSearchQuery.assetTypeIdList.length > 0 ||
-      localSearchQuery.assetNameIdList.length > 0 ||
-      localSearchQuery.assetLocationIdList.length > 0 ||
-      localSearchQuery.remark.trim() !== ''
+  return searchQuery.assetTypeIdList.length > 0 ||
+      searchQuery.assetNameIdList.length > 0 ||
+      searchQuery.assetLocationIdList.length > 0 ||
+      searchQuery.remark.trim() !== ''
 })
 
 const isDateRangeValid = computed(() => {
-  return localSearchQuery.startDate && localSearchQuery.endDate
+  return searchQuery.startDate && searchQuery.endDate
 })
 
 const dateRangeDisplay = computed(() => {
-  if (!localSearchQuery.startDate || !localSearchQuery.endDate) return ''
-  return `${localSearchQuery.startDate} ~ ${localSearchQuery.endDate}`
+  if (!searchQuery.startDate || !searchQuery.endDate) return ''
+  return `${searchQuery.startDate} ~ ${searchQuery.endDate}`
 })
 
 const emptyStateDescription = computed(() => {
@@ -382,7 +380,7 @@ const statisticsCards = computed(() => [
   }
 ])
 
-// 图表数据处理（保持原有逻辑）
+// 图表数据处理
 const formattedDates = computed(() => {
   return allDates.value.map(date => {
     const [year, month, day] = date.split('-')
@@ -652,8 +650,8 @@ async function initializeChart(): Promise<void> {
   }
 }
 
-// 使用 store 提供的独立方法加载数据
-async function loadLocalData(): Promise<void> {
+// 数据加载
+async function loadData(): Promise<void> {
   if (!isDateRangeValid.value) {
     showNotification('请选择有效的日期范围', 'error')
     return
@@ -663,22 +661,18 @@ async function loadLocalData(): Promise<void> {
   errorMessage.value = ''
 
   try {
-    // 构建查询参数
-    const queryParams = {
-      assetTypeIdList: localSearchQuery.assetTypeIdList.map(id => Number(id)),
-      assetNameIdList: localSearchQuery.assetNameIdList.map(id => Number(id)),
-      assetLocationIdList: localSearchQuery.assetLocationIdList.map(id => Number(id)),
-      startDate: localSearchQuery.startDate,
-      endDate: localSearchQuery.endDate,
-      remark: localSearchQuery.remark.trim()
-    }
+    assetStore.updateQuery({
+      assetTypeIdList: searchQuery.assetTypeIdList.map(id => Number(id)),
+      assetNameIdList: searchQuery.assetNameIdList.map(id => Number(id)),
+      assetLocationIdList: searchQuery.assetLocationIdList.map(id => Number(id)),
+      startDate: searchQuery.startDate,
+      endDate: searchQuery.endDate,
+      remark: searchQuery.remark.trim()
+    })
 
-    // 使用 store 的独立方法获取数据，不影响 store 的状态
-    const data = await assetStore.loadAllRecordsIndependent(queryParams)
-    localAssetRecords.value = data || []
+    await assetStore.loadAllRecords()
 
     await nextTick()
-
     if (hasData.value) {
       showNotification('资产数据加载成功', 'success')
       await initializeChart()
@@ -695,22 +689,22 @@ async function loadLocalData(): Promise<void> {
 // 处理来自 AssetSearch 组件的搜索事件
 async function handleSearchFromComponent(query: SearchQuery): Promise<void> {
   // 查询对象已经通过双向绑定更新，直接加载数据即可
-  await loadLocalData()
+  await loadData()
 }
 
 // 处理来自 AssetSearch 组件的重置事件
 async function handleResetFromComponent(): Promise<void> {
   // 重置查询条件
-  localSearchQuery.assetNameIdList = []
-  localSearchQuery.assetTypeIdList = []
-  localSearchQuery.assetLocationIdList = []
-  localSearchQuery.remark = ''
+  searchQuery.assetNameIdList = []
+  searchQuery.assetTypeIdList = []
+  searchQuery.assetLocationIdList = []
+  searchQuery.remark = ''
 
   // 重置日期范围到默认值
   const defaultRange = getDefaultRange()
   const [startDate, endDate] = defaultRange.split(' ~ ')
-  localSearchQuery.startDate = startDate
-  localSearchQuery.endDate = endDate
+  searchQuery.startDate = startDate
+  searchQuery.endDate = endDate
 
   // 重置图表选项
   Object.assign(chartOptions, {
@@ -721,8 +715,8 @@ async function handleResetFromComponent(): Promise<void> {
   })
 
   errorMessage.value = ''
-  localAssetRecords.value = []
-  await loadLocalData()
+  assetStore.allList = []
+  await loadData()
 }
 
 // 生命周期
@@ -733,10 +727,10 @@ onMounted(async () => {
   // 设置默认日期范围
   const defaultRange = getDefaultRange()
   const [startDate, endDate] = defaultRange.split(' ~ ')
-  localSearchQuery.startDate = startDate
-  localSearchQuery.endDate = endDate
+  searchQuery.startDate = startDate
+  searchQuery.endDate = endDate
 
-  await loadLocalData()
+  await loadData()
   window.addEventListener('resize', resizeChart)
 })
 
@@ -756,13 +750,16 @@ watch(
     { deep: true }
 )
 
-// 监听本地资产记录变化
-watch(localAssetRecords, async () => {
-  if (isChartReady.value && !isLoading.value) {
-    await nextTick()
-    await initializeChart()
-  }
-}, { deep: true })
+watch(
+    () => assetStore.allList,
+    async () => {
+      if (isChartReady.value && !isLoading.value) {
+        await nextTick()
+        await initializeChart()
+      }
+    },
+    { deep: true }
+)
 
 watch(chartRef, async (newRef) => {
   if (newRef && isChartReady.value && hasData.value && !isLoading.value) {
@@ -771,11 +768,11 @@ watch(chartRef, async (newRef) => {
   }
 })
 
-// 监听 localSearchQuery 中的 assetTypeIdList 变化，清空 assetNameIdList
+// 监听 searchQuery 中的 assetTypeIdList 变化，清空 assetNameIdList
 watch(
-    () => localSearchQuery.assetTypeIdList,
+    () => searchQuery.assetTypeIdList,
     () => {
-      localSearchQuery.assetNameIdList = []
+      searchQuery.assetNameIdList = []
     }
 )
 </script>
