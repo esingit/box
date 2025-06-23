@@ -1,5 +1,4 @@
-
-
+<!--src/components/dashboard/Dashboard.vue-->
 <template>
   <div class="min-h-screen max-w-6xl mx-auto bg-gray-50 rounded-xl flex flex-col space-y-8">
     <!-- 加载状态 -->
@@ -10,7 +9,7 @@
 
     <!-- 错误状态 -->
     <div v-else-if="loadError" class="py-12 text-center">
-      <AlertCircle class="mx-auto w-16 h-16 mb-4" />
+      <AlertCircle class="mx-auto w-16 h-16 mb-4"/>
       <h3 class="mb-2 text-lg font-semibold text-gray-800">数据加载失败</h3>
       <p class="mb-4 text-gray-600">{{ loadError }}</p>
       <BaseButton
@@ -25,8 +24,8 @@
     <div v-else class="grid gap-6">
       <FitnessStats
           :key="`fitness-${route.fullPath}`"
-          :unit-options="unitOptions"
-          :fitness-type-options="fitnessTypeOptions"
+          :unitOptions="unitOptions"
+          :fitnessTypeOptions="fitnessTypeOptions"
       />
 
       <AssetStats
@@ -41,15 +40,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { storeToRefs } from 'pinia'
-import { AlertCircle } from 'lucide-vue-next'
-import { useMetaStore, type CommonMetaVO } from '@/store/metaStore'
-import { useAssetNameStore } from '@/store/assetNameStore'
+import {computed, onMounted, ref} from 'vue'
+import {useRoute} from 'vue-router'
+import {storeToRefs} from 'pinia'
+import {AlertCircle} from 'lucide-vue-next'
+import {useMetaStore} from '@/store/metaStore'
+import {useAssetNameStore} from '@/store/assetNameStore'
 
 import FitnessStats from './components/FitnessStats.vue'
 import AssetStats from './components/AssetStats.vue'
+
+// 类型定义，仅传入组件用 label/value
+interface Option {
+  label: string
+  value: string | number
+}
 
 const route = useRoute()
 const metaStore = useMetaStore()
@@ -58,40 +63,36 @@ const assetNameStore = useAssetNameStore()
 const isLoading = ref(true)
 const loadError = ref('')
 
-// 通用映射函数，返回 CommonMetaVO[]
-function mapToCommonMetaVO(list: any[] | undefined, typeCode = '', typeName = ''): CommonMetaVO[] {
-  if (!list || !Array.isArray(list)) return []
-  return list
-      .filter(item => item && item.id && (item.value1 || item.name))
+/** 公共映射函数：元数据 => Option[] */
+function mapToOption(arr: any[] | undefined): Option[] {
+  if (!arr || !Array.isArray(arr)) return []
+  return arr
+      .filter(item => item && item.id && item.value1)
       .map(item => ({
-        id: item.id,
-        typeCode: item.typeCode || typeCode,
-        typeName: item.typeName || typeName,
+        label: item.value1,
         value: item.id,
-        label: item.value1 || item.name || '',
-        key1: item.key1,
-        key2: item.key2,
-        key3: item.key3,
-        key4: item.key4,
-        value1: item.value1,
-        value2: item.value2,
-        value3: item.value3,
-        value4: item.value4,
       }))
 }
 
-// 各类选项（typeMap 是 Record<string, CommonMetaVO[]>）
-const unitOptions = computed<CommonMetaVO[]>(() => metaStore.getOptions('UNIT'))
-const fitnessTypeOptions = computed<CommonMetaVO[]>(() => metaStore.getOptions('FITNESS_TYPE'))
-const assetTypeOptions = computed<CommonMetaVO[]>(() => metaStore.getOptions('ASSET_TYPE'))
-const assetLocationOptions = computed<CommonMetaVO[]>(() => metaStore.getOptions('ASSET_LOCATION'))
+// 基础选项：单位、健身类型、资产类型、资产位置（都用 Option[]）
+const unitOptions = computed<Option[]>(() => mapToOption(metaStore.typeMap?.UNIT))
+const fitnessTypeOptions = computed<Option[]>(() => mapToOption(metaStore.typeMap?.FITNESS_TYPE))
+const assetTypeOptions = computed<Option[]>(() => mapToOption(metaStore.typeMap?.ASSET_TYPE))
+const assetLocationOptions = computed<Option[]>(() => mapToOption(metaStore.typeMap?.ASSET_LOCATION))
 
-// 资产名称选项（来自 assetNameStore 里 assetName）
-const { assetName } = storeToRefs(assetNameStore)
-const assetNameOptions = computed<CommonMetaVO[]>(() =>
-    mapToCommonMetaVO(assetName.value, 'ASSET_NAME', '资产名称')
-)
+// 资产名称选项（来自 store 的 assetName 数据）
+const {assetName} = storeToRefs(assetNameStore)
+const assetNameOptions = computed<Option[]>(() => {
+  if (!assetName.value || !Array.isArray(assetName.value)) return []
+  return assetName.value
+      .filter(item => item && item.id && item.name)
+      .map(item => ({
+        label: item.name,
+        value: item.id,
+      }))
+})
 
+// 初始化函数
 async function initializeData() {
   isLoading.value = true
   loadError.value = ''

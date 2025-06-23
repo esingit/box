@@ -1,3 +1,4 @@
+<!--src/components/dashboard/components/FitnessStats.vue-->
 <template>
   <div class="bg-white rounded-xl p-6 hover:shadow-md w-full space-y-4">
     <h2 class="text-lg font-semibold">健身统计</h2>
@@ -101,7 +102,6 @@ import {useFitnessStore} from '@/store/fitnessStore'
 import {useChart, useDateRange} from '@/utils/common'
 import emitter from '@/utils/eventBus'
 import type {EChartsOption} from 'echarts'
-import {CommonMetaVO} from "@/store/metaStore";
 
 interface FitnessRecord {
   id: string
@@ -115,10 +115,21 @@ interface FitnessRecord {
 // 常量
 const EXERCISE_TYPE_KEY = 'EXERCISE'
 
-// Props
+// 定义 Option 接口
+interface Option {
+  label: string
+  value: string | number
+  id?: string | number      // 添加 id 属性
+  value1?: string           // 添加 value1 属性
+  key1?: string            // 添加 key1 属性
+  key2?: string            // 添加 key2 属性
+  key3?: string            // 添加 key3 属性
+}
+
+// 修改 Props 定义
 const props = defineProps<{
-  fitnessTypeOptions: CommonMetaVO[]
-  unitOptions: CommonMetaVO[]
+  fitnessTypeOptions: Option[]  // 改为 Option[]
+  unitOptions: Option[]         // 改为 Option[]
 }>()
 
 // Composables
@@ -459,7 +470,11 @@ const chartSeries = computed(() => {
                 const {value, dataIndex} = params
                 if (value <= 0) return ''
                 const date = allDates.value[dataIndex]
-                return formatValueWithUnit(value, typeId, date)
+                // 确保 typeId 不是 undefined
+                if (typeId !== undefined) {
+                  return formatValueWithUnit(value, typeId, date)
+                }
+                return formatValue(value)  // 如果 typeId 是 undefined，只返回格式化的数值
               }
             } : undefined,
             emphasis: {
@@ -527,8 +542,8 @@ const echartConfig = computed(() => {
             if (param.value > 0) {
               // 从系列中查找 typeId
               const series = chartSeries.value.find(s => s.name === param.seriesName)
-              if (series && series.typeId) {
-                const typeId = series.typeId
+              if (series && series.typeId !== undefined) {
+                const typeId = series.typeId as string | number  // 添加类型断言
 
                 // 获取该类型在该日期的单位
                 const unit = getRecordUnit(typeId, date)
@@ -538,16 +553,16 @@ const echartConfig = computed(() => {
                 const displayValue = unit ? `${formattedValue}${unit}` : formattedValue
 
                 result += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 3px">
-                  <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
-                  <span>${param.seriesName}: <strong>${displayValue}</strong></span>
-                </div>`
+          <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
+              <span>${param.seriesName}: <strong>${displayValue}</strong></span>
+          </div>`
               } else {
                 // 如果找不到对应的系列，显示不带单位的数值
                 const formattedValue = formatValue(param.value)
                 result += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 3px">
-                  <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
-                  <span>${param.seriesName}: <strong>${formattedValue}</strong></span>
-                </div>`
+        <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
+        <span>${param.seriesName}: <strong>${formattedValue}</strong></span>
+      </div>`
               }
             }
           })

@@ -103,12 +103,23 @@ interface SearchQuery {
   remark: string
 }
 
+// 定义 Option 接口
+interface Option {
+  label: string
+  value: string | number
+  id?: string | number      // 添加 id 属性
+  value1?: string           // 添加 value1 属性
+  key1?: string            // 添加 key1 属性
+  key2?: string            // 添加 key2 属性
+  key3?: string            // 添加 key3 属性
+}
+
 // Props
 const props = defineProps<{
-  assetNameOptions: CommonMetaVO[]
-  assetTypeOptions: CommonMetaVO[]
-  assetLocationOptions: CommonMetaVO[]
-  unitOptions: UnitOption[]
+  assetNameOptions: Option[]
+  assetTypeOptions: Option[]
+  assetLocationOptions: Option[]
+  unitOptions: Option[]
 }>()
 
 // Composables
