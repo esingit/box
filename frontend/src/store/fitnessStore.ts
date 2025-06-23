@@ -6,10 +6,25 @@ import qs from 'qs'
 import {formatFitnessRecord} from '@/utils/commonMeta'
 import {formatTime} from '@/utils/formatters'
 
+// 添加本地存储的 key，用于持久化查询条件
+const QUERY_STORAGE_KEY = 'fitness_query_conditions'
+
 export const useFitnessStore = defineStore('fitness', () => {
     // --- 状态 ---
     const list = ref<any[]>([])
     const allList = ref<any[]>([])
+
+    // 从本地存储恢复查询条件
+    const getSavedQuery = () => {
+        try {
+            const saved = localStorage.getItem(QUERY_STORAGE_KEY)
+            return saved ? JSON.parse(saved) : {}
+        } catch {
+            return {}
+        }
+    }
+
+    // 初始化查询条件，并从本地存储恢复
     const query = reactive<{
         typeIdList: number[]
         startDate: string
@@ -19,7 +34,8 @@ export const useFitnessStore = defineStore('fitness', () => {
         typeIdList: [],
         startDate: '',
         endDate: '',
-        remark: ''
+        remark: '',
+        ...getSavedQuery() // 恢复保存的查询条件
     })
 
     const pagination = reactive({
@@ -28,8 +44,9 @@ export const useFitnessStore = defineStore('fitness', () => {
         total: 0
     })
 
+    // 统一列表加载状态，移除 loadingAll
     const loadingList = ref(false)
-    const loadingAll = ref(false)
+    const loadingStats = ref(false) // 修复了原始代码中的重复声明
 
     const stats = reactive({
         monthlyCount: 0,
@@ -39,8 +56,8 @@ export const useFitnessStore = defineStore('fitness', () => {
         proteinIntake: 0,
         carbsIntake: 0
     })
-    const loadingStats = ref(false)
 
+    // 使用一个控制器管理所有列表查询（分页和全量）的取消
     let recordController: AbortController | null = null
     let statsController: AbortController | null = null
 
@@ -48,6 +65,16 @@ export const useFitnessStore = defineStore('fitness', () => {
     const recordCount = computed(() => pagination.total)
 
     // --- 内部函数 ---
+    // 保存查询条件到本地存储
+    function saveQueryToStorage() {
+        try {
+            localStorage.setItem(QUERY_STORAGE_KEY, JSON.stringify(query))
+        } catch (error) {
+            console.warn('Failed to save query to localStorage:', error)
+        }
+    }
+
+    // 构建查询参数，并对 remark 进行 trim() 处理
     function buildParams() {
         return {
             page: pagination.pageNo,
@@ -55,7 +82,7 @@ export const useFitnessStore = defineStore('fitness', () => {
             typeIdList: query.typeIdList.length > 0 ? query.typeIdList : undefined,
             startDate: query.startDate ? query.startDate + 'T00:00:00' : undefined,
             endDate: query.endDate ? query.endDate + 'T23:59:59' : undefined,
-            remark: query.remark || undefined
+            remark: query.remark.trim() || undefined
         }
     }
 
@@ -70,6 +97,7 @@ export const useFitnessStore = defineStore('fitness', () => {
 
     // --- 列表分页查询 ---
     async function loadList() {
+        // 如果有正在进行的列表请求，则取消它
         if (recordController) recordController.abort()
         recordController = new AbortController()
         loadingList.value = true
@@ -108,35 +136,47 @@ export const useFitnessStore = defineStore('fitness', () => {
         }
     }
 
-    // --- 查询全部记录（不分页） ---
+    // --- 查询全部记录（不分页），逻辑和参数与资金 store 对齐 ---
     async function loadAllRecords() {
-        loadingAll.value = true
+        // 如果有正在进行的列表请求，则取消它
+        if (recordController) recordController.abort()
+        recordController = new AbortController()
+        loadingList.value = true // 使用相同的加载状态
+
         try {
             const res = await axiosInstance.get('/api/fitness-record/listAll', {
                 params: {
                     typeIdList: query.typeIdList.length > 0 ? query.typeIdList : undefined,
                     startDate: query.startDate ? query.startDate + 'T00:00:00' : undefined,
                     endDate: query.endDate ? query.endDate + 'T23:59:59' : undefined,
-                    remark: query.remark || undefined
+                    remark: query.remark.trim() || undefined // 使用 trim()
                 },
+                signal: recordController.signal, // 添加 AbortController signal
                 paramsSerializer: params => qs.stringify(params, {arrayFormat: 'repeat'})
             })
 
             if (res.data.success) {
-                allList.value = await Promise.all(res.data.data.map(formatFitnessRecord))
+                const raw = res.data.data || [] // 确保数据为数组
+                allList.value = await Promise.all(raw.map(formatFitnessRecord))
+                // 更新分页信息以反映全量数据
+                pagination.total = raw.length
+                pagination.pageNo = 1
+                pagination.pageSize = raw.length || 10
             } else {
                 emitter.emit('notify', {message: res.data.message || '获取全部记录失败', type: 'error'})
             }
         } catch (err) {
             await handleError(err, '获取全部记录')
         } finally {
-            loadingAll.value = false
+            loadingList.value = false // 使用相同的加载状态
+            recordController = null
         }
     }
 
-    // --- 查询参数更新 ---
+    // --- 查询参数更新，增加持久化 ---
     function updateQuery(newQuery: Partial<typeof query>) {
         Object.assign(query, newQuery)
+        saveQueryToStorage() // 保存到本地存储
     }
 
     function setPageNo(page: number) {
@@ -148,12 +188,14 @@ export const useFitnessStore = defineStore('fitness', () => {
         pagination.pageNo = 1
     }
 
+    // --- 重置查询参数，增加持久化 ---
     function resetQuery() {
         query.typeIdList = []
         query.startDate = ''
         query.endDate = ''
         query.remark = ''
         pagination.pageNo = 1
+        saveQueryToStorage() // 保存到本地存储
     }
 
     // --- 统计 ---
@@ -180,18 +222,20 @@ export const useFitnessStore = defineStore('fitness', () => {
         }
     }
 
-    // --- 增删改 ---
+    // --- 增删改，调整逻辑使其与资金 store 一致（成功返回 true，失败抛出错误） ---
     async function addRecord(data: any) {
         try {
             const res = await axiosInstance.post('/api/fitness-record/add', formatTime(data))
             if (res.data.success) {
                 emitter.emit('notify', {message: '添加成功', type: 'success'})
-                await loadList()
+                await loadList() // 添加后重新加载列表
+                return true // 成功时返回 true
             } else {
-                emitter.emit('notify', {message: res.data.message || '添加失败', type: 'error'})
+                throw new Error(res.data.message || '添加失败') // 失败时抛出错误
             }
-        } catch (err) {
+        } catch (err: any) {
             await handleError(err, '添加记录')
+            throw err // 重新抛出错误
         }
     }
 
@@ -200,12 +244,14 @@ export const useFitnessStore = defineStore('fitness', () => {
             const res = await axiosInstance.put('/api/fitness-record/update', formatTime(data))
             if (res.data.success) {
                 emitter.emit('notify', {message: '更新成功', type: 'success'})
-                await loadList()
+                await loadList() // 更新后重新加载列表
+                return true // 成功时返回 true
             } else {
-                emitter.emit('notify', {message: res.data.message || '更新失败', type: 'error'})
+                throw new Error(res.data.message || '更新失败') // 失败时抛出错误
             }
-        } catch (err) {
+        } catch (err: any) {
             await handleError(err, '更新记录')
+            throw err // 重新抛出错误
         }
     }
 
@@ -214,12 +260,13 @@ export const useFitnessStore = defineStore('fitness', () => {
             const res = await axiosInstance.delete(`/api/fitness-record/delete/${id}`)
             if (res.data.success) {
                 emitter.emit('notify', {message: '删除成功', type: 'success'})
-                await loadList()
+                await loadList() // 删除后重新加载列表
             } else {
-                emitter.emit('notify', {message: res.data.message || '删除失败', type: 'error'})
+                throw new Error(res.data.message || '删除失败') // 失败时抛出错误
             }
-        } catch (err) {
+        } catch (err: any) {
             await handleError(err, '删除记录')
+            throw err // 重新抛出错误
         }
     }
 
@@ -229,7 +276,6 @@ export const useFitnessStore = defineStore('fitness', () => {
         query,
         pagination,
         loadingList,
-        loadingAll,
         stats,
         loadingStats,
         hasRecords,

@@ -4,8 +4,8 @@
 
     <!-- 使用健身查询组件替换原有查询条件 -->
     <FitnessSearch
-        :query="searchQuery"
-        :fitness-type-options="fitnessTypeOptions"
+        :query="query"
+        :fitness-type-options="props.fitnessTypeOptions"
         :result-count="fitnessRecords.length"
         @search="handleSearchFromComponent"
         @reset="handleResetFromComponent"
@@ -94,6 +94,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
+import {storeToRefs} from 'pinia'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import FitnessSearch from '@/components/fitness/FitnessSearch.vue'
 import {useFitnessStore} from '@/store/fitnessStore'
@@ -122,6 +123,8 @@ const props = defineProps<{
 
 // Composables
 const fitnessStore = useFitnessStore()
+const {query, allList} = storeToRefs(fitnessStore)
+
 const {
   getDefaultRange,
   parseDateRange
@@ -259,17 +262,15 @@ const hasData = computed(() => {
 
 // 检查是否有搜索条件
 const hasSearchConditions = computed(() => {
-  return searchQuery.typeIdList.length > 0 || searchQuery.remark.trim() !== ''
+  return query.value.typeIdList.length > 0 || query.value.remark.trim() !== ''
 })
 
-// 日期范围显示
 const dateRangeDisplay = computed(() => {
-  return formatDateRange(searchQuery.startDate, searchQuery.endDate)
+  return formatDateRange(query.value.startDate, query.value.endDate)
 })
 
-// 空状态描述
 const emptyStateDescription = computed(() => {
-  if (!searchQuery.startDate || !searchQuery.endDate) {
+  if (!query.value.startDate || !query.value.endDate) {
     return '请选择日期范围查看健身数据'
   }
   if (hasSearchConditions.value) {
@@ -278,14 +279,13 @@ const emptyStateDescription = computed(() => {
   return `${dateRangeDisplay.value}期间暂无健身记录，开始您的健身之旅吧！`
 })
 
-// 获取有效的健身类型列表
 const effectiveTypeIds = computed(() => {
   if (!props.fitnessTypeOptions || !Array.isArray(props.fitnessTypeOptions)) {
     return []
   }
 
-  return searchQuery.typeIdList.length > 0
-      ? searchQuery.typeIdList
+  return query.value.typeIdList.length > 0
+      ? query.value.typeIdList
       : props.fitnessTypeOptions.map(item => item.value || item.id)
 })
 
@@ -684,7 +684,7 @@ async function initializeChart(): Promise<void> {
 
 // 数据加载
 async function loadData(): Promise<void> {
-  if (!searchQuery.startDate || !searchQuery.endDate) {
+  if (!query.value.startDate || !query.value.endDate) {
     showNotification('请选择有效的日期范围', 'error')
     return
   }
@@ -693,13 +693,6 @@ async function loadData(): Promise<void> {
   errorMessage.value = ''
 
   try {
-    fitnessStore.updateQuery({
-      typeIdList: effectiveTypeIds.value.map(id => Number(id)),
-      startDate: searchQuery.startDate,
-      endDate: searchQuery.endDate,
-      remark: searchQuery.remark.trim()
-    })
-
     await fitnessStore.loadAllRecords()
 
     await nextTick()
@@ -717,33 +710,30 @@ async function loadData(): Promise<void> {
 }
 
 // 处理 FitnessSearch 组件的搜索事件
-async function handleSearchFromComponent(query: typeof searchQuery): Promise<void> {
-  // 更新搜索查询状态
-  Object.assign(searchQuery, query)
+async function handleSearchFromComponent(newQuery: typeof query.value) {
+  fitnessStore.updateQuery(newQuery)
   await loadData()
 }
 
-// 处理 FitnessSearch 组件的重置事件
-async function handleResetFromComponent(): Promise<void> {
-  // 重置搜索查询状态
-  searchQuery.typeIdList = []
-  searchQuery.startDate = ''
-  searchQuery.endDate = ''
-  searchQuery.remark = ''
+async function handleResetFromComponent() {
+  fitnessStore.resetQuery()
 
-  // 重置图表选项
+  // 设置默认日期范围
+  const defaultRange = getDefaultRange()
+  const {startDate, endDate} = parseDateRange(defaultRange)
+  fitnessStore.updateQuery({
+    ...fitnessStore.query,
+    typeIdList: [],
+    remark: '',
+    startDate,
+    endDate,
+  })
+
   chartOptions.showDataLabels = false
   chartOptions.showAreaFill = true
   chartOptions.smoothCurve = true
   errorMessage.value = ''
 
-  // 设置默认日期范围
-  const defaultRange = getDefaultRange()
-  const {startDate, endDate} = parseDateRange(defaultRange)
-  searchQuery.startDate = startDate
-  searchQuery.endDate = endDate
-
-  fitnessStore.resetQuery()
   await loadData()
 }
 
@@ -759,20 +749,18 @@ onMounted(async () => {
   await nextTick()
   isChartReady.value = true
 
-  // 初始化默认日期范围
-  const defaultRange = getDefaultRange()
-  const {startDate, endDate} = parseDateRange(defaultRange)
-  searchQuery.startDate = startDate
-  searchQuery.endDate = endDate
+  if (!query.value.startDate || !query.value.endDate) {
+    const defaultRange = getDefaultRange()
+    const {startDate, endDate} = parseDateRange(defaultRange)
+    fitnessStore.updateQuery({
+      ...query.value,
+      startDate,
+      endDate
+    })
+  }
 
   await loadData()
-
   window.addEventListener('resize', resizeChart)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', resizeChart)
-  destroyChart()
 })
 
 // 监听图表选项变化
