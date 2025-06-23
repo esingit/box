@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-6 max-w-6xl mx-auto flex flex-col space-y-8 rounded-xl">
+  <div class="min-h-screen bg-gray-50 p-6 max-w-6xl mx-auto flex flex-col space-y-6 rounded-xl">
     <!-- 统计卡片 -->
     <section class="bg-white rounded-xl hover:shadow-md p-6">
-      <header class="flex justify-between items-center mb-3">
+      <header class="flex justify-between items-center">
         <h2 class="text-xl font-semibold text-gray-800">健身统计</h2>
         <BaseButton type="button" @click="refreshData" color="outline" :icon="LucideRefreshCw" class="w-7 h-7"/>
       </header>
@@ -37,7 +37,7 @@
     </section>
 
     <!-- 搜索和操作 -->
-    <section class="bg-white rounded-xl hover:shadow-md p-6 space-y-4">
+    <section class="bg-white rounded-xl hover:shadow-md p-4 space-y-4">
       <div class="flex justify-start">
         <BaseButton title="添加记录" @click="handleAdd" color="primary" :icon="LucidePlus"/>
       </div>

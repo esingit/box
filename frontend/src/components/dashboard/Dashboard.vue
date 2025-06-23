@@ -28,7 +28,7 @@
     </div>
 
     <!-- 主要内容 -->
-    <div v-else class="grid gap-12">
+    <div v-else class="grid gap-6">
       <!-- 健身统计组件 -->
       <FitnessStats
           :key="`fitness-${route.fullPath}`"

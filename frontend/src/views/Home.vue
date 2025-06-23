@@ -9,7 +9,7 @@
     />
     <h1 class="text-2xl font-bold">BOX</h1>
   </header>
-  <div v-if="isLoggedIn" class="bg-gray-50 rounded-xl p-6 w-full space-y-4">
+  <div v-if="isLoggedIn" class="min-h-screen bg-gray-50 p-6 max-w-6xl mx-auto flex flex-col space-y-6 rounded-xl">
     <main class="flex-1 overflow-auto">
       <!-- 用户已登录时显示看板 -->
       <Dashboard/>
