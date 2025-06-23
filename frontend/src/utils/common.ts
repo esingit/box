@@ -1,5 +1,5 @@
 // src/utils/common.ts
-import { ref, computed,nextTick } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import * as echarts from 'echarts'
 
 export function useDateRange() {
@@ -55,10 +55,10 @@ export function useChart() {
 
         await nextTick()
 
-        // 销毁旧实例
-        destroyChart()
+        // ✅ Patch wheel listeners to passive to silence DevTools warnings
+        patchEChartsWheelListener(chartRef.value)
 
-        // 创建新实例
+        destroyChart()
         chartInstance = echarts.init(chartRef.value)
         chartInstance.setOption(options, true)
         chartInstance.resize()
@@ -82,5 +82,27 @@ export function useChart() {
         initChart,
         destroyChart,
         resizeChart
+    }
+}
+
+/**
+ * 修复 ECharts 默认绑定 wheel/mousewheel 事件没有 passive:true 的性能警告
+ */
+function patchEChartsWheelListener(el: HTMLElement) {
+    const rawAddEventListener = el.addEventListener
+
+    el.addEventListener = function (
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        options?: boolean | AddEventListenerOptions
+    ) {
+        if (type === 'wheel' || type === 'mousewheel') {
+            if (typeof options === 'boolean') {
+                options = { passive: true }
+            } else {
+                options = Object.assign({}, options, { passive: true })
+            }
+        }
+        rawAddEventListener.call(this, type, listener, options)
     }
 }

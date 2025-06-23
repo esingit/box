@@ -3,6 +3,7 @@
     <component
         :is="isTextareaType ? 'textarea' : 'input'"
         ref="inputRef"
+        v-bind="$attrs"
         :value="inputDisplayValue"
         :type="isTextareaType ? undefined : type"
         :placeholder="computedPlaceholder"
@@ -11,14 +12,13 @@
         :min="isNumberType ? min : undefined"
         :max="isNumberType ? max : undefined"
         :step="isNumberType ? step : undefined"
-        autocomplete="on"
         @input="handleInput"
         @blur="validate"
         class="input-base pr-12 appearance-none"
         :class="{
         'msg-error': showError,
         'min-h-[80px] resize-y': isTextareaType
-      }"
+        }"
     />
 
     <!-- 清除按钮（支持 textarea） -->
@@ -74,6 +74,7 @@
 </template>
 
 <script setup lang="ts">
+
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { LucideX, LucideChevronUp, LucideChevronDown } from 'lucide-vue-next'
 
@@ -129,6 +130,8 @@ const errorTooltip = computed(() =>
 const computedPlaceholder = computed(() =>
     props.placeholder || `请输入${props.title || '内容'}`
 )
+
+defineOptions({ inheritAttrs: false })
 
 watch(() => props.modelValue, (val) => {
   innerValue.value = val ?? ''

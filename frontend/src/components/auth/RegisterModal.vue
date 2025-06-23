@@ -4,26 +4,44 @@
     <form @submit.prevent="onSubmit" class="space-y-4">
       <div>
         <label class="modal-label">用户名</label>
-        <BaseInput v-model="username" placeholder="请输入用户名" />
+        <BaseInput
+            v-model="username"
+            placeholder="请输入用户名"
+            autocomplete="username"
+        />
         <p v-if="errors.username" class="msg-error">{{ errors.username }}</p>
       </div>
 
       <div>
         <label class="modal-label">密码</label>
-        <BaseInput v-model="password" type="password" placeholder="请输入密码" />
+        <BaseInput
+            v-model="password"
+            type="password"
+            placeholder="请输入密码"
+            autocomplete="new-password"
+        />
         <p v-if="errors.password" class="msg-error">{{ errors.password }}</p>
       </div>
 
       <div>
         <label class="modal-label">确认密码</label>
-        <BaseInput v-model="confirmPassword" type="password" placeholder="请再次输入密码" />
+        <BaseInput
+            v-model="confirmPassword"
+            type="password"
+            placeholder="请再次输入密码"
+            autocomplete="new-password"
+        />
         <p v-if="errors.confirmPassword" class="msg-error">{{ errors.confirmPassword }}</p>
       </div>
 
       <div v-if="needCaptcha">
         <label class="modal-label">验证码</label>
         <div class="flex items-center gap-2">
-          <BaseInput v-model="captcha" placeholder="请输入验证码" />
+          <BaseInput
+              v-model="captcha"
+              placeholder="请输入验证码"
+              autocomplete="off"
+          />
           <img
               :src="captchaUrl"
               @click="refreshCaptcha"
@@ -37,7 +55,13 @@
 
       <p v-if="error" class="msg-error">{{ error }}</p>
 
-      <BaseButton type="submit" color="primary" :icon="LucideUserPlus" :disabled="loading" class="w-full">
+      <BaseButton
+          type="submit"
+          color="primary"
+          :icon="LucideUserPlus"
+          :disabled="loading"
+          class="w-full"
+      >
         {{ loading ? '注册中...' : '注册' }}
       </BaseButton>
     </form>
@@ -74,6 +98,7 @@ import BaseInput from '@/components/base/BaseInput.vue'
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
   (e: 'switch-to-login'): void
+  (e: 'registerSuccess'): void
 }>()
 
 const props = defineProps<{ visible: boolean }>()

@@ -719,7 +719,6 @@ async function initializeChart(): Promise<void> {
     if (!chartRef.value) return
 
     await initChart(echartConfig.value)
-    console.log('Chart initialized successfully')
   } catch (error) {
     console.error('Failed to initialize chart:', error)
     errorMessage.value = '图表初始化失败'

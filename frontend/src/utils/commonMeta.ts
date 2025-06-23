@@ -1,31 +1,19 @@
 import axiosInstance from '@/api/axios'
-import axios from 'axios'
-import {useMetaStore} from '@/store/metaStore'
+import { useMetaStore } from '@/store/metaStore'
 
-// 缓存已获取的数据
 const cache = new Map<string | number, { typeName: string; value1: string }>()
 
 /**
- * 根据ID获取 CommonMeta 的值（带超时控制）
+ * 根据 ID 获取 CommonMeta 数据（带超时控制 + 缓存）
  */
 export async function getCommonMetaById(id: string | number): Promise<{ typeName: string; value1: string } | null> {
-    if (!id) {
-        console.debug('[CommonMeta] ID为空')
-        return null
-    }
+    if (!id) return null
+    if (cache.has(id)) return cache.get(id)!
 
-    if (cache.has(id)) {
-        const cached = cache.get(id)!
-        console.debug(`[CommonMeta] 命中缓存: ${id}`, cached)
-        return cached
-    }
-
-    // 超时控制（5秒）
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 5000)
 
     try {
-        console.debug(`[CommonMeta] 请求ID: ${id}`)
         const res = await axiosInstance.get(`/api/common-meta/by-id/${id}`, {
             signal: controller.signal
         })
@@ -33,29 +21,19 @@ export async function getCommonMetaById(id: string | number): Promise<{ typeName
 
         if (res.data?.success && res.data.data) {
             cache.set(id, res.data.data)
-            console.debug(`[CommonMeta] 成功获取: ${id}`, res.data.data)
             return res.data.data
         }
-
-        console.warn(`[CommonMeta] 数据为空或失败: ${id}`, res.data)
         return null
-    } catch (err: any) {
+    } catch {
         clearTimeout(timeout)
-        if (axios.isCancel(err)) {
-            console.debug(`[CommonMeta] 请求取消或超时: ${id}`)
-        } else {
-            console.error(`[CommonMeta] 请求失败: ${id}`, err)
-        }
         return null
     }
 }
-
 
 /**
  * 清除 CommonMeta 缓存
  */
 export function clearCommonMetaCache(): void {
-    console.debug('[CommonMeta] 缓存已清除')
     cache.clear()
 }
 
@@ -101,12 +79,7 @@ export async function formatAssetRecord<
         assetLocationValue?: string
     } & Record<string, any>
 >(record: T): Promise<T> {
-    if (!record) {
-        console.warn('[Asset] 记录为空')
-        return record
-    }
-
-    console.debug('[Asset] 格式化记录:', record)
+    if (!record) return record
 
     const [assetTypeValue, unitValue, assetLocationValue] = await Promise.all([
         formatValue(record.assetTypeId, record.assetTypeValue),
@@ -114,22 +87,18 @@ export async function formatAssetRecord<
         formatValue(record.assetLocationId, record.assetLocationValue)
     ])
 
-    const formatted = {
+    return {
         ...record,
         assetTypeValue,
         unitValue,
         assetLocationValue
     }
-
-    console.debug('[Asset] 格式化完成:', formatted)
-    return formatted
 }
 
 /**
  * 判断是否是合法的元数据 ID
  */
 function isValidMetaId(value: any): boolean {
-    // 通常 ID 为 number 或字符串形式的数字（如 '123'），防止传中文等非法值
     return (
         (typeof value === 'number' && !isNaN(value)) ||
         (typeof value === 'string' && /^\d+$/.test(value))
@@ -145,12 +114,7 @@ export async function formatAssetNameRecord<
         description: string | number
     } & Record<string, any>
 >(record: T): Promise<T> {
-    if (!record) {
-        console.warn('[AssetName] 记录为空')
-        return record
-    }
-
-    console.debug('[AssetName] 格式化记录:', record)
+    if (!record) return record
 
     const nameId = isValidMetaId(record.name) ? record.name : undefined
     const descriptionId = isValidMetaId(record.description) ? record.description : undefined
@@ -160,16 +124,16 @@ export async function formatAssetNameRecord<
         formatValue(descriptionId, String(record.description))
     ])
 
-    const formatted = {
+    return {
         ...record,
         name,
         description
     }
-
-    console.debug('[AssetName] 格式化完成:', formatted)
-    return formatted
 }
 
+/**
+ * 根据类型设置默认单位
+ */
 export async function setDefaultUnit(
     typeId: string,
     setFieldValue?: (field: string, value: any) => void,
@@ -185,9 +149,7 @@ export async function setDefaultUnit(
     const selectedType = types.find(type => String(type.id) === String(typeId))
 
     if (!selectedType?.key3) {
-        if (typeof setFieldValue === 'function') {
-            setFieldValue('unitId', '')
-        }
+        setFieldValue?.('unitId', '')
         return
     }
 
@@ -195,10 +157,7 @@ export async function setDefaultUnit(
     if (!defaultUnit) return
 
     const currentUnitId = values?.unitId
-
     if (!currentUnitId || String(currentUnitId) !== String(defaultUnit.id)) {
-        if (typeof setFieldValue === 'function') {
-            setFieldValue('unitId', defaultUnit.id)
-        }
+        setFieldValue?.('unitId', defaultUnit.id)
     }
 }

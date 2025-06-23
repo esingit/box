@@ -40,8 +40,6 @@ const REQUEST_TIMEOUT = 5 * 60 * 1000 // 5分钟超时
 function setupEventListeners() {
   if (eventListenerSetup) return
 
-  console.log('🟢 设置 show-login 事件监听')
-
   const handleShowLogin = () => {
     // 🔥 更严格的重复检查
     if (isShowingLoginModal.value) {
@@ -144,7 +142,6 @@ export function useAuth() {
 
   // 弹窗控制方法
   function showLogin(action?: AuthAction) {
-    console.log('🟢 showLogin called')
     if (action) {
       pendingAuthAction.value = action
     }
