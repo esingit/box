@@ -23,7 +23,7 @@
           :key="year"
           type="button"
           @click="selectYear(year)"
-          :class="['w-full text-left py-1 px-2 rounded hover:bg-blue-100', year === currentYear ? 'bg-blue-200 font-bold' : '']"
+          :class="['w-full text-left py-1 px-2 rounded hover:bg-gray-100', year === currentYear ? 'bg-gray-200 font-bold' : '']"
       >
         {{ year }}年
       </button>
@@ -36,7 +36,7 @@
           :key="m"
           type="button"
           @click="selectMonth(m - 1)"
-          :class="['w-full text-left py-1 px-2 rounded hover:bg-blue-100', m - 1 === currentMonth ? 'bg-blue-200 font-bold' : '']"
+          :class="['w-full text-left py-1 px-2 rounded hover:bg-gray-100', m - 1 === currentMonth ? 'bg-gray-200 font-bold' : '']"
       >
         {{ m }}月
       </button>

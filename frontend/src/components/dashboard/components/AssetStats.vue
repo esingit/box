@@ -66,18 +66,7 @@ import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import { useAssetStore } from '@/store/assetStore'
 import { useDateRange, useChart } from '@/utils/common'
 import emitter from '@/utils/eventBus'
-
-// 类型定义
-interface Option {
-  label: string
-  value: string | number
-  id?: string
-  name?: string
-  value1?: string
-  key1?: string
-  key2?: string
-  key3?: string
-}
+import type {CommonMetaVO} from "@/store/metaStore";
 
 interface UnitOption {
   id: string | number
@@ -116,9 +105,9 @@ interface SearchQuery {
 
 // Props
 const props = defineProps<{
-  assetNameOptions: Option[]
-  assetTypeOptions: Option[]
-  assetLocationOptions: Option[]
+  assetNameOptions: CommonMetaVO[]
+  assetTypeOptions: CommonMetaVO[]
+  assetLocationOptions: CommonMetaVO[]
   unitOptions: UnitOption[]
 }>()
 
@@ -849,20 +838,3 @@ watch(
     }
 )
 </script>
-
-<style scoped>
-.animate-fade {
-  animation: fadeIn 0.3s ease forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-</style>
