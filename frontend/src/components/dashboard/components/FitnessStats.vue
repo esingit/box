@@ -174,6 +174,18 @@ const CHART_COLORS = [
   '#8B9B8B', '#B8898B', '#89B8B8', '#A8A87B', '#9E7B8C', '#7B8C9E'
 ]
 
+// 防抖函数 - 修复 NodeJS.Timeout 类型错误
+function debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout>
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }
+}
+
 // 转换 fitnessTypeOptions 格式以适配 FitnessSearch 组件
 const fitnessTypeOptions = computed(() => {
   if (!props.fitnessTypeOptions || !Array.isArray(props.fitnessTypeOptions)) {
@@ -675,18 +687,38 @@ function showNotification(message: string, type: 'success' | 'error' | 'warning'
   emitter.emit('notify', {message, type})
 }
 
-// 初始化图表的函数
+// 初始化图表的函数 - 优化版本
 async function initializeChart(): Promise<void> {
   if (!isChartReady.value || !hasData.value || !echartConfig.value) {
     return
   }
 
   try {
+    // 等待 DOM 更新
     await nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // 增加等待时间和重试机制
+    let retryCount = 0
+    const maxRetries = 10
+    const retryDelay = 50
+
+    while (retryCount < maxRetries) {
+      if (chartRef.value) {
+        break
+      }
+      await new Promise(resolve => setTimeout(resolve, retryDelay))
+      retryCount++
+    }
 
     if (!chartRef.value) {
       console.warn('Chart container not found after waiting')
+      return
+    }
+
+    // 确保容器有尺寸
+    const rect = chartRef.value.getBoundingClientRect()
+    if (rect.width === 0 || rect.height === 0) {
+      console.warn('Chart container has no size')
       return
     }
 
@@ -696,6 +728,13 @@ async function initializeChart(): Promise<void> {
     errorMessage.value = '图表初始化失败'
   }
 }
+
+// 创建防抖版本的图表更新函数
+const debouncedUpdateChart = debounce(async () => {
+  if (hasData.value && echartConfig.value && !isLoading.value && isChartReady.value) {
+    await initializeChart()
+  }
+}, 200)
 
 // 数据加载
 async function loadData(): Promise<void> {
@@ -709,11 +748,14 @@ async function loadData(): Promise<void> {
 
   try {
     await fitnessStore.loadAllRecords()
-
     await nextTick()
+
     if (hasData.value) {
       showNotification('健身数据加载成功', 'success')
-      await initializeChart()
+      // 延迟初始化图表，确保 DOM 完全更新
+      setTimeout(async () => {
+        await initializeChart()
+      }, 150)
     }
   } catch (error) {
     console.error('Failed to load fitness data:', error)
@@ -751,60 +793,6 @@ async function handleResetFromComponent() {
 
   await loadData()
 }
-
-// 更新图表显示
-async function updateChart(): Promise<void> {
-  if (hasData.value && echartConfig.value && !isLoading.value && isChartReady.value) {
-    await initializeChart()
-  }
-}
-
-// 生命周期
-onMounted(async () => {
-  await nextTick()
-  isChartReady.value = true
-
-  if (!query.value.startDate || !query.value.endDate) {
-    const defaultRange = getDefaultRange()
-    const {startDate, endDate} = parseDateRange(defaultRange)
-    fitnessStore.updateQuery({
-      startDate,
-      endDate
-    })
-  }
-
-  await loadData()
-  window.addEventListener('resize', resizeChart)
-})
-
-// 监听图表选项变化
-watch(
-    () => [chartOptions.showDataLabels, chartOptions.showAreaFill, chartOptions.smoothCurve],
-    () => {
-      updateChart()
-    },
-    {deep: true}
-)
-
-// 监听数据变化
-watch(
-    () => fitnessStore.allList,
-    async () => {
-      if (isChartReady.value && !isLoading.value) {
-        await nextTick()
-        await initializeChart()
-      }
-    },
-    {deep: true}
-)
-
-// 监听图表容器变化
-watch(chartRef, async (newRef) => {
-  if (newRef && isChartReady.value && hasData.value && !isLoading.value) {
-    await nextTick()
-    await initializeChart()
-  }
-})
 
 // 计算俯卧撑总数
 const pushUpCount = computed(() => {
@@ -850,5 +838,68 @@ const proteinCount = computed(() => {
     const count = Number(record.count || 0)
     return sum + (isNaN(count) ? 0 : count)
   }, 0)
+})
+
+// 优化生命周期钩子
+onMounted(async () => {
+  await nextTick()
+  isChartReady.value = true
+
+  if (!query.value.startDate || !query.value.endDate) {
+    const defaultRange = getDefaultRange()
+    const {startDate, endDate} = parseDateRange(defaultRange)
+    fitnessStore.updateQuery({
+      startDate,
+      endDate
+    })
+  }
+
+  // 延迟加载数据，确保组件完全初始化
+  setTimeout(async () => {
+    await loadData()
+  }, 100)
+
+  window.addEventListener('resize', resizeChart)
+})
+
+// 优化监听器，避免重复初始化
+watch(
+    () => [chartOptions.showDataLabels, chartOptions.showAreaFill, chartOptions.smoothCurve],
+    () => {
+      debouncedUpdateChart()
+    },
+    {deep: true}
+)
+
+// 优化数据变化监听
+watch(
+    () => [fitnessStore.allList, hasData.value],
+    async ([newList, newHasData], [oldList, oldHasData]) => {
+      // 只在数据从无到有，或者数据实际发生变化时才更新
+      if (isChartReady.value && !isLoading.value) {
+        if (newHasData && (!oldHasData || newList !== oldList)) {
+          await nextTick()
+          debouncedUpdateChart()
+        }
+      }
+    },
+    {deep: true}
+)
+
+// 优化图表容器监听
+watch(chartRef, async (newRef, oldRef) => {
+  if (newRef && newRef !== oldRef && isChartReady.value && hasData.value && !isLoading.value) {
+    await nextTick()
+    // 给更多时间让 DOM 完全渲染
+    setTimeout(() => {
+      debouncedUpdateChart()
+    }, 100)
+  }
+})
+
+// 添加清理函数
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', resizeChart)
+  destroyChart()
 })
 </script>

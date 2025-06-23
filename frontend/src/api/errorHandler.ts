@@ -13,7 +13,7 @@ interface CustomAxiosRequestConfig extends AxiosRequestConfig {
 
 // 🔥 添加状态管理，避免重复处理
 let isHandlingAuthError = false
-let authErrorTimeout: NodeJS.Timeout | null = null
+let authErrorTimeout: ReturnType<typeof setTimeout> | null = null
 
 export class ErrorHandler {
   static async handleAuthError(error: AxiosError): Promise<never> {
