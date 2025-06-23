@@ -1,4 +1,3 @@
-// assetStore.ts
 import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
 import axiosInstance from '@/utils/axios'
@@ -7,24 +6,39 @@ import qs from 'qs'
 import { formatAssetRecord } from '@/utils/commonMeta'
 import { formatTime } from '@/utils/formatters'
 
+// 添加本地存储的 key
+const QUERY_STORAGE_KEY = 'asset_query_conditions'
+
 export const useAssetStore = defineStore('asset', () => {
     const list = ref<any[]>([])
     const allList = ref<any[]>([])
+
+    // 从本地存储恢复查询条件
+    const getSavedQuery = () => {
+        try {
+            const saved = localStorage.getItem(QUERY_STORAGE_KEY)
+            return saved ? JSON.parse(saved) : {}
+        } catch {
+            return {}
+        }
+    }
+
     const query = reactive<{
-        assetNameIdList: number[];
-        assetLocationIdList: number[];
-        assetTypeIdList: number[];
-        startDate: string;
-        endDate: string;
-        remark: string;
+        assetNameIdList: number[]
+        assetLocationIdList: number[]
+        assetTypeIdList: number[]
+        startDate: string
+        endDate: string
+        remark: string
     }>({
         assetNameIdList: [],
         assetLocationIdList: [],
         assetTypeIdList: [],
         startDate: '',
         endDate: '',
-        remark: ''
-    });
+        remark: '',
+        ...getSavedQuery() // 恢复保存的查询条件
+    })
 
     const pagination = reactive({
         pageNo: 1,
@@ -48,6 +62,15 @@ export const useAssetStore = defineStore('asset', () => {
 
     const hasRecords = computed(() => list.value.length > 0)
     const recordCount = computed(() => pagination.total)
+
+    // 保存查询条件到本地存储
+    function saveQueryToStorage() {
+        try {
+            localStorage.setItem(QUERY_STORAGE_KEY, JSON.stringify(query))
+        } catch (error) {
+            console.warn('Failed to save query to localStorage:', error)
+        }
+    }
 
     function buildParams() {
         return {
@@ -90,7 +113,10 @@ export const useAssetStore = defineStore('asset', () => {
                 pagination.pageNo = Number(raw.current ?? pagination.pageNo)
                 pagination.pageSize = Number(raw.size ?? pagination.pageSize)
             } else {
-                emitter.emit('notify', { message: res.data.message || '获取列表失败', type: 'error' })
+                emitter.emit('notify', {
+                    message: res.data.message || '获取列表失败',
+                    type: 'error'
+                })
             }
         } catch (err) {
             await handleError(err, '获取资产记录')
@@ -100,8 +126,10 @@ export const useAssetStore = defineStore('asset', () => {
         }
     }
 
+    // 修改 updateQuery 函数，添加持久化
     function updateQuery(newQuery: Partial<typeof query>) {
         Object.assign(query, newQuery)
+        saveQueryToStorage() // 保存到本地存储
     }
 
     function setPageNo(page: number) {
@@ -113,6 +141,7 @@ export const useAssetStore = defineStore('asset', () => {
         pagination.pageNo = 1
     }
 
+    // 修改 resetQuery 函数
     function resetQuery() {
         query.assetNameIdList = []
         query.assetLocationIdList = []
@@ -121,6 +150,7 @@ export const useAssetStore = defineStore('asset', () => {
         query.endDate = ''
         query.remark = ''
         pagination.pageNo = 1
+        saveQueryToStorage() // 保存到本地存储
     }
 
     async function loadStats() {
@@ -136,7 +166,10 @@ export const useAssetStore = defineStore('asset', () => {
             if (res.data.success) {
                 Object.assign(stats, res.data.data)
             } else {
-                emitter.emit('notify', { message: res.data.message || '获取统计失败', type: 'error' })
+                emitter.emit('notify', {
+                    message: res.data.message || '获取统计失败',
+                    type: 'error'
+                })
             }
         } catch (err) {
             await handleError(err, '获取统计')
@@ -197,10 +230,7 @@ export const useAssetStore = defineStore('asset', () => {
         try {
             const res = await axiosInstance.post('/api/asset-record/copy-last' + (force ? '?force=true' : ''))
             if (res.data?.success) {
-                emitter.emit('notify', {
-                    message: '复制成功',
-                    type: 'success'
-                })
+                emitter.emit('notify', { message: '复制成功', type: 'success' })
             } else {
                 throw new Error(res.data?.message || '复制失败')
             }
@@ -212,6 +242,7 @@ export const useAssetStore = defineStore('asset', () => {
             throw error
         }
     }
+
     async function loadAllRecords() {
         if (recordController) recordController.abort()
         recordController = new AbortController()
@@ -238,7 +269,10 @@ export const useAssetStore = defineStore('asset', () => {
                 pagination.pageNo = 1
                 pagination.pageSize = raw.length || 10
             } else {
-                emitter.emit('notify', { message: res.data.message || '获取全部记录失败', type: 'error' })
+                emitter.emit('notify', {
+                    message: res.data.message || '获取全部记录失败',
+                    type: 'error'
+                })
             }
         } catch (err) {
             await handleError(err, '获取全部资产记录')

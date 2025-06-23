@@ -4,7 +4,7 @@
 
     <!-- 使用 AssetSearch 组件替代原查询条件 -->
     <AssetSearch
-        :query="searchQuery"
+        :query="assetStore.query"
         :asset-name-options="props.assetNameOptions"
         :asset-type-options="props.assetTypeOptions"
         :asset-location-options="props.assetLocationOptions"
@@ -18,11 +18,7 @@
       <div class="flex flex-wrap items-center gap-4">
         <span class="text-sm font-medium text-gray-600">显示维度:</span>
         <label v-for="option in chartOptionsConfig" :key="option.key" class="flex items-center gap-2 cursor-pointer">
-          <input
-              type="checkbox"
-              v-model="chartOptions[option.key]"
-              class="rounded checkbox-input"
-          />
+          <input type="checkbox" v-model="chartOptions[option.key]" class="rounded checkbox-input" />
           <span class="text-sm">{{ option.label }}</span>
         </label>
       </div>
@@ -48,20 +44,12 @@
 
       <!-- 错误状态 -->
       <div v-else-if="errorMessage" class="h-full">
-        <BaseEmptyState
-            icon="Wallet"
-            :message="errorMessage"
-            description="请检查网络连接或稍后重试"
-        />
+        <BaseEmptyState icon="Wallet" :message="errorMessage" description="请检查网络连接或稍后重试" />
       </div>
 
       <!-- 空数据状态 -->
       <div v-else-if="!hasData" class="h-full">
-        <BaseEmptyState
-            icon="Wallet"
-            message="暂无资产数据"
-            :description="emptyStateDescription"
-        />
+        <BaseEmptyState icon="Wallet" message="暂无资产数据" :description="emptyStateDescription" />
       </div>
 
       <!-- 图表容器 -->
@@ -144,16 +132,6 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const isChartReady = ref(false)
 
-// 创建查询对象供 AssetSearch 组件使用
-const searchQuery = reactive<SearchQuery>({
-  assetNameIdList: [],
-  assetTypeIdList: [],
-  assetLocationIdList: [],
-  startDate: '',
-  endDate: '',
-  remark: ''
-})
-
 // 图表选项配置
 const chartOptionsConfig = [
   { key: 'showTotalTrend', label: '总金额趋势' },
@@ -162,19 +140,39 @@ const chartOptionsConfig = [
   { key: 'showLocationDimension', label: '按资产位置' }
 ] as const
 
+// 图表选项持久化
+const CHART_OPTIONS_STORAGE_KEY = 'asset_chart_options'
+
+const getSavedChartOptions = () => {
+  try {
+    const saved = localStorage.getItem(CHART_OPTIONS_STORAGE_KEY)
+    return saved ? JSON.parse(saved) : {}
+  } catch {
+    return {}
+  }
+}
+
 const chartOptions = reactive({
   showTotalTrend: true,
   showNameDimension: true,
   showTypeDimension: true,
-  showLocationDimension: true
+  showLocationDimension: true,
+  ...getSavedChartOptions()
 })
+
+const saveChartOptions = () => {
+  try {
+    localStorage.setItem(CHART_OPTIONS_STORAGE_KEY, JSON.stringify(chartOptions))
+  } catch (error) {
+    console.warn('Failed to save chart options:', error)
+  }
+}
 
 // 低饱和度颜色方案
 const CHART_COLORS = [
-  '#6B7F96', '#8D9C8D', '#B19C7D', '#A88080', '#8C7BA8', '#9E8C9E',
-  '#7B9E9E', '#B8936B', '#7B9DB8', '#9BB87B', '#B87B9D', '#7B7BB8',
-  '#8B9B8B', '#B8898B', '#89B8B8', '#A8A87B', '#9E7B8C', '#7B8C9E',
-  '#A8937B', '#8C8C7B'
+  '#6B7F96', '#8D9C8D', '#B19C7D', '#A88080', '#8C7BA8', '#9E8C9E', '#7B9E9E', '#B8936B',
+  '#7B9DB8', '#9BB87B', '#B87B9D', '#7B7BB8', '#8B9B8B', '#B8898B', '#89B8B8', '#A8A87B',
+  '#9E7B8C', '#7B8C9E', '#A8937B', '#8C8C7B'
 ]
 
 // 工具函数
@@ -286,19 +284,19 @@ const hasData = computed(() => {
 })
 
 const hasSearchConditions = computed(() => {
-  return searchQuery.assetTypeIdList.length > 0 ||
-      searchQuery.assetNameIdList.length > 0 ||
-      searchQuery.assetLocationIdList.length > 0 ||
-      searchQuery.remark.trim() !== ''
+  return assetStore.query.assetTypeIdList.length > 0 ||
+      assetStore.query.assetNameIdList.length > 0 ||
+      assetStore.query.assetLocationIdList.length > 0 ||
+      assetStore.query.remark.trim() !== ''
 })
 
 const isDateRangeValid = computed(() => {
-  return searchQuery.startDate && searchQuery.endDate
+  return assetStore.query.startDate && assetStore.query.endDate
 })
 
 const dateRangeDisplay = computed(() => {
-  if (!searchQuery.startDate || !searchQuery.endDate) return ''
-  return `${searchQuery.startDate} ~ ${searchQuery.endDate}`
+  if (!assetStore.query.startDate || !assetStore.query.endDate) return ''
+  return `${assetStore.query.startDate} ~ ${assetStore.query.endDate}`
 })
 
 const emptyStateDescription = computed(() => {
@@ -465,9 +463,21 @@ const chartSeries = computed(() => {
           symbol: 'circle',
           symbolSize: 8,
           data: totalData,
-          lineStyle: { width: 4, color: '#4A5568', shadowColor: 'rgba(74, 85, 104, 0.3)', shadowBlur: 4 },
-          itemStyle: { color: '#4A5568', borderWidth: 2, borderColor: '#fff' },
-          emphasis: { focus: 'series', scale: true },
+          lineStyle: {
+            width: 4,
+            color: '#4A5568',
+            shadowColor: 'rgba(74, 85, 104, 0.3)',
+            shadowBlur: 4
+          },
+          itemStyle: {
+            color: '#4A5568',
+            borderWidth: 2,
+            borderColor: '#fff'
+          },
+          emphasis: {
+            focus: 'series',
+            scale: true
+          },
           z: 10
         })
       }
@@ -495,9 +505,21 @@ const chartSeries = computed(() => {
               symbol: config.symbol,
               symbolSize: 5,
               data: item.data,
-              lineStyle: { width: 2, type: config.lineType, color, shadowColor: `${color}33`, shadowBlur: 2 },
-              itemStyle: { color, borderWidth: 1, borderColor: '#fff' },
-              emphasis: { focus: 'series' }
+              lineStyle: {
+                width: 2,
+                type: config.lineType,
+                color,
+                shadowColor: `${color}33`,
+                shadowBlur: 2
+              },
+              itemStyle: {
+                color,
+                borderWidth: 1,
+                borderColor: '#fff'
+              },
+              emphasis: {
+                focus: 'series'
+              }
             })
           }
         })
@@ -528,17 +550,31 @@ const echartConfig = computed(() => {
         subtext: `统计期间: ${dateRangeDisplay.value} | 汇总基准: ${lastDateWithRecords.value}`,
         left: 'center',
         top: 15,
-        textStyle: { fontSize: 18, fontWeight: 'bold', color: '#2D3748' },
-        subtextStyle: { fontSize: 12, color: '#718096' }
+        textStyle: {
+          fontSize: 18,
+          fontWeight: 'bold',
+          color: '#2D3748'
+        },
+        subtextStyle: {
+          fontSize: 12,
+          color: '#718096'
+        }
       },
       tooltip: {
         trigger: 'axis',
-        axisPointer: { type: 'cross', label: { backgroundColor: '#718096' } },
+        axisPointer: {
+          type: 'cross',
+          label: {
+            backgroundColor: '#718096'
+          }
+        },
         backgroundColor: 'rgba(255, 255, 255, 0.96)',
         borderColor: '#E2E8F0',
         borderWidth: 1,
         borderRadius: 8,
-        textStyle: { color: '#2D3748' },
+        textStyle: {
+          color: '#2D3748'
+        },
         extraCssText: 'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);',
         formatter: (params: any[]) => {
           if (!Array.isArray(params)) return ''
@@ -558,7 +594,12 @@ const echartConfig = computed(() => {
 
           Object.entries(groupedParams).forEach(([key, series]) => {
             if (series.length > 0) {
-              const titles = { total: '💰 总计', name: '📊 按资产名称', type: '🏷️ 按资产类型', location: '📍 按资产位置' }
+              const titles = {
+                total: '💰 总计',
+                name: '📊 按资产名称',
+                type: '🏷️ 按资产类型',
+                location: '📍 按资产位置'
+              }
               result += `<div style="margin-top: 8px; font-weight: 600; color: #4A5568; font-size: 13px">${titles[key as keyof typeof titles]}</div>`
               series.forEach(item => {
                 if (item.value > 0) {
@@ -580,7 +621,10 @@ const echartConfig = computed(() => {
         orient: 'horizontal',
         bottom: hasMultipleDates ? 60 : 15,
         data: chartSeries.value.map(s => s.name),
-        textStyle: { fontSize: 11, color: '#4A5568' }
+        textStyle: {
+          fontSize: 11,
+          color: '#4A5568'
+        }
       },
       grid: {
         left: 100,
@@ -599,28 +643,60 @@ const echartConfig = computed(() => {
           interval: 0,
           rotate: hasMultipleDates ? 45 : 0
         },
-        axisLine: { lineStyle: { color: '#CBD5E0' } },
-        axisTick: { alignWithLabel: true, lineStyle: { color: '#CBD5E0' } }
+        axisLine: {
+          lineStyle: {
+            color: '#CBD5E0'
+          }
+        },
+        axisTick: {
+          alignWithLabel: true,
+          lineStyle: {
+            color: '#CBD5E0'
+          }
+        }
       },
       yAxis: {
         type: 'value',
         name: '金额',
-        nameTextStyle: { fontSize: 12, color: '#718096' },
+        nameTextStyle: {
+          fontSize: 12,
+          color: '#718096'
+        },
         axisLabel: {
           fontSize: 11,
           color: '#718096',
           formatter: (value: number) => formatAmountWithUnit(value, statisticsData.value.unitSymbol)
         },
-        splitLine: { lineStyle: { type: 'dashed', color: '#E2E8F0' } },
-        axisLine: { show: false },
-        axisTick: { show: false },
+        splitLine: {
+          lineStyle: {
+            type: 'dashed',
+            color: '#E2E8F0'
+          }
+        },
+        axisLine: {
+          show: false
+        },
+        axisTick: {
+          show: false
+        },
         max: yAxisMax,
         minInterval: 1
       },
       series: chartSeries.value,
       dataZoom: hasMultipleDates ? [
-        { type: 'inside', start: 0, end: 100 },
-        { type: 'slider', show: true, start: 0, end: 100, height: 20, bottom: 25 }
+        {
+          type: 'inside',
+          start: 0,
+          end: 100
+        },
+        {
+          type: 'slider',
+          show: true,
+          start: 0,
+          end: 100,
+          height: 20,
+          bottom: 25
+        }
       ] : undefined,
       animation: true,
       animationDuration: 1200,
@@ -661,15 +737,6 @@ async function loadData(): Promise<void> {
   errorMessage.value = ''
 
   try {
-    assetStore.updateQuery({
-      assetTypeIdList: searchQuery.assetTypeIdList.map(id => Number(id)),
-      assetNameIdList: searchQuery.assetNameIdList.map(id => Number(id)),
-      assetLocationIdList: searchQuery.assetLocationIdList.map(id => Number(id)),
-      startDate: searchQuery.startDate,
-      endDate: searchQuery.endDate,
-      remark: searchQuery.remark.trim()
-    })
-
     await assetStore.loadAllRecords()
 
     await nextTick()
@@ -688,23 +755,23 @@ async function loadData(): Promise<void> {
 
 // 处理来自 AssetSearch 组件的搜索事件
 async function handleSearchFromComponent(query: SearchQuery): Promise<void> {
-  // 查询对象已经通过双向绑定更新，直接加载数据即可
+  // AssetSearch 组件已经通过双向绑定更新了 assetStore.query
+  // 直接加载数据即可
   await loadData()
 }
 
 // 处理来自 AssetSearch 组件的重置事件
 async function handleResetFromComponent(): Promise<void> {
-  // 重置查询条件
-  searchQuery.assetNameIdList = []
-  searchQuery.assetTypeIdList = []
-  searchQuery.assetLocationIdList = []
-  searchQuery.remark = ''
+  // 使用 store 的重置方法
+  assetStore.resetQuery()
 
   // 重置日期范围到默认值
   const defaultRange = getDefaultRange()
   const [startDate, endDate] = defaultRange.split(' ~ ')
-  searchQuery.startDate = startDate
-  searchQuery.endDate = endDate
+  assetStore.updateQuery({
+    startDate,
+    endDate
+  })
 
   // 重置图表选项
   Object.assign(chartOptions, {
@@ -713,6 +780,7 @@ async function handleResetFromComponent(): Promise<void> {
     showTypeDimension: true,
     showLocationDimension: true
   })
+  saveChartOptions()
 
   errorMessage.value = ''
   assetStore.allList = []
@@ -724,11 +792,15 @@ onMounted(async () => {
   await nextTick()
   isChartReady.value = true
 
-  // 设置默认日期范围
-  const defaultRange = getDefaultRange()
-  const [startDate, endDate] = defaultRange.split(' ~ ')
-  searchQuery.startDate = startDate
-  searchQuery.endDate = endDate
+  // 如果 store 中没有设置日期范围，设置默认日期范围
+  if (!assetStore.query.startDate || !assetStore.query.endDate) {
+    const defaultRange = getDefaultRange()
+    const [startDate, endDate] = defaultRange.split(' ~ ')
+    assetStore.updateQuery({
+      startDate,
+      endDate
+    })
+  }
 
   await loadData()
   window.addEventListener('resize', resizeChart)
@@ -746,6 +818,7 @@ watch(
       if (isChartReady.value && !isLoading.value) {
         await initializeChart()
       }
+      saveChartOptions() // 保存图表选项
     },
     { deep: true }
 )
@@ -768,11 +841,11 @@ watch(chartRef, async (newRef) => {
   }
 })
 
-// 监听 searchQuery 中的 assetTypeIdList 变化，清空 assetNameIdList
+// 监听 store 中的 assetTypeIdList 变化，清空 assetNameIdList
 watch(
-    () => searchQuery.assetTypeIdList,
+    () => assetStore.query.assetTypeIdList,
     () => {
-      searchQuery.assetNameIdList = []
+      assetStore.updateQuery({ assetNameIdList: [] })
     }
 )
 </script>
