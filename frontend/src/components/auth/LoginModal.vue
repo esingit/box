@@ -27,7 +27,7 @@
                 :model-value="field.value"
                 @update:model-value="field.onChange"
                 type="password"
-                :placeholder="'请输入密码'"
+                placeholder="请输入密码"
                 autocomplete="current-password"
                 clearable
                 :disabled="loading"
@@ -42,7 +42,8 @@
           <div class="flex items-center gap-2">
             <Field name="captcha" v-slot="{ field }">
               <BaseInput
-                  v-model="field.value"
+                  :model-value="field.value"
+                  @update:model-value="field.onChange"
                   placeholder="请输入验证码"
                   autocomplete="off"
                   clearable
@@ -92,15 +93,24 @@ import { Form, Field, ErrorMessage, type SubmissionHandler } from 'vee-validate'
 import * as yup from 'yup'
 import { LucideLogIn } from 'lucide-vue-next'
 import { useUserStore } from '@/store/userStore'
+import { useAuth } from '@/composables/useAuth'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
-import { useAuth } from '@/composable/useAuth'
+import BaseButton from '@/components/base/BaseButton.vue'
 
 const userStore = useUserStore()
-const { pendingAuthAction } = useAuth()
+const { onLoginSuccess } = useAuth()
 
-const props = defineProps<{ visible: boolean }>()
-const emit = defineEmits(['update:visible', 'switch-to-register'])
+const props = defineProps<{
+  visible: boolean
+}>()
+
+// 🔥 明确定义 emits 避免 Vue 警告
+const emit = defineEmits<{
+  'update:visible': [value: boolean]
+  'switch-to-register': []
+  'login-success': []
+}>()
 
 const visible = computed({
   get: () => props.visible,
@@ -191,9 +201,16 @@ const onSubmit: SubmissionHandler = async (values) => {
     const res = await userStore.login(credentials)
 
     if (res.success) {
-      if (pendingAuthAction.value) await pendingAuthAction.value()
+      console.log('🟢 LoginModal: 登录成功，调用 onLoginSuccess')
+
+      // 🔥 使用 useAuth 的统一登录成功处理逻辑
+      await onLoginSuccess()
+
+      // 发出登录成功事件给父组件
+      emit('login-success')
+
+      // 关闭弹窗
       close()
-      emit('login-success') // 如果你父组件监听登录成功
     } else {
       error.value = res.message || '登录失败'
       if (res.needCaptcha) {
@@ -202,6 +219,7 @@ const onSubmit: SubmissionHandler = async (values) => {
       }
     }
   } catch (e: any) {
+    console.error('LoginModal: 登录过程中出错:', e)
     error.value = e.message || '登录异常'
   } finally {
     loading.value = false

@@ -1,6 +1,6 @@
 // src/router/guard.ts
 import { useUserStore } from '@/store/userStore'
-import { useAuth } from '@/composable/useAuth'
+import { useAuth } from '@/composables/useAuth'
 import emitter from '@/utils/eventBus'
 import type { Router, NavigationGuardNext, RouteLocationNormalized } from 'vue-router'
 

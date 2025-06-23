@@ -1,3 +1,4 @@
+<!-- src/App.vue -->
 <template>
   <div class="app-wrapper">
     <div v-if="isUserLoading" class="loading">加载中...</div>
@@ -37,12 +38,12 @@
       </template>
     </div>
 
-    <!-- 统一管理登录注册弹窗，删除单独 LoginModal -->
+    <!-- 统一管理登录注册弹窗 -->
     <AuthModals
         v-model:showLogin="isShowingLoginModal"
         v-model:showRegister="isShowingRegisterModal"
-        @login-success="handleLoginSuccess"
-        @register-success="handleLoginSuccess"
+        @loginSuccess="handleLoginSuccess"
+        @registerSuccess="handleLoginSuccess"
     />
 
     <Profile ref="profileSettingsRef" />
@@ -55,8 +56,7 @@
 import { ref, provide, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store/userStore'
-import { useAuth } from '@/composable/useAuth'
-import { useAuthModal } from '@/composable/useAuthModal'
+import { useAuth } from '@/composables/useAuth'
 import emitter from '@/utils/eventBus'
 
 import Sidebar from '@/components/layout/Sidebar.vue'
@@ -69,22 +69,28 @@ import Profile from '@/components/layout/Profile.vue'
 
 const userStore = useUserStore()
 const auth = useAuth()
-const authModal = useAuthModal()
+
+// 从 userStore 获取用户信息
 const { user } = storeToRefs(userStore)
-const { pendingAuthAction, clearToken } = auth
+
+// 从合并后的 useAuth 获取所有需要的状态和方法
 const {
+  isLoggedIn,
   isShowingLoginModal,
   isShowingRegisterModal,
   showLogin,
   showRegister,
   hideLogin,
-  hideRegister
-} = authModal
+  hideRegister,
+  onLoginSuccess,
+  clearToken
+} = auth
 
-const { isLoggedIn } = storeToRefs(userStore)
+// 本地状态
 const isUserLoading = ref(true)
 const profileSettingsRef = ref<InstanceType<typeof Profile> | null>(null)
 
+// 侧边栏状态
 const sidebarCollapsed = ref(false)
 provide('setSidebarCollapsed', (collapsed: boolean) => {
   sidebarCollapsed.value = collapsed
@@ -103,42 +109,41 @@ onUnmounted(() => {
   emitter.off('show-login', onShowLogin)
 })
 
+// 通知方法
 function notify(type: 'success' | 'error' | 'info' | 'warning', msg: string) {
   emitter.emit('notify', { message: msg, type })
 }
 
+// 错误处理
 function handleError(error: any, defaultMessage: string) {
   const message = error?.message || defaultMessage
   notify('error', message)
   console.error(error)
 }
 
+// 登录成功处理
 async function handleLoginSuccess() {
   try {
-    await userStore.fetchUser()
+    // 使用 useAuth 中的完整处理逻辑
+    await onLoginSuccess()
     notify('success', '登录成功')
-    if (typeof pendingAuthAction.value === 'function') {
-      await pendingAuthAction.value()
-    }
   } catch (error) {
     handleError(error, '登录后操作失败')
-  } finally {
-    pendingAuthAction.value = null
-    // 登录成功后关闭弹窗
-    hideLogin()
-    hideRegister()
   }
 }
 
+// 退出登录处理
 async function handleLogout() {
   try {
     await userStore.logout()
     clearToken()
+    notify('success', '已退出登录')
   } catch (error) {
     handleError(error, '退出登录失败')
   }
 }
 
+// 初始化用户数据
 async function initializeUser(retryCount = 3) {
   try {
     await userStore.hydrate()
@@ -154,9 +159,11 @@ async function initializeUser(retryCount = 3) {
   }
 }
 
+// 打开个人设置
 function handleOpenProfile() {
   profileSettingsRef.value?.openModal()
 }
 
+// 启动时初始化用户数据
 initializeUser()
 </script>

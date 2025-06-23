@@ -1,3 +1,4 @@
+// src/store/fitnessStore.ts
 import {defineStore} from 'pinia'
 import {ref, reactive, computed} from 'vue'
 import axiosInstance from '@/api/axios'
@@ -86,8 +87,23 @@ export const useFitnessStore = defineStore('fitness', () => {
         }
     }
 
-    async function handleError(err: any, action: string) {
-        if (err?.code === 'ERR_CANCELED') return
+    // 🔥 优化后的错误处理函数
+    async function handleError(action: string, err: any) {
+        // 忽略取消的请求
+        if (err?.code === 'ERR_CANCELED') {
+            console.log(`[${action}] 请求被取消`)
+            return
+        }
+
+        // 🔥 忽略认证相关的错误，不显示给用户
+        if (err?.message === 'AUTH_CANCELED' ||
+            err?.message === '用户未登录，请先登录' ||
+            err?.message === '请求已取消') {
+            console.log(`[${action}] 认证相关错误，等待用户登录:`, err.message)
+            return
+        }
+
+        // 其他错误正常处理
         console.error(`[${action}] 出错:`, err)
         emitter.emit('notify', {
             message: `${action} 失败：${err?.message || '未知错误'}`,
@@ -129,7 +145,7 @@ export const useFitnessStore = defineStore('fitness', () => {
                 })
             }
         } catch (err) {
-            await handleError(err, '获取健身记录')
+            await handleError('获取健身记录', err)
         } finally {
             loadingList.value = false
             recordController = null
@@ -166,7 +182,7 @@ export const useFitnessStore = defineStore('fitness', () => {
                 emitter.emit('notify', {message: res.data.message || '获取全部记录失败', type: 'error'})
             }
         } catch (err) {
-            await handleError(err, '获取全部记录')
+            await handleError('获取全部记录', err)
         } finally {
             loadingList.value = false // 使用相同的加载状态
             recordController = null
@@ -215,7 +231,7 @@ export const useFitnessStore = defineStore('fitness', () => {
                 emitter.emit('notify', {message: res.data.message || '获取统计失败', type: 'error'})
             }
         } catch (err) {
-            await handleError(err, '获取统计')
+            await handleError('获取统计', err)
         } finally {
             loadingStats.value = false
             statsController = null
@@ -234,8 +250,17 @@ export const useFitnessStore = defineStore('fitness', () => {
                 throw new Error(res.data.message || '添加失败') // 失败时抛出错误
             }
         } catch (err: any) {
-            await handleError(err, '添加记录')
-            throw err // 重新抛出错误
+            // 🔥 只有非认证错误才抛出，认证错误由 handleError 静默处理
+            if (err?.message !== 'AUTH_CANCELED' &&
+                err?.message !== '用户未登录，请先登录' &&
+                err?.message !== '请求已取消') {
+                await handleError('添加记录', err)
+                throw err // 重新抛出错误
+            } else {
+                await handleError('添加记录', err)
+                // 认证错误不抛出，让组件可以正常处理
+                return false
+            }
         }
     }
 
@@ -250,8 +275,17 @@ export const useFitnessStore = defineStore('fitness', () => {
                 throw new Error(res.data.message || '更新失败') // 失败时抛出错误
             }
         } catch (err: any) {
-            await handleError(err, '更新记录')
-            throw err // 重新抛出错误
+            // 🔥 只有非认证错误才抛出，认证错误由 handleError 静默处理
+            if (err?.message !== 'AUTH_CANCELED' &&
+                err?.message !== '用户未登录，请先登录' &&
+                err?.message !== '请求已取消') {
+                await handleError('更新记录', err)
+                throw err // 重新抛出错误
+            } else {
+                await handleError('更新记录', err)
+                // 认证错误不抛出，让组件可以正常处理
+                return false
+            }
         }
     }
 
@@ -261,12 +295,22 @@ export const useFitnessStore = defineStore('fitness', () => {
             if (res.data.success) {
                 emitter.emit('notify', {message: '删除成功', type: 'success'})
                 await loadList() // 删除后重新加载列表
+                return true // 🔥 删除成功也返回 true
             } else {
                 throw new Error(res.data.message || '删除失败') // 失败时抛出错误
             }
         } catch (err: any) {
-            await handleError(err, '删除记录')
-            throw err // 重新抛出错误
+            // 🔥 只有非认证错误才抛出，认证错误由 handleError 静默处理
+            if (err?.message !== 'AUTH_CANCELED' &&
+                err?.message !== '用户未登录，请先登录' &&
+                err?.message !== '请求已取消') {
+                await handleError('删除记录', err)
+                throw err // 重新抛出错误
+            } else {
+                await handleError('删除记录', err)
+                // 认证错误不抛出，让组件可以正常处理
+                return false
+            }
         }
     }
 

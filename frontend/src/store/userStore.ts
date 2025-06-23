@@ -1,7 +1,8 @@
+// src/store/userStore.ts
 import { defineStore } from 'pinia'
-import axios, { AxiosInstance } from 'axios'
 import type { Router } from 'vue-router'
 import { tokenService } from '@/api/tokenService'
+import axiosInstance from '@/api/axios' // 使用统一的axios实例
 import emitter from '@/utils/eventBus'
 
 interface User {
@@ -24,8 +25,6 @@ interface LoginResponse {
     needCaptcha?: boolean
 }
 
-let apiClientInstance: AxiosInstance | null = null
-
 export const useUserStore = defineStore('user', {
     state: () => ({
         token: null as string | null,
@@ -33,8 +32,6 @@ export const useUserStore = defineStore('user', {
         isInitialized: false,
         isLoggedIn: false,
         isRefreshing: false,
-        apiClient: null as AxiosInstance | null,
-        pendingAction: null as (() => Promise<void>) | null,
     }),
 
     getters: {
@@ -43,26 +40,6 @@ export const useUserStore = defineStore('user', {
     },
 
     actions: {
-        initApiClient() {
-            if (!this.apiClient) {
-                const instance = axios.create({
-                    baseURL: '/api/user',
-                    timeout: 10000,
-                })
-
-                instance.interceptors.request.use(config => {
-                    if (this.token && config.headers) {
-                        config.headers.Authorization = `Bearer ${this.token}`
-                    }
-                    return config
-                })
-
-                apiClientInstance = instance
-                this.apiClient = instance
-            }
-            return this.apiClient!
-        },
-
         setAuth(token: string | null) {
             this.token = token
             if (token) {
@@ -85,7 +62,6 @@ export const useUserStore = defineStore('user', {
             }
 
             this.setAuth(this.token)
-            this.initApiClient()
 
             try {
                 const valid = await this.verifyToken()
@@ -105,9 +81,8 @@ export const useUserStore = defineStore('user', {
         },
 
         async verifyToken(): Promise<boolean> {
-            this.initApiClient()
             try {
-                const res = await this.apiClient!.get<ApiResponse<{ shouldRefresh?: boolean }>>('/verify-token')
+                const res = await axiosInstance.get<ApiResponse<{ shouldRefresh?: boolean }>>('/api/user/verify-token')
                 if (res.data.success) {
                     if (res.data.data?.shouldRefresh && !this.isRefreshing) {
                         return await this.refreshToken()
@@ -124,10 +99,9 @@ export const useUserStore = defineStore('user', {
             if (this.isRefreshing) return false
 
             this.isRefreshing = true
-            this.initApiClient()
 
             try {
-                const res = await this.apiClient!.post<ApiResponse<string>>('/refresh-token')
+                const res = await axiosInstance.post<ApiResponse<string>>('/api/user/refresh-token')
                 if (res.data.success && res.data.data) {
                     this.setAuth(res.data.data)
                     return true
@@ -143,9 +117,8 @@ export const useUserStore = defineStore('user', {
         async fetchUser(): Promise<void> {
             if (!this.token) return await this.clearAuth(false)
 
-            this.initApiClient()
             try {
-                const res = await this.apiClient!.get<ApiResponse<User>>('/profile')
+                const res = await axiosInstance.get<ApiResponse<User>>('/api/user/profile')
                 if (res.data.success && res.data.data) {
                     this.user = res.data.data
                     this.isLoggedIn = true
@@ -158,21 +131,11 @@ export const useUserStore = defineStore('user', {
         },
 
         async login(credentials: Record<string, any>): Promise<LoginResponse> {
-            this.initApiClient()
             try {
-                const res = await this.apiClient!.post<ApiResponse<string>>('/login', credentials)
+                const res = await axiosInstance.post<ApiResponse<string>>('/api/user/login', credentials)
                 if (res.data.success && res.data.data) {
                     this.setAuth(res.data.data)
                     await this.fetchUser()
-
-                    // 登录成功后执行挂起的操作
-                    if (this.pendingAction) {
-                        const action = this.pendingAction
-                        this.pendingAction = null
-                        await action()
-                    }
-
-                    emitter.emit('login-success')
                     return { success: true, message: '登录成功' }
                 }
 
@@ -191,7 +154,7 @@ export const useUserStore = defineStore('user', {
 
         async fetchCaptcha(): Promise<{ imageUrl: string; captchaId: string } | null> {
             try {
-                const { data } = await axios.get('/api/captcha', { params: { t: Date.now() } })
+                const { data } = await axiosInstance.get('/api/captcha', { params: { t: Date.now() } })
                 return {
                     captchaId: data.captchaId,
                     imageUrl: `/api${data.captchaUrl}`,
@@ -204,7 +167,7 @@ export const useUserStore = defineStore('user', {
 
         async logout(clearUI = true, router?: Router): Promise<void> {
             try {
-                await this.apiClient?.post('/logout')
+                await axiosInstance.post('/api/user/logout')
             } catch {}
 
             await this.clearAuth(clearUI)
@@ -227,9 +190,8 @@ export const useUserStore = defineStore('user', {
         },
 
         async register(userData: Record<string, any>): Promise<ApiResponse> {
-            this.initApiClient()
             try {
-                const res = await this.apiClient!.post<ApiResponse>('/register', userData)
+                const res = await axiosInstance.post<ApiResponse>('/api/user/register', userData)
                 return res.data
             } catch (err: any) {
                 return {
@@ -239,11 +201,10 @@ export const useUserStore = defineStore('user', {
                 }
             }
         },
-        async resetPassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
-            this.initApiClient()
 
+        async resetPassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
             try {
-                const res = await this.apiClient!.post<ApiResponse>('/reset-password', {
+                const res = await axiosInstance.post<ApiResponse>('/api/user/reset-password', {
                     username: this.user?.username,
                     oldPassword,
                     newPassword

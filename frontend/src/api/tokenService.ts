@@ -1,70 +1,78 @@
-// src/services/tokenService.ts
-import axios from 'axios';
+// src/api/tokenService.ts
+import axios from 'axios'
 
 class TokenService {
-  isRefreshing: boolean;
+  isRefreshing: boolean
   waitingRequests: Array<{
     config: any,
     resolve: (value?: any) => void,
     reject: (reason?: any) => void
-  }>;
-
-  clearToken() {
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
-  }
+  }>
 
   constructor() {
-    this.isRefreshing = false;
-    this.waitingRequests = [];
+    this.isRefreshing = false
+    this.waitingRequests = []
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    return localStorage.getItem('token')
   }
 
   setToken(token: string) {
-    localStorage.setItem('token', token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    localStorage.setItem('token', token)
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+  }
+
+  clearToken() {
+    localStorage.removeItem('token')
+    delete axios.defaults.headers.common['Authorization']
+    this.isRefreshing = false
+    this.clearWaitingQueue()
   }
 
   async refreshToken(): Promise<string | null> {
     try {
-      const token = this.getToken();
+      const token = this.getToken()
       if (!token) {
-        throw new Error('No token found');
+        throw new Error('No token found')
       }
 
-      const { useUserStore } = await import('@/store/userStore');
-      const userStore = useUserStore();
+      const { useUserStore } = await import('@/store/userStore')
+      const userStore = useUserStore()
 
-      if (await userStore.verifyToken()) {
-        return this.getToken();
+      const success = await userStore.refreshToken()
+      if (success) {
+        return this.getToken()
       }
-      throw new Error('Token refresh failed');
+      throw new Error('Token refresh failed')
     } catch (error) {
-      console.error('刷新token失败:', error);
-      throw error;
+      console.error('刷新token失败:', error)
+      this.clearToken()
+      throw error
     }
   }
 
   addToWaitingQueue(config: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.waitingRequests.push({ config, resolve, reject });
-    });
+      this.waitingRequests.push({ config, resolve, reject })
+    })
   }
 
   processWaitingQueue(newToken: string) {
     this.waitingRequests.forEach(({ config, resolve }) => {
-      config.headers['Authorization'] = `Bearer ${newToken}`;
-      resolve(axios(config));
-    });
-    this.waitingRequests = [];
+      config.headers = config.headers || {}
+      config.headers['Authorization'] = `Bearer ${newToken}`
+      resolve(axios(config))
+    })
+    this.waitingRequests = []
   }
 
   clearWaitingQueue() {
-    this.waitingRequests = [];
+    this.waitingRequests.forEach(({ reject }) => {
+      reject(new Error('Token refresh failed'))
+    })
+    this.waitingRequests = []
   }
 }
 
-export const tokenService = new TokenService();
+export const tokenService = new TokenService()
