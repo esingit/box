@@ -23,7 +23,7 @@
             range
             clearable
             placeholder="请选择日期范围"
-            class="w-[325px]"
+            class="w-[320px]"
         />
       </div>
 
