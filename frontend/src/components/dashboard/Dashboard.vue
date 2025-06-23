@@ -11,7 +11,7 @@
     <!-- 错误状态 -->
     <div v-else-if="loadError" class="flex items-center justify-center py-12">
       <div class="text-center">
-        <div class="text-red-500 mb-4">
+        <div class="msg-error mb-4">
           <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>

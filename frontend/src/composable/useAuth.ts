@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { useUserStore } from '@/store/userStore'
+import emitter from '@/utils/eventBus'
 
 export function useAuth() {
   const userStore = useUserStore()
@@ -18,9 +19,7 @@ export function useAuth() {
   const pendingAuthAction = ref<null | (() => Promise<void>)>(null)
 
   const showLogin = () => {
-    import('@/utils/eventBus').then(({ default: emitter }) => {
-      emitter.emit('show-login')
-    })
+    emitter.emit('show-login')
   }
 
   return {

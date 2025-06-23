@@ -1,3 +1,4 @@
+<!--src/components/auth/LoginModal.vue-->
 <template>
   <BaseModal :visible="visible" title="欢迎回来" @update:visible="close" width="500px">
     <Form :validation-schema="schema" v-slot="{ handleSubmit }">
@@ -88,7 +89,9 @@ import { LucideLogIn } from 'lucide-vue-next'
 import { useUserStore } from '@/store/userStore'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
+import { useAuth } from '@/composable/useAuth'
 
+const { pendingAuthAction } = useAuth()
 const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits(['update:visible', 'login-success', 'switch-to-register'])
 
@@ -179,6 +182,10 @@ const onSubmit: SubmissionHandler = async (values) => {
     const res = await userStore.login(credentials)
 
     if (res.success) {
+      // 登录成功，调用重试队列
+      if (pendingAuthAction.value) {
+        await pendingAuthAction.value()
+      }
       emit('login-success')
       close()
     } else {

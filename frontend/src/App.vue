@@ -1,4 +1,3 @@
-<!-- App.vue -->
 <template>
   <div class="app-wrapper">
     <div v-if="isUserLoading" class="loading">加载中...</div>
@@ -6,7 +5,8 @@
       <template v-if="isLoggedIn">
         <div class="layout flex h-screen relative">
           <Sidebar :isLoggedIn="isLoggedIn" />
-          <div class="flex-1 flex flex-col transition-all duration-200 ease-in-out"
+          <div
+              class="flex-1 flex flex-col transition-all duration-200 ease-in-out"
               :class="{ 'ml-0': sidebarCollapsed, 'ml-32': !sidebarCollapsed }"
           >
             <div class="menu-container">
@@ -87,12 +87,15 @@ provide('setSidebarCollapsed', (collapsed: boolean) => {
   sidebarCollapsed.value = collapsed
 })
 
+// 监听事件总线弹出登录弹窗
 function onShowLogin() {
   showLogin()
 }
+
 onMounted(() => {
   emitter.on('show-login', onShowLogin)
 })
+
 onUnmounted(() => {
   emitter.off('show-login', onShowLogin)
 })

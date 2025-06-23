@@ -102,7 +102,7 @@
       </div>
     </div>
 
-    <p v-if="showError" class="msg-error mt-1 ml-1 text-sm text-red-500">
+    <p v-if="showError" class="msg-error mt-1 ml-1 text-sm msg-error">
       {{ requiredMessage || `请输入${title}` }}
     </p>
   </div>

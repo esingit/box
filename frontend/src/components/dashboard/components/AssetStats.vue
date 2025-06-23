@@ -345,8 +345,8 @@ const statisticsCards = computed(() => [
     title: '总金额',
     value: formatAmountWithUnit(statisticsData.value.totalAmount, statisticsData.value.unitSymbol),
     cardClass: 'bg-red-50 p-3 rounded-lg',
-    titleClass: 'text-red-600 font-medium',
-    valueClass: 'text-lg font-bold text-red-800'
+    titleClass: 'msg-error font-medium',
+    valueClass: 'text-lg font-bold msg-error'
   },
   {
     title: '储蓄类型总额',
