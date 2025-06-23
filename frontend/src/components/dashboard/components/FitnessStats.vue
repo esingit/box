@@ -753,7 +753,6 @@ onMounted(async () => {
     const defaultRange = getDefaultRange()
     const {startDate, endDate} = parseDateRange(defaultRange)
     fitnessStore.updateQuery({
-      ...query.value,
       startDate,
       endDate
     })

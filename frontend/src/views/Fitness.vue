@@ -41,7 +41,6 @@
       <div class="flex justify-start">
         <BaseButton title="添加记录" @click="handleAdd" color="primary" :icon="LucidePlus"/>
       </div>
-      <!-- 这里使用 v-model:query 实现双向绑定 -->
       <FitnessSearch
           v-model:query="query"
           :fitnessTypeOptions="fitnessTypeOptions"
@@ -78,6 +77,7 @@
         @submit="handleAddRecord"
         @close="closeAddModal"
     />
+
     <!-- 编辑弹窗 -->
     <FitnessForm
         v-if="editingIdx !== null"
@@ -96,9 +96,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { LucidePlus, LucideRefreshCw } from 'lucide-vue-next'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { LucidePlus, LucideRefreshCw } from 'lucide-vue-next'
 import { useFitnessStore } from '@/store/fitnessStore'
 import { useMetaStore } from '@/store/metaStore'
 import emitter from '@/utils/eventBus'
@@ -111,14 +111,15 @@ import FitnessSearch from '@/components/fitness/FitnessSearch.vue'
 
 const fitnessStore = useFitnessStore()
 const metaStore = useMetaStore()
-const { list, stats, query: storeQuery, pagination } = storeToRefs(fitnessStore)
+
+// 解构响应式引用
+const { query, pagination, list, stats } = storeToRefs(fitnessStore)
 
 const loading = ref(false)
 const showAddModal = ref(false)
 const editingIdx = ref<null | number>(null)
 const resultCount = ref<number | null>(null)
 
-// 类型选项
 const fitnessTypeOptions = computed(() =>
     (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
       label: item.value1 || '',
@@ -126,7 +127,6 @@ const fitnessTypeOptions = computed(() =>
     }))
 )
 
-// 单位选项
 const fitnessUnitOptions = computed(() =>
     (metaStore.typeMap?.UNIT || []).map(item => ({
       label: item.value1 || '',
@@ -134,37 +134,13 @@ const fitnessUnitOptions = computed(() =>
     }))
 )
 
-// 初始化时，确保query.typeIdList是空数组（避免默认全选）
-const query = reactive({
-  typeIdList: Array.isArray(storeQuery.value.typeIdList) && storeQuery.value.typeIdList.length > 0
-      ? [...storeQuery.value.typeIdList]
-      : [],
-  startDate: storeQuery.value.startDate || '',
-  endDate: storeQuery.value.endDate || '',
-  remark: storeQuery.value.remark || ''
-})
-
-// 保持 pinia 的 query 和本地 query 同步，防止页面切换后残留旧值
-watch(query, (newVal) => {
-  storeQuery.value.typeIdList = Array.isArray(newVal.typeIdList) ? [...newVal.typeIdList] : []
-  storeQuery.value.startDate = newVal.startDate
-  storeQuery.value.endDate = newVal.endDate
-  storeQuery.value.remark = newVal.remark
-}, { deep: true })
-
-// 父组件接收子组件的 query 变更，合并更新 pinia 的 query 状态
-function handleQuery(newQuery) {
-  Object.assign(query, newQuery)
+function handleQuery() {
   fitnessStore.setPageNo(1)
   refreshData()
 }
 
 function resetQuery() {
-  // 这里重置所有查询条件，并同步 Pinia
-  query.typeIdList = []
-  query.startDate = ''
-  query.endDate = ''
-  query.remark = ''
+  fitnessStore.resetQuery()
   fitnessStore.setPageNo(1)
   refreshData()
 }
@@ -172,13 +148,6 @@ function resetQuery() {
 async function refreshData() {
   loading.value = true
   try {
-    // 切换页面回来时，强制确保 typeIdList 不是全选状态
-    if (!query.typeIdList.length) {
-      storeQuery.value.typeIdList = []
-    } else {
-      storeQuery.value.typeIdList = [...query.typeIdList]
-    }
-
     await Promise.all([fitnessStore.loadStats(), fitnessStore.loadList()])
     resultCount.value = fitnessStore.pagination.total
     emitter.emit('notify', { message: `成功查询出 ${resultCount.value} 条数据`, type: 'success' })
@@ -252,14 +221,10 @@ function handleDelete(record) {
 }
 
 function initEmptyForm() {
-  // 默认类型“俯卧撑”
   const defaultType = fitnessTypeOptions.value.find(item => item.label === '俯卧撑')
-  form.typeId = defaultType ? String(defaultType.value) : String(fitnessTypeOptions.value[0]?.value || '')
-
-  // 默认单位“个”
   const defaultUnit = fitnessUnitOptions.value.find(item => item.label === '个')
+  form.typeId = defaultType ? String(defaultType.value) : String(fitnessTypeOptions.value[0]?.value || '')
   form.unitId = defaultUnit ? String(defaultUnit.value) : String(fitnessUnitOptions.value[0]?.value || '')
-
   form.count = '1'
   form.finishTime = formatDate(new Date())
   form.remark = ''
@@ -281,9 +246,6 @@ const isNextWorkoutOverdue = computed(() => {
 
 onMounted(async () => {
   await metaStore.initAll()
-  // 切换页面回来，重置typeIdList为空，避免全选
-  query.typeIdList = []
-  storeQuery.value.typeIdList = []
   await refreshData()
 })
 </script>

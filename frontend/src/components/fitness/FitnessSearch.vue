@@ -79,22 +79,22 @@ const toggleMore = () => {
   showMore.value = !showMore.value
 }
 
-// 日期范围 v-model 字符串（内部处理）
+// 日期范围字符串，供 BaseDateInput 使用（内部）
 const rangeValue = ref('')
 
-// 本地 options 副本，避免初次为空
+// 本地副本 options，避免首次无数据导致展示问题
 const localFitnessTypeOptions = ref<Array<{ label: string; value: string | number }>>([])
 
 watch(() => props.fitnessTypeOptions, (val) => {
   localFitnessTypeOptions.value = val || []
 }, { immediate: true })
 
-// 监听 query.startDate/endDate => rangeValue
+// 监听父组件传入的 startDate 和 endDate，合并成 rangeValue 字符串
 watch(() => [props.query.startDate, props.query.endDate], ([start, end]) => {
   rangeValue.value = joinRangeDates(start, end)
 }, { immediate: true })
 
-// 监听 rangeValue => 拆分更新 query.startDate/endDate
+// 监听 rangeValue 变化，拆分成 startDate 和 endDate 赋给 query
 watch(rangeValue, (val) => {
   const { start, end } = splitRangeDates(val)
   props.query.startDate = start
@@ -102,7 +102,7 @@ watch(rangeValue, (val) => {
 })
 
 function onSearch() {
-  emit('search', { ...props.query })
+  emit('search')
 }
 
 function onReset() {
