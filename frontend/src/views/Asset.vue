@@ -47,6 +47,7 @@
       <div class="flex justify-start gap-2">
         <BaseButton title="添加资产" @click="handleAdd" color="primary" :icon="LucidePlus"/>
         <BaseButton title="复制上回记录" @click="onCopyClick" color="outline" :icon="LucideCopy"/>
+        <BaseButton title="扫图批量添加" @click="handleScanPicAdd" color="outline" :icon="LucideScanText"/>
       </div>
       <AssetSearch
           :query="query"
@@ -93,12 +94,21 @@
         @submit="saveEdit"
         @close="cancelEdit"
     />
+    <AssetForm
+        v-if="showScanPicAddModal"
+        :visible="showScanPicAddModal"
+        :form="form"
+        title="扫图批量添加"
+        confirm-text="确定"
+        @submit="handleAddRecord"
+        @close="closeScanPicAddModal"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { LucideCopy, LucidePlus, LucideRefreshCw } from 'lucide-vue-next'
+import { LucideCopy, LucidePlus, LucideRefreshCw, LucideScanText } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { format } from 'date-fns'
 import { useAssetStore } from '@/store/assetStore'
@@ -119,6 +129,7 @@ const { list, stats, query, pagination } = storeToRefs(assetStore)
 
 const loading = ref(false)
 const showAddModal = ref(false)
+const showScanPicAddModal = ref(false)
 const editingIdx = ref<number | null>(null)
 const resultCount = ref<number | null>(null)
 
@@ -240,6 +251,21 @@ function handlePageChange(page: number) {
 function handleAdd() {
   initEmptyForm()
   showAddModal.value = true
+}
+
+function handleScanPicAdd() {
+  initEmptyForm()
+  showScanPicAddModal.value = true
+}
+
+function closeScanPicAddModal() {
+  showScanPicAddModal.value = false
+}
+
+async function handleScanPicAddModal(data: typeof form) {
+  await assetStore.ScanPicAddRecord({ ...data})
+  showScanPicAddModal.value = false
+  await refreshData()
 }
 
 function closeAddModal() {

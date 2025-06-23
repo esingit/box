@@ -1,3 +1,4 @@
+// src/router/routes.ts
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import Home from '@/views/Home.vue'
@@ -17,7 +18,7 @@ export const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: '首页',
-      showSidebar: false,  // 首页不显示侧边栏
+      showSidebar: false,
     },
   },
   {
@@ -27,7 +28,7 @@ export const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: '健身记录',
-      showSidebar: true,   // 需要登录且显示侧边栏
+      showSidebar: true,
     },
   },
   {
@@ -55,22 +56,6 @@ export const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-})
-
-// 导航守卫：鉴权+标题动态设置
-router.beforeEach((to, from, next) => {
-  const isLoggedIn = !!localStorage.getItem('token')
-
-  // 设置文档标题
-  if (to.meta.title) {
-    document.title = to.meta.title + ' - Box'
-  }
-
-  if (to.meta.requiresAuth && !isLoggedIn) {
-    next('/home') // 没登录强制回首页或者登录页
-  } else {
-    next()
-  }
 })
 
 export default router
