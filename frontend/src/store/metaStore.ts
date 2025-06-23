@@ -1,7 +1,7 @@
 // /store/metaStore.ts
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
-import axiosInstance from '@/utils/axios'
+import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 
 // 请求参数 DTO，只包含 typeCode

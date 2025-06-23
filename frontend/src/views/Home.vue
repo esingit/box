@@ -17,15 +17,15 @@
   </div>
 </template>
 
-<script setup>
+<script setup="ts">
 import {ref} from 'vue'
+import {storeToRefs} from 'pinia'
 import {Package} from 'lucide-vue-next'
 import Dashboard from '@/components/dashboard/Dashboard.vue'
-import {useAuth} from "@/composable/useAuth";
+import {useUserStore} from '@/store/userStore'
 
-const auth = useAuth()
-
-const {isLoggedIn} = auth
+const userStore = useUserStore()
+const {isLoggedIn} = storeToRefs(userStore)
 const isRotating = ref(false)
 
 function applyRotationAnimation(duration = 1000) {

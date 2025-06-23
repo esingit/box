@@ -1,5 +1,7 @@
+// src/composables/useAuthModal.ts
 import { ref } from 'vue'
 
+// 全局单例状态，保证所有地方共享登录注册弹窗状态
 const isShowingLoginModal = ref(false)
 const isShowingRegisterModal = ref(false)
 
@@ -21,9 +23,17 @@ function hideRegister() {
     isShowingRegisterModal.value = false
 }
 
-function handleSwitchToLogin() {
+function hideAll() {
+    isShowingLoginModal.value = false
     isShowingRegisterModal.value = false
-    isShowingLoginModal.value = true
+}
+
+function handleSwitchToLogin() {
+    showLogin()
+}
+
+function handleSwitchToRegister() {
+    showRegister()
 }
 
 export const useAuthModal = () => ({
@@ -33,5 +43,7 @@ export const useAuthModal = () => ({
     hideLogin,
     showRegister,
     hideRegister,
-    handleSwitchToLogin
+    hideAll,
+    handleSwitchToLogin,
+    handleSwitchToRegister
 })

@@ -36,12 +36,15 @@
         </div>
       </template>
     </div>
+
+    <!-- 统一管理登录注册弹窗，删除单独 LoginModal -->
     <AuthModals
         v-model:showLogin="isShowingLoginModal"
         v-model:showRegister="isShowingRegisterModal"
         @login-success="handleLoginSuccess"
         @register-success="handleLoginSuccess"
     />
+
     <Profile ref="profileSettingsRef" />
     <BaseNotice />
     <BaseDialog />
@@ -67,9 +70,8 @@ import Profile from '@/components/layout/Profile.vue'
 const userStore = useUserStore()
 const auth = useAuth()
 const authModal = useAuthModal()
-
 const { user } = storeToRefs(userStore)
-const { isLoggedIn, pendingAuthAction, clearToken } = auth
+const { pendingAuthAction, clearToken } = auth
 const {
   isShowingLoginModal,
   isShowingRegisterModal,
@@ -79,6 +81,7 @@ const {
   hideRegister
 } = authModal
 
+const { isLoggedIn } = storeToRefs(userStore)
 const isUserLoading = ref(true)
 const profileSettingsRef = ref<InstanceType<typeof Profile> | null>(null)
 
@@ -121,6 +124,7 @@ async function handleLoginSuccess() {
     handleError(error, '登录后操作失败')
   } finally {
     pendingAuthAction.value = null
+    // 登录成功后关闭弹窗
     hideLogin()
     hideRegister()
   }

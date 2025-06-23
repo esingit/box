@@ -37,7 +37,7 @@
       <LucideX class="w-4 h-4" />
     </button>
 
-    <!-- 数字调节按钮 -->
+    <!-- 数字调节按钮，密码和textarea不显示 -->
     <div
         v-if="isNumberType"
         class="absolute top-1/2 right-2 -translate-y-1/2 flex flex-col justify-center"
@@ -81,7 +81,7 @@ const props = withDefaults(defineProps<{
   modelValue?: string | number
   title?: string
   placeholder?: string
-  type?: 'text' | 'number' | 'textarea'
+  type?: 'text' | 'number' | 'textarea' | 'password'
   disabled?: boolean
   clearable?: boolean
   required?: boolean
@@ -216,14 +216,3 @@ onMounted(() => {
   })
 })
 </script>
-
-<style scoped>
-input[type='number']::-webkit-inner-spin-button,
-input[type='number']::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type='number'] {
-  -moz-appearance: textfield;
-}
-</style>

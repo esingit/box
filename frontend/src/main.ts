@@ -1,3 +1,4 @@
+// src/main.ts
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router/routes'
@@ -14,25 +15,27 @@ import { setupRouterGuard } from './router/guard'
 
 async function bootstrap() {
     const app = createApp(App)
-
     const pinia = createPinia()
     app.use(pinia)
 
-    // 预加载用户数据
+    // 预加载用户状态，确保 hydrate 完成后再挂载，避免登录态闪烁和异常
     const { useUserStore } = await import('./store/userStore')
     const userStore = useUserStore()
-    if (typeof userStore.hydrate === 'function') {
-        await userStore.hydrate()
-    }
+    const initialized = await userStore.hydrate()
 
     app.use(router)
 
-    // 调用路由守卫初始化，务必在挂载前
+    // 挂载路由守卫，必须在 app.use(router) 之后调用
     setupRouterGuard(router)
+
+    // 如果未登录，强制跳转登录页，防止首次加载页面空白
+    if (!initialized) {
+        router.replace('/home')
+    }
 
     setupECharts(app)
 
     app.mount('#app')
 }
 
-bootstrap()
+bootstrap().then(() => {})

@@ -1,6 +1,6 @@
 import {defineStore} from 'pinia'
 import {ref, reactive, computed} from 'vue'
-import axiosInstance from '@/utils/axios'
+import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
 import {formatFitnessRecord} from '@/utils/commonMeta'

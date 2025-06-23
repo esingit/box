@@ -29,6 +29,7 @@ type Events = {
   'login-success': void
   'confirm': ConfirmPayload
   'show-login': void
+  'show-register': void
 }
 
 // 扩展 Emitter 类型以支持 once 方法

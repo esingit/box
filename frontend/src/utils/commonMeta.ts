@@ -1,4 +1,4 @@
-import axiosInstance from '@/utils/axios'
+import axiosInstance from '@/api/axios'
 import axios from 'axios'
 import {useMetaStore} from '@/store/metaStore'
 
@@ -6,7 +6,7 @@ import {useMetaStore} from '@/store/metaStore'
 const cache = new Map<string | number, { typeName: string; value1: string }>()
 
 /**
- * 根据ID获取 CommonMeta 的值
+ * 根据ID获取 CommonMeta 的值（带超时控制）
  */
 export async function getCommonMetaById(id: string | number): Promise<{ typeName: string; value1: string } | null> {
     if (!id) {
@@ -20,11 +20,16 @@ export async function getCommonMetaById(id: string | number): Promise<{ typeName
         return cached
     }
 
+    // 超时控制（5秒）
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+
     try {
         console.debug(`[CommonMeta] 请求ID: ${id}`)
         const res = await axiosInstance.get(`/api/common-meta/by-id/${id}`, {
-            signal: AbortSignal.timeout(5000)
+            signal: controller.signal
         })
+        clearTimeout(timeout)
 
         if (res.data?.success && res.data.data) {
             cache.set(id, res.data.data)
@@ -35,14 +40,16 @@ export async function getCommonMetaById(id: string | number): Promise<{ typeName
         console.warn(`[CommonMeta] 数据为空或失败: ${id}`, res.data)
         return null
     } catch (err: any) {
+        clearTimeout(timeout)
         if (axios.isCancel(err)) {
-            console.debug(`[CommonMeta] 请求取消: ${id}`)
+            console.debug(`[CommonMeta] 请求取消或超时: ${id}`)
         } else {
             console.error(`[CommonMeta] 请求失败: ${id}`, err)
         }
         return null
     }
 }
+
 
 /**
  * 清除 CommonMeta 缓存
@@ -119,7 +126,18 @@ export async function formatAssetRecord<
 }
 
 /**
- * 格式化资产名称记录中的所有元数据
+ * 判断是否是合法的元数据 ID
+ */
+function isValidMetaId(value: any): boolean {
+    // 通常 ID 为 number 或字符串形式的数字（如 '123'），防止传中文等非法值
+    return (
+        (typeof value === 'number' && !isNaN(value)) ||
+        (typeof value === 'string' && /^\d+$/.test(value))
+    )
+}
+
+/**
+ * 格式化资产名称记录中的所有元数据字段
  */
 export async function formatAssetNameRecord<
     T extends {
@@ -134,9 +152,12 @@ export async function formatAssetNameRecord<
 
     console.debug('[AssetName] 格式化记录:', record)
 
+    const nameId = isValidMetaId(record.name) ? record.name : undefined
+    const descriptionId = isValidMetaId(record.description) ? record.description : undefined
+
     const [name, description] = await Promise.all([
-        formatValue(String(record.name), String(record.name)),
-        formatValue(String(record.description), String(record.description))
+        formatValue(nameId, String(record.name)),
+        formatValue(descriptionId, String(record.description))
     ])
 
     const formatted = {

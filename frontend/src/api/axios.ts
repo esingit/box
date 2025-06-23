@@ -1,17 +1,15 @@
-import axios, {
-    AxiosResponse,
-    AxiosError,
-    InternalAxiosRequestConfig,
-    AxiosHeaders
-} from 'axios'
-import { axiosConfig, ALLOWED_DUPLICATE_ENDPOINTS } from '@/api/axiosConfig'
-import { generateRequestKey, requestManager } from '@/api/requestManager'
-import { tokenService } from '@/api/tokenService'
-import { ErrorHandler } from '@/api/errorHandler'
+// src/api/axios.ts
+import axios, {AxiosError, AxiosHeaders, AxiosResponse, InternalAxiosRequestConfig} from 'axios'
+import {ALLOWED_DUPLICATE_ENDPOINTS, axiosConfig} from '@/api/axiosConfig'
+import {generateRequestKey, requestManager} from '@/api/requestManager'
+import {tokenService} from '@/api/tokenService'
+import {ErrorHandler} from '@/api/errorHandler'
 
 type CustomRequestConfig = InternalAxiosRequestConfig & {
     allowDuplicate?: boolean
     skipAuthRetry?: boolean
+    retry?: number
+    retryDelay?: number
     signal?: AbortSignal
 }
 
@@ -22,21 +20,15 @@ const AUTH_WHITELIST: string[] = [
     '/api/captcha'
 ]
 
-// 创建 Axios 实例
 const instance = axios.create(axiosConfig)
 
-// 请求拦截器
 instance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
         const customConfig = config as CustomRequestConfig
         const requestKey = generateRequestKey(customConfig)
 
-        // 防止重复请求
-        const allowDuplicate =
-            customConfig.allowDuplicate ||
-            ALLOWED_DUPLICATE_ENDPOINTS.some(endpoint =>
-                customConfig.url?.includes(endpoint)
-            )
+        const allowDuplicate = customConfig.allowDuplicate ||
+            ALLOWED_DUPLICATE_ENDPOINTS.some(endpoint => customConfig.url?.includes(endpoint))
 
         if (!allowDuplicate) {
             if (requestManager.has(requestKey)) {
@@ -49,16 +41,15 @@ instance.interceptors.request.use(
             requestManager.add(requestKey, controller)
         }
 
-        // 获取路径名用于白名单判断
+        // 解析请求路径判断是否是白名单接口
         const rawUrl = customConfig.url || ''
-        const fullUrl = new URL(rawUrl, customConfig.baseURL || location.origin)
+        const baseURL = customConfig.baseURL || location.origin
+        const fullUrl = new URL(rawUrl, baseURL)
         const requestPath = fullUrl.pathname
 
-        const isAuthEndpoint = AUTH_WHITELIST.some(endpoint =>
-            requestPath.startsWith(endpoint)
-        )
+        const isAuthEndpoint = AUTH_WHITELIST.some(endpoint => requestPath.startsWith(endpoint))
 
-        // 非白名单接口才注入 token
+        // 非白名单接口才注入token
         if (!isAuthEndpoint) {
             const token = tokenService.getToken()
             if (!customConfig.headers) {
@@ -74,7 +65,6 @@ instance.interceptors.request.use(
     error => Promise.reject(error)
 )
 
-// 响应拦截器
 instance.interceptors.response.use(
     (response: AxiosResponse) => {
         requestManager.delete(generateRequestKey(response.config as CustomRequestConfig))
@@ -102,11 +92,11 @@ instance.interceptors.response.use(
                 if (config?.skipAuthRetry) {
                     return Promise.reject(axiosErr)
                 }
-                return ErrorHandler.handle401Error(axiosErr, config)
+                return ErrorHandler.handle401Error(axiosErr, config!)
             }
 
             ErrorHandler.handleOtherErrors(response.status, response.data)
-            return ErrorHandler.handleRetry(axiosErr, config)
+            return ErrorHandler.handleRetry(axiosErr, config!)
         }
 
         return Promise.reject(error)

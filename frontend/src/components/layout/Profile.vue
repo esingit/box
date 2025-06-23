@@ -62,6 +62,7 @@
                 <Field name="oldPassword" v-slot="{ field }">
                   <BaseInput
                       id="oldPassword"
+                      type="password"
                       :model-value="field.value"
                       @update:model-value="field.onChange"
                       placeholder="请输入旧密码"
@@ -76,6 +77,7 @@
                 <Field name="newPassword" v-slot="{ field }">
                   <BaseInput
                       id="newPassword"
+                      type="password"
                       :model-value="field.value"
                       @update:model-value="field.onChange"
                       placeholder="6-20位字母数字组合"
@@ -90,6 +92,7 @@
                 <Field name="confirmPassword" v-slot="{ field }">
                   <BaseInput
                       id="confirmPassword"
+                      type="password"
                       :model-value="field.value"
                       @update:model-value="field.onChange"
                       placeholder="再次确认新密码"

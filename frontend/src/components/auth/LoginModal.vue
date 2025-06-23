@@ -1,15 +1,16 @@
-<!--src/components/auth/LoginModal.vue-->
+<!-- src/components/auth/LoginModal.vue -->
 <template>
   <BaseModal :visible="visible" title="欢迎回来" @update:visible="close" width="500px">
     <Form :validation-schema="schema" v-slot="{ handleSubmit }">
       <form @submit.prevent="handleSubmit(onSubmit)" class="space-y-4" autocomplete="on">
+        <!-- 用户名 -->
         <div>
           <label class="modal-label">用户名</label>
           <Field name="username" v-slot="{ field }">
             <BaseInput
                 :model-value="field.value"
                 @update:model-value="field.onChange"
-                :placeholder="'请输入用户名'"
+                placeholder="请输入用户名"
                 autocomplete="username"
                 clearable
                 :disabled="loading"
@@ -18,6 +19,7 @@
           <ErrorMessage name="username" class="msg-error" />
         </div>
 
+        <!-- 密码 -->
         <div>
           <label class="modal-label">密码</label>
           <Field name="password" v-slot="{ field }">
@@ -34,13 +36,13 @@
           <ErrorMessage name="password" class="msg-error" />
         </div>
 
+        <!-- 验证码 -->
         <div v-if="needCaptcha">
           <label class="modal-label">验证码</label>
           <div class="flex items-center gap-2">
             <Field name="captcha" v-slot="{ field }">
               <BaseInput
                   v-model="field.value"
-                  class="input-base"
                   placeholder="请输入验证码"
                   autocomplete="off"
                   clearable
@@ -58,19 +60,22 @@
           <ErrorMessage name="captcha" class="msg-error" />
         </div>
 
+        <!-- 错误提示 -->
         <p v-if="error" class="msg-error">{{ error }}</p>
 
+        <!-- 登录按钮 -->
         <BaseButton type="submit" color="primary" :icon="LucideLogIn" :disabled="loading" class="w-full">
           {{ loading ? '登录中...' : '登录' }}
         </BaseButton>
       </form>
     </Form>
 
+    <!-- 底部切换 -->
     <template #footer>
       <div class="mt-4 text-center text-sm">
         没有账号？
         <button
-            @click="$emit('switch-to-register')"
+            @click="switchToRegister"
             class="msg-strong hover:underline focus:outline-none"
             :disabled="loading"
         >
@@ -91,9 +96,11 @@ import BaseModal from '@/components/base/BaseModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import { useAuth } from '@/composable/useAuth'
 
+const userStore = useUserStore()
 const { pendingAuthAction } = useAuth()
+
 const props = defineProps<{ visible: boolean }>()
-const emit = defineEmits(['update:visible', 'login-success', 'switch-to-register'])
+const emit = defineEmits(['update:visible', 'switch-to-register'])
 
 const visible = computed({
   get: () => props.visible,
@@ -106,8 +113,6 @@ const needCaptcha = ref(false)
 const captchaUrl = ref('')
 const captchaId = ref('')
 const captchaLoading = ref(false)
-
-const userStore = useUserStore()
 
 const schema = yup.object({
   username: yup.string().min(4, '用户名至少4位').required('请输入用户名'),
@@ -123,7 +128,6 @@ const schema = yup.object({
   })
 })
 
-// 监听是否需要验证码，自动刷新或清空
 watch(needCaptcha, async val => {
   if (val && !captchaUrl.value) {
     await refreshCaptcha()
@@ -163,6 +167,11 @@ function close() {
   }, 300)
 }
 
+function switchToRegister() {
+  close()
+  emit('switch-to-register')
+}
+
 const onSubmit: SubmissionHandler = async (values) => {
   if (loading.value) return
   error.value = ''
@@ -182,12 +191,9 @@ const onSubmit: SubmissionHandler = async (values) => {
     const res = await userStore.login(credentials)
 
     if (res.success) {
-      // 登录成功，调用重试队列
-      if (pendingAuthAction.value) {
-        await pendingAuthAction.value()
-      }
-      emit('login-success')
+      if (pendingAuthAction.value) await pendingAuthAction.value()
       close()
+      emit('login-success') // 如果你父组件监听登录成功
     } else {
       error.value = res.message || '登录失败'
       if (res.needCaptcha) {

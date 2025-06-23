@@ -1,3 +1,4 @@
+<!--src/components/auth/RegisterModal.vue-->
 <template>
   <BaseModal :visible="visible" title="注册新用户" @update:visible="close" width="500px">
     <form @submit.prevent="onSubmit" class="space-y-4">
@@ -77,7 +78,7 @@ const emit = defineEmits<{
 
 const props = defineProps<{ visible: boolean }>()
 
-const visible = computed<boolean>({
+const visible = computed({
   get: () => props.visible,
   set: val => emit('update:visible', val)
 })
@@ -199,6 +200,6 @@ const onSubmit = handleSubmit(async values => {
 
 function handleSuccessClose() {
   successModalVisible.value = false
-  emit('switch-to-login')
+  emit('switch-to-login') // 自动跳转登录弹窗
 }
 </script>

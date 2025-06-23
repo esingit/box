@@ -1,33 +1,43 @@
-interface AbortControllerMap {
-    [key: string]: AbortController
+// src/utils/requestManager.ts
+// 用于存储正在进行的请求的Map
+const pendingRequests = new Map<string, AbortController>()
+
+// 生成请求的唯一key
+export const generateRequestKey = (config: {
+  url?: string
+  method?: string
+  params?: Record<string, any>
+  data?: any
+}): string => {
+  const { url = '', method = 'GET', params, data } = config
+  const queryStr = params ? `?${new URLSearchParams(params).toString()}` : ''
+  const dataStr = data ? `:${JSON.stringify(data)}` : ''
+  return `${method.toUpperCase()}:${url}${queryStr}${dataStr}`
 }
 
-class RequestManager {
-    private requests: AbortControllerMap = {}
-
-    has(key: string): boolean {
-        return key in this.requests
-    }
-
-    get(key: string): AbortController | undefined {
-        return this.requests[key]
-    }
-
-    add(key: string, controller: AbortController): void {
-        this.requests[key] = controller
-    }
-
-    delete(key: string): void {
-        delete this.requests[key]
-    }
+// 取消重复的请求
+export function cancelPendingRequests(message = '取消重复请求'): void {
+  for (const [, controller] of pendingRequests) {
+    controller.abort(message)
+  }
+  pendingRequests.clear()
 }
 
-export const requestManager = new RequestManager()
+// 管理请求
+export const requestManager = {
+  add(requestKey: string, controller: AbortController): void {
+    pendingRequests.set(requestKey, controller)
+  },
 
-// 生成请求唯一key，避免重复请求
-export function generateRequestKey(config: { method?: string; url?: string; params?: any; data?: any }): string {
-    const { method = 'get', url = '', params, data } = config
-    const paramsString = params ? JSON.stringify(params) : ''
-    const dataString = data ? JSON.stringify(data) : ''
-    return [method.toUpperCase(), url, paramsString, dataString].join('&')
+  delete(requestKey: string): void {
+    pendingRequests.delete(requestKey)
+  },
+
+  has(requestKey: string): boolean {
+    return pendingRequests.has(requestKey)
+  },
+
+  get(requestKey: string): AbortController | undefined {
+    return pendingRequests.get(requestKey)
+  }
 }

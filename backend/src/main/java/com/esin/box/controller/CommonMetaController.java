@@ -23,15 +23,27 @@ public class CommonMetaController {
     }
 
     @GetMapping("/by-id/{id}")
-    public ApiResponse<CommonMeta> getMetaById(@PathVariable Long id) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Invalid id parameter");
+    public ApiResponse<CommonMeta> getMetaById(@PathVariable("id") String idStr) {
+        try {
+            long id = Long.parseLong(idStr);
+
+            if (id <= 0) {
+                return ApiResponse.error("参数错误：ID 必须为正整数");
+            }
+
+            CommonMeta meta = commonMetaService.getById(id);
+            if (meta == null) {
+                return ApiResponse.error("未找到 ID 为 " + id + " 的元数据");
+            }
+
+            return ApiResponse.success(meta);
+
+        } catch (NumberFormatException e) {
+            return ApiResponse.error("参数错误：ID 必须是数字");
+        } catch (Exception e) {
+            return ApiResponse.error("获取元数据失败：" + e.getMessage());
         }
-        CommonMeta meta = commonMetaService.getById(id);
-        if (meta == null) {
-            throw new IllegalArgumentException("Meta not found with id: " + id);
-        }
-        return ApiResponse.success(meta);
     }
+
 
 }
