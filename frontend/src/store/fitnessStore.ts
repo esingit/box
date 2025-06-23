@@ -58,9 +58,13 @@ export const useFitnessStore = defineStore('fitness', () => {
         carbsIntake: 0
     })
 
-    // 使用一个控制器管理所有列表查询（分页和全量）的取消
+    // 🔥 优化请求控制器管理
     let recordController: AbortController | null = null
     let statsController: AbortController | null = null
+
+    // 🔥 添加请求防抖机制
+    let loadRecordsTimeout: ReturnType<typeof setTimeout> | null = null
+    let lastRequestParams: string = ''
 
     const hasRecords = computed(() => list.value.length > 0)
     const recordCount = computed(() => pagination.total)
@@ -76,22 +80,34 @@ export const useFitnessStore = defineStore('fitness', () => {
     }
 
     // 构建查询参数，并对 remark 进行 trim() 处理
-    function buildParams() {
-        return {
-            page: pagination.pageNo,
-            pageSize: pagination.pageSize,
+    function buildParams(includePageInfo = true) {
+        const baseParams = {
             typeIdList: query.typeIdList.length > 0 ? query.typeIdList : undefined,
             startDate: query.startDate ? query.startDate + 'T00:00:00' : undefined,
             endDate: query.endDate ? query.endDate + 'T23:59:59' : undefined,
             remark: query.remark.trim() || undefined
         }
+
+        if (includePageInfo) {
+            return {
+                ...baseParams,
+                page: pagination.pageNo,
+                pageSize: pagination.pageSize
+            }
+        }
+
+        return baseParams
     }
 
-    // 🔥 优化后的错误处理函数
-    async function handleError(action: string, err: any) {
-        // 忽略取消的请求
-        if (err?.code === 'ERR_CANCELED') {
-            console.log(`[${action}] 请求被取消`)
+    // 🔥 优化错误处理函数
+    async function handleError(action: string, err: any, isManualCancel = false) {
+        // 🔥 区分不同类型的取消
+        if (err?.code === 'ERR_CANCELED' || err?.name === 'AbortError') {
+            if (isManualCancel) {
+                console.log(`🟡 [${action}] 请求被主动取消（切换查询条件）`)
+            } else {
+                console.log(`🟡 [${action}] 请求被取消`)
+            }
             return
         }
 
@@ -99,28 +115,63 @@ export const useFitnessStore = defineStore('fitness', () => {
         if (err?.message === 'AUTH_CANCELED' ||
             err?.message === '用户未登录，请先登录' ||
             err?.message === '请求已取消') {
-            console.log(`[${action}] 认证相关错误，等待用户登录:`, err.message)
+            console.log(`🟡 [${action}] 认证相关错误，等待用户登录:`, err.message)
             return
         }
 
         // 其他错误正常处理
-        console.error(`[${action}] 出错:`, err)
+        console.error(`🔴 [${action}] 出错:`, err)
         emitter.emit('notify', {
             message: `${action} 失败：${err?.message || '未知错误'}`,
             type: 'error'
         })
     }
 
+    // 🔥 安全取消请求的函数
+    function cancelRecordRequest(reason = '新请求开始') {
+        if (recordController) {
+            console.log(`🟡 [请求管理] ${reason}，取消之前的记录请求`)
+            recordController.abort()
+            recordController = null
+        }
+    }
+
+    // 🔥 检查参数是否发生变化
+    function hasParamsChanged(newParams: any): boolean {
+        const newParamsStr = JSON.stringify(newParams)
+        const changed = newParamsStr !== lastRequestParams
+        lastRequestParams = newParamsStr
+        return changed
+    }
+
     // --- 列表分页查询 ---
-    async function loadList() {
-        // 如果有正在进行的列表请求，则取消它
-        if (recordController) recordController.abort()
+    async function loadList(force = false) {
+        const params = buildParams()
+
+        // 🔥 如果参数没有变化且不是强制加载，跳过请求
+        if (!force && !hasParamsChanged(params) && list.value.length > 0) {
+            console.log('🟡 [获取健身记录] 参数未变化，跳过重复请求')
+            return
+        }
+
+        // 🔥 清除防抖定时器
+        if (loadRecordsTimeout) {
+            clearTimeout(loadRecordsTimeout)
+            loadRecordsTimeout = null
+        }
+
+        // 🔥 如果有正在进行的请求，标记为主动取消
+        const isManualCancel = recordController !== null
+        cancelRecordRequest('分页查询开始')
+
         recordController = new AbortController()
         loadingList.value = true
 
         try {
+            console.log('🟢 [获取健身记录] 开始分页查询', params)
+
             const res = await axiosInstance.get('/api/fitness-record/list', {
-                params: buildParams(),
+                params,
                 signal: recordController.signal,
                 paramsSerializer: params => qs.stringify(params, {arrayFormat: 'repeat'})
             })
@@ -138,6 +189,11 @@ export const useFitnessStore = defineStore('fitness', () => {
                 pagination.total = Number(raw.total ?? 0)
                 pagination.pageNo = Number(raw.current ?? pagination.pageNo)
                 pagination.pageSize = Number(raw.size ?? pagination.pageSize)
+
+                console.log('🟢 [获取健身记录] 分页查询成功', {
+                    count: list.value.length,
+                    total: pagination.total
+                })
             } else {
                 emitter.emit('notify', {
                     message: res.data.message || '获取列表失败',
@@ -145,63 +201,116 @@ export const useFitnessStore = defineStore('fitness', () => {
                 })
             }
         } catch (err) {
-            await handleError('获取健身记录', err)
+            await handleError('获取健身记录', err, isManualCancel)
         } finally {
             loadingList.value = false
             recordController = null
         }
     }
 
-    // --- 查询全部记录（不分页），逻辑和参数与资金 store 对齐 ---
-    async function loadAllRecords() {
-        // 如果有正在进行的列表请求，则取消它
-        if (recordController) recordController.abort()
+    // --- 查询全部记录（不分页）---
+    async function loadAllRecords(force = false) {
+        const params = buildParams(false)
+
+        // 🔥 如果参数没有变化且不是强制加载，跳过请求
+        if (!force && !hasParamsChanged({...params, type: 'all'}) && allList.value.length > 0) {
+            console.log('🟡 [获取全部记录] 参数未变化，跳过重复请求')
+            return
+        }
+
+        // 🔥 清除防抖定时器
+        if (loadRecordsTimeout) {
+            clearTimeout(loadRecordsTimeout)
+            loadRecordsTimeout = null
+        }
+
+        // 🔥 如果有正在进行的请求，标记为主动取消
+        const isManualCancel = recordController !== null
+        cancelRecordRequest('全量查询开始')
+
         recordController = new AbortController()
-        loadingList.value = true // 使用相同的加载状态
+        loadingList.value = true
 
         try {
+            console.log('🟢 [获取全部记录] 开始全量查询', params)
+
             const res = await axiosInstance.get('/api/fitness-record/listAll', {
-                params: {
-                    typeIdList: query.typeIdList.length > 0 ? query.typeIdList : undefined,
-                    startDate: query.startDate ? query.startDate + 'T00:00:00' : undefined,
-                    endDate: query.endDate ? query.endDate + 'T23:59:59' : undefined,
-                    remark: query.remark.trim() || undefined // 使用 trim()
-                },
-                signal: recordController.signal, // 添加 AbortController signal
+                params,
+                signal: recordController.signal,
                 paramsSerializer: params => qs.stringify(params, {arrayFormat: 'repeat'})
             })
 
             if (res.data.success) {
-                const raw = res.data.data || [] // 确保数据为数组
+                const raw = res.data.data || []
                 allList.value = await Promise.all(raw.map(formatFitnessRecord))
+
                 // 更新分页信息以反映全量数据
                 pagination.total = raw.length
                 pagination.pageNo = 1
                 pagination.pageSize = raw.length || 10
+
+                console.log('🟢 [获取全部记录] 全量查询成功', {
+                    count: allList.value.length
+                })
             } else {
-                emitter.emit('notify', {message: res.data.message || '获取全部记录失败', type: 'error'})
+                emitter.emit('notify', {
+                    message: res.data.message || '获取全部记录失败',
+                    type: 'error'
+                })
             }
         } catch (err) {
-            await handleError('获取全部记录', err)
+            await handleError('获取全部记录', err, isManualCancel)
         } finally {
-            loadingList.value = false // 使用相同的加载状态
+            loadingList.value = false
             recordController = null
         }
     }
 
+    // 🔥 添加防抖版本的加载函数
+    function loadAllRecordsDebounced(delay = 300) {
+        if (loadRecordsTimeout) {
+            clearTimeout(loadRecordsTimeout)
+        }
+
+        loadRecordsTimeout = setTimeout(() => {
+            loadAllRecords(true)
+        }, delay)
+    }
+
+    function loadListDebounced(delay = 300) {
+        if (loadRecordsTimeout) {
+            clearTimeout(loadRecordsTimeout)
+        }
+
+        loadRecordsTimeout = setTimeout(() => {
+            loadList(true)
+        }, delay)
+    }
+
     // --- 查询参数更新，增加持久化 ---
     function updateQuery(newQuery: Partial<typeof query>) {
-        Object.assign(query, newQuery)
-        saveQueryToStorage() // 保存到本地存储
+        const hasChanged = Object.keys(newQuery).some(key => {
+            return (query as any)[key] !== (newQuery as any)[key]
+        })
+
+        if (hasChanged) {
+            Object.assign(query, newQuery)
+            saveQueryToStorage()
+            console.log('🟡 [查询条件] 已更新', query)
+        }
     }
 
     function setPageNo(page: number) {
-        pagination.pageNo = page
+        if (pagination.pageNo !== page) {
+            pagination.pageNo = page
+        }
     }
 
     function setPageSize(size: number) {
-        pagination.pageSize = size
-        pagination.pageNo = 1
+        if (pagination.pageSize !== size) {
+            pagination.pageSize = size
+            pagination.pageNo = 1
+        }
     }
 
     // --- 重置查询参数，增加持久化 ---
@@ -211,12 +320,20 @@ export const useFitnessStore = defineStore('fitness', () => {
         query.endDate = ''
         query.remark = ''
         pagination.pageNo = 1
-        saveQueryToStorage() // 保存到本地存储
+        saveQueryToStorage()
+
+        // 🔥 重置时清除参数缓存，确保下次查询会执行
+        lastRequestParams = ''
+        console.log('🟡 [查询条件] 已重置')
     }
 
     // --- 统计 ---
     async function loadStats() {
-        if (statsController) statsController.abort()
+        if (statsController) {
+            console.log('🟡 [获取统计] 取消之前的统计请求')
+            statsController.abort()
+        }
+
         statsController = new AbortController()
         loadingStats.value = true
 
@@ -227,8 +344,12 @@ export const useFitnessStore = defineStore('fitness', () => {
 
             if (res.data.success) {
                 Object.assign(stats, res.data.data)
+                console.log('🟢 [获取统计] 统计查询成功')
             } else {
-                emitter.emit('notify', {message: res.data.message || '获取统计失败', type: 'error'})
+                emitter.emit('notify', {
+                    message: res.data.message || '获取统计失败',
+                    type: 'error'
+                })
             }
         } catch (err) {
             await handleError('获取统计', err)
@@ -238,27 +359,26 @@ export const useFitnessStore = defineStore('fitness', () => {
         }
     }
 
-    // --- 增删改，调整逻辑使其与资金 store 一致（成功返回 true，失败抛出错误） ---
+    // --- 增删改 ---
     async function addRecord(data: any) {
         try {
             const res = await axiosInstance.post('/api/fitness-record/add', formatTime(data))
             if (res.data.success) {
                 emitter.emit('notify', {message: '添加成功', type: 'success'})
-                await loadList() // 添加后重新加载列表
-                return true // 成功时返回 true
+                // 🔥 添加后强制重新加载列表
+                await loadList(true)
+                return true
             } else {
-                throw new Error(res.data.message || '添加失败') // 失败时抛出错误
+                throw new Error(res.data.message || '添加失败')
             }
         } catch (err: any) {
-            // 🔥 只有非认证错误才抛出，认证错误由 handleError 静默处理
             if (err?.message !== 'AUTH_CANCELED' &&
                 err?.message !== '用户未登录，请先登录' &&
                 err?.message !== '请求已取消') {
                 await handleError('添加记录', err)
-                throw err // 重新抛出错误
+                throw err
             } else {
                 await handleError('添加记录', err)
-                // 认证错误不抛出，让组件可以正常处理
                 return false
             }
         }
@@ -269,21 +389,20 @@ export const useFitnessStore = defineStore('fitness', () => {
             const res = await axiosInstance.put('/api/fitness-record/update', formatTime(data))
             if (res.data.success) {
                 emitter.emit('notify', {message: '更新成功', type: 'success'})
-                await loadList() // 更新后重新加载列表
-                return true // 成功时返回 true
+                // 🔥 更新后强制重新加载列表
+                await loadList(true)
+                return true
             } else {
-                throw new Error(res.data.message || '更新失败') // 失败时抛出错误
+                throw new Error(res.data.message || '更新失败')
             }
         } catch (err: any) {
-            // 🔥 只有非认证错误才抛出，认证错误由 handleError 静默处理
             if (err?.message !== 'AUTH_CANCELED' &&
                 err?.message !== '用户未登录，请先登录' &&
                 err?.message !== '请求已取消') {
                 await handleError('更新记录', err)
-                throw err // 重新抛出错误
+                throw err
             } else {
                 await handleError('更新记录', err)
-                // 认证错误不抛出，让组件可以正常处理
                 return false
             }
         }
@@ -294,24 +413,40 @@ export const useFitnessStore = defineStore('fitness', () => {
             const res = await axiosInstance.delete(`/api/fitness-record/delete/${id}`)
             if (res.data.success) {
                 emitter.emit('notify', {message: '删除成功', type: 'success'})
-                await loadList() // 删除后重新加载列表
-                return true // 🔥 删除成功也返回 true
+                // 🔥 删除后强制重新加载列表
+                await loadList(true)
+                return true
             } else {
-                throw new Error(res.data.message || '删除失败') // 失败时抛出错误
+                throw new Error(res.data.message || '删除失败')
             }
         } catch (err: any) {
-            // 🔥 只有非认证错误才抛出，认证错误由 handleError 静默处理
             if (err?.message !== 'AUTH_CANCELED' &&
                 err?.message !== '用户未登录，请先登录' &&
                 err?.message !== '请求已取消') {
                 await handleError('删除记录', err)
-                throw err // 重新抛出错误
+                throw err
             } else {
                 await handleError('删除记录', err)
-                // 认证错误不抛出，让组件可以正常处理
                 return false
             }
         }
+    }
+
+    // 🔥 添加清理函数
+    function cleanup() {
+        cancelRecordRequest('组件销毁')
+
+        if (statsController) {
+            statsController.abort()
+            statsController = null
+        }
+
+        if (loadRecordsTimeout) {
+            clearTimeout(loadRecordsTimeout)
+            loadRecordsTimeout = null
+        }
+
+        console.log('🟡 [Store清理] 已清理所有请求和定时器')
     }
 
     return {
@@ -326,6 +461,8 @@ export const useFitnessStore = defineStore('fitness', () => {
         recordCount,
         loadList,
         loadAllRecords,
+        loadAllRecordsDebounced,
+        loadListDebounced,
         updateQuery,
         setPageNo,
         setPageSize,
@@ -333,6 +470,7 @@ export const useFitnessStore = defineStore('fitness', () => {
         loadStats,
         addRecord,
         updateRecord,
-        deleteRecord
+        deleteRecord,
+        cleanup
     }
 })

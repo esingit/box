@@ -6,7 +6,7 @@
     <!-- 使用健身查询组件替换原有查询条件 -->
     <FitnessSearch
         :query="query"
-        :fitness-type-options="props.fitnessTypeOptions"
+        :fitness-type-options="fitnessTypeOptions"
         :result-count="fitnessRecords.length"
         @search="handleSearchFromComponent"
         @reset="handleResetFromComponent"
@@ -119,27 +119,28 @@ const EXERCISE_TYPE_KEY = 'EXERCISE'
 interface Option {
   label: string
   value: string | number
-  id?: string | number      // 添加 id 属性
-  value1?: string           // 添加 value1 属性
-  key1?: string            // 添加 key1 属性
-  key2?: string            // 添加 key2 属性
-  key3?: string            // 添加 key3 属性
+  id?: string | number
+  value1?: string
+  key1?: string
+  key2?: string
+  key3?: string
 }
 
-// 修改 Props 定义
+// Props 定义
 const props = defineProps<{
-  fitnessTypeOptions: Option[]  // 改为 Option[]
-  unitOptions: Option[]         // 改为 Option[]
+  fitnessTypeOptions: Option[]
+  unitOptions: Option[]
 }>()
 
 // Composables
 const fitnessStore = useFitnessStore()
-const {query, allList} = storeToRefs(fitnessStore)
+const {query, allList, loadingList} = storeToRefs(fitnessStore)
 
 const {
   getDefaultRange,
   parseDateRange
 } = useDateRange()
+
 const {
   chartRef,
   initChart,
@@ -147,18 +148,10 @@ const {
   resizeChart
 } = useChart()
 
-// 响应式状态
-const isLoading = ref(false)
+// 🔥 使用 store 中的 loading 状态
+const isLoading = computed(() => loadingList.value)
 const errorMessage = ref('')
 const isChartReady = ref(false)
-
-// 搜索查询状态 - 用于传递给 FitnessSearch 组件
-const searchQuery = reactive({
-  typeIdList: [] as (string | number)[],
-  startDate: '',
-  endDate: '',
-  remark: ''
-})
 
 // 图表选项
 const chartOptions = reactive({
@@ -174,7 +167,7 @@ const CHART_COLORS = [
   '#8B9B8B', '#B8898B', '#89B8B8', '#A8A87B', '#9E7B8C', '#7B8C9E'
 ]
 
-// 防抖函数 - 修复 NodeJS.Timeout 类型错误
+// 防抖函数
 function debounce<T extends (...args: any[]) => any>(
     func: T,
     wait: number
@@ -231,7 +224,6 @@ const unitMapping = computed(() => {
 
   props.unitOptions.forEach(option => {
     if (option) {
-      // 同时支持 id 和 value 作为键
       if (option.id && option.value1) {
         map[String(option.id)] = option.value1
       }
@@ -253,7 +245,6 @@ function getDefaultUnitForType(typeId: string | number): string {
     return ''
   }
 
-  // 根据 key3 找到对应的单位（key1 匹配）
   const defaultUnit = props.unitOptions?.find(unit => unit.key1 === fitnessType.key3)
   if (!defaultUnit) {
     return ''
@@ -270,7 +261,7 @@ function isExerciseType(typeId: string | number): boolean {
   return fitnessType?.key2 === EXERCISE_TYPE_KEY
 }
 
-// 计算属性 - 添加空值检查
+// 计算属性
 const fitnessRecords = computed<FitnessRecord[]>(() => {
   const list = fitnessStore.allList
   if (!list || !Array.isArray(list)) {
@@ -283,7 +274,6 @@ const hasData = computed(() => {
   return fitnessRecords.value.length > 0 && !errorMessage.value
 })
 
-// 检查是否有搜索条件
 const hasSearchConditions = computed(() => {
   return query.value.typeIdList.length > 0 || query.value.remark.trim() !== ''
 })
@@ -323,7 +313,6 @@ const exerciseRecords = computed(() => {
 const exerciseDaysCount = computed(() => {
   if (!exerciseRecords.value.length) return 0
 
-  // 收集所有运动类型记录的日期
   const exerciseDays = new Set<string>()
   exerciseRecords.value.forEach(record => {
     if (record.finishTime) {
@@ -374,7 +363,6 @@ function getRecordUnit(typeId: string | number, date: string): string {
       record.finishTime?.startsWith(date)
   )
 
-  // 如果记录有单位ID，使用该记录中的单位
   if (records.length > 0 && records[0].unitId) {
     const unitId = String(records[0].unitId)
     const unitName = unitMapping.value[unitId]
@@ -383,7 +371,6 @@ function getRecordUnit(typeId: string | number, date: string): string {
     }
   }
 
-  // 如果没有记录或者单位ID，使用该类型的默认单位
   return getDefaultUnitForType(typeId)
 }
 
@@ -391,7 +378,7 @@ function getRecordUnit(typeId: string | number, date: string): string {
 function formatValueWithUnit(value: number, typeId: string | number, date: string): string {
   if (value === 0) return '0'
 
-  const unit = getRecordUnit(typeId, date) // 这里获取到正确的单位
+  const unit = getRecordUnit(typeId, date)
 
   let formattedValue: string
   if (value >= 1000) {
@@ -434,7 +421,6 @@ const chartSeries = computed(() => {
           )
           const typeName = typeOption?.value1 || typeOption?.label || `类型${typeId}`
 
-          // 按日期汇总该类型的数据
           const data = allDates.value.map(date => {
             return fitnessRecords.value
                 .filter(record =>
@@ -445,7 +431,6 @@ const chartSeries = computed(() => {
                 .reduce((sum, record) => sum + Number(record.count || 0), 0)
           })
 
-          // 过滤掉没有数据的系列
           if (!data.some(value => value > 0)) return null
 
           const color = CHART_COLORS[index % CHART_COLORS.length]
@@ -454,7 +439,6 @@ const chartSeries = computed(() => {
             name: typeName,
             type: 'line',
             data,
-            // 添加自定义属性存储 typeId
             typeId: typeId,
             smooth: chartOptions.smoothCurve,
             symbol: 'circle',
@@ -482,11 +466,10 @@ const chartSeries = computed(() => {
                 const {value, dataIndex} = params
                 if (value <= 0) return ''
                 const date = allDates.value[dataIndex]
-                // 确保 typeId 不是 undefined
                 if (typeId !== undefined) {
                   return formatValueWithUnit(value, typeId, date)
                 }
-                return formatValue(value)  // 如果 typeId 是 undefined，只返回格式化的数值
+                return formatValue(value)
               }
             } : undefined,
             emphasis: {
@@ -502,7 +485,7 @@ const chartSeries = computed(() => {
   }
 })
 
-// 修改 tooltip formatter
+// ECharts 配置
 const echartConfig = computed(() => {
   if (!hasData.value || !chartSeries.value.length || !allDates.value.length) {
     return null
@@ -552,29 +535,23 @@ const echartConfig = computed(() => {
 
           params.forEach((param) => {
             if (param.value > 0) {
-              // 从系列中查找 typeId
               const series = chartSeries.value.find(s => s.name === param.seriesName)
               if (series && series.typeId !== undefined) {
-                const typeId = series.typeId as string | number  // 添加类型断言
-
-                // 获取该类型在该日期的单位
+                const typeId = series.typeId as string | number
                 const unit = getRecordUnit(typeId, date)
-
-                // 格式化数值
                 const formattedValue = formatValue(param.value)
                 const displayValue = unit ? `${formattedValue}${unit}` : formattedValue
 
                 result += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 3px">
-          <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
-              <span>${param.seriesName}: <strong>${displayValue}</strong></span>
-          </div>`
+                  <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
+                  <span>${param.seriesName}: <strong>${displayValue}</strong></span>
+                </div>`
               } else {
-                // 如果找不到对应的系列，显示不带单位的数值
                 const formattedValue = formatValue(param.value)
                 result += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 3px">
-        <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
-        <span>${param.seriesName}: <strong>${formattedValue}</strong></span>
-      </div>`
+                  <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%"></span>
+                  <span>${param.seriesName}: <strong>${formattedValue}</strong></span>
+                </div>`
               }
             }
           })
@@ -628,7 +605,7 @@ const echartConfig = computed(() => {
           fontSize: 12,
           color: '#718096'
         },
-        axisLabel: {
+        axiosLabel: {
           fontSize: 11,
           color: '#718096',
           formatter: (value: number) => {
@@ -687,17 +664,15 @@ function showNotification(message: string, type: 'success' | 'error' | 'warning'
   emitter.emit('notify', {message, type})
 }
 
-// 初始化图表的函数 - 优化版本
+// 🔥 优化后的图表初始化
 async function initializeChart(): Promise<void> {
   if (!isChartReady.value || !hasData.value || !echartConfig.value) {
     return
   }
 
   try {
-    // 等待 DOM 更新
     await nextTick()
 
-    // 增加等待时间和重试机制
     let retryCount = 0
     const maxRetries = 10
     const retryDelay = 50
@@ -715,7 +690,6 @@ async function initializeChart(): Promise<void> {
       return
     }
 
-    // 确保容器有尺寸
     const rect = chartRef.value.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) {
       console.warn('Chart container has no size')
@@ -736,46 +710,71 @@ const debouncedUpdateChart = debounce(async () => {
   }
 }, 200)
 
-// 数据加载
+// 🔥 优化数据加载，使用 store 的防抖方法
 async function loadData(): Promise<void> {
   if (!query.value.startDate || !query.value.endDate) {
     showNotification('请选择有效的日期范围', 'error')
     return
   }
 
-  isLoading.value = true
   errorMessage.value = ''
 
   try {
-    await fitnessStore.loadAllRecords()
+    console.log('🟢 开始加载健身数据')
+
+    // 🔥 使用 store 中的防抖方法
+    fitnessStore.loadAllRecordsDebounced(300)
+
+    // 🔥 监听数据加载完成
     await nextTick()
+
+    // 等待数据加载完成
+    const checkDataLoaded = () => {
+      return new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (!isLoading.value) {
+            clearInterval(checkInterval)
+            resolve()
+          }
+        }, 100)
+
+        // 5秒超时
+        setTimeout(() => {
+          clearInterval(checkInterval)
+          resolve()
+        }, 5000)
+      })
+    }
+
+    await checkDataLoaded()
 
     if (hasData.value) {
       showNotification('健身数据加载成功', 'success')
-      // 延迟初始化图表，确保 DOM 完全更新
       setTimeout(async () => {
         await initializeChart()
       }, 150)
     }
-  } catch (error) {
-    console.error('Failed to load fitness data:', error)
-    errorMessage.value = '获取健身数据失败'
-    showNotification('获取健身数据失败，请稍后重试', 'error')
-  } finally {
-    isLoading.value = false
+  } catch (error: any) {
+    if (error?.name !== 'AbortError') {
+      console.error('🔴 Failed to load fitness data:', error)
+      errorMessage.value = '获取健身数据失败'
+      showNotification('获取健身数据失败，请稍后重试', 'error')
+    }
   }
 }
 
-// 处理 FitnessSearch 组件的搜索事件
+// 处理搜索事件
 async function handleSearchFromComponent(newQuery: typeof query.value) {
+  console.log('🟢 处理搜索请求', newQuery)
   fitnessStore.updateQuery(newQuery)
-  await loadData()
+
+  // 🔥 使用防抖版本避免频繁请求
+  fitnessStore.loadAllRecordsDebounced(300)
 }
 
 async function handleResetFromComponent() {
   fitnessStore.resetQuery()
 
-  // 设置默认日期范围
   const defaultRange = getDefaultRange()
   const {startDate, endDate} = parseDateRange(defaultRange)
   fitnessStore.updateQuery({
@@ -791,7 +790,8 @@ async function handleResetFromComponent() {
   chartOptions.smoothCurve = true
   errorMessage.value = ''
 
-  await loadData()
+  // 🔥 使用防抖版本
+  fitnessStore.loadAllRecordsDebounced(300)
 }
 
 // 计算俯卧撑总数
@@ -803,12 +803,10 @@ const pushUpCount = computed(() => {
   return fitnessRecords.value.filter(record => {
     if (!record || !record.typeId) return false
 
-    // 通过typeId找到对应的健身类型
     const fitnessType = props.fitnessTypeOptions.find(type =>
         String(type.value) === String(record.typeId) || String(type.id) === String(record.typeId)
     )
 
-    // 检查是否为俯卧撑类型（key1 === 'PUSH_UP'）
     return fitnessType?.key1 === 'PUSH_UP'
   }).reduce((sum, record) => {
     const count = Number(record.count || 0)
@@ -825,13 +823,10 @@ const proteinCount = computed(() => {
   return fitnessRecords.value.filter(record => {
     if (!record || !record.typeId) return false
 
-    // 通过typeId找到对应的健身类型
     const fitnessType = props.fitnessTypeOptions.find(type =>
         String(type.value) === String(record.typeId) || String(type.id) === String(record.typeId)
     )
 
-    // 检查是否为蛋白质类型（根据您的数据结构调整条件）
-    // 这里假设蛋白质类型的 key1 === 'PROTEIN' 或者 value1 包含"蛋白"
     return fitnessType?.key1 === 'PROTEIN' ||
         fitnessType?.value1?.includes('蛋白')
   }).reduce((sum, record) => {
@@ -840,7 +835,7 @@ const proteinCount = computed(() => {
   }, 0)
 })
 
-// 优化生命周期钩子
+// 🔥 生命周期优化
 onMounted(async () => {
   await nextTick()
   isChartReady.value = true
@@ -854,15 +849,21 @@ onMounted(async () => {
     })
   }
 
-  // 延迟加载数据，确保组件完全初始化
-  setTimeout(async () => {
-    await loadData()
+  // 🔥 延迟加载数据，确保组件完全初始化
+  setTimeout(() => {
+    loadData()
   }, 100)
 
-  window.addEventListener('resize', resizeChart)
+  // 🔥 修复: 添加 passive 选项和错误处理
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', resizeChart, {
+      passive: true,
+      capture: false
+    })
+  }
 })
 
-// 优化监听器，避免重复初始化
+// 监听器优化
 watch(
     () => [chartOptions.showDataLabels, chartOptions.showAreaFill, chartOptions.smoothCurve],
     () => {
@@ -871,11 +872,9 @@ watch(
     {deep: true}
 )
 
-// 优化数据变化监听
 watch(
     () => [fitnessStore.allList, hasData.value],
     async ([newList, newHasData], [oldList, oldHasData]) => {
-      // 只在数据从无到有，或者数据实际发生变化时才更新
       if (isChartReady.value && !isLoading.value) {
         if (newHasData && (!oldHasData || newList !== oldList)) {
           await nextTick()
@@ -886,20 +885,25 @@ watch(
     {deep: true}
 )
 
-// 优化图表容器监听
 watch(chartRef, async (newRef, oldRef) => {
   if (newRef && newRef !== oldRef && isChartReady.value && hasData.value && !isLoading.value) {
     await nextTick()
-    // 给更多时间让 DOM 完全渲染
     setTimeout(() => {
       debouncedUpdateChart()
     }, 100)
   }
 })
 
-// 添加清理函数
+// 🔥 优化清理函数
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', resizeChart)
-  destroyChart()
+  try {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', resizeChart)
+    }
+    destroyChart()
+    fitnessStore.cleanup()
+  } catch (error) {
+    console.warn('Cleanup error:', error)
+  }
 })
 </script>

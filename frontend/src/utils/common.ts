@@ -43,9 +43,49 @@ export function useDateRange() {
     }
 }
 
+// 🔥 全局 patch，在模块加载时就执行
+let isGlobalPatchApplied = false
+
+function applyGlobalEventListenerPatch() {
+    if (isGlobalPatchApplied) return
+
+    const originalAddEventListener = EventTarget.prototype.addEventListener
+
+    EventTarget.prototype.addEventListener = function(
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        options?: boolean | AddEventListenerOptions
+    ) {
+        // 🔥 对滚轮相关事件强制添加 passive: true
+        if (type === 'wheel' || type === 'mousewheel' || type === 'touchmove') {
+            if (typeof options === 'boolean') {
+                options = {
+                    capture: options,
+                    passive: true
+                }
+            } else if (options && typeof options === 'object') {
+                options = {
+                    ...options,
+                    passive: true
+                }
+            } else {
+                options = {
+                    passive: true
+                }
+            }
+        }
+
+        return originalAddEventListener.call(this, type, listener, options)
+    }
+
+    isGlobalPatchApplied = true
+    console.log('🟢 全局 passive event listener patch 已应用')
+}
+
 export function useChart() {
     const chartRef = ref<HTMLDivElement | null>(null)
     let chartInstance: echarts.ECharts | null = null
+    let resizeObserver: ResizeObserver | null = null
 
     async function initChart(options: echarts.EChartsOption): Promise<void> {
         if (!chartRef.value) {
@@ -53,27 +93,81 @@ export function useChart() {
             return
         }
 
+        // 🔥 确保在 ECharts 初始化前应用 patch
+        applyGlobalEventListenerPatch()
+
         await nextTick()
 
-        // ✅ Patch wheel listeners to passive to silence DevTools warnings
-        patchEChartsWheelListener(chartRef.value)
-
         destroyChart()
-        chartInstance = echarts.init(chartRef.value)
-        chartInstance.setOption(options, true)
-        chartInstance.resize()
+
+        try {
+            // 🔥 初始化 ECharts 实例
+            chartInstance = echarts.init(chartRef.value, undefined, {
+                // 🔥 添加配置选项来优化性能
+                devicePixelRatio: window.devicePixelRatio || 1,
+                renderer: 'canvas', // 明确指定渲染器
+                useDirtyRect: true, // 启用脏矩形优化
+            })
+
+            chartInstance.setOption(options, true)
+            chartInstance.resize()
+
+            // 🔥 使用 ResizeObserver 替代 window resize 事件，性能更好
+            setupResizeObserver()
+
+        } catch (error) {
+            console.error('ECharts 初始化失败:', error)
+        }
+    }
+
+    function setupResizeObserver() {
+        if (!chartRef.value || !chartInstance) return
+
+        // 清理之前的观察器
+        if (resizeObserver) {
+            resizeObserver.disconnect()
+        }
+
+        // 🔥 使用 ResizeObserver 监听容器大小变化
+        if (typeof ResizeObserver !== 'undefined') {
+            resizeObserver = new ResizeObserver((entries) => {
+                for (const entry of entries) {
+                    if (entry.target === chartRef.value && chartInstance) {
+                        // 🔥 使用 requestAnimationFrame 优化性能
+                        requestAnimationFrame(() => {
+                            if (chartInstance && !chartInstance.isDisposed()) {
+                                chartInstance.resize()
+                            }
+                        })
+                    }
+                }
+            })
+
+            resizeObserver.observe(chartRef.value)
+        }
     }
 
     function destroyChart(): void {
+        if (resizeObserver) {
+            resizeObserver.disconnect()
+            resizeObserver = null
+        }
+
         if (chartInstance) {
-            chartInstance.dispose()
+            if (!chartInstance.isDisposed()) {
+                chartInstance.dispose()
+            }
             chartInstance = null
         }
     }
 
     function resizeChart(): void {
-        if (chartInstance) {
-            chartInstance.resize()
+        if (chartInstance && !chartInstance.isDisposed()) {
+            requestAnimationFrame(() => {
+                if (chartInstance && !chartInstance.isDisposed()) {
+                    chartInstance.resize()
+                }
+            })
         }
     }
 
@@ -85,24 +179,8 @@ export function useChart() {
     }
 }
 
-/**
- * 修复 ECharts 默认绑定 wheel/mousewheel 事件没有 passive:true 的性能警告
- */
-function patchEChartsWheelListener(el: HTMLElement) {
-    const rawAddEventListener = el.addEventListener
-
-    el.addEventListener = function (
-        type: string,
-        listener: EventListenerOrEventListenerObject,
-        options?: boolean | AddEventListenerOptions
-    ) {
-        if (type === 'wheel' || type === 'mousewheel') {
-            if (typeof options === 'boolean') {
-                options = { passive: true }
-            } else {
-                options = Object.assign({}, options, { passive: true })
-            }
-        }
-        rawAddEventListener.call(this, type, listener, options)
-    }
+// 🔥 导出清理函数
+export function cleanupGlobalPatches() {
+    // 如果需要恢复原始行为，可以在这里实现
+    // 但通常不需要，因为 passive: true 是更好的默认行为
 }
