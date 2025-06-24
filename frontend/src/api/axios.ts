@@ -89,10 +89,12 @@ instance.interceptors.response.use(
             }
 
             if (response.status === 401) {
-                if (config?.skipAuthRetry) {
-                    return Promise.reject(axiosErr)
-                }
-                return ErrorHandler.handle401Error(axiosErr, config!)
+                if (config?.skipAuthRetry) return Promise.reject(axiosErr)
+
+                const result = await ErrorHandler.handle401Error(axiosErr, config!)
+                // 🔥 处理失败后，result 可能是 null，我们直接返回空响应
+                if (result === null) return Promise.resolve({ data: null, status: 401 })
+                return result
             }
 
             ErrorHandler.handleOtherErrors(response.status, response.data)

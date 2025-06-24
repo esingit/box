@@ -27,10 +27,10 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String jwtSecret;
     
-    @Value("${jwt.expiration:60000}")  // 默认2小时
+    @Value("${jwt.expiration:7200000}")  // 默认2小时
     private long jwtExpirationInMs;
     
-    @Value("${jwt.refresh-window:30000}")  // 默认30分钟
+    @Value("${jwt.refresh-window:1800000}")  // 默认30分钟
     private long refreshWindowInMs;
     
     @Value("${jwt.blacklist-expiration:86400000}")  // 默认24小时

@@ -39,32 +39,29 @@ let eventCleanupFunctions: Array<() => void> = []
 const REQUEST_TIMEOUT = 5 * 60 * 1000 // 5分钟超时
 
 function setupEventListeners() {
+
   if (eventListenerSetup) return
 
   const handleShowLogin = () => {
-    // 🔥 更严格的重复检查
-    if (isShowingLoginModal.value) {
-      console.log('🟡 登录弹窗已显示，忽略重复事件')
-      return
-    }
-
-    // 🔥 检查用户是否已登录
+    if (isShowingLoginModal.value) return
     const userStore = useUserStore()
-    if (userStore.isLoggedIn && userStore.token) {
-      console.log('🟡 用户已登录，忽略登录弹窗事件')
-      return
-    }
+    if (userStore.isLoggedIn && userStore.token) return
 
-    console.log('🟢 收到 show-login 事件，显示登录弹窗')
     isShowingLoginModal.value = true
     isShowingRegisterModal.value = false
   }
 
   emitter.on('show-login', handleShowLogin)
 
-  // 🔥 添加清理函数
+  // ✅ 新增监听 window 事件，避免循环引用
+  const loginListener = () => {
+    handleShowLogin()
+  }
+  window.addEventListener('force-login', loginListener)
+
   eventCleanupFunctions.push(() => {
     emitter.off('show-login', handleShowLogin)
+    window.removeEventListener('force-login', loginListener)
   })
 
   // 🔥 定期清理超时的待重试请求

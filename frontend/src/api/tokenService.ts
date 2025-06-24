@@ -106,7 +106,14 @@ class TokenService {
     } catch (error) {
       console.error('刷新token失败:', error)
       this.clearToken()
-      throw error
+
+      // 🔥 增加体验优化：直接处理认证失败 & 弹窗
+      const { useAuth } = await import('@/composables/useAuth')
+      const { onAuthFailed } = useAuth()
+      onAuthFailed()
+      window.dispatchEvent(new CustomEvent('force-login')) // 安全触发全局弹窗
+
+      return null // ❗不再 throw，防止 axios 抛出堆栈
     }
   }
 

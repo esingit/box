@@ -197,8 +197,14 @@ const commonAttributes = ref({
 })
 
 // 元数据
-const assetTypes = computed(() => metaStore.assetTypes || [])
-const assetLocations = computed(() => metaStore.assetLocations || [])
+const assetTypes = computed(() => metaStore.typeMap?.ASSET_TYPE?.map(i => ({
+  label: String(i.value1),
+  value: i.id
+})) || [])
+const assetLocations = computed(() => metaStore.typeMap?.ASSET_LOCATION?.map(i => ({
+  label: String(i.value1),
+  value: i.id
+})) || [])
 
 // 计算属性
 const canSubmit = computed(() => {
@@ -273,14 +279,4 @@ async function handleSubmit() {
 
   emit('submit', records)
 }
-
-// 加载元数据
-onMounted(() => {
-  if (!metaStore.assetTypes?.length) {
-    metaStore.loadAssetTypes()
-  }
-  if (!metaStore.assetLocations?.length) {
-    metaStore.loadAssetLocations()
-  }
-})
 </script>
