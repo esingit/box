@@ -3,9 +3,7 @@
     <!-- 统计卡片 -->
     <section class="bg-white rounded-xl hover:shadow-md p-6">
       <header class="flex justify-between items-center mb-3">
-        <h2 class="text-xl font-semibold text-gray-800 ">
-          <h2 class="text-xl font-semibold text-gray-800">健身统计</h2>
-        </h2>
+        <h2 class="text-xl font-semibold text-gray-800">健身统计</h2>
         <BaseButton type="button" @click="refreshData" color="outline" :icon="LucideRefreshCw" class="w-7 h-7"/>
       </header>
 

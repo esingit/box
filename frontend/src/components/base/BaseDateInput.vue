@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, defineExpose, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import dayjs from 'dayjs'
 import { LucideX, LucideCalendar } from 'lucide-vue-next'
 import BaseButton from './BaseButton.vue'
