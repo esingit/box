@@ -59,16 +59,18 @@
 
     <!-- 图表区域 -->
     <div class="relative min-h-[400px] h-[calc(100vh-300px)]">
-      <!-- 加载状态 - 优先级最高 -->
-      <div v-if="showLoading" class="flex items-center justify-center h-full text-gray-400">
-        <div class="flex items-center gap-2">
-          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-          <span>{{ loadingText }}</span>
+      <!-- 加载状态覆盖层 -->
+      <transition name="fade">
+        <div v-if="showLoading" class="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+          <div class="flex items-center gap-2 text-gray-600">
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+            <span>{{ loadingText }}</span>
+          </div>
         </div>
-      </div>
+      </transition>
 
       <!-- 错误状态 -->
-      <div v-else-if="errorMessage" class="h-full">
+      <div v-if="errorMessage && !showLoading" class="h-full">
         <BaseEmptyState
             icon="Dumbbell"
             :message="errorMessage"
@@ -77,7 +79,7 @@
       </div>
 
       <!-- 空数据状态 -->
-      <div v-else-if="showEmptyState" class="h-full">
+      <div v-else-if="showEmptyState && !showLoading" class="h-full">
         <BaseEmptyState
             icon="Dumbbell"
             message="暂无健身数据"
@@ -85,21 +87,25 @@
         />
       </div>
 
-      <!-- 图表容器 -->
-      <div v-else-if="shouldShowChart" :key="chartKey" ref="chartRef" class="w-full h-full chart-container"></div>
+      <!-- 图表容器 - 始终渲染以便快速更新 -->
+      <div
+          v-show="shouldShowChart || hasInitialData"
+          ref="chartRef"
+          class="w-full h-full chart-container"
+      ></div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
+import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch} from 'vue'
 import {storeToRefs} from 'pinia'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import FitnessSearch from '@/components/fitness/FitnessSearch.vue'
 import {useFitnessStore} from '@/store/fitnessStore'
 import {useChart, useDateRange} from '@/utils/common'
 import emitter from '@/utils/eventBus'
-import type {EChartsOption} from 'echarts'
+import type {EChartsOption, ECharts} from 'echarts'
 
 // 类型定义
 interface FitnessRecord {
@@ -141,16 +147,16 @@ const {query, allList, loadingList} = storeToRefs(fitnessStore)
 
 // Composables
 const {getDefaultRange, parseDateRange} = useDateRange()
-const {chartRef, initChart, destroyChart, resizeChart} = useChart()
+const {chartRef, initChart, destroyChart, resizeChart, getChartInstance} = useChart()
 
 // 状态管理
 const isLoading = computed(() => loadingList.value)
 const errorMessage = ref('')
 const isChartReady = ref(false)
-const chartKey = ref(0)
 const isUpdatingChart = ref(false)
-const isSearching = ref(false) // 新增：搜索状态
-const hasInitialData = ref(false) // 新增：是否有初始数据
+const isSearching = ref(false)
+const hasInitialData = ref(false)
+const chartInstance = shallowRef<ECharts | null>(null) // 使用shallowRef优化性能
 
 // 图表选项
 const chartOptions = reactive({
@@ -159,7 +165,7 @@ const chartOptions = reactive({
   smoothCurve: true
 })
 
-// 工具函数
+// 工具函数 - 优化防抖时间
 function debounce<T extends (...args: any[]) => any>(
     func: T,
     wait: number
@@ -168,6 +174,32 @@ function debounce<T extends (...args: any[]) => any>(
   return (...args: Parameters<T>) => {
     clearTimeout(timeout)
     timeout = setTimeout(() => func(...args), wait)
+  }
+}
+
+// 快速防抖函数
+function quickDebounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number = 50
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout>
+  let lastCallTime = 0
+
+  return (...args: Parameters<T>) => {
+    const now = Date.now()
+    const timeSinceLastCall = now - lastCallTime
+
+    // 如果距离上次调用超过wait时间，立即执行
+    if (timeSinceLastCall >= wait) {
+      lastCallTime = now
+      func(...args)
+    } else {
+      clearTimeout(timeout)
+      timeout = setTimeout(() => {
+        lastCallTime = Date.now()
+        func(...args)
+      }, wait - timeSinceLastCall)
+    }
   }
 }
 
@@ -185,7 +217,6 @@ function createSafeQuery(inputQuery: any) {
   }
 
   if (!inputQuery || typeof inputQuery !== 'object') {
-    console.warn('⚠️ 无效的查询参数，使用默认值', inputQuery)
     return defaultQuery
   }
 
@@ -193,14 +224,7 @@ function createSafeQuery(inputQuery: any) {
     typeIdList: Array.isArray(inputQuery.typeIdList) ? inputQuery.typeIdList : [],
     startDate: typeof inputQuery.startDate === 'string' ? inputQuery.startDate : '',
     endDate: typeof inputQuery.endDate === 'string' ? inputQuery.endDate : '',
-    remark: typeof inputQuery.remark === 'string' ? inputQuery.remark : '',
-    ...Object.fromEntries(
-        Object.entries(inputQuery).filter(([key, value]) =>
-            !['typeIdList', 'startDate', 'endDate', 'remark'].includes(key) &&
-            value !== undefined &&
-            value !== null
-        )
-    )
+    remark: typeof inputQuery.remark === 'string' ? inputQuery.remark : ''
   }
 }
 
@@ -242,41 +266,32 @@ const emptyStateDescription = computed(() => {
 
 // 计算属性 - 显示控制
 const showLoading = computed(() => {
-  // 正在加载中，或者正在搜索且没有初始数据
-  return isLoading.value || (isSearching.value && !hasInitialData.value)
+  return isLoading.value && isSearching.value
 })
 
 const loadingText = computed(() => {
-  if (isSearching.value) {
-    return '查询健身数据中...'
-  }
-  return '加载健身数据中...'
+  return '查询健身数据中...'
 })
 
 const showEmptyState = computed(() => {
-  // 不在加载中，没有错误，没有数据，且查询条件有效
-  return !showLoading.value &&
+  return !hasData.value &&
       !errorMessage.value &&
-      !hasData.value &&
       query.value?.startDate &&
-      query.value?.endDate
+      query.value?.endDate &&
+      !isLoading.value
 })
 
 const shouldShowChart = computed(() => {
-  // 不在加载中，没有错误，有数据，图表已准备好
-  return !showLoading.value &&
+  return hasData.value &&
       !errorMessage.value &&
-      hasData.value &&
       isChartReady.value
 })
 
 const shouldShowOptions = computed(() => {
-  // 有数据或者有初始数据时显示选项
   return hasData.value || hasInitialData.value
 })
 
 const shouldShowStats = computed(() => {
-  // 有数据或者有初始数据时显示统计
   return hasData.value || hasInitialData.value
 })
 
@@ -287,6 +302,9 @@ const effectiveTypeIds = computed(() => {
       ? query.value.typeIdList
       : props.fitnessTypeOptions.map(item => item.value || item.id).filter(Boolean)
 })
+
+// 优化：使用Map缓存日期数据
+const dateDataCache = new Map<string, Map<string, number>>()
 
 const allDates = computed(() => {
   const dateSet = new Set<string>()
@@ -308,18 +326,16 @@ const formattedDates = computed(() => {
   })
 })
 
-// 统计相关计算属性
+// 统计相关计算属性 - 使用缓存优化
 const exerciseDaysCount = computed(() => {
   if (!fitnessRecords.value.length) return 0
 
   const exerciseDays = new Set<string>()
-  fitnessRecords.value
-      .filter(record => isExerciseType(record.typeId))
-      .forEach(record => {
-        if (record.finishTime) {
-          exerciseDays.add(record.finishTime.split('T')[0])
-        }
-      })
+  for (const record of fitnessRecords.value) {
+    if (isExerciseType(record.typeId) && record.finishTime) {
+      exerciseDays.add(record.finishTime.split('T')[0])
+    }
+  }
 
   return exerciseDays.size
 })
@@ -327,44 +343,41 @@ const exerciseDaysCount = computed(() => {
 const pushUpCount = computed(() => {
   if (!fitnessRecords.value.length || !props.fitnessTypeOptions?.length) return 0
 
-  return fitnessRecords.value
-      .filter(record => {
-        const fitnessType = props.fitnessTypeOptions?.find(type =>
-            String(type.value) === String(record.typeId) ||
-            String(type.id) === String(record.typeId)
-        )
-        return fitnessType?.key1 === 'PUSH_UP'
-      })
-      .reduce((sum, record) => {
-        const count = Number(record.count || 0)
-        return sum + (isNaN(count) ? 0 : count)
-      }, 0)
+  let sum = 0
+  for (const record of fitnessRecords.value) {
+    const fitnessType = props.fitnessTypeOptions?.find(type =>
+        String(type.value) === String(record.typeId) ||
+        String(type.id) === String(record.typeId)
+    )
+    if (fitnessType?.key1 === 'PUSH_UP') {
+      sum += Number(record.count || 0)
+    }
+  }
+  return sum
 })
 
 const proteinCount = computed(() => {
   if (!fitnessRecords.value.length || !props.fitnessTypeOptions?.length) return 0
 
-  return fitnessRecords.value
-      .filter(record => {
-        const fitnessType = props.fitnessTypeOptions?.find(type =>
-            String(type.value) === String(record.typeId) ||
-            String(type.id) === String(record.typeId)
-        )
-        return fitnessType?.key1 === 'PROTEIN' ||
-            fitnessType?.value1?.includes('蛋白')
-      })
-      .reduce((sum, record) => {
-        const count = Number(record.count || 0)
-        return sum + (isNaN(count) ? 0 : count)
-      }, 0)
+  let sum = 0
+  for (const record of fitnessRecords.value) {
+    const fitnessType = props.fitnessTypeOptions?.find(type =>
+        String(type.value) === String(record.typeId) ||
+        String(type.id) === String(record.typeId)
+    )
+    if (fitnessType?.key1 === 'PROTEIN' || fitnessType?.value1?.includes('蛋白')) {
+      sum += Number(record.count || 0)
+    }
+  }
+  return sum
 })
 
-// 单位映射
+// 单位映射 - 使用缓存
 const unitMapping = computed(() => {
   const map: Record<string, string> = {}
   if (!props.unitOptions?.length) return map
 
-  props.unitOptions.forEach(option => {
+  for (const option of props.unitOptions) {
     if (option) {
       if (option.id && option.value1) {
         map[String(option.id)] = option.value1
@@ -373,7 +386,7 @@ const unitMapping = computed(() => {
         map[String(option.value)] = option.value1
       }
     }
-  })
+  }
   return map
 })
 
@@ -468,11 +481,30 @@ function formatValue(value: number): string {
   }
 }
 
-// 图表配置生成
+// 图表配置生成 - 优化性能
 const chartSeries = computed(() => {
   if (!hasData.value || !allDates.value.length) return []
 
   try {
+    // 清除缓存
+    dateDataCache.clear()
+
+    // 预处理数据，建立缓存
+    for (const record of fitnessRecords.value) {
+      if (record?.finishTime) {
+        const date = record.finishTime.split('T')[0]
+        const typeId = String(record.typeId)
+
+        if (!dateDataCache.has(date)) {
+          dateDataCache.set(date, new Map())
+        }
+
+        const typeMap = dateDataCache.get(date)!
+        const currentValue = typeMap.get(typeId) || 0
+        typeMap.set(typeId, currentValue + Number(record.count || 0))
+      }
+    }
+
     return effectiveTypeIds.value
         .map((typeId, index) => {
           if (!typeId) return null
@@ -483,14 +515,10 @@ const chartSeries = computed(() => {
           )
           const typeName = typeOption?.value1 || typeOption?.label || `类型${typeId}`
 
+          // 使用缓存的数据
           const data = allDates.value.map(date => {
-            return fitnessRecords.value
-                .filter(record =>
-                    record &&
-                    String(record.typeId) === String(typeId) &&
-                    record.finishTime?.startsWith(date)
-                )
-                .reduce((sum, record) => sum + Number(record.count || 0), 0)
+            const typeMap = dateDataCache.get(date)
+            return typeMap?.get(String(typeId)) || 0
           })
 
           if (!data.some(value => value > 0)) return null
@@ -709,7 +737,7 @@ const echartConfig = computed(() => {
         }
       ] : undefined,
       animation: true,
-      animationDuration: 1000,
+      animationDuration: 600, // 减少动画时间
       animationEasing: 'cubicOut'
     }
   } catch (error) {
@@ -718,8 +746,8 @@ const echartConfig = computed(() => {
   }
 })
 
-// 图表初始化函数
-async function initializeChart(): Promise<void> {
+// 优化的图表更新函数 - 使用setOption而不是重建
+async function updateChartData(): Promise<void> {
   if (!shouldShowChart.value || !echartConfig.value || isUpdatingChart.value) {
     return
   }
@@ -727,59 +755,72 @@ async function initializeChart(): Promise<void> {
   isUpdatingChart.value = true
 
   try {
-    await nextTick()
-
-    let retryCount = 0
-    const maxRetries = 10
-    const retryDelay = 50
-
-    while (retryCount < maxRetries) {
-      if (chartRef.value) {
-        break
-      }
-      await new Promise(resolve => setTimeout(resolve, retryDelay))
-      retryCount++
+    // 如果图表实例存在，直接更新数据
+    if (chartInstance.value) {
+      chartInstance.value.setOption(echartConfig.value, {
+        notMerge: false, // 合并配置而不是完全替换
+        lazyUpdate: false // 立即更新
+      })
+      console.log('✅ 图表数据更新成功')
+    } else {
+      // 首次创建图表
+      await initializeChart()
     }
-
-    if (!chartRef.value) {
-      console.warn('Chart container not found after waiting')
-      return
-    }
-
-    const rect = chartRef.value.getBoundingClientRect()
-    if (rect.width === 0 || rect.height === 0) {
-      console.warn('Chart container has no size')
-      return
-    }
-
-    // 销毁旧图表
-    destroyChart()
-
-    // 创建新图表
-    await initChart(echartConfig.value as EChartsOption)
-
-    console.log('✅ 图表初始化成功')
   } catch (error) {
-    console.error('Failed to initialize chart:', error)
-    errorMessage.value = '图表初始化失败'
+    console.error('Failed to update chart:', error)
+    errorMessage.value = '图表更新失败'
   } finally {
     isUpdatingChart.value = false
   }
 }
 
-// 创建防抖版本的图表更新函数
-const debouncedUpdateChart = debounce(async () => {
-  if (shouldShowChart.value && echartConfig.value && !isUpdatingChart.value) {
-    // 只有在确实需要更新时才改变chartKey
-    chartKey.value++
-    await nextTick()
-    setTimeout(async () => {
-      await initializeChart()
-    })
+// 图表初始化函数 - 优化版
+async function initializeChart(): Promise<void> {
+  if (!shouldShowChart.value || !echartConfig.value) {
+    return
   }
-})
 
-// 数据加载函数
+  try {
+    // 立即尝试初始化，不等待
+    if (!chartRef.value) {
+      await nextTick()
+    }
+
+    if (!chartRef.value) {
+      console.warn('Chart container not found')
+      return
+    }
+
+    const rect = chartRef.value.getBoundingClientRect()
+    if (rect.width === 0 || rect.height === 0) {
+      // 延迟重试一次
+      setTimeout(() => initializeChart(), 50)
+      return
+    }
+
+    // 销毁旧图表
+    if (chartInstance.value) {
+      chartInstance.value.dispose()
+      chartInstance.value = null
+    }
+
+    // 创建新图表
+    const instance = await initChart(echartConfig.value as EChartsOption)
+    chartInstance.value = instance
+
+    console.log('✅ 图表初始化成功')
+  } catch (error) {
+    console.error('Failed to initialize chart:', error)
+    errorMessage.value = '图表初始化失败'
+  }
+}
+
+// 创建快速防抖版本的图表更新函数
+const quickUpdateChart = quickDebounce(async () => {
+  await updateChartData()
+}, 100)
+
+// 数据加载函数 - 优化版
 async function loadData(): Promise<void> {
   try {
     if (!query.value?.startDate || !query.value?.endDate) {
@@ -795,8 +836,8 @@ async function loadData(): Promise<void> {
       typeIdList: query.value.typeIdList
     })
 
-    // 使用 store 中的防抖方法
-    fitnessStore.loadAllRecordsDebounced(300)
+    // 使用更短的防抖时间
+    fitnessStore.loadAllRecordsDebounced(100)
   } catch (error: any) {
     if (error?.name !== 'AbortError') {
       console.error('🔴 Failed to load fitness data:', error)
@@ -806,32 +847,23 @@ async function loadData(): Promise<void> {
   }
 }
 
-// 处理搜索事件
+// 处理搜索事件 - 优化版
 async function handleSearchFromComponent(newQuery?: any) {
   try {
-    console.log('🟢 处理搜索请求', {
-      newQuery,
-      type: typeof newQuery,
-      currentQuery: query.value
-    })
+    console.log('🟢 处理搜索请求')
 
     // 设置搜索状态
     isSearching.value = true
 
-    // 如果没有传递参数或参数无效，直接使用当前的查询条件进行搜索
     let targetQuery = query.value
 
     if (newQuery && typeof newQuery === 'object') {
       targetQuery = newQuery
-    } else {
-      console.log('🔍 使用当前查询条件进行搜索')
     }
 
-    // 创建安全的查询对象
     const safeQuery = createSafeQuery(targetQuery)
-    console.log('🟢 验证后的查询参数', safeQuery)
 
-    // 检查查询条件是否真的发生了变化（仅当传递了新查询时才检查）
+    // 检查查询条件是否真的发生了变化
     if (newQuery && typeof newQuery === 'object') {
       const currentQueryStr = JSON.stringify(query.value)
       const newQueryStr = JSON.stringify(safeQuery)
@@ -849,8 +881,8 @@ async function handleSearchFromComponent(newQuery?: any) {
     // 清除错误信息
     errorMessage.value = ''
 
-    // 加载数据
-    fitnessStore.loadAllRecordsDebounced(300)
+    // 立即加载数据，使用更短的防抖时间
+    fitnessStore.loadAllRecordsDebounced(50)
 
   } catch (error) {
     console.error('❌ 处理搜索请求失败', error)
@@ -859,7 +891,7 @@ async function handleSearchFromComponent(newQuery?: any) {
   }
 }
 
-// 处理重置事件
+// 处理重置事件 - 优化版
 async function handleResetFromComponent() {
   try {
     console.log('🟢 处理重置请求')
@@ -873,15 +905,12 @@ async function handleResetFromComponent() {
     const defaultRange = getDefaultRange()
     const {startDate, endDate} = parseDateRange(defaultRange)
 
-    // 创建安全的重置查询对象
     const resetQuery = createSafeQuery({
       typeIdList: [],
       remark: '',
       startDate: startDate || '',
       endDate: endDate || ''
     })
-
-    console.log('🟢 重置查询参数', resetQuery)
 
     fitnessStore.updateQuery(resetQuery)
 
@@ -893,8 +922,8 @@ async function handleResetFromComponent() {
     // 清除错误信息
     errorMessage.value = ''
 
-    // 加载数据
-    fitnessStore.loadAllRecordsDebounced(300)
+    // 立即加载数据
+    fitnessStore.loadAllRecordsDebounced(50)
 
   } catch (error) {
     console.error('❌ 处理重置请求失败', error)
@@ -910,7 +939,7 @@ watch(
       try {
         console.log('🟢 图表选项改变，更新图表')
         if (shouldShowChart.value) {
-          debouncedUpdateChart()
+          quickUpdateChart()
         }
       } catch (error) {
         console.error('❌ 图表选项监听错误', error)
@@ -926,7 +955,6 @@ watch(
       try {
         console.log('🟢 loading状态改变', { newLoading, oldLoading })
 
-        // 当loading从true变为false时，说明数据加载完成
         if (oldLoading && !newLoading) {
           // 重置搜索状态
           isSearching.value = false
@@ -935,10 +963,10 @@ watch(
           if (hasData.value) {
             hasInitialData.value = true
             console.log('📊 数据加载完成，准备更新图表')
-            // 延迟更新图表，确保DOM完全渲染
-            setTimeout(() => {
+            // 立即更新图表
+            nextTick(() => {
               if (shouldShowChart.value) {
-                debouncedUpdateChart()
+                quickUpdateChart()
               }
             })
           }
@@ -947,6 +975,17 @@ watch(
         console.error('❌ loading状态监听错误', error)
       }
     }
+)
+
+// 监听图表配置变化，快速更新
+watch(
+    echartConfig,
+    (newConfig) => {
+      if (newConfig && chartInstance.value && !isLoading.value) {
+        quickUpdateChart()
+      }
+    },
+    { deep: true }
 )
 
 // 生命周期
@@ -971,10 +1010,8 @@ onMounted(async () => {
       fitnessStore.updateQuery(defaultQuery)
     }
 
-    // 延迟加载数据，确保组件完全初始化
-    setTimeout(() => {
-      loadData()
-    })
+    // 立即加载数据
+    loadData()
 
     // 添加窗口大小变化监听
     if (typeof window !== 'undefined') {
@@ -996,10 +1033,31 @@ onBeforeUnmount(() => {
     if (typeof window !== 'undefined') {
       window.removeEventListener('resize', resizeChart)
     }
+
+    if (chartInstance.value) {
+      chartInstance.value.dispose()
+      chartInstance.value = null
+    }
+
     destroyChart()
     fitnessStore.cleanup()
+
+    // 清理缓存
+    dateDataCache.clear()
   } catch (error) {
     console.warn('Cleanup error:', error)
   }
 })
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
