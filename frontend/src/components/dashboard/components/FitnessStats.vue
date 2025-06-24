@@ -182,13 +182,13 @@ function debounce<T extends (...args: any[]) => any>(
 // 转换 fitnessTypeOptions 格式以适配 FitnessSearch 组件
 const fitnessTypeOptions = computed(() => {
   if (!props.fitnessTypeOptions || !Array.isArray(props.fitnessTypeOptions)) {
-    return []
+    return [] as { label: string; value: string | number }[]
   }
 
   return props.fitnessTypeOptions.map(option => ({
     label: option.value1 || option.label || `类型${option.value}`,
-    value: option.value || option.id
-  }))
+    value: option.value || option.id || '' // 确保始终有值
+  })) as { label: string; value: string | number }[]
 })
 
 // 格式化日期范围显示
