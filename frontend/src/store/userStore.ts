@@ -132,10 +132,19 @@ export const useUserStore = defineStore('user', {
 
         async login(credentials: Record<string, any>): Promise<LoginResponse> {
             try {
+                console.log('🟡 开始登录流程')
+
                 const res = await axiosInstance.post<ApiResponse<string>>('/api/user/login', credentials)
                 if (res.data.success && res.data.data) {
+                    console.log('🟢 登录API调用成功，设置认证信息')
+
+                    // 设置token和登录状态
                     this.setAuth(res.data.data)
+
+                    // 获取用户信息
                     await this.fetchUser()
+
+                    console.log('🟢 登录流程完成')
                     return { success: true, message: '登录成功' }
                 }
 
@@ -145,6 +154,7 @@ export const useUserStore = defineStore('user', {
                     needCaptcha: res.data.needCaptcha
                 }
             } catch (err: any) {
+                console.error('🔴 登录过程中出现错误:', err)
                 return {
                     success: false,
                     message: err.response?.data?.message || '登录失败，请重试'
@@ -178,12 +188,21 @@ export const useUserStore = defineStore('user', {
         },
 
         async clearAuth(clearUI = true): Promise<void> {
+            console.log('🟡 清理认证状态')
+
             this.setAuth(null)
             this.user = {} as User
             this.isRefreshing = false
             this.isLoggedIn = false
 
             if (clearUI) {
+                // 🔥 在清理UI时也清理浏览器记忆（但保留必要的认证数据）
+                try {
+                    tokenService.clearBrowserMemoryExceptAuth()
+                } catch (error) {
+                    console.error('清理浏览器记忆时出错:', error)
+                }
+
                 emitter.emit('notify', { message: '已注销', type: 'success' })
                 window.location.replace('/home')
             }

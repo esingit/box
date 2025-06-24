@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useUserStore } from '@/store/userStore'
 import emitter from '@/utils/eventBus'
 import axiosInstance from '@/api/axios'
+import { tokenService } from '@/api/tokenService'
 import type { AxiosRequestConfig } from 'axios'
 
 // 🔥 改进类型定义
@@ -25,7 +26,7 @@ const isShowingRegisterModal = ref(false)
 const pendingRetryRequests = ref<PendingRetryRequest[]>([])
 
 // 全局状态 - 待执行的认证后操作
-const pendingAuthAction = ref<AuthAction | null>(null)
+const pendingAuthAction = ref<AuthAction | null>()
 
 // 防止重复触发认证失败处理
 const isAuthFailed = ref(false)
@@ -264,6 +265,17 @@ export function useAuth() {
     }
   }
 
+  // 🔥 新增：清理浏览器记忆的方法
+  function clearBrowserMemory() {
+    try {
+      console.log('🟡 清理浏览器记忆...')
+      tokenService.clearBrowserMemoryExceptAuth()
+      console.log('🟢 浏览器记忆清理完成')
+    } catch (error) {
+      console.error('🔴 清理浏览器记忆失败:', error)
+    }
+  }
+
   // 登录成功后的完整处理逻辑
   async function onLoginSuccess() {
     try {
@@ -272,10 +284,13 @@ export function useAuth() {
       // 🔥 重置认证失败状态
       isAuthFailed.value = false
 
-      // 1. 先获取用户信息
+      // 🔥 1. 首先清理浏览器记忆（在获取用户信息之前）
+      clearBrowserMemory()
+
+      // 2. 获取用户信息
       await userStore.fetchUser()
 
-      // 2. 处理待重试的请求
+      // 3. 处理待重试的请求
       if (pendingRetryRequests.value.length > 0) {
         console.log('🟢 处理待重试请求，数量:', pendingRetryRequests.value.length)
         const currentToken = userStore.token
@@ -287,7 +302,7 @@ export function useAuth() {
         }
       }
 
-      // 3. 处理其他待执行的操作
+      // 4. 处理其他待执行的操作
       if (pendingAuthAction.value) {
         const action = pendingAuthAction.value
         pendingAuthAction.value = null
@@ -299,10 +314,10 @@ export function useAuth() {
         }
       }
 
-      // 4. 发出全局登录成功事件
+      // 5. 发出全局登录成功事件
       emitter.emit('login-success')
 
-      // 5. 关闭弹窗
+      // 6. 关闭弹窗
       hideAll()
 
     } catch (error) {
@@ -395,6 +410,7 @@ export function useAuth() {
     // 🔥 工具方法
     getRetryRequestsStats,
     cleanup: cleanup, // 🔥 暴露清理方法供必要时手动调用
+    clearBrowserMemory, // 🔥 新增：暴露清理浏览器记忆的方法
   }
 }
 

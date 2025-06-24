@@ -30,6 +30,64 @@ class TokenService {
     this.clearWaitingQueue()
   }
 
+  // 🔥 新增：清除浏览器记忆但保留重要数据
+  clearBrowserMemoryExceptAuth() {
+    try {
+      console.log('🟡 开始清理浏览器记忆，保留认证相关数据')
+
+      // 保存需要保留的重要数据
+      const importantData = {
+        token: this.getToken(),
+      }
+
+      // 清除 localStorage（除了重要数据）
+      const localStorageKeysToKeep = ['token']
+      const localStorageKeys = Object.keys(localStorage)
+      localStorageKeys.forEach(key => {
+        if (!localStorageKeysToKeep.includes(key)) {
+          localStorage.removeItem(key)
+        }
+      })
+
+      // 清除 sessionStorage
+      sessionStorage.clear()
+
+      // 清除除了认证相关的 cookies
+      this.clearNonAuthCookies()
+
+      // 恢复重要数据
+      if (importantData.token) {
+        this.setToken(importantData.token)
+      }
+
+      console.log('🟢 浏览器记忆清理完成，已保留认证数据')
+    } catch (error) {
+      console.error('🔴 清理浏览器记忆时出错:', error)
+    }
+  }
+
+  // 🔥 新增：清除非认证相关的cookies
+  private clearNonAuthCookies() {
+    try {
+      const cookies = document.cookie.split(';')
+      const authRelatedCookies = ['token', 'refresh_token', 'auth_session'] // 定义需要保留的认证相关cookie名称
+
+      cookies.forEach(cookie => {
+        const [name] = cookie.split('=')
+        const cookieName = name.trim()
+
+        // 如果不是认证相关的cookie，则清除
+        if (!authRelatedCookies.some(authCookie => cookieName.includes(authCookie))) {
+          // 清除cookie的标准方法
+          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
+          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`
+        }
+      })
+    } catch (error) {
+      console.error('清理cookies时出错:', error)
+    }
+  }
+
   async refreshToken(): Promise<string | null> {
     try {
       const token = this.getToken()
