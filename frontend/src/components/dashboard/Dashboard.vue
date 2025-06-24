@@ -23,13 +23,15 @@
     <!-- 主内容 -->
     <div v-else class="grid gap-6">
       <FitnessStats
-          :key="`fitness-${route.fullPath}`"
+          ref="fitnessStatsRef"
+          :key="`fitness-${route.fullPath}-${sidebarToggleKey}`"
           :unitOptions="unitOptions"
           :fitnessTypeOptions="fitnessTypeOptions"
       />
 
       <AssetStats
-          :key="`asset-${route.fullPath}`"
+          ref="assetStatsRef"
+          :key="`asset-${route.fullPath}-${sidebarToggleKey}`"
           :asset-name-options="assetNameOptions"
           :asset-type-options="assetTypeOptions"
           :asset-location-options="assetLocationOptions"
@@ -40,12 +42,13 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, ref} from 'vue'
+import {computed, onMounted, ref, watch, nextTick} from 'vue'
 import {useRoute} from 'vue-router'
 import {storeToRefs} from 'pinia'
 import {AlertCircle} from 'lucide-vue-next'
 import {useMetaStore} from '@/store/metaStore'
 import {useAssetNameStore} from '@/store/assetNameStore'
+import {useSidebarStore} from '@/store/sidebarStore'
 
 import FitnessStats from './components/FitnessStats.vue'
 import AssetStats from './components/AssetStats.vue'
@@ -59,9 +62,13 @@ interface Option {
 const route = useRoute()
 const metaStore = useMetaStore()
 const assetNameStore = useAssetNameStore()
+const sidebarStore = useSidebarStore()
 
 const isLoading = ref(true)
 const loadError = ref('')
+const sidebarToggleKey = ref(0) // 用于强制重新渲染组件
+const fitnessStatsRef = ref()
+const assetStatsRef = ref()
 
 /** 公共映射函数：元数据 => Option[] */
 function mapToOption(arr: any[] | undefined): Option[] {
@@ -105,6 +112,15 @@ async function initializeData() {
     isLoading.value = false
   }
 }
+
+// 监听侧边栏状态变化，统一处理所有图表的resize
+watch(() => sidebarStore.isExpanded, () => {
+  setTimeout(async () => {
+    await nextTick()
+    // 强制重新渲染组件来触发图表重新计算尺寸
+    sidebarToggleKey.value++
+  }, 0)
+})
 
 onMounted(() => {
   initializeData()

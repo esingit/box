@@ -24,7 +24,7 @@
         <component :is="item.icon" :size="20" />
         <span
             class="whitespace-nowrap transition-all"
-            :class="{ 'opacity-0 w-0 scale-0': isCollapsed }"
+            :class="{ 'opacity-0 w-0 scale-0': !sidebarStore.isExpanded }"
         >
           {{ item.title }}
         </span>
@@ -34,7 +34,7 @@
 
   <!-- 悬浮图标：收起时展示 -->
   <div
-      v-if="isCollapsed"
+      v-if="!sidebarStore.isExpanded"
       class="fixed top-3 left-3 z-50 cursor-pointer animate-bounce-in"
       @click="toggleSidebar"
   >
@@ -49,12 +49,13 @@
 import { ref, computed, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { Package, LucideHome, LucideDumbbell, LucideWallet } from 'lucide-vue-next'
+import { useSidebarStore } from '@/store/sidebarStore'
 
 // 注入登录状态
 const props = defineProps<{ isLoggedIn: boolean }>()
 
 const route = useRoute()
-const isCollapsed = ref(false)
+const sidebarStore = useSidebarStore()
 const isRotating = ref(false)
 
 // 通知父组件的 inject 函数
@@ -70,14 +71,14 @@ const menuItems = [
 // 容器样式
 const sidebarClass = computed(() => [
   'h-full bg-white border-r border-gray-200 text-gray-800 flex flex-col transition-all duration-300 ease-in-out fixed z-40',
-  isCollapsed.value ? 'w-0 overflow-visible' : 'w-32'
+  !sidebarStore.isExpanded ? 'w-0 overflow-visible' : 'w-32'
 ].join(' '))
 
 // Logo 图标样式
 const logoClass = computed(() => [
   'text-gray-800 transition-all duration-300',
   isRotating.value && 'animate-spin',
-  isCollapsed.value && 'opacity-0 scale-0'
+  !sidebarStore.isExpanded && 'opacity-0 scale-0'
 ].filter(Boolean).join(' '))
 
 // 当前激活菜单项
@@ -88,11 +89,11 @@ const getItemClass = (path: string) => ({
 // 切换收起/展开
 function toggleSidebar() {
   if (!props.isLoggedIn) return
-  isCollapsed.value = !isCollapsed.value
+  sidebarStore.toggleSidebar()
   isRotating.value = true
 
   // 通知父组件
-  setSidebarCollapsed?.(isCollapsed.value)
+  setSidebarCollapsed?.(!sidebarStore.isExpanded)
 
   setTimeout(() => {
     isRotating.value = false

@@ -1,9 +1,7 @@
-<!--src/components/dashboard/components/FitnessStats.vue-->
 <template>
   <div class="bg-white rounded-xl p-6 hover:shadow-md w-full space-y-4">
     <h2 class="text-lg font-semibold">健身统计</h2>
 
-    <!-- 使用健身查询组件替换原有查询条件 -->
     <FitnessSearch
         :query="query"
         :fitness-type-options="fitnessTypeOptions"
@@ -13,7 +11,7 @@
     />
 
     <!-- 图表显示选项 -->
-    <div v-if="hasData" class="border rounded-xl p-4">
+    <div v-if="shouldShowOptions" class="border rounded-xl p-4">
       <div class="flex flex-wrap items-center gap-4">
         <span class="text-sm font-medium text-gray-600">显示选项:</span>
         <label class="flex items-center gap-2 cursor-pointer">
@@ -44,7 +42,7 @@
     </div>
 
     <!-- 统计信息 -->
-    <div v-if="hasData" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+    <div v-if="shouldShowStats" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
       <div class="bg-green-50 p-3 rounded-lg">
         <div class="text-green-600 font-medium">运动天数</div>
         <div class="text-lg font-bold text-green-800">{{ exerciseDaysCount }}</div>
@@ -61,11 +59,11 @@
 
     <!-- 图表区域 -->
     <div class="relative min-h-[400px] h-[calc(100vh-300px)]">
-      <!-- 加载状态 -->
-      <div v-if="isLoading" class="flex items-center justify-center h-full text-gray-400">
+      <!-- 加载状态 - 优先级最高 -->
+      <div v-if="showLoading" class="flex items-center justify-center h-full text-gray-400">
         <div class="flex items-center gap-2">
           <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-          <span>加载健身数据中...</span>
+          <span>{{ loadingText }}</span>
         </div>
       </div>
 
@@ -79,7 +77,7 @@
       </div>
 
       <!-- 空数据状态 -->
-      <div v-else-if="!hasData" class="h-full">
+      <div v-else-if="showEmptyState" class="h-full">
         <BaseEmptyState
             icon="Dumbbell"
             message="暂无健身数据"
@@ -88,7 +86,7 @@
       </div>
 
       <!-- 图表容器 -->
-      <div v-else ref="chartRef" class="w-full h-full chart-container"></div>
+      <div v-else-if="shouldShowChart" :key="chartKey" ref="chartRef" class="w-full h-full chart-container"></div>
     </div>
   </div>
 </template>
@@ -103,6 +101,7 @@ import {useChart, useDateRange} from '@/utils/common'
 import emitter from '@/utils/eventBus'
 import type {EChartsOption} from 'echarts'
 
+// 类型定义
 interface FitnessRecord {
   id: string
   typeId: number | string
@@ -112,10 +111,6 @@ interface FitnessRecord {
   remark?: string
 }
 
-// 常量
-const EXERCISE_TYPE_KEY = 'EXERCISE'
-
-// 定义 Option 接口
 interface Option {
   label: string
   value: string | number
@@ -126,32 +121,36 @@ interface Option {
   key3?: string
 }
 
-// Props 定义
+// 常量
+const EXERCISE_TYPE_KEY = 'EXERCISE'
+const CHART_COLORS = [
+  '#6B7F96', '#8D9C8D', '#B19C7D', '#A88080', '#8C7BA8', '#9E8C9E',
+  '#7B9E9E', '#B8936B', '#7B9DB8', '#9BB87B', '#B87B9D', '#7B7BB8',
+  '#8B9B8B', '#B8898B', '#89B8B8', '#A8A87B', '#9E7B8C', '#7B8C9E'
+]
+
+// Props
 const props = defineProps<{
   fitnessTypeOptions: Option[]
   unitOptions: Option[]
 }>()
 
-// Composables
+// Store
 const fitnessStore = useFitnessStore()
 const {query, allList, loadingList} = storeToRefs(fitnessStore)
 
-const {
-  getDefaultRange,
-  parseDateRange
-} = useDateRange()
+// Composables
+const {getDefaultRange, parseDateRange} = useDateRange()
+const {chartRef, initChart, destroyChart, resizeChart} = useChart()
 
-const {
-  chartRef,
-  initChart,
-  destroyChart,
-  resizeChart
-} = useChart()
-
-// 🔥 使用 store 中的 loading 状态
+// 状态管理
 const isLoading = computed(() => loadingList.value)
 const errorMessage = ref('')
 const isChartReady = ref(false)
+const chartKey = ref(0)
+const isUpdatingChart = ref(false)
+const isSearching = ref(false) // 新增：搜索状态
+const hasInitialData = ref(false) // 新增：是否有初始数据
 
 // 图表选项
 const chartOptions = reactive({
@@ -160,14 +159,7 @@ const chartOptions = reactive({
   smoothCurve: true
 })
 
-// 低饱和度颜色方案
-const CHART_COLORS = [
-  '#6B7F96', '#8D9C8D', '#B19C7D', '#A88080', '#8C7BA8', '#9E8C9E',
-  '#7B9E9E', '#B8936B', '#7B9DB8', '#9BB87B', '#B87B9D', '#7B7BB8',
-  '#8B9B8B', '#B8898B', '#89B8B8', '#A8A87B', '#9E7B8C', '#7B8C9E'
-]
-
-// 防抖函数
+// 工具函数
 function debounce<T extends (...args: any[]) => any>(
     func: T,
     wait: number
@@ -179,48 +171,198 @@ function debounce<T extends (...args: any[]) => any>(
   }
 }
 
-// 转换 fitnessTypeOptions 格式以适配 FitnessSearch 组件
-const fitnessTypeOptions = computed(() => {
-  if (!props.fitnessTypeOptions || !Array.isArray(props.fitnessTypeOptions)) {
-    return [] as { label: string; value: string | number }[]
+function showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') {
+  emitter.emit('notify', {message, type})
+}
+
+// 验证和创建安全的查询对象
+function createSafeQuery(inputQuery: any) {
+  const defaultQuery = {
+    typeIdList: [],
+    startDate: '',
+    endDate: '',
+    remark: ''
   }
+
+  if (!inputQuery || typeof inputQuery !== 'object') {
+    console.warn('⚠️ 无效的查询参数，使用默认值', inputQuery)
+    return defaultQuery
+  }
+
+  return {
+    typeIdList: Array.isArray(inputQuery.typeIdList) ? inputQuery.typeIdList : [],
+    startDate: typeof inputQuery.startDate === 'string' ? inputQuery.startDate : '',
+    endDate: typeof inputQuery.endDate === 'string' ? inputQuery.endDate : '',
+    remark: typeof inputQuery.remark === 'string' ? inputQuery.remark : '',
+    ...Object.fromEntries(
+        Object.entries(inputQuery).filter(([key, value]) =>
+            !['typeIdList', 'startDate', 'endDate', 'remark'].includes(key) &&
+            value !== undefined &&
+            value !== null
+        )
+    )
+  }
+}
+
+// 计算属性 - 数据相关
+const fitnessTypeOptions = computed(() => {
+  if (!props.fitnessTypeOptions?.length) return []
 
   return props.fitnessTypeOptions.map(option => ({
     label: option.value1 || option.label || `类型${option.value}`,
-    value: option.value || option.id || '' // 确保始终有值
-  })) as { label: string; value: string | number }[]
+    value: option.value || option.id || ''
+  }))
 })
 
-// 格式化日期范围显示
-function formatDateRange(startDate: string, endDate: string): string {
-  if (!startDate || !endDate) {
-    return ''
+const fitnessRecords = computed<FitnessRecord[]>(() => {
+  return Array.isArray(fitnessStore.allList) ? fitnessStore.allList : []
+})
+
+const hasData = computed(() => {
+  return fitnessRecords.value.length > 0
+})
+
+const hasSearchConditions = computed(() => {
+  return query.value?.typeIdList?.length > 0 || (query.value?.remark || '').trim() !== ''
+})
+
+const dateRangeDisplay = computed(() => {
+  return formatDateRange(query.value?.startDate || '', query.value?.endDate || '')
+})
+
+const emptyStateDescription = computed(() => {
+  if (!query.value?.startDate || !query.value?.endDate) {
+    return '请选择日期范围查看健身数据'
   }
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
+  if (hasSearchConditions.value) {
+    return '当前筛选条件下没有找到健身记录，请尝试调整筛选条件'
   }
+  return `${dateRangeDisplay.value}期间暂无健身记录，开始您的健身之旅吧！`
+})
 
-  const start = formatDate(startDate)
-  const end = formatDate(endDate)
+// 计算属性 - 显示控制
+const showLoading = computed(() => {
+  // 正在加载中，或者正在搜索且没有初始数据
+  return isLoading.value || (isSearching.value && !hasInitialData.value)
+})
 
-  if (start === end) {
-    return start
+const loadingText = computed(() => {
+  if (isSearching.value) {
+    return '查询健身数据中...'
   }
+  return '加载健身数据中...'
+})
 
-  return `${start} ~ ${end}`
-}
+const showEmptyState = computed(() => {
+  // 不在加载中，没有错误，没有数据，且查询条件有效
+  return !showLoading.value &&
+      !errorMessage.value &&
+      !hasData.value &&
+      query.value?.startDate &&
+      query.value?.endDate
+})
 
-// 创建单位映射
+const shouldShowChart = computed(() => {
+  // 不在加载中，没有错误，有数据，图表已准备好
+  return !showLoading.value &&
+      !errorMessage.value &&
+      hasData.value &&
+      isChartReady.value
+})
+
+const shouldShowOptions = computed(() => {
+  // 有数据或者有初始数据时显示选项
+  return hasData.value || hasInitialData.value
+})
+
+const shouldShowStats = computed(() => {
+  // 有数据或者有初始数据时显示统计
+  return hasData.value || hasInitialData.value
+})
+
+const effectiveTypeIds = computed(() => {
+  if (!props.fitnessTypeOptions?.length) return []
+
+  return query.value?.typeIdList?.length > 0
+      ? query.value.typeIdList
+      : props.fitnessTypeOptions.map(item => item.value || item.id).filter(Boolean)
+})
+
+const allDates = computed(() => {
+  const dateSet = new Set<string>()
+
+  fitnessRecords.value.forEach(record => {
+    if (record?.finishTime) {
+      const date = record.finishTime.split('T')[0]
+      if (date) dateSet.add(date)
+    }
+  })
+
+  return Array.from(dateSet).sort()
+})
+
+const formattedDates = computed(() => {
+  return allDates.value.map(date => {
+    const [year, month, day] = date.split('-')
+    return `${month}/${day}`
+  })
+})
+
+// 统计相关计算属性
+const exerciseDaysCount = computed(() => {
+  if (!fitnessRecords.value.length) return 0
+
+  const exerciseDays = new Set<string>()
+  fitnessRecords.value
+      .filter(record => isExerciseType(record.typeId))
+      .forEach(record => {
+        if (record.finishTime) {
+          exerciseDays.add(record.finishTime.split('T')[0])
+        }
+      })
+
+  return exerciseDays.size
+})
+
+const pushUpCount = computed(() => {
+  if (!fitnessRecords.value.length || !props.fitnessTypeOptions?.length) return 0
+
+  return fitnessRecords.value
+      .filter(record => {
+        const fitnessType = props.fitnessTypeOptions?.find(type =>
+            String(type.value) === String(record.typeId) ||
+            String(type.id) === String(record.typeId)
+        )
+        return fitnessType?.key1 === 'PUSH_UP'
+      })
+      .reduce((sum, record) => {
+        const count = Number(record.count || 0)
+        return sum + (isNaN(count) ? 0 : count)
+      }, 0)
+})
+
+const proteinCount = computed(() => {
+  if (!fitnessRecords.value.length || !props.fitnessTypeOptions?.length) return 0
+
+  return fitnessRecords.value
+      .filter(record => {
+        const fitnessType = props.fitnessTypeOptions?.find(type =>
+            String(type.value) === String(record.typeId) ||
+            String(type.id) === String(record.typeId)
+        )
+        return fitnessType?.key1 === 'PROTEIN' ||
+            fitnessType?.value1?.includes('蛋白')
+      })
+      .reduce((sum, record) => {
+        const count = Number(record.count || 0)
+        return sum + (isNaN(count) ? 0 : count)
+      }, 0)
+})
+
+// 单位映射
 const unitMapping = computed(() => {
   const map: Record<string, string> = {}
-  if (!props.unitOptions || !Array.isArray(props.unitOptions)) {
-    return map
-  }
+  if (!props.unitOptions?.length) return map
 
   props.unitOptions.forEach(option => {
     if (option) {
@@ -235,127 +377,29 @@ const unitMapping = computed(() => {
   return map
 })
 
-// 获取健身类型的默认单位
-function getDefaultUnitForType(typeId: string | number): string {
-  const fitnessType = props.fitnessTypeOptions?.find(type =>
-      String(type.value) === String(typeId) || String(type.id) === String(typeId)
-  )
+// 图表相关函数
+function formatDateRange(startDate: string, endDate: string): string {
+  if (!startDate || !endDate) return ''
 
-  if (!fitnessType?.key3) {
-    return ''
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   }
 
-  const defaultUnit = props.unitOptions?.find(unit => unit.key1 === fitnessType.key3)
-  if (!defaultUnit) {
-    return ''
-  }
+  const start = formatDate(startDate)
+  const end = formatDate(endDate)
 
-  return defaultUnit.value1 || ''
+  return start === end ? start : `${start} ~ ${end}`
 }
 
-// 判断健身类型是否为运动类型
 function isExerciseType(typeId: string | number): boolean {
   const fitnessType = props.fitnessTypeOptions?.find(type =>
-      String(type.value) === String(typeId) || String(type.id) === String(typeId)
+      String(type.value) === String(typeId) ||
+      String(type.id) === String(typeId)
   )
   return fitnessType?.key2 === EXERCISE_TYPE_KEY
 }
 
-// 计算属性
-const fitnessRecords = computed<FitnessRecord[]>(() => {
-  const list = fitnessStore.allList
-  if (!list || !Array.isArray(list)) {
-    return []
-  }
-  return list as FitnessRecord[]
-})
-
-const hasData = computed(() => {
-  return fitnessRecords.value.length > 0 && !errorMessage.value
-})
-
-const hasSearchConditions = computed(() => {
-  return query.value.typeIdList.length > 0 || query.value.remark.trim() !== ''
-})
-
-const dateRangeDisplay = computed(() => {
-  return formatDateRange(query.value.startDate, query.value.endDate)
-})
-
-const emptyStateDescription = computed(() => {
-  if (!query.value.startDate || !query.value.endDate) {
-    return '请选择日期范围查看健身数据'
-  }
-  if (hasSearchConditions.value) {
-    return '当前筛选条件下没有找到健身记录，请尝试调整筛选条件'
-  }
-  return `${dateRangeDisplay.value}期间暂无健身记录，开始您的健身之旅吧！`
-})
-
-const effectiveTypeIds = computed(() => {
-  if (!props.fitnessTypeOptions || !Array.isArray(props.fitnessTypeOptions)) {
-    return []
-  }
-
-  return query.value.typeIdList.length > 0
-      ? query.value.typeIdList
-      : props.fitnessTypeOptions.map(item => item.value || item.id)
-})
-
-// 获取运动类型的健身记录
-const exerciseRecords = computed(() => {
-  return fitnessRecords.value.filter(record => {
-    return isExerciseType(record.typeId)
-  })
-})
-
-// 获取运动类型的健身天数
-const exerciseDaysCount = computed(() => {
-  if (!exerciseRecords.value.length) return 0
-
-  const exerciseDays = new Set<string>()
-  exerciseRecords.value.forEach(record => {
-    if (record.finishTime) {
-      const date = record.finishTime.split('T')[0]
-      exerciseDays.add(date)
-    }
-  })
-
-  return exerciseDays.size
-})
-
-// 获取所有日期并排序
-const allDates = computed(() => {
-  const dateSet = new Set<string>()
-
-  if (!fitnessRecords.value || !Array.isArray(fitnessRecords.value)) {
-    return []
-  }
-
-  fitnessRecords.value.forEach(record => {
-    if (record && record.finishTime) {
-      const date = record.finishTime.split('T')[0]
-      if (date) {
-        dateSet.add(date)
-      }
-    }
-  })
-  return Array.from(dateSet).sort()
-})
-
-// 格式化日期显示
-const formattedDates = computed(() => {
-  if (!allDates.value || !Array.isArray(allDates.value)) {
-    return []
-  }
-
-  return allDates.value.map(date => {
-    const [year, month, day] = date.split('-')
-    return `${month}/${day}`
-  })
-})
-
-// 获取指定类型和日期的记录单位
 function getRecordUnit(typeId: string | number, date: string): string {
   const records = fitnessRecords.value.filter(record =>
       record &&
@@ -374,7 +418,23 @@ function getRecordUnit(typeId: string | number, date: string): string {
   return getDefaultUnitForType(typeId)
 }
 
-// 格式化数值显示（带单位）
+function getDefaultUnitForType(typeId: string | number): string {
+  const fitnessType = props.fitnessTypeOptions?.find(type =>
+      String(type.value) === String(typeId) || String(type.id) === String(typeId)
+  )
+
+  if (!fitnessType?.key3) {
+    return ''
+  }
+
+  const defaultUnit = props.unitOptions?.find(unit => unit.key1 === fitnessType.key3)
+  if (!defaultUnit) {
+    return ''
+  }
+
+  return defaultUnit.value1 || ''
+}
+
 function formatValueWithUnit(value: number, typeId: string | number, date: string): string {
   if (value === 0) return '0'
 
@@ -394,7 +454,6 @@ function formatValueWithUnit(value: number, typeId: string | number, date: strin
   return unit ? `${formattedValue}${unit}` : formattedValue
 }
 
-// 单独的数值格式化函数，不带单位
 function formatValue(value: number): string {
   if (value === 0) return '0'
 
@@ -409,15 +468,18 @@ function formatValue(value: number): string {
   }
 }
 
-// 生成图表系列数据
+// 图表配置生成
 const chartSeries = computed(() => {
   if (!hasData.value || !allDates.value.length) return []
 
   try {
     return effectiveTypeIds.value
         .map((typeId, index) => {
+          if (!typeId) return null
+
           const typeOption = props.fitnessTypeOptions?.find(item =>
-              String(item.value) === String(typeId) || String(item.id) === String(typeId)
+              String(item.value) === String(typeId) ||
+              String(item.id) === String(typeId)
           )
           const typeName = typeOption?.value1 || typeOption?.label || `类型${typeId}`
 
@@ -439,7 +501,7 @@ const chartSeries = computed(() => {
             name: typeName,
             type: 'line',
             data,
-            typeId: typeId,
+            typeId,
             smooth: chartOptions.smoothCurve,
             symbol: 'circle',
             symbolSize: 6,
@@ -466,10 +528,7 @@ const chartSeries = computed(() => {
                 const {value, dataIndex} = params
                 if (value <= 0) return ''
                 const date = allDates.value[dataIndex]
-                if (typeId !== undefined) {
-                  return formatValueWithUnit(value, typeId, date)
-                }
-                return formatValue(value)
+                return formatValueWithUnit(value, typeId, date)
               }
             } : undefined,
             emphasis: {
@@ -478,7 +537,7 @@ const chartSeries = computed(() => {
             }
           }
         })
-        .filter(Boolean) as any[]
+        .filter(Boolean)
   } catch (error) {
     console.error('Error generating chart series:', error)
     return []
@@ -535,7 +594,7 @@ const echartConfig = computed(() => {
 
           params.forEach((param) => {
             if (param.value > 0) {
-              const series = chartSeries.value.find(s => s.name === param.seriesName)
+              const series = chartSeries.value.find(s => s && s.name === param.seriesName)
               if (series && series.typeId !== undefined) {
                 const typeId = series.typeId as string | number
                 const unit = getRecordUnit(typeId, date)
@@ -563,7 +622,7 @@ const echartConfig = computed(() => {
         type: 'scroll',
         orient: 'horizontal',
         bottom: hasMultipleDates ? 60 : 15,
-        data: chartSeries.value.map(s => s.name),
+        data: chartSeries.value.map(s => s?.name || '').filter(Boolean),
         textStyle: {
           fontSize: 12,
           color: '#4A5568'
@@ -605,7 +664,7 @@ const echartConfig = computed(() => {
           fontSize: 12,
           color: '#718096'
         },
-        axiosLabel: {
+        axisLabel: {
           fontSize: 11,
           color: '#718096',
           formatter: (value: number) => {
@@ -659,16 +718,13 @@ const echartConfig = computed(() => {
   }
 })
 
-// 通知函数
-function showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') {
-  emitter.emit('notify', {message, type})
-}
-
-// 🔥 优化后的图表初始化
+// 图表初始化函数
 async function initializeChart(): Promise<void> {
-  if (!isChartReady.value || !hasData.value || !echartConfig.value) {
+  if (!shouldShowChart.value || !echartConfig.value || isUpdatingChart.value) {
     return
   }
+
+  isUpdatingChart.value = true
 
   try {
     await nextTick()
@@ -696,64 +752,51 @@ async function initializeChart(): Promise<void> {
       return
     }
 
+    // 销毁旧图表
+    destroyChart()
+
+    // 创建新图表
     await initChart(echartConfig.value as EChartsOption)
+
+    console.log('✅ 图表初始化成功')
   } catch (error) {
     console.error('Failed to initialize chart:', error)
     errorMessage.value = '图表初始化失败'
+  } finally {
+    isUpdatingChart.value = false
   }
 }
 
 // 创建防抖版本的图表更新函数
 const debouncedUpdateChart = debounce(async () => {
-  if (hasData.value && echartConfig.value && !isLoading.value && isChartReady.value) {
-    await initializeChart()
-  }
-}, 200)
-
-// 🔥 优化数据加载，使用 store 的防抖方法
-async function loadData(): Promise<void> {
-  if (!query.value.startDate || !query.value.endDate) {
-    showNotification('请选择有效的日期范围', 'error')
-    return
-  }
-
-  errorMessage.value = ''
-
-  try {
-    console.log('🟢 开始加载健身数据')
-
-    // 🔥 使用 store 中的防抖方法
-    fitnessStore.loadAllRecordsDebounced(300)
-
-    // 🔥 监听数据加载完成
+  if (shouldShowChart.value && echartConfig.value && !isUpdatingChart.value) {
+    // 只有在确实需要更新时才改变chartKey
+    chartKey.value++
     await nextTick()
+    setTimeout(async () => {
+      await initializeChart()
+    })
+  }
+})
 
-    // 等待数据加载完成
-    const checkDataLoaded = () => {
-      return new Promise<void>((resolve) => {
-        const checkInterval = setInterval(() => {
-          if (!isLoading.value) {
-            clearInterval(checkInterval)
-            resolve()
-          }
-        }, 100)
-
-        // 5秒超时
-        setTimeout(() => {
-          clearInterval(checkInterval)
-          resolve()
-        }, 5000)
-      })
+// 数据加载函数
+async function loadData(): Promise<void> {
+  try {
+    if (!query.value?.startDate || !query.value?.endDate) {
+      showNotification('请选择有效的日期范围', 'error')
+      return
     }
 
-    await checkDataLoaded()
+    errorMessage.value = ''
 
-    if (hasData.value) {
-      showNotification('健身数据加载成功', 'success')
-      setTimeout(async () => {
-        await initializeChart()
-      }, 150)
-    }
+    console.log('🟢 开始加载健身数据', {
+      startDate: query.value.startDate,
+      endDate: query.value.endDate,
+      typeIdList: query.value.typeIdList
+    })
+
+    // 使用 store 中的防抖方法
+    fitnessStore.loadAllRecordsDebounced(300)
   } catch (error: any) {
     if (error?.name !== 'AbortError') {
       console.error('🔴 Failed to load fitness data:', error)
@@ -764,139 +807,192 @@ async function loadData(): Promise<void> {
 }
 
 // 处理搜索事件
-async function handleSearchFromComponent(newQuery: typeof query.value) {
-  console.log('🟢 处理搜索请求', newQuery)
-  fitnessStore.updateQuery(newQuery)
+async function handleSearchFromComponent(newQuery?: any) {
+  try {
+    console.log('🟢 处理搜索请求', {
+      newQuery,
+      type: typeof newQuery,
+      currentQuery: query.value
+    })
 
-  // 🔥 使用防抖版本避免频繁请求
-  fitnessStore.loadAllRecordsDebounced(300)
+    // 设置搜索状态
+    isSearching.value = true
+
+    // 如果没有传递参数或参数无效，直接使用当前的查询条件进行搜索
+    let targetQuery = query.value
+
+    if (newQuery && typeof newQuery === 'object') {
+      targetQuery = newQuery
+    } else {
+      console.log('🔍 使用当前查询条件进行搜索')
+    }
+
+    // 创建安全的查询对象
+    const safeQuery = createSafeQuery(targetQuery)
+    console.log('🟢 验证后的查询参数', safeQuery)
+
+    // 检查查询条件是否真的发生了变化（仅当传递了新查询时才检查）
+    if (newQuery && typeof newQuery === 'object') {
+      const currentQueryStr = JSON.stringify(query.value)
+      const newQueryStr = JSON.stringify(safeQuery)
+
+      if (currentQueryStr === newQueryStr) {
+        console.log('ℹ️ 查询条件未变化，跳过更新')
+        isSearching.value = false
+        return
+      }
+
+      // 更新查询条件
+      fitnessStore.updateQuery(safeQuery)
+    }
+
+    // 清除错误信息
+    errorMessage.value = ''
+
+    // 加载数据
+    fitnessStore.loadAllRecordsDebounced(300)
+
+  } catch (error) {
+    console.error('❌ 处理搜索请求失败', error)
+    showNotification('搜索失败，请重试', 'error')
+    isSearching.value = false
+  }
 }
 
+// 处理重置事件
 async function handleResetFromComponent() {
-  fitnessStore.resetQuery()
+  try {
+    console.log('🟢 处理重置请求')
 
-  const defaultRange = getDefaultRange()
-  const {startDate, endDate} = parseDateRange(defaultRange)
-  fitnessStore.updateQuery({
-    ...fitnessStore.query,
-    typeIdList: [],
-    remark: '',
-    startDate,
-    endDate,
-  })
+    // 设置搜索状态
+    isSearching.value = true
 
-  chartOptions.showDataLabels = false
-  chartOptions.showAreaFill = true
-  chartOptions.smoothCurve = true
-  errorMessage.value = ''
+    // 重置store状态
+    fitnessStore.resetQuery()
 
-  // 🔥 使用防抖版本
-  fitnessStore.loadAllRecordsDebounced(300)
-}
-
-// 计算俯卧撑总数
-const pushUpCount = computed(() => {
-  if (!fitnessRecords.value?.length || !props.fitnessTypeOptions?.length) {
-    return 0
-  }
-
-  return fitnessRecords.value.filter(record => {
-    if (!record || !record.typeId) return false
-
-    const fitnessType = props.fitnessTypeOptions.find(type =>
-        String(type.value) === String(record.typeId) || String(type.id) === String(record.typeId)
-    )
-
-    return fitnessType?.key1 === 'PUSH_UP'
-  }).reduce((sum, record) => {
-    const count = Number(record.count || 0)
-    return sum + (isNaN(count) ? 0 : count)
-  }, 0)
-})
-
-// 计算蛋白质总量
-const proteinCount = computed(() => {
-  if (!fitnessRecords.value?.length || !props.fitnessTypeOptions?.length) {
-    return 0
-  }
-
-  return fitnessRecords.value.filter(record => {
-    if (!record || !record.typeId) return false
-
-    const fitnessType = props.fitnessTypeOptions.find(type =>
-        String(type.value) === String(record.typeId) || String(type.id) === String(record.typeId)
-    )
-
-    return fitnessType?.key1 === 'PROTEIN' ||
-        fitnessType?.value1?.includes('蛋白')
-  }).reduce((sum, record) => {
-    const count = Number(record.count || 0)
-    return sum + (isNaN(count) ? 0 : count)
-  }, 0)
-})
-
-// 🔥 生命周期优化
-onMounted(async () => {
-  await nextTick()
-  isChartReady.value = true
-
-  if (!query.value.startDate || !query.value.endDate) {
     const defaultRange = getDefaultRange()
     const {startDate, endDate} = parseDateRange(defaultRange)
-    fitnessStore.updateQuery({
-      startDate,
-      endDate
-    })
-  }
 
-  // 🔥 延迟加载数据，确保组件完全初始化
-  setTimeout(() => {
-    loadData()
-  }, 100)
-
-  // 🔥 修复: 添加 passive 选项和错误处理
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', resizeChart, {
-      passive: true,
-      capture: false
+    // 创建安全的重置查询对象
+    const resetQuery = createSafeQuery({
+      typeIdList: [],
+      remark: '',
+      startDate: startDate || '',
+      endDate: endDate || ''
     })
+
+    console.log('🟢 重置查询参数', resetQuery)
+
+    fitnessStore.updateQuery(resetQuery)
+
+    // 重置图表选项
+    chartOptions.showDataLabels = false
+    chartOptions.showAreaFill = true
+    chartOptions.smoothCurve = true
+
+    // 清除错误信息
+    errorMessage.value = ''
+
+    // 加载数据
+    fitnessStore.loadAllRecordsDebounced(300)
+
+  } catch (error) {
+    console.error('❌ 处理重置请求失败', error)
+    showNotification('重置失败，请重试', 'error')
+    isSearching.value = false
   }
-})
+}
 
 // 监听器优化
 watch(
-    () => [chartOptions.showDataLabels, chartOptions.showAreaFill, chartOptions.smoothCurve],
+    () => chartOptions,
     () => {
-      debouncedUpdateChart()
-    },
-    {deep: true}
-)
-
-watch(
-    () => [fitnessStore.allList, hasData.value],
-    async ([newList, newHasData], [oldList, oldHasData]) => {
-      if (isChartReady.value && !isLoading.value) {
-        if (newHasData && (!oldHasData || newList !== oldList)) {
-          await nextTick()
+      try {
+        console.log('🟢 图表选项改变，更新图表')
+        if (shouldShowChart.value) {
           debouncedUpdateChart()
         }
+      } catch (error) {
+        console.error('❌ 图表选项监听错误', error)
       }
     },
-    {deep: true}
+    { deep: true }
 )
 
-watch(chartRef, async (newRef, oldRef) => {
-  if (newRef && newRef !== oldRef && isChartReady.value && hasData.value && !isLoading.value) {
+// 监听数据加载完成
+watch(
+    () => isLoading.value,
+    (newLoading, oldLoading) => {
+      try {
+        console.log('🟢 loading状态改变', { newLoading, oldLoading })
+
+        // 当loading从true变为false时，说明数据加载完成
+        if (oldLoading && !newLoading) {
+          // 重置搜索状态
+          isSearching.value = false
+
+          // 设置有初始数据标志
+          if (hasData.value) {
+            hasInitialData.value = true
+            console.log('📊 数据加载完成，准备更新图表')
+            // 延迟更新图表，确保DOM完全渲染
+            setTimeout(() => {
+              if (shouldShowChart.value) {
+                debouncedUpdateChart()
+              }
+            })
+          }
+        }
+      } catch (error) {
+        console.error('❌ loading状态监听错误', error)
+      }
+    }
+)
+
+// 生命周期
+onMounted(async () => {
+  try {
+    console.log('🟢 组件挂载')
+
     await nextTick()
+    isChartReady.value = true
+
+    if (!query.value?.startDate || !query.value?.endDate) {
+      const defaultRange = getDefaultRange()
+      const {startDate, endDate} = parseDateRange(defaultRange)
+
+      const defaultQuery = createSafeQuery({
+        typeIdList: [],
+        remark: '',
+        startDate: startDate || '',
+        endDate: endDate || ''
+      })
+
+      fitnessStore.updateQuery(defaultQuery)
+    }
+
+    // 延迟加载数据，确保组件完全初始化
     setTimeout(() => {
-      debouncedUpdateChart()
-    }, 100)
+      loadData()
+    })
+
+    // 添加窗口大小变化监听
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', resizeChart, {
+        passive: true,
+        capture: false
+      })
+    }
+  } catch (error) {
+    console.error('❌ 组件挂载错误', error)
+    showNotification('组件初始化失败', 'error')
   }
 })
 
-// 🔥 优化清理函数
 onBeforeUnmount(() => {
   try {
+    console.log('🟢 组件卸载')
+
     if (typeof window !== 'undefined') {
       window.removeEventListener('resize', resizeChart)
     }

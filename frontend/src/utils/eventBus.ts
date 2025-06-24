@@ -30,6 +30,7 @@ type Events = {
   'confirm': ConfirmPayload
   'show-login': void
   'show-register': void
+  'sidebar-toggled': void
 }
 
 // 扩展 Emitter 类型以支持 once 方法
