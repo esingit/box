@@ -1,10 +1,10 @@
 <template>
   <div ref="menuRef" class="relative select-none">
     <div class="menu-head">
-      <button
+      <BaseButton
           @click="toggleMenu"
-          class="menu-btn"
           type="button"
+          color="text"
           aria-haspopup="true"
           :aria-expanded="showMenu"
       >
@@ -14,7 +14,7 @@
             class="w-4 h-4 text-gray-500 transition-transform duration-300"
             :style="{ transform: showMenu ? 'rotate(180deg)' : 'rotate(0deg)' }"
         />
-      </button>
+      </BaseButton>
     </div>
 
     <transition name="fade-scale">

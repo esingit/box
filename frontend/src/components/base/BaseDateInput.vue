@@ -28,7 +28,7 @@
     <div
         v-if="open"
         ref="popoverRef"
-        class="absolute z-50 mt-2 p-5 w-[520px] bg-white rounded-xl shadow-lg text-gray-900 select-none border"
+        class="absolute z-50 mt-2 p-5 w-[520px] bg-white rounded-xl shadow-lg text-gray-800 select-none border"
         style="left: 0; top: 100%;"
         @click.stop
     >
@@ -38,7 +38,7 @@
             v-for="opt in quickOptions"
             :key="opt.label"
             class="flex-1 py-1 text-xs"
-            :class="opt.isActive ? 'bg-blue-100 text-blue-900 border-blue-300' : ''"
+            :class="opt.isActive ? 'bg-blue-100 text-gray-800 border-blue-300' : ''"
             type="button"
             color="outline"
             @click="applyQuick(opt)"

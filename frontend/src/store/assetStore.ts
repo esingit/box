@@ -1,11 +1,11 @@
 // src/store/assetStore.ts
-import { defineStore } from 'pinia'
-import { ref, reactive, computed } from 'vue'
+import {defineStore} from 'pinia'
+import {computed, reactive, ref} from 'vue'
 import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
-import { formatAssetRecord } from '@/utils/commonMeta'
-import { formatTime } from '@/utils/formatters'
+import {formatAssetRecord} from '@/utils/commonMeta'
+import {formatTime} from '@/utils/formatters'
 
 // 添加本地存储的 key
 const QUERY_STORAGE_KEY = 'asset_query_conditions'
@@ -126,7 +126,7 @@ export const useAssetStore = defineStore('asset', () => {
             const res = await axiosInstance.get('/api/asset-record/list', {
                 params: buildParams(),
                 signal: recordController.signal,
-                paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
+                paramsSerializer: params => qs.stringify(params, {arrayFormat: 'repeat'})
             })
 
             if (res.data.success) {
@@ -174,7 +174,7 @@ export const useAssetStore = defineStore('asset', () => {
                     remark: query.remark.trim() || undefined
                 },
                 signal: recordController.signal,
-                paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
+                paramsSerializer: params => qs.stringify(params, {arrayFormat: 'repeat'})
             })
 
             if (res.data.success) {
@@ -257,7 +257,7 @@ export const useAssetStore = defineStore('asset', () => {
         try {
             const res = await axiosInstance.post('/api/asset-record/add', formatTime(data))
             if (res.data.success) {
-                emitter.emit('notify', { message: '添加成功', type: 'success' })
+                emitter.emit('notify', {message: '添加成功', type: 'success'})
                 await loadList() // 添加后重新加载列表
                 return true // 成功时返回 true
             } else {
@@ -282,7 +282,7 @@ export const useAssetStore = defineStore('asset', () => {
         try {
             const res = await axiosInstance.put('/api/asset-record/update', formatTime(data))
             if (res.data.success) {
-                emitter.emit('notify', { message: '更新成功', type: 'success' })
+                emitter.emit('notify', {message: '更新成功', type: 'success'})
                 await loadList() // 更新后重新加载列表
                 return true // 成功时返回 true
             } else {
@@ -307,7 +307,7 @@ export const useAssetStore = defineStore('asset', () => {
         try {
             const res = await axiosInstance.delete(`/api/asset-record/delete/${id}`)
             if (res.data.success) {
-                emitter.emit('notify', { message: '删除成功', type: 'success' })
+                emitter.emit('notify', {message: '删除成功', type: 'success'})
                 await loadList() // 删除后重新加载列表
                 return true // 🔥 删除成功也返回 true
             } else {
@@ -332,7 +332,7 @@ export const useAssetStore = defineStore('asset', () => {
         try {
             const res = await axiosInstance.post('/api/asset-record/copy-last' + (force ? '?force=true' : ''))
             if (res.data?.success) {
-                emitter.emit('notify', { message: '复制成功', type: 'success' })
+                emitter.emit('notify', {message: '复制成功', type: 'success'})
                 await loadList() // 🔥 复制成功后重新加载列表
                 return true // 🔥 复制成功返回 true
             } else {
@@ -351,6 +351,54 @@ export const useAssetStore = defineStore('asset', () => {
             } else {
                 console.log('[复制记录] 认证相关错误，等待用户登录:', err.message)
                 // 认证错误不抛出，让组件可以正常处理
+                return false
+            }
+        }
+    }
+
+    // OCR识别图片
+    async function recognizeAssetImage(formData: FormData) {
+        try {
+            const res = await axiosInstance.post('/api/asset-record/recognize-image', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            })
+
+            if (res.data.success) {
+                return res.data.data // 返回 AssetRecordDTO 数组
+            } else {
+                throw new Error(res.data.message || '图片识别失败')
+            }
+        } catch (err) {
+            await handleError('图片识别', err)
+            throw err
+        }
+    }
+
+// 批量添加资产记录
+    async function batchAddRecords(records: any[]) {
+        try {
+            const res = await axiosInstance.post('/api/asset-record/batch-add', records.map(item => formatTime(item)))
+
+            if (res.data.success) {
+                emitter.emit('notify', {
+                    message: `成功添加 ${res.data.data} 条记录`,
+                    type: 'success'
+                })
+                await loadList() // 添加后重新加载列表
+                return true
+            } else {
+                throw new Error(res.data.message || '批量添加失败')
+            }
+        } catch (err: any) {
+            if (err?.message !== 'AUTH_CANCELED' &&
+                err?.message !== '用户未登录，请先登录' &&
+                err?.message !== '请求已取消') {
+                await handleError('批量添加记录', err)
+                throw err
+            } else {
+                await handleError('批量添加记录', err)
                 return false
             }
         }
@@ -380,5 +428,7 @@ export const useAssetStore = defineStore('asset', () => {
         updateRecord,
         handleDelete,
         copyLastRecords,
+        recognizeAssetImage,
+        batchAddRecords,
     }
 })

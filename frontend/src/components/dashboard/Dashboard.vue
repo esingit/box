@@ -1,6 +1,6 @@
 <!--src/components/dashboard/Dashboard.vue-->
 <template>
-  <div class="min-h-screen max-w-6xl mx-auto bg-gray-50 rounded-xl flex flex-col space-y-8">
+  <div class="min-h-screen bg-gray-50 p-6 max-w-screen-2xl mx-auto flex flex-col space-y-6 rounded-xl">
     <!-- 加载状态 -->
     <div v-if="isLoading" class="py-12 flex justify-center items-center text-gray-500 gap-3">
       <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>

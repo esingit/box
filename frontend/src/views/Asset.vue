@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-6 max-w-6xl mx-auto flex flex-col space-y-6 rounded-xl">
+  <div class="min-h-screen bg-gray-50 p-6 max-w-screen-2xl mx-auto flex flex-col space-y-6 rounded-xl">
     <!-- 资产统计卡片 -->
     <section class="bg-white rounded-xl hover:shadow-md p-6">
       <header class="flex justify-between items-center mb-3">
@@ -47,7 +47,10 @@
       <div class="flex justify-start gap-2">
         <BaseButton title="添加资产" @click="handleAdd" color="primary" :icon="LucidePlus"/>
         <BaseButton title="复制上回记录" @click="onCopyClick" color="outline" :icon="LucideCopy"/>
-        <BaseButton title="扫图批量添加" @click="handleScanPicAdd" color="outline" :icon="LucideScanText"/>
+        <BaseButton title="扫图批量添加" @click="showAssetScanAddFlag" color="outline" :icon="LucideScanText">
+          <Camera class="w-5 h-5" />
+          扫图批量添加
+        </BaseButton>
       </div>
       <AssetSearch
           :query="query"
@@ -94,14 +97,14 @@
         @submit="saveEdit"
         @close="cancelEdit"
     />
-    <AssetForm
-        v-if="showScanPicAddModal"
-        :visible="showScanPicAddModal"
+    <AssetScanAddModal
+        v-if="showAssetScanAddFlag"
+        :visible="showAssetScanAddFlag"
         :form="form"
         title="扫图批量添加"
         confirm-text="确定"
-        @submit="handleAddRecord"
-        @close="closeScanPicAddModal"
+        @submit="handleAssetScanAddRecord"
+        @close="closeAssetScanAddModal"
     />
   </div>
 </template>
@@ -121,6 +124,7 @@ import BaseStatCard from '@/components/base/BaseStatCard.vue'
 import AssetList from '@/components/asset/AssetList.vue'
 import AssetForm from '@/components/asset/AssetForm.vue'
 import AssetSearch from '@/components/asset/AssetSearch.vue'
+import AssetScanAddModal from '@/components/asset/AssetScanAddModal.vue'
 
 const assetStore = useAssetStore()
 const assetNameStore = useAssetNameStore()
@@ -129,7 +133,7 @@ const { list, stats, query, pagination } = storeToRefs(assetStore)
 
 const loading = ref(false)
 const showAddModal = ref(false)
-const showScanPicAddModal = ref(false)
+const showAssetScanAddFlag = ref(false)
 const editingIdx = ref<number | null>(null)
 const resultCount = ref<number | null>(null)
 
@@ -253,19 +257,23 @@ function handleAdd() {
   showAddModal.value = true
 }
 
-function handleScanPicAdd() {
+function showAssetScanAddModal() {
   initEmptyForm()
-  showScanPicAddModal.value = true
+  showAssetScanAddFlag.value = true
 }
 
-function closeScanPicAddModal() {
-  showScanPicAddModal.value = false
+function closeAssetScanAddModal() {
+  showAssetScanAddFlag.value = false
 }
 
-async function handleScanPicAddModal(data: typeof form) {
-  await assetStore.ScanPicAddRecord({ ...data})
-  showScanPicAddModal.value = false
-  await refreshData()
+async function handleAssetScanAddRecord(records: any[]) {
+  try {
+    await assetStore.batchAddRecords(records)
+    showAssetScanAddFlag.value = false
+    await refreshData()
+  } catch (error) {
+    console.error('批量添加失败:', error)
+  }
 }
 
 function closeAddModal() {

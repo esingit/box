@@ -7,15 +7,21 @@ import com.esin.box.config.UserContextHolder;
 import com.esin.box.converter.AssetRecordConverter;
 import com.esin.box.dto.AssetRecordDTO;
 import com.esin.box.dto.AssetStatsDTO;
+import com.esin.box.entity.AssetName;
 import com.esin.box.entity.AssetRecord;
 import com.esin.box.entity.CommonMeta;
 import com.esin.box.mapper.AssetRecordMapper;
+import com.esin.box.service.AssetNameService;
 import com.esin.box.service.AssetRecordService;
 import com.esin.box.service.CommonMetaService;
+import net.sourceforge.tess4j.ITesseract;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,6 +30,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @Transactional
@@ -37,6 +45,15 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
     @Autowired
     private AssetRecordConverter assetRecordConverter;
+
+    @Autowired
+    private AssetNameService assetNameService;
+
+    @Autowired
+    private ITesseract tesseract;  // 注入配置好的 Tesseract 实例
+
+    @Value("${app.upload.temp-dir:/tmp/asset-images}")
+    private String tempDir;
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AssetRecordServiceImpl.class);
 
@@ -354,5 +371,258 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
         List<AssetRecord> entityList = assetRecordMapper.selectList(wrapper);
         return assetRecordConverter.toDTOList(entityList);
+    }
+
+
+    @Override
+    public List<AssetRecordDTO> recognizeAssetImage(MultipartFile image) throws Exception {
+        List<AssetRecordDTO> results = new ArrayList<>();
+
+        // 创建临时文件
+        File tempFile = null;
+        try {
+            // 确保临时目录存在
+            File dir = new File(tempDir);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            // 保存上传的图片到临时文件
+            String fileName = "asset_" + System.currentTimeMillis() + "_" + image.getOriginalFilename();
+            tempFile = new File(dir, fileName);
+            image.transferTo(tempFile);
+
+            // 使用Tesseract进行OCR识别
+            // ITesseract tesseract = new Tesseract();
+            // tesseract.setDatapath("/usr/local/share/tessdata");
+            // tesseract.setLanguage("chi_sim+eng");
+
+            // 直接使用注入的 tesseract
+            String text = tesseract.doOCR(tempFile);
+            log.info("OCR识别结果: {}", text);
+
+            // 解析识别的文本
+            results = parseOCRText(text);
+
+        } catch (Exception e) {
+            log.error("图片识别失败", e);
+            throw new RuntimeException("图片识别失败: " + e.getMessage());
+        } finally {
+            // 清理临时文件
+            if (tempFile != null && tempFile.exists()) {
+                tempFile.delete();
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * 解析OCR识别的文本，提取资产名称和金额
+     */
+    private List<AssetRecordDTO> parseOCRText(String text) {
+        List<AssetRecordDTO> results = new ArrayList<>();
+
+        if (text == null || text.trim().isEmpty()) {
+            return results;
+        }
+
+        // 按行分割文本
+        String[] lines = text.split("\\n");
+
+        // 定义匹配模式
+        // 模式1: 名称 金额 (如：工资收入 5000)
+        Pattern pattern1 = Pattern.compile("([\\u4e00-\\u9fa5a-zA-Z\\s]+)\\s+([\\d,]+\\.?\\d*)");
+        // 模式2: 名称：金额 (如：工资收入：5000)
+        Pattern pattern2 = Pattern.compile("([\\u4e00-\\u9fa5a-zA-Z\\s]+)[：:]\\s*([\\d,]+\\.?\\d*)");
+        // 模式3: 金额 名称 (如：5000 工资收入)
+        Pattern pattern3 = Pattern.compile("([\\d,]+\\.?\\d*)\\s+([\\u4e00-\\u9fa5a-zA-Z\\s]+)");
+
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+
+            AssetRecordDTO item = null;
+
+            // 尝试匹配模式2（优先级最高，因为有明确的分隔符）
+            Matcher matcher2 = pattern2.matcher(line);
+            if (matcher2.find()) {
+                item = new AssetRecordDTO();
+                item.setAssetName(matcher2.group(1).trim());
+                item.setAmount(parseAmount(matcher2.group(2)));
+            }
+
+            // 尝试匹配模式1
+            if (item == null) {
+                Matcher matcher1 = pattern1.matcher(line);
+                if (matcher1.find()) {
+                    String name = matcher1.group(1).trim();
+                    // 排除纯数字被识别为名称的情况
+                    if (!name.matches("\\d+")) {
+                        item = new AssetRecordDTO();
+                        item.setAssetName(name);
+                        item.setAmount(parseAmount(matcher1.group(2)));
+                    }
+                }
+            }
+
+            // 尝试匹配模式3
+            if (item == null) {
+                Matcher matcher3 = pattern3.matcher(line);
+                if (matcher3.find()) {
+                    String name = matcher3.group(2).trim();
+                    if (!name.isEmpty()) {
+                        item = new AssetRecordDTO();
+                        item.setAssetName(name);
+                        item.setAmount(parseAmount(matcher3.group(1)));
+                    }
+                }
+            }
+
+            // 如果成功解析，添加到结果列表
+            if (item != null && item.getAmount() != null && item.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                // 设置默认值
+                item.setAcquireTime(LocalDateTime.now());
+                item.setRemark("批量导入");
+                results.add(item);
+                log.debug("解析成功: {} - {}", item.getAssetName(), item.getAmount());
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * 解析金额字符串
+     */
+    private BigDecimal parseAmount(String amountStr) {
+        try {
+            // 移除逗号和空格
+            amountStr = amountStr.replaceAll("[,\\s]", "");
+            return new BigDecimal(amountStr);
+        } catch (NumberFormatException e) {
+            log.warn("无法解析金额: {}", amountStr);
+            return null;
+        }
+    }
+
+    @Override
+    @Transactional
+    public int batchAddRecords(List<AssetRecordDTO> records, String createUser) {
+        if (records == null || records.isEmpty()) {
+            throw new RuntimeException("记录列表不能为空");
+        }
+
+        int successCount = 0;
+        LocalDateTime now = LocalDateTime.now();
+
+        for (AssetRecordDTO dto : records) {
+            try {
+                // 验证必填字段
+                validateAssetRecord(dto);
+
+                // 处理资产名称（如果是新名称则创建）
+                Long assetNameId = processAssetName(dto, createUser);
+
+                // 创建资产记录实体
+                AssetRecord record = new AssetRecord();
+                record.setAssetNameId(assetNameId);
+                record.setAssetTypeId(dto.getAssetTypeId());
+                record.setAmount(dto.getAmount());
+                record.setUnitId(dto.getUnitId() != null ? dto.getUnitId() : getDefaultUnitId());
+                record.setAssetLocationId(dto.getAssetLocationId());
+                record.setAcquireTime(dto.getAcquireTime() != null ? dto.getAcquireTime() : now);
+                record.setRemark(dto.getRemark() != null ? dto.getRemark() : "批量导入");
+                record.setCreateUser(createUser);
+
+                // 插入记录
+                assetRecordMapper.insert(record);
+                successCount++;
+
+            } catch (Exception e) {
+                log.error("添加记录失败: {}", dto, e);
+                // 继续处理下一条，不中断整个批量操作
+            }
+        }
+
+        if (successCount == 0) {
+            throw new RuntimeException("批量添加失败，没有成功添加任何记录");
+        }
+
+        log.info("批量添加完成，成功: {}/{}", successCount, records.size());
+        return successCount;
+    }
+
+    /**
+     * 验证资产记录必填字段
+     */
+    private void validateAssetRecord(AssetRecordDTO dto) {
+        if (dto.getAssetName() == null || dto.getAssetName().trim().isEmpty()) {
+            if (dto.getAssetNameId() == null) {
+                throw new RuntimeException("资产名称不能为空");
+            }
+        }
+        if (dto.getAssetTypeId() == null) {
+            throw new RuntimeException("资产类型不能为空");
+        }
+        if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("金额必须大于0");
+        }
+        if (dto.getAssetLocationId() == null) {
+            throw new RuntimeException("资产位置不能为空");
+        }
+    }
+
+    /**
+     * 处理资产名称，如果不存在则创建
+     */
+    private Long processAssetName(AssetRecordDTO dto, String createUser) {
+        // 如果已经有ID，直接返回
+        if (dto.getAssetNameId() != null) {
+            return dto.getAssetNameId();
+        }
+
+        // 如果有名称，查找或创建
+        if (dto.getAssetName() != null && !dto.getAssetName().trim().isEmpty()) {
+            String name = dto.getAssetName().trim();
+
+            // 查找是否已存在
+            QueryWrapper<AssetName> wrapper = new QueryWrapper<>();
+            wrapper.eq("name", name)
+                    .eq("create_user", createUser)
+                    .eq("deleted", 0);
+            AssetName existing = assetNameService.getOne(wrapper);
+
+            if (existing != null) {
+                return existing.getId();
+            }
+
+            // 创建新的资产名称
+            AssetName assetName = new AssetName();
+            assetName.setName(name);
+            assetName.setDescription("");
+            assetName.setCreateUser(createUser);
+            assetNameService.save(assetName);
+
+            log.info("创建新的资产名称: {}", name);
+            return assetName.getId();
+        }
+
+        throw new RuntimeException("资产名称不能为空");
+    }
+
+    /**
+     * 获取默认货币单位ID（人民币）
+     */
+    private Long getDefaultUnitId() {
+        QueryWrapper<CommonMeta> wrapper = new QueryWrapper<>();
+        wrapper.eq("type_code", "UNIT")
+                .eq("key1", "CNY")
+                .eq("deleted", 0);
+        CommonMeta unit = commonMetaService.getOne(wrapper);
+        if (unit == null) {
+            throw new RuntimeException("系统未配置默认货币单位");
+        }
+        return unit.getId();
     }
 }

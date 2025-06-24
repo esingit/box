@@ -1,5 +1,5 @@
 <template>
-  <div class="select-none text-gray-900 bg-white rounded-xl p-2 border border-gray-300">
+  <div class="select-none text-gray-800 bg-white rounded-xl p-2 border border-gray-300">
     <!-- 年月选择 -->
     <div class="flex items-center justify-between mb-2 px-2">
       <button @click="prevMonth" type="button" class="p-1 hover:bg-gray-200 rounded">‹</button>
@@ -59,7 +59,7 @@
           :class="[
           'w-8 h-8 flex items-center justify-center rounded-xl',
           day.isToday ? 'bg-gray-400 text-white' : '',
-          day.isSelected ? 'bg-gray-200 text-gray-900 font-semibold' : 'hover:bg-gray-100 text-gray-900',
+          day.isSelected ? 'bg-gray-200 text-gray-800 font-semibold' : 'hover:bg-gray-100 text-gray-800',
           day.disabled ? 'text-gray-400 cursor-not-allowed' : ''
         ]"
       >

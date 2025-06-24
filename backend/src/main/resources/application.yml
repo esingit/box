@@ -27,7 +27,7 @@ spring:
     time-zone: GMT+8
     generator:
       write-numbers-as-strings: true
-  # 添加文件上传配置
+  # 文件上传配置
   servlet:
     multipart:
       enabled: true
@@ -50,11 +50,12 @@ mybatis-plus:
 logging:
   level:
     root: INFO
-    com.box.login: DEBUG
-    com.box.login.mapper: DEBUG
-    com.box.login.mapper.com.esin.box.mapper.FitnessRecordMapper: TRACE
+    com.esin.box: DEBUG
+    com.esin.box.mapper: DEBUG
     org.springframework.data.redis: INFO
     org.springframework.security: DEBUG
+    # OCR相关日志
+    net.sourceforge.tess4j: INFO
 
 # 跨域配置
 cors:
@@ -64,21 +65,51 @@ cors:
   allow-credentials: true
   max-age: 3600
 
-# OCR 相关配置
+# 应用配置
 app:
   upload:
-    # 文件上传路径
+    # 临时文件目录（用于OCR识别）
+    temp-dir: ${java.io.tmpdir}/box/asset-images
+    # 文件上传保存路径
     path: ${user.home}/box-uploads
     # 允许的文件类型
-    allowed-types: image/jpeg,image/jpg,image/png,image/gif,image/bmp
+    allowed-types:
+      - image/jpeg
+      - image/jpg
+      - image/png
+      - image/gif
+      - image/bmp
+      - image/webp
+    # 文件大小限制（字节）
+    max-size: 10485760  # 10MB
   ocr:
     tesseract:
-      # Mac 上 Homebrew 安装的 Tesseract 默认路径
-      # 如果是其他安装方式，请修改此路径
-      data-path: /opt/homebrew/share/tessdata
-      # 支持中英文识别
+      # Tesseract 数据路径配置
+      # Mac mini 上的路径（根据安装方式选择）：
+      # - Homebrew Intel: /usr/local/share/tessdata
+      # - Homebrew Apple Silicon: /opt/homebrew/share/tessdata
+      # - MacPorts: /opt/local/share/tessdata
+      # 自动检测路径（在启动类中实现）
+      data-path: /usr/local/share/tessdata
+      # 备用路径（Apple Silicon）
+      data-path-alt: /opt/homebrew/share/tessdata
+      # 语言包：中文简体+英文
       language: chi_sim+eng
-      # OCR 引擎模式：1=LSTM神经网络，0=传统Tesseract，2=两者结合
+      # OCR 引擎模式
+      # 0 = 仅传统Tesseract
+      # 1 = 仅神经网络LSTM
+      # 2 = 传统+LSTM（默认）
+      # 3 = 基于可用性自动选择
       ocr-engine-mode: 1
-      # 页面分割模式：1=自动页面分割with OSD，3=全自动页面分割(默认)
+      # 页面分割模式
+      # 1 = 带方向和脚本检测的自动页面分割
+      # 3 = 全自动页面分割，但没有方向和脚本检测（默认）
+      # 6 = 统一的文本块
+      # 11 = 稀疏文本，按任意顺序查找尽可能多的文本
       page-seg-mode: 3
+      # DPI设置（提高识别精度）
+      dpi: 300
+      # 是否保留识别后的临时文件（调试用）
+      keep-temp-files: false
+      # 识别超时时间（秒）
+      timeout: 30

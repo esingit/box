@@ -1,5 +1,5 @@
 <template>
-  <div class="flex space-x-2 mt-2 justify-center text-gray-900 select-none">
+  <div class="flex space-x-2 mt-2 justify-center text-gray-800 select-none">
     <select v-model.number="hours" class="select-clean">
       <option
           v-for="h in 24"

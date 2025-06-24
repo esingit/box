@@ -4,6 +4,8 @@ import com.esin.box.entity.AssetRecord;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.math.BigDecimal;
+
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class AssetRecordDTO extends AssetRecord {
@@ -14,4 +16,5 @@ public class AssetRecordDTO extends AssetRecord {
     private String unitValue;   // 货币单位值
     private String assetLocationName;  // 资产位置名称
     private String assetLocationValue; // 资产位置值
+    private BigDecimal amount; //金额
 }
