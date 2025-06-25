@@ -70,7 +70,8 @@ export interface ChartOptionsType {
 // 图片识别返回的数据格式
 export interface RecognizedAssetItem {
     assetName: string
-    amount: number
+    assetNameId: number | null
+    amount: number | null
     unit?: string
     assetTypeId?: number
     assetLocationId?: number

@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :visible="visible" width="590px" @update:visible="handleClose">
+  <BaseModal title="扫图批量添加" :visible="visible" width="1350px" @update:visible="handleClose">
     <div class="p-4 space-y-6">
       <!-- 上传操作区 -->
       <div class="space-y-4">
@@ -37,28 +37,52 @@
 
       <!-- 统一属性设置 -->
       <div v-if="recognizedData.length" class="section-card">
-        <h4 class="section-title">统一设置属性</h4>
-        <div class="grid grid-cols-2 gap-4">
+        <h4 class="text-sm font-medium text-gray-700 mb-1 block">设置共同信息</h4>
+        <div class="grid grid-cols-5 gap-4">
           <BaseSelect
               title="资产类型"
               v-model="commonAttributes.assetTypeId"
               :options="assetTypeOptions"
-              placeholder="全部资产类型"
+              required
               clearable
+              @change="onAssetTypeChange"
           />
           <BaseSelect
               title="资产位置"
               v-model="commonAttributes.assetLocationId"
               :options="assetLocationOptions"
-              placeholder="全部资产位置"
+              required
               clearable
           />
+          <BaseDateInput
+              title="登记日期"
+              v-model="commonAttributes.acquireTime"
+              type="date"
+              :max="today"
+              required
+              clearable
+          />
+            <BaseSelect
+                title="货币单位"
+                v-model="commonAttributes.unit"
+                :options="units"
+                clearable
+            />
+            <BaseButton
+                type="button"
+                title="名称管理"
+                color="outline"
+                @click="assetNameRef?.open()"
+                :icon="LucideSettings"
+                variant="search"
+                class="w-52"
+            />
         </div>
       </div>
 
       <!-- 识别结果展示 -->
       <div v-if="recognizedData.length" class="section-card">
-        <h4 class="section-title">识别结果 ({{ recognizedData.length }} 条)</h4>
+        <h4 class="text-sm font-medium text-gray-700 mb-1 block">识别结果 ({{ recognizedData.length }} 条)</h4>
         <RecognizedAssetsTable :data="recognizedData" @remove-item="removeItem" />
       </div>
 
@@ -77,32 +101,46 @@
       </div>
     </div>
   </BaseModal>
+  <AssetName ref="assetNameRef" @refresh="refreshAssetNames"/>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Loader2, LucideScanText } from 'lucide-vue-next'
+import { Loader2, LucideScanText, LucideSettings } from 'lucide-vue-next'
 import { useAssetStore } from '@/store/assetStore'
 import { useMetaStore } from '@/store/metaStore'
 import emitter from '@/utils/eventBus'
 import { RawAssetRecord, RecognizedAssetItem } from '@/types/asset'
+
+import {useAssetNameStore} from '@/store/assetNameStore'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import RecognizedAssetsTable from '@/components/asset/RecognizedAssetsTable.vue'
+import BaseDateInput from "@/components/base/BaseDateInput.vue";
+import AssetName from "@/components/asset/assetName/AssetName.vue";
 
-const props = defineProps<{ visible: boolean }>()
+const props = defineProps<{
+  visible: boolean
+  form?: any
+  title?: string
+  confirmText?: string
+}>()
 const emit = defineEmits(['close', 'submit', 'update:visible'])
 const assetStore = useAssetStore()
 const metaStore = useMetaStore()
+const assetNameStore = useAssetNameStore()
 
 const imageFile = ref<File | null>(null)
 const imagePreview = ref('')
+const assetNameRef = ref()
 const isRecognizing = ref(false)
+const today = new Date().toISOString().slice(0, 10)
+
 // 修改为识别专用的数据结构
 const recognizedData = ref<RecognizedAssetItem[]>([])
 
-const commonAttributes = ref({ assetTypeId: null, assetLocationId: null })
+const commonAttributes = ref({ assetTypeId: null, assetLocationId: null , acquireTime: today, unit: null })
 
 const assetTypeOptions = computed(() =>
     metaStore.typeMap?.ASSET_TYPE?.map(i => ({ label: String(i.value1), value: i.id })) || []
@@ -110,6 +148,10 @@ const assetTypeOptions = computed(() =>
 const assetLocationOptions = computed(() =>
     metaStore.typeMap?.ASSET_LOCATION?.map(i => ({ label: String(i.value1), value: i.id })) || []
 )
+const units = computed(() => metaStore.typeMap?.UNIT?.map(i => ({
+  label: String(i.value1),
+  value: i.id
+})) || [])
 
 const canSubmit = computed(() =>
     recognizedData.value.length > 0 &&
@@ -190,5 +232,12 @@ function handleClose() {
   recognizedData.value = []
   commonAttributes.value.assetTypeId = null
   commonAttributes.value.assetLocationId = null
+}
+
+function onAssetTypeChange() {
+}
+
+function refreshAssetNames() {
+  assetNameStore.fetchAssetName()
 }
 </script>

@@ -1,9 +1,11 @@
+<!-- BaseSelect.vue -->
 <template>
   <div class="relative w-full">
     <Listbox
-        v-model="modelValue"
+        :model-value="modelValue"
         :multiple="multiple"
         ref="listBoxRef"
+        @update:model-value="handleUpdateModelValue"
         @blur="onBlur"
     >
       <div class="relative w-full">
@@ -13,7 +15,9 @@
             'input-base flex justify-between items-center w-full pr-8',
             showError ? 'msg-error' : ''
           ]"
+            @click="handleButtonClick"
         >
+          <!-- 按钮内容保持不变 -->
           <span
               class="truncate whitespace-nowrap block max-w-full"
               :class="{
@@ -24,11 +28,11 @@
             {{ showError ? (requiredMessage || '此项为必填') : selectedText }}
           </span>
 
-          <!-- 图标区域：清空按钮 + 下拉箭头 -->
           <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-[15px]">
             <button
                 v-if="clearable && hasValue"
                 @click.stop="clearSelection"
+                type="button"
                 class="text-gray-400 hover:text-gray-600 transition"
                 title="清除"
                 tabindex="-1"
@@ -41,11 +45,14 @@
 
         <ListboxOptions
             :class="[
-            'absolute z-50 w-full overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
+            'absolute z-[2500] w-full overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
             direction === 'up' ? 'mb-1 bottom-full' : 'mt-1 top-full',
             'min-h-[80px] max-h-60'
           ]"
+            @before-enter="handleDropdownOpen"
+            @after-leave="handleDropdownClose"
         >
+          <!-- 选项内容保持不变 -->
           <ListboxOption
               v-for="item in safeOptions"
               :key="item.value"
@@ -79,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import {
   Listbox,
   ListboxButton,
@@ -113,18 +120,24 @@ const props = withDefaults(defineProps<{
   requiredMessage: ''
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  'update:modelValue': [value: string | number | (string | number)[] | null]
+  'blur': []
+  'dropdown-open': []    // 新增：下拉框打开事件
+  'dropdown-close': []   // 新增：下拉框关闭事件
+}>()
 
 const listBoxRef = ref<InstanceType<typeof Listbox> | null>(null)
+const showError = ref(false)
+const isDropdownOpen = ref(false)
 
-const modelValue = computed({
-  get: () => props.modelValue,
-  set: val => {
-    emit('update:modelValue', val)
-    showError.value = false
-  }
-})
+// 处理模型值更新
+const handleUpdateModelValue = (val: string | number | (string | number)[] | null) => {
+  emit('update:modelValue', val)
+  showError.value = false
+}
 
+// 其他计算属性保持不变...
 const safeOptions = computed(() => props.options ?? [])
 
 function isArrayValue(val: unknown): val is (string | number)[] {
@@ -133,7 +146,7 @@ function isArrayValue(val: unknown): val is (string | number)[] {
 
 const selectedLabels = computed(() => {
   const options = safeOptions.value
-  const value = modelValue.value
+  const value = props.modelValue
 
   if (props.multiple && isArrayValue(value)) {
     return options.filter(opt => value.includes(opt.value)).map(opt => opt.label)
@@ -143,7 +156,7 @@ const selectedLabels = computed(() => {
   }
 })
 
-const computedPlaceholder = computed(() => props.placeholder || `请输入${props.title}`)
+const computedPlaceholder = computed(() => props.placeholder || `请选择${props.title}`)
 
 const selectedText = computed(() =>
     selectedLabels.value.length
@@ -151,27 +164,70 @@ const selectedText = computed(() =>
         : computedPlaceholder.value
 )
 
-const direction = computed(() => props.direction ?? 'down')
-
 const hasValue = computed(() =>
     props.multiple
-        ? Array.isArray(modelValue.value) && modelValue.value.length > 0
-        : !!modelValue.value
+        ? Array.isArray(props.modelValue) && props.modelValue.length > 0
+        : !!props.modelValue
 )
 
-const showError = ref(false)
+// 处理下拉框状态变化
+const handleButtonClick = () => {
+  nextTick(() => {
+    // 检查下拉框是否打开
+    const isOpen = listBoxRef.value?.$el?.getAttribute('data-headlessui-state')?.includes('open')
+    if (isOpen && !isDropdownOpen.value) {
+      handleDropdownOpen()
+    }
+  })
+}
+
+const handleDropdownOpen = () => {
+  isDropdownOpen.value = true
+  emit('dropdown-open')
+}
+
+const handleDropdownClose = () => {
+  isDropdownOpen.value = false
+  emit('dropdown-close')
+}
+
+// 监听 Headless UI 状态变化
+watch(() => listBoxRef.value, (listbox) => {
+  if (listbox?.$el) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-headlessui-state') {
+          const target = mutation.target as HTMLElement
+          const state = target.getAttribute('data-headlessui-state')
+          const isOpen = state?.includes('open') ?? false
+
+          if (isOpen && !isDropdownOpen.value) {
+            handleDropdownOpen()
+          } else if (!isOpen && isDropdownOpen.value) {
+            handleDropdownClose()
+          }
+        }
+      })
+    })
+
+    observer.observe(listbox.$el, { attributes: true })
+    return () => observer.disconnect()
+  }
+}, { immediate: true })
 
 function clearSelection() {
-  modelValue.value = props.multiple ? [] : ''
+  const newValue = props.multiple ? [] : null
+  emit('update:modelValue', newValue)
   showError.value = false
 }
 
 function onBlur() {
+  emit('blur')
   if (props.required) {
     const empty =
         props.multiple
-            ? !Array.isArray(modelValue.value) || modelValue.value.length === 0
-            : !modelValue.value || modelValue.value === ''
+            ? !Array.isArray(props.modelValue) || props.modelValue.length === 0
+            : !props.modelValue || props.modelValue === ''
     if (empty) {
       showError.value = true
       nextTick(() => {
@@ -185,4 +241,11 @@ function onBlur() {
     }
   }
 }
+
+defineExpose({
+  validate: () => {
+    onBlur()
+    return !showError.value
+  }
+})
 </script>

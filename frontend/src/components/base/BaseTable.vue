@@ -1,84 +1,134 @@
+<!--src/components/base/BaseTable.vue-->
 <template>
-  <div class="relative overflow-auto border border-gray-200 rounded-xl min-h-[520px] max-h-[520px]">
-    <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
-      <!-- 表头固定 -->
-      <thead class="bg-gray-50 sticky top-0 z-10 block w-full select-none">
-      <tr class="table w-full table-fixed">
-        <th
-            v-for="(col, idx) in columns"
-            :key="col.key"
-            class="px-3 py-2 font-medium whitespace-nowrap relative group"
-            :style="{ width: columnWidths[col.key] + 'px' }"
-            :class="headerAlignClass(col.key)"
-        >
-          <div :class="['w-full', textAlignClass(col.key), 'select-none truncate pr-2']">
-            {{ col.label }}
-          </div>
-          <div
-              v-if="col.resizable && idx < columns.length - 1"
-              class="absolute right-0 top-0 h-full w-1 cursor-col-resize group-hover:bg-gray-300"
-              @mousedown.prevent="startResize($event, col.key)"
-              @dblclick.prevent="resetColumnWidth(col.key)"
-          ></div>
-        </th>
-      </tr>
-      </thead>
-
-      <tbody class="block w-full">
-      <tr v-if="loading" class="table w-full table-fixed">
-        <td :colspan="columns.length" class="py-8">
-          <slot name="loading">
-            <div class="space-y-2">
-              <div v-for="i in 5" :key="i" class="h-6 bg-gray-200 rounded animate-pulse"></div>
+  <!-- 移除所有overflow限制，让下拉框能够完全展示 -->
+  <div class="relative border border-gray-200 rounded-xl" style="min-height: 520px;">
+    <!-- 表格头部区域 -->
+    <div class="sticky top-0 z-20 bg-gray-50 rounded-t-xl">
+      <table class="min-w-full table-fixed text-sm text-gray-800">
+        <thead>
+        <tr>
+          <th
+              v-for="(col, idx) in columns"
+              :key="col.key"
+              class="px-3 py-2 font-medium whitespace-nowrap relative group"
+              :style="{ width: columnWidths[col.key] + 'px' }"
+              :class="headerAlignClass(col.key)"
+          >
+            <div :class="['w-full', textAlignClass(col.key), 'select-none truncate pr-2']">
+              {{ col.label }}
             </div>
-          </slot>
-        </td>
-      </tr>
+            <div
+                v-if="col.resizable && idx < columns.length - 1"
+                class="absolute right-0 top-0 h-full w-1 cursor-col-resize group-hover:bg-gray-300"
+                @mousedown.prevent="startResize($event, col.key)"
+                @dblclick.prevent="resetColumnWidth(col.key)"
+            ></div>
+          </th>
+        </tr>
+        </thead>
+      </table>
+    </div>
 
-      <tr v-else-if="!data.length" class="table w-full table-fixed">
-        <td :colspan="columns.length" class="py-8 text-center text-gray-400">
-          <slot name="empty">
-            <BaseEmptyState
-                icon="Dumbbell"
-                message="暂无数据"
-                description="点击上方的添加按钮开始记录"
-            />
-          </slot>
-        </td>
-      </tr>
+    <!-- 表格内容区域 - 设置最大高度和滚动 -->
+    <div class="relative" style="max-height: 460px; overflow-y: auto;">
+      <table class="min-w-full table-fixed text-sm text-gray-800">
+        <tbody>
+        <tr v-if="loading">
+          <td :colspan="columns.length" class="py-8">
+            <slot name="loading">
+              <div class="space-y-2">
+                <div v-for="i in 5" :key="i" class="h-6 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </slot>
+          </td>
+        </tr>
 
-      <tr
-          v-else
-          v-for="(row, rowIndex) in data"
-          :key="row.id || rowIndex"
-          class="table w-full table-fixed hover:bg-gray-50 transition-colors"
-      >
-        <td
-            v-for="col in columns"
-            :key="col.key"
-            class="px-3 py-2 truncate whitespace-nowrap"
-            :style="{ width: columnWidths[col.key] + 'px' }"
-            :class="cellAlignClass(col.key)"
-            @mouseenter="col.key !== 'actions' && onMouseEnter(rowIndex, col.key, $event)"
-            @mousemove="col.key !== 'actions' && onMouseMove($event)"
-            @mouseleave="col.key !== 'actions' && onMouseLeave()"
-        >
-          <template v-if="col.key === 'actions' && col.actions">
-            <div class="flex justify-end">
-              <BaseActions
-                  :record="row"
-                  @edit="handleEdit(row)"
-                  @delete="handleDelete(row)"
+        <tr v-else-if="!data.length">
+          <td :colspan="columns.length" class="py-8 text-center text-gray-400">
+            <slot name="empty">
+              <BaseEmptyState
+                  icon="Dumbbell"
+                  message="暂无数据"
+                  description="点击上方的添加按钮开始记录"
               />
-            </div>
-          </template>
-          <template v-else>
-            {{ formatCell(row, col.key) }}
-          </template>
-        </td>
-      </tr>
-      </tbody>
-    </table>
+            </slot>
+          </td>
+        </tr>
+
+        <tr
+            v-else
+            v-for="(row, rowIndex) in data"
+            :key="row.id || rowIndex"
+            class="hover:bg-gray-50 transition-colors"
+            :class="{ 'relative z-[100]': activeRowIndex === rowIndex }"
+        >
+          <td
+              v-for="col in columns"
+              :key="col.key"
+              class="px-3 py-2 whitespace-nowrap"
+              :style="{
+                  width: columnWidths[col.key] + 'px',
+                  position: hasDropdown(col) && activeRowIndex === rowIndex ? 'relative' : 'static',
+                  zIndex: hasDropdown(col) && activeRowIndex === rowIndex ? 200 : 'auto'
+                }"
+              :class="cellAlignClass(col.key)"
+              @mouseenter="!isEditable(col) && col.key !== 'actions' && onMouseEnter(rowIndex, col.key, $event)"
+              @mousemove="!isEditable(col) && col.key !== 'actions' && onMouseMove($event)"
+              @mouseleave="!isEditable(col) && col.key !== 'actions' && onMouseLeave()"
+          >
+            <!-- 操作列 -->
+            <template v-if="col.actions">
+              <div class="flex justify-end">
+                <slot name="actions" :record="row" :index="rowIndex">
+                  <BaseActions
+                      :record="row"
+                      @edit="handleEdit(row, rowIndex)"
+                      @delete="handleDelete(row, rowIndex)"
+                  />
+                </slot>
+              </div>
+            </template>
+
+            <!-- 自定义单元格内容 -->
+            <template v-else-if="$slots[`cell-${col.key}`]">
+              <slot
+                  :name="`cell-${col.key}`"
+                  :record="row"
+                  :index="rowIndex"
+                  :column="col"
+                  :value="row[col.key]"
+                  :set-active-row="setActiveRow"
+                  :clear-active-row="clearActiveRow"
+              />
+            </template>
+
+            <!-- 可编辑单元格 -->
+            <template v-else-if="isEditable(col)">
+              <component
+                  :is="getEditorComponent(col)"
+                  :model-value="row[col.key]"
+                  :column="col"
+                  :record="row"
+                  :index="rowIndex"
+                  @update:model-value="handleCellChange(rowIndex, col.key, $event)"
+                  @blur="handleCellBlur(rowIndex, col.key)"
+              />
+            </template>
+
+            <!-- 普通显示单元格 -->
+            <template v-else>
+                <span
+                    :title="formatTooltipContent(row, col.key)"
+                    class="block truncate"
+                >
+                  {{ formatCell(row, col.key) }}
+                </span>
+            </template>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Tooltip -->
     <Teleport to="body">
@@ -94,25 +144,82 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import {reactive, ref, markRaw} from 'vue'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import BaseActions from '@/components/base/BaseActions.vue'
+// 编辑器组件
+import TextEditor from './editors/TextEditor.vue'
+import NumberEditor from './editors/NumberEditor.vue'
+import SelectEditor from './editors/SelectEditor.vue'
+import DateEditor from './editors/DateEditor.vue'
 
 const props = defineProps({
-  columns: { type: Array, required: true },
-  data: { type: Array, default: () => [] },
-  loading: { type: Boolean, default: false }
+  columns: {type: Array, required: true},
+  data: {type: Array, default: () => []},
+  loading: {type: Boolean, default: false},
+  editable: {type: Boolean, default: false}
 })
 
-const emit = defineEmits(['edit', 'delete'])
+const emit = defineEmits(['edit', 'delete', 'cell-change', 'cell-blur'])
 
 const DEFAULT_WIDTH = 100
 const columnWidths = reactive({})
+const activeRowIndex = ref(null) // 跟踪当前活动行
+
 props.columns.forEach(col => {
   columnWidths[col.key] = col.defaultWidth || DEFAULT_WIDTH
 })
 
-// 拖拽列宽
+// 编辑器组件映射
+const editorComponents = {
+  text: markRaw(TextEditor),
+  number: markRaw(NumberEditor),
+  select: markRaw(SelectEditor),
+  date: markRaw(DateEditor)
+}
+
+// 判断列是否包含下拉框
+function hasDropdown(col) {
+  return col.type === 'select' || col.key === 'assetNameId'
+}
+
+// 设置活动行
+function setActiveRow(rowIndex) {
+  activeRowIndex.value = rowIndex
+}
+
+// 清除活动行
+function clearActiveRow() {
+  activeRowIndex.value = null
+}
+
+// 暴露方法给插槽使用
+defineExpose({
+  setActiveRow,
+  clearActiveRow
+})
+
+// 判断列是否可编辑
+function isEditable(col) {
+  return props.editable && col.editable !== false && col.type && col.type !== 'custom'
+}
+
+// 获取编辑器组件
+function getEditorComponent(col) {
+  return editorComponents[col.type] || editorComponents.text
+}
+
+// 处理单元格变更
+function handleCellChange(rowIndex, key, value) {
+  emit('cell-change', props.data[rowIndex], key, value, rowIndex)
+}
+
+// 处理单元格失焦
+function handleCellBlur(rowIndex, key) {
+  emit('cell-blur', props.data[rowIndex], key, rowIndex)
+}
+
+// 拖拽列宽（保持原有逻辑）
 let resizingKey = null
 let startX = 0
 let startWidth = 0
@@ -127,6 +234,7 @@ function doResize(e) {
     resizeTimer = null
   }, 16)
 }
+
 function startResize(e, key) {
   resizingKey = key
   startX = e.pageX
@@ -134,6 +242,7 @@ function startResize(e, key) {
   window.addEventListener('mousemove', doResize)
   window.addEventListener('mouseup', stopResize)
 }
+
 function stopResize() {
   resizingKey = null
   window.removeEventListener('mousemove', doResize)
@@ -143,30 +252,33 @@ function stopResize() {
     resizeTimer = null
   }
 }
+
 function resetColumnWidth(key) {
   const col = props.columns.find(c => c.key === key)
   columnWidths[key] = col?.defaultWidth || DEFAULT_WIDTH
 }
 
-// 对齐类
+// 对齐类（保持原有逻辑）
 function textAlignClass(key) {
   if (['amount', 'count'].includes(key)) return 'text-right'
   if (['acquireTime', 'finishTime'].includes(key)) return 'text-center'
   if (key === 'actions') return 'text-center'
   return 'text-left'
 }
+
 function headerAlignClass(key) {
   return textAlignClass(key)
 }
+
 function cellAlignClass(key) {
   if (key === 'actions') return 'text-right'
   return textAlignClass(key)
 }
 
-// Tooltip 控制
+// Tooltip 控制（保持原有逻辑）
 const tooltipVisible = ref(false)
 const tooltipContent = ref('')
-const tooltipPosition = reactive({ x: 0, y: 0 })
+const tooltipPosition = reactive({x: 0, y: 0})
 
 let currentRow = null
 let currentField = null
@@ -188,6 +300,7 @@ function onMouseMove(event) {
   tooltipPosition.x = event.clientX + 12
   tooltipPosition.y = event.clientY + 20
 }
+
 function onMouseLeave() {
   tooltipVisible.value = false
   currentRow = null
@@ -205,6 +318,7 @@ function formatTooltipContent(row, key) {
   return row[key] ?? '-'
 }
 
+// 格式化显示（保持原有逻辑）
 function formatCell(row, key) {
   if (key === 'amount' || key === 'count') {
     return formatAmount(row[key]) + (row.unitValue ? ` ${row.unitValue}` : '')
@@ -214,20 +328,23 @@ function formatCell(row, key) {
   }
   return row[key] ?? '-'
 }
+
 function formatAmount(value) {
   if (value == null || isNaN(value)) return '0.00'
   const abs = Math.abs(value)
   return (value < 0 ? '-' : '') + abs.toFixed(2)
 }
+
 function formatDate(dateStr) {
   if (!dateStr) return '-'
   return dateStr.slice(0, 10)
 }
 
-function handleEdit(row) {
-  emit('edit', row)
+function handleEdit(row, index) {
+  emit('edit', row, index)
 }
-function handleDelete(row) {
-  emit('delete', row)
+
+function handleDelete(row, index) {
+  emit('delete', row, index)
 }
 </script>
