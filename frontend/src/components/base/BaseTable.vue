@@ -12,9 +12,9 @@
               :key="col.key"
               class="px-3 py-2 font-medium whitespace-nowrap relative group"
               :style="{ width: columnWidths[col.key] + 'px' }"
-              :class="headerAlignClass(col.key)"
+              :class="getHeaderAlignClass(col)"
           >
-            <div :class="['w-full', textAlignClass(col.key), 'select-none truncate pr-2']">
+            <div :class="['w-full', getHeaderTextAlignClass(col), 'select-none truncate pr-2']">
               {{ col.label }}
             </div>
             <div
@@ -81,10 +81,9 @@
                   minWidth: columnWidths[col.key] + 'px',
                   position: hasDropdown(col) && activeRowIndex === rowIndex ? 'relative' : 'static',
                   zIndex: hasDropdown(col) && activeRowIndex === rowIndex ? 200 : 'auto',
-                  // 根据是否包含下拉框来设置overflow
                   overflow: hasDropdown(col) ? 'visible' : 'hidden'
                 }"
-              :class="cellAlignClass(col.key)"
+              :class="getCellAlignClass(col)"
               @mouseenter="!isEditable(col) && col.key !== 'actions' && onMouseEnter(rowIndex, col.key, $event)"
               @mousemove="!isEditable(col) && col.key !== 'actions' && onMouseMove($event)"
               @mouseleave="!isEditable(col) && col.key !== 'actions' && onMouseLeave()"
@@ -104,7 +103,6 @@
 
             <!-- 自定义单元格内容 -->
             <template v-else-if="$slots[`cell-${col.key}`]">
-              <!-- 根据是否包含下拉框使用不同的容器样式 -->
               <div
                   :class="[
                     'w-full',
@@ -143,7 +141,7 @@
               </div>
             </template>
 
-            <!-- 普通显示单元格 - 充分利用空间 -->
+            <!-- 普通显示单元格 -->
             <template v-else>
               <div class="w-full overflow-hidden">
                   <span
@@ -209,7 +207,7 @@ const editorComponents = {
   date: markRaw(DateEditor)
 }
 
-// 判断列是否包含下拉框 - 更精确的判断
+// 判断列是否包含下拉框
 function hasDropdown(col) {
   return col.type === 'select' || col.key === 'assetNameId' ||
       (col.type === 'custom' && col.key === 'assetNameId')
@@ -243,6 +241,45 @@ function handleCellChange(rowIndex, key, value) {
 // 处理单元格失焦
 function handleCellBlur(rowIndex, key) {
   emit('cell-blur', props.data[rowIndex], key, rowIndex)
+}
+
+// 获取表头对齐样式 - 基于列配置或默认规则
+function getHeaderAlignClass(col) {
+  // 优先使用列配置中的对齐方式
+  if (col.headerAlign) {
+    return `text-${col.headerAlign}`
+  }
+
+  // 根据列类型或key决定对齐方式
+  if (col.key === 'actions') return 'text-center'
+  if (['amount', 'count', 'price', 'money'].includes(col.key)) return 'text-right'
+  if (['acquireTime', 'finishTime', 'date', 'time'].includes(col.key)) return 'text-center'
+
+  // 默认左对齐
+  return 'text-left'
+}
+
+// 获取表头文本对齐样式
+function getHeaderTextAlignClass(col) {
+  return getHeaderAlignClass(col)
+}
+
+// 获取单元格对齐样式
+function getCellAlignClass(col) {
+  // 优先使用列配置中的对齐方式
+  if (col.align) {
+    return `text-${col.align}`
+  }
+
+  // 操作列特殊处理
+  if (col.key === 'actions') return 'text-right'
+
+  // 根据列类型或key决定对齐方式
+  if (['amount', 'count', 'price', 'money'].includes(col.key)) return 'text-right'
+  if (['acquireTime', 'finishTime', 'date', 'time'].includes(col.key)) return 'text-center'
+
+  // 默认左对齐
+  return 'text-left'
 }
 
 // 拖拽列宽调整
@@ -283,23 +320,6 @@ function stopResize() {
 function resetColumnWidth(key) {
   const col = props.columns.find(c => c.key === key)
   columnWidths[key] = col?.defaultWidth || DEFAULT_WIDTH
-}
-
-// 对齐类
-function textAlignClass(key) {
-  if (['amount', 'count'].includes(key)) return 'text-right'
-  if (['acquireTime', 'finishTime'].includes(key)) return 'text-center'
-  if (key === 'actions') return 'text-center'
-  return 'text-left'
-}
-
-function headerAlignClass(key) {
-  return textAlignClass(key)
-}
-
-function cellAlignClass(key) {
-  if (key === 'actions') return 'text-right'
-  return textAlignClass(key)
 }
 
 // Tooltip 控制

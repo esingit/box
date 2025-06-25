@@ -7,12 +7,9 @@
       :loading="loading"
       @delete="handleDelete"
   >
-    <!-- 扫描结果列 -->
+    <!-- 扫描结果列 - 移除 title 属性，让 BaseTable 的 tooltip 接管 -->
     <template #cell-assetName="{ record }">
-      <span
-          :class="textClass"
-          :title="record.assetName || '暂无扫描结果'"
-      >
+      <span class="text-sm text-gray-900 dark:text-gray-100 block truncate">
         {{ record.assetName || '暂无扫描结果' }}
       </span>
     </template>
@@ -33,23 +30,24 @@
       />
     </template>
 
-    <!-- 其他列保持不变 -->
+    <!-- 金额列 -->
     <template #cell-amount="{ record, index }">
       <input
           :value="record.amount"
           type="number"
           step="0.01"
-          :class="inputClass"
+          class="w-full px-2 py-1 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 text-sm focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           placeholder="0.00"
           @input="handleAmountChange(index, ($event.target as HTMLInputElement).value)"
       />
     </template>
 
+    <!-- 备注列 -->
     <template #cell-remark="{ record, index }">
       <input
           :value="record.remark"
           type="text"
-          :class="inputClass"
+          class="w-full px-2 py-1 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 text-sm focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           placeholder="备注信息"
           @input="handleFieldChange(index, 'remark', ($event.target as HTMLInputElement).value)"
       />
@@ -78,7 +76,6 @@ import BaseButton from "@/components/base/BaseButton.vue"
 import BaseSelect from "@/components/base/BaseSelect.vue"
 import { RecognizedAssetItem } from "@/types/asset"
 
-// 其余代码保持不变...
 const props = defineProps<{
   data: RecognizedAssetItem[]
   loading?: boolean
@@ -92,14 +89,6 @@ const emit = defineEmits<{
 const assetNameStore = useAssetNameStore()
 const tableRef = ref()
 
-const textClass = computed(() =>
-    'text-sm text-gray-900 dark:text-gray-100 truncate block max-w-xs'
-)
-
-const inputClass = computed(() =>
-    'w-full px-2 py-1 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 text-sm focus:ring-1 focus:ring-blue-500 focus:border-transparent'
-)
-
 const assetNameOptions = computed(() => {
   return assetNameStore.assetNameOptions || []
 })
@@ -110,35 +99,45 @@ const columns = [
     label: '扫描结果',
     resizable: true,
     defaultWidth: 350,
-    type: 'custom'
+    type: 'custom',
+    headerAlign: 'left',
+    align: 'left'
   },
   {
     key: 'assetNameId',
     label: '资产名称',
     resizable: true,
     defaultWidth: 350,
-    type: 'custom'
+    type: 'custom',
+    headerAlign: 'left',
+    align: 'left'
   },
   {
     key: 'amount',
     label: '金额',
     resizable: true,
     defaultWidth: 150,
-    type: 'custom'
+    type: 'custom',
+    headerAlign: 'right',
+    align: 'right'
   },
   {
     key: 'remark',
     label: '备注',
     resizable: true,
     defaultWidth: 150,
-    type: 'custom'
+    type: 'custom',
+    headerAlign: 'left',
+    align: 'left'
   },
   {
     key: 'actions',
     label: '操作',
     resizable: false,
     defaultWidth: 100,
-    actions: true
+    actions: true,
+    headerAlign: 'center',
+    align: 'center'
   }
 ]
 
