@@ -29,16 +29,16 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-     @Value("${jwt.access-token-expiration:15000}") // 15秒，用于测试
-    //@Value("${jwt.access-token-expiration:7200000}") // 2小时 访问令牌有效期
+//     @Value("${jwt.access-token-expiration:15000}") // 15秒，用于测试
+    @Value("${jwt.access-token-expiration:7200000}") // 2小时 访问令牌有效期
     private long accessTokenExpirationInMs;
 
-     @Value("${jwt.refresh-token-expiration:60000}") // 20秒，用于测试
-    //@Value("${jwt.refresh-token-expiration:2592000000}") // 30天，毫秒
+//     @Value("${jwt.refresh-token-expiration:60000}") // 20秒，用于测试
+    @Value("${jwt.refresh-token-expiration:2592000000}") // 30天，毫秒
     private long refreshTokenExpirationInMs;
 
-     @Value("${jwt.refresh-window:10000}") // 10秒，用于测试
-    //@Value("${jwt.refresh-window:1800000}") // 30分钟 刷新窗口时间
+//     @Value("${jwt.refresh-window:10000}") // 10秒，用于测试
+    @Value("${jwt.refresh-window:1800000}") // 30分钟 刷新窗口时间
     private long refreshWindowInMs;
 
     @Value("${jwt.blacklist-expiration:86400000}") // 24小时，毫秒
