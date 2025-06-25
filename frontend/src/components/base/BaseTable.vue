@@ -1,7 +1,6 @@
 <!--src/components/base/BaseTable.vue-->
 <template>
-  <!-- 固定表格容器宽度 -->
-  <div class="relative border border-gray-200 rounded-xl" style="min-height: 520px; width: 100%;">
+  <div class="relative border border-gray-200 rounded-xl" style="min-height: 600px; max-height: 600px; width: 100%;">
     <!-- 表格头部区域 -->
     <div class="sticky top-0 z-20 bg-gray-50 rounded-t-xl">
       <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
@@ -30,9 +29,8 @@
     </div>
 
     <!-- 表格内容区域 -->
-    <div class="relative" style="max-height: 460px; overflow-y: auto;">
+    <div class="relative" style="height: 540px; overflow-y: auto;">
       <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
-        <!-- 隐藏的列宽定义行 -->
         <colgroup>
           <col
               v-for="col in columns"
@@ -71,23 +69,19 @@
             class="hover:bg-gray-50 transition-colors"
             :class="{ 'relative z-[100]': activeRowIndex === rowIndex }"
         >
-          <!--src/components/base/BaseTable.vue 关键部分修改-->
           <td
               v-for="col in columns"
               :key="col.key"
               class="px-3 py-2 whitespace-nowrap"
               :style="{
-                width: columnWidths[col.key] + 'px',
-                maxWidth: columnWidths[col.key] + 'px',
-                minWidth: columnWidths[col.key] + 'px',
-                position: hasDropdown(col) && activeRowIndex === rowIndex ? 'relative' : 'static',
-                zIndex: hasDropdown(col) && activeRowIndex === rowIndex ? 200 : 'auto',
-                overflow: hasDropdown(col) ? 'visible' : 'hidden'
-              }"
+                  width: columnWidths[col.key] + 'px',
+                  maxWidth: columnWidths[col.key] + 'px',
+                  minWidth: columnWidths[col.key] + 'px',
+                  position: hasDropdown(col) && activeRowIndex === rowIndex ? 'relative' : 'static',
+                  zIndex: hasDropdown(col) && activeRowIndex === rowIndex ? 200 : 'auto',
+                  overflow: hasDropdown(col) ? 'visible' : 'hidden'
+                }"
               :class="getCellAlignClass(col)"
-              @mouseenter="!hasDropdown(col) && !col.actions && onMouseEnter(rowIndex, col.key, $event)"
-              @mousemove="!hasDropdown(col) && !col.actions && onMouseMove($event)"
-              @mouseleave="!hasDropdown(col) && !col.actions && onMouseLeave()"
           >
             <!-- 操作列 -->
             <template v-if="col.actions">
@@ -109,6 +103,9 @@
                     'w-full',
                     hasDropdown(col) ? 'overflow-visible' : 'overflow-hidden'
                   ]"
+                  @mouseenter="handleCellMouseEnter(rowIndex, col.key, $event, row, col)"
+                  @mousemove="handleCellMouseMove($event)"
+                  @mouseleave="handleCellMouseLeave(col)"
               >
                 <slot
                     :name="`cell-${col.key}`"
@@ -144,11 +141,13 @@
 
             <!-- 普通显示单元格 -->
             <template v-else>
-              <div class="w-full overflow-hidden">
-                  <span
-                      :title="formatTooltipContent(row, col.key)"
-                      class="block truncate"
-                  >
+              <div
+                  class="w-full overflow-hidden"
+                  @mouseenter="handleCellMouseEnter(rowIndex, col.key, $event, row, col)"
+                  @mousemove="handleCellMouseMove($event)"
+                  @mouseleave="handleCellMouseLeave(col)"
+              >
+                  <span class="block truncate">
                     {{ formatCell(row, col.key) }}
                   </span>
               </div>
@@ -210,8 +209,7 @@ const editorComponents = {
 
 // 判断列是否包含下拉框
 function hasDropdown(col) {
-  return col.type === 'select' || col.key === 'assetNameId' ||
-      (col.type === 'custom' && col.key === 'assetNameId')
+  return col.key === 'assetNameId'
 }
 
 // 设置活动行
@@ -244,42 +242,28 @@ function handleCellBlur(rowIndex, key) {
   emit('cell-blur', props.data[rowIndex], key, rowIndex)
 }
 
-// 获取表头对齐样式 - 基于列配置或默认规则
+// 获取表头对齐样式
 function getHeaderAlignClass(col) {
-  // 优先使用列配置中的对齐方式
   if (col.headerAlign) {
     return `text-${col.headerAlign}`
   }
-
-  // 根据列类型或key决定对齐方式
   if (col.key === 'actions') return 'text-center'
   if (['amount', 'count', 'price', 'money'].includes(col.key)) return 'text-right'
   if (['acquireTime', 'finishTime', 'date', 'time'].includes(col.key)) return 'text-center'
-
-  // 默认左对齐
   return 'text-left'
 }
 
-// 获取表头文本对齐样式
 function getHeaderTextAlignClass(col) {
   return getHeaderAlignClass(col)
 }
 
-// 获取单元格对齐样式
 function getCellAlignClass(col) {
-  // 优先使用列配置中的对齐方式
   if (col.align) {
     return `text-${col.align}`
   }
-
-  // 操作列特殊处理
   if (col.key === 'actions') return 'text-right'
-
-  // 根据列类型或key决定对齐方式
   if (['amount', 'count', 'price', 'money'].includes(col.key)) return 'text-right'
   if (['acquireTime', 'finishTime', 'date', 'time'].includes(col.key)) return 'text-center'
-
-  // 默认左对齐
   return 'text-left'
 }
 
@@ -323,48 +307,42 @@ function resetColumnWidth(key) {
   columnWidths[key] = col?.defaultWidth || DEFAULT_WIDTH
 }
 
-// Tooltip 控制
+// Tooltip 控制 - 简化逻辑
 const tooltipVisible = ref(false)
 const tooltipContent = ref('')
 const tooltipPosition = reactive({x: 0, y: 0})
 
-let currentRow = null
-let currentField = null
+function handleCellMouseEnter(rowIndex, fieldKey, event, row, col) {
+  // 简化条件判断
+  if (col.actions) return
+  if (col.key === 'actions') return
+  if (hasDropdown(col) && activeRowIndex.value === rowIndex) return
+  if (['amount', 'remark'].includes(col.key)) return // 这些是输入框，不需要 tooltip
 
-function onMouseEnter(index, field, event) {
-  const row = props.data[index]
-  if (!row) return
-  if (currentRow !== index || currentField !== field) {
-    tooltipContent.value = formatTooltipContent(row, field)
-    currentRow = index
-    currentField = field
+  // 生成 tooltip 内容
+  let content = ''
+  if (fieldKey === 'assetName') {
+    content = row.assetName || '暂无扫描结果'
+  } else {
+    content = formatTooltipContent(row, fieldKey)
   }
+
+  if (!content || content === '-') return
+
+  tooltipContent.value = content
   tooltipVisible.value = true
-  onMouseMove(event)
+  handleCellMouseMove(event)
 }
 
-function onMouseMove(event) {
+function handleCellMouseMove(event) {
   if (!tooltipVisible.value) return
   tooltipPosition.x = event.clientX + 12
   tooltipPosition.y = event.clientY + 20
 }
 
-function onMouseLeave() {
+function handleCellMouseLeave(col) {
   tooltipVisible.value = false
-  currentRow = null
-  currentField = null
   tooltipContent.value = ''
-}
-
-function shouldShowTooltip(col) {
-  // 操作列不显示 tooltip
-  if (col.actions || col.key === 'actions') return false
-
-  // 包含下拉框的列在展开时不显示 tooltip
-  if (hasDropdown(col) && activeRowIndex.value !== null) return false
-
-  // 其他情况都显示 tooltip
-  return true
 }
 
 function formatTooltipContent(row, key) {
