@@ -2,6 +2,7 @@
 import {computed, nextTick, ref} from 'vue'
 import type {EChartsCoreOption, EChartsType} from 'echarts/core'
 import * as echarts from 'echarts/core'
+import { DataZoomComponent } from 'echarts/components'
 
 export function useDateRange() {
     const dateRange = ref('')
@@ -84,6 +85,7 @@ function applyGlobalEventListenerPatch() {
 }
 
 export function useChart() {
+    echarts.use([DataZoomComponent])
     const chartRef = ref<HTMLDivElement | null>(null)
     let resizeObserver: ResizeObserver | null = null
     let chartInstance: EChartsType | null = null

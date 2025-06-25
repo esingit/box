@@ -328,7 +328,6 @@ export const useFitnessStore = defineStore('fitness', () => {
             // 更新分页信息
             pagination.total = records.length
             pagination.pageNo = 1
-            pagination.pageSize = records.length || DEFAULT_PAGE_SIZE
 
             if (isDev) {
                 console.log('🟢 [获取全部记录] 全量查询成功', {

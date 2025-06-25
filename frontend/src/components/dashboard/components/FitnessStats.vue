@@ -3,7 +3,7 @@
     <h2 class="text-lg font-semibold">健身统计</h2>
 
     <FitnessSearch
-        :query="query"
+        v-model:query="query"
         :fitness-type-options="fitnessTypeOptions"
         :result-count="fitnessRecords.length"
         @search="handleSearchFromComponent"
