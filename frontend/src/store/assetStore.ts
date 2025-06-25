@@ -1,55 +1,137 @@
 // src/store/assetStore.ts
-import {defineStore} from 'pinia'
-import {computed, reactive, ref} from 'vue'
+import { defineStore } from 'pinia'
+import { ref, reactive, computed } from 'vue'
 import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
-import {formatAssetRecord} from '@/utils/commonMeta'
-import {formatTime} from '@/utils/formatters'
+import { formatAssetRecord } from '@/utils/commonMeta'
+import { formatTime } from '@/utils/formatters'
 
-// 添加本地存储的 key
+// 🔥 类型定义
+interface RawAssetRecord {
+    id: number | string
+    assetNameId: string | number
+    assetLocationId: string | number
+    assetTypeId: string | number
+    unitId: string | number  // 添加这一行
+    amount?: number
+    date: string
+    remark?: string
+    [key: string]: any
+}
+
+interface FormattedAssetRecord extends RawAssetRecord {
+    assetNameValue?: string
+    assetLocationValue?: string
+    assetTypeValue?: string
+    formattedAmount?: string
+    [key: string]: any
+}
+
+interface QueryConditions {
+    assetNameIdList: number[]
+    assetLocationIdList: number[]
+    assetTypeIdList: number[]
+    startDate: string
+    endDate: string
+    remark: string
+}
+
+interface PaginationInfo {
+    pageNo: number
+    pageSize: number
+    total: number
+}
+
+interface StatsData {
+    formattedDate: string
+    totalAssets: number
+    assetsChange: number
+    totalLiabilities: number
+    liabilitiesChange: number
+}
+
+interface ApiResponse<T = any> {
+    success: boolean
+    message?: string
+    data?: T
+    code?: string
+}
+
+interface PaginatedResponse<T> {
+    records: T[]
+    total: number
+    current: number
+    size: number
+}
+
+interface BatchAddResult {
+    successCount: number
+    failedCount?: number
+    errors?: string[]
+}
+
+// 🔥 常量定义
 const QUERY_STORAGE_KEY = 'asset_query_conditions'
+const DEFAULT_DEBOUNCE_DELAY = 300
+const DEFAULT_PAGE_SIZE = 10
 
-export const useAssetStore = defineStore('asset', () => {
-    // --- 状态 ---
-    const list = ref<any[]>([])
-    const allList = ref<any[]>([])
+// 🔥 请求管理器类
+class RequestManager {
+    private controllers = new Map<string, AbortController>()
+    private isDev = import.meta.env.DEV
 
-    // 从本地存储恢复查询条件
-    const getSavedQuery = () => {
-        try {
-            const saved = localStorage.getItem(QUERY_STORAGE_KEY)
-            return saved ? JSON.parse(saved) : {}
-        } catch {
-            return {}
+    abort(key: string, reason = '新请求开始'): void {
+        const controller = this.controllers.get(key)
+        if (controller) {
+            if (this.isDev) {
+                console.log(`🟡 [请求管理] ${reason}，取消 ${key} 请求`)
+            }
+            controller.abort(reason)
+            this.controllers.delete(key)
         }
     }
 
-    // 初始化查询条件，并从本地存储恢复
-    const query = reactive<{
-        assetNameIdList: number[]
-        assetLocationIdList: number[]
-        assetTypeIdList: number[]
-        startDate: string
-        endDate: string
-        remark: string
-    }>({
+    create(key: string): AbortController {
+        this.abort(key)
+        const controller = new AbortController()
+        this.controllers.set(key, controller)
+        return controller
+    }
+
+    cleanup(): void {
+        this.controllers.forEach((controller, key) => {
+            controller.abort('Store cleanup')
+        })
+        this.controllers.clear()
+        if (this.isDev) {
+            console.log('🟡 [请求管理] 已清理所有请求')
+        }
+    }
+}
+
+export const useAssetStore = defineStore('asset', () => {
+    // 🔥 状态定义
+    const list = ref<FormattedAssetRecord[]>([])
+    const allList = ref<FormattedAssetRecord[]>([])
+
+    const query = reactive<QueryConditions>({
         assetNameIdList: [],
         assetLocationIdList: [],
         assetTypeIdList: [],
         startDate: '',
         endDate: '',
         remark: '',
-        ...getSavedQuery() // 恢复保存的查询条件
+        ...getSavedQuery()
     })
 
-    const pagination = reactive({
+    const pagination = reactive<PaginationInfo>({
         pageNo: 1,
-        pageSize: 10,
+        pageSize: DEFAULT_PAGE_SIZE,
         total: 0
     })
 
-    const stats = reactive({
+    const stats = reactive<StatsData>({
         formattedDate: '-',
         totalAssets: 0,
         assetsChange: 0,
@@ -57,350 +139,523 @@ export const useAssetStore = defineStore('asset', () => {
         liabilitiesChange: 0,
     })
 
-    const loadingList = ref(false)
-    const loadingStats = ref(false)
+    // 🔥 加载状态管理
+    const loadingState = reactive({
+        list: false,
+        stats: false,
+        operation: false, // 添加、更新、删除操作的加载状态
+        recognition: false // OCR识别的加载状态
+    })
 
-    // 使用控制器管理请求取消
-    let recordController: AbortController | null = null
-    let statsController: AbortController | null = null
+    // 🔥 请求管理
+    const requestManager = new RequestManager()
+    const isDev = import.meta.env.DEV
 
+    // 防抖定时器
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+    // 参数缓存用于去重
+    let lastRequestParams: string = ''
+
+    // 🔥 计算属性
     const hasRecords = computed(() => list.value.length > 0)
     const recordCount = computed(() => pagination.total)
+    const isLoading = computed(() => Object.values(loadingState).some(Boolean))
 
-    // --- 内部函数 ---
-    // 保存查询条件到本地存储
-    function saveQueryToStorage() {
+    // 🔥 工具函数
+    function getSavedQuery(): Partial<QueryConditions> {
+        try {
+            const saved = localStorage.getItem(QUERY_STORAGE_KEY)
+            return saved ? JSON.parse(saved) : {}
+        } catch (error) {
+            if (isDev) {
+                console.warn('Failed to parse saved query:', error)
+            }
+            return {}
+        }
+    }
+
+    function saveQueryToStorage(): void {
         try {
             localStorage.setItem(QUERY_STORAGE_KEY, JSON.stringify(query))
         } catch (error) {
-            console.warn('Failed to save query to localStorage:', error)
+            if (isDev) {
+                console.warn('Failed to save query to localStorage:', error)
+            }
         }
     }
 
-    // 构建查询参数，并对 remark 进行 trim() 处理
-    function buildParams() {
-        return {
-            page: pagination.pageNo,
-            pageSize: pagination.pageSize,
-            assetNameIdList: query.assetNameIdList.length ? query.assetNameIdList : undefined,
-            assetLocationIdList: query.assetLocationIdList.length ? query.assetLocationIdList : undefined,
-            assetTypeIdList: query.assetTypeIdList.length ? query.assetTypeIdList : undefined,
-            startDate: query.startDate ? query.startDate + 'T00:00:00' : undefined,
-            endDate: query.endDate ? query.endDate + 'T23:59:59' : undefined,
+    function buildParams(includePageInfo = true): Record<string, any> {
+        const baseParams: Record<string, any> = {
+            assetNameIdList: query.assetNameIdList.length > 0 ? query.assetNameIdList : undefined,
+            assetLocationIdList: query.assetLocationIdList.length > 0 ? query.assetLocationIdList : undefined,
+            assetTypeIdList: query.assetTypeIdList.length > 0 ? query.assetTypeIdList : undefined,
+            startDate: query.startDate ? `${query.startDate}T00:00:00` : undefined,
+            endDate: query.endDate ? `${query.endDate}T23:59:59` : undefined,
             remark: query.remark.trim() || undefined
         }
+
+        if (includePageInfo) {
+            baseParams.page = pagination.pageNo
+            baseParams.pageSize = pagination.pageSize
+        }
+
+        // 移除 undefined 值
+        return Object.fromEntries(
+            Object.entries(baseParams).filter(([_, value]) => value !== undefined)
+        )
     }
 
-    // 🔥 优化后的错误处理函数
-    async function handleError(action: string, err: any) {
-        // 忽略取消的请求
-        if (err?.code === 'ERR_CANCELED') {
-            console.log(`[${action}] 请求被取消`)
-            return
+    function hasParamsChanged(newParams: Record<string, any>): boolean {
+        const newParamsStr = JSON.stringify(newParams)
+        const changed = newParamsStr !== lastRequestParams
+        lastRequestParams = newParamsStr
+        return changed
+    }
+
+    function clearDebounceTimer(): void {
+        if (debounceTimer) {
+            clearTimeout(debounceTimer)
+            debounceTimer = null
+        }
+    }
+
+    // 🔥 统一的 API 响应处理
+    function handleApiResponse<T>(response: any, operationName: string): T | null {
+        // 检查是否需要重新登录
+        if (response?.data?.code === 'AUTH_REQUIRED') {
+            if (isDev) {
+                console.info(`🔐 [${operationName}] 检测到需要重新登录，已静默处理`)
+            }
+            return null
         }
 
-        // 🔥 忽略认证相关的错误，不显示给用户
-        if (err?.message === 'AUTH_CANCELED' ||
-            err?.message === '用户未登录，请先登录' ||
-            err?.message === '请求已取消') {
-            console.log(`[${action}] 认证相关错误，等待用户登录:`, err.message)
-            return
+        if (response?.data?.success) {
+            return response.data.data
         }
 
-        // 其他错误正常处理
-        console.error(`[${action}] 出错:`, err)
+        // 业务逻辑错误
+        const errorMessage = response?.data?.message || `${operationName}失败`
         emitter.emit('notify', {
-            message: `${action} 失败：${err?.message || '未知错误'}`,
+            message: errorMessage,
+            type: 'error'
+        })
+
+        throw new Error(errorMessage)
+    }
+
+    // 🔥 统一的错误处理
+    function handleError(operationName: string, error: unknown): void {
+        // 忽略取消相关的错误
+        if (isRequestCancelled(error)) {
+            if (isDev) {
+                console.log(`🟡 [${operationName}] 请求被取消`)
+            }
+            return
+        }
+
+        // 忽略认证相关错误，这些会由全局处理
+        if (isAuthError(error)) {
+            if (isDev) {
+                console.log(`🟡 [${operationName}] 认证错误，等待用户登录`)
+            }
+            return
+        }
+
+        // 记录并显示其他错误
+        const errorMessage = getErrorMessage(error)
+        if (isDev) {
+            console.error(`🔴 [${operationName}] 出错:`, error)
+        }
+
+        emitter.emit('notify', {
+            message: `${operationName}失败：${errorMessage}`,
             type: 'error'
         })
     }
 
-    // --- 列表分页查询 ---
-    async function loadList() {
-        // 如果有正在进行的列表请求，则取消它
-        if (recordController) recordController.abort()
-        recordController = new AbortController()
-        loadingList.value = true
+    function isRequestCancelled(error: unknown): boolean {
+        const err = error as any
+        return err?.code === 'ERR_CANCELED' ||
+            err?.name === 'AbortError' ||
+            err?.message?.includes('canceled')
+    }
+
+    function isAuthError(error: unknown): boolean {
+        const err = error as any
+        const authErrorMessages = [
+            'AUTH_CANCELED',
+            '用户未登录，请先登录',
+            '请求已取消',
+            '登录已过期，请重新登录'
+        ]
+        return authErrorMessages.includes(err?.message)
+    }
+
+    function getErrorMessage(error: unknown): string {
+        if (error instanceof Error) {
+            return error.message
+        }
+        return typeof error === 'string' ? error : '未知错误'
+    }
+
+    // 🔥 API 调用函数
+    async function loadList(force = false): Promise<void> {
+        const params = buildParams()
+
+        if (!force && !hasParamsChanged(params) && list.value.length > 0) {
+            if (isDev) {
+                console.log('🟡 [获取资产记录] 参数未变化，跳过重复请求')
+            }
+            return
+        }
+
+        clearDebounceTimer()
+        const controller = requestManager.create('list')
+        loadingState.list = true
 
         try {
-            const res = await axiosInstance.get('/api/asset-record/list', {
-                params: buildParams(),
-                signal: recordController.signal,
-                paramsSerializer: params => qs.stringify(params, {arrayFormat: 'repeat'})
+            if (isDev) {
+                console.log('🟢 [获取资产记录] 开始分页查询', params)
+            }
+
+            const response = await axiosInstance.get('/api/asset-record/list', {
+                params,
+                signal: controller.signal,
+                paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
             })
 
-            if (res.data.success) {
-                const raw = res.data.data
+            const data = handleApiResponse<PaginatedResponse<RawAssetRecord>>(response, '获取资产记录')
+            if (!data) return // 需要重新登录
 
-                if (!raw.records || !Array.isArray(raw.records)) {
-                    list.value = []
-                    pagination.total = 0
-                    return
-                }
+            if (!data.records || !Array.isArray(data.records)) {
+                list.value = []
+                pagination.total = 0
+                return
+            }
 
-                list.value = await Promise.all(raw.records.map(formatAssetRecord))
-                pagination.total = Number(raw.total ?? 0)
-                pagination.pageNo = Number(raw.current ?? pagination.pageNo)
-                pagination.pageSize = Number(raw.size ?? pagination.pageSize)
-            } else {
-                emitter.emit('notify', {
-                    message: res.data.message || '获取列表失败',
-                    type: 'error'
+            // 🔥 明确类型转换
+            list.value = await Promise.all(
+                data.records.map((record: RawAssetRecord) => formatAssetRecord(record))
+            ) as unknown as FormattedAssetRecord[]
+
+            pagination.total = Number(data.total ?? 0)
+            pagination.pageNo = Number(data.current ?? pagination.pageNo)
+            pagination.pageSize = Number(data.size ?? pagination.pageSize)
+
+            if (isDev) {
+                console.log('🟢 [获取资产记录] 分页查询成功', {
+                    count: list.value.length,
+                    total: pagination.total
                 })
             }
-        } catch (err) {
-            await handleError('获取资产记录', err)
+        } catch (error) {
+            handleError('获取资产记录', error)
         } finally {
-            loadingList.value = false
-            recordController = null
+            loadingState.list = false
         }
     }
 
-    // --- 查询全部记录（不分页） ---
-    async function loadAllRecords() {
-        // 如果有正在进行的列表请求，则取消它
-        if (recordController) recordController.abort()
-        recordController = new AbortController()
-        loadingList.value = true
+    async function loadAllRecords(force = false): Promise<void> {
+        const params = buildParams(false)
+        const paramKey = { ...params, type: 'all' }
+
+        if (!force && !hasParamsChanged(paramKey) && allList.value.length > 0) {
+            if (isDev) {
+                console.log('🟡 [获取全部资产记录] 参数未变化，跳过重复请求')
+            }
+            return
+        }
+
+        clearDebounceTimer()
+        const controller = requestManager.create('allRecords')
+        loadingState.list = true
 
         try {
-            const res = await axiosInstance.get('/api/asset-record/listAll', {
-                params: {
-                    assetNameIdList: query.assetNameIdList.length ? query.assetNameIdList : undefined,
-                    assetLocationIdList: query.assetLocationIdList.length ? query.assetLocationIdList : undefined,
-                    assetTypeIdList: query.assetTypeIdList.length ? query.assetTypeIdList : undefined,
-                    startDate: query.startDate ? query.startDate + 'T00:00:00' : undefined,
-                    endDate: query.endDate ? query.endDate + 'T23:59:59' : undefined,
-                    remark: query.remark.trim() || undefined
-                },
-                signal: recordController.signal,
-                paramsSerializer: params => qs.stringify(params, {arrayFormat: 'repeat'})
+            if (isDev) {
+                console.log('🟢 [获取全部资产记录] 开始全量查询', params)
+            }
+
+            const response = await axiosInstance.get('/api/asset-record/listAll', {
+                params,
+                signal: controller.signal,
+                paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
             })
 
-            if (res.data.success) {
-                const raw = res.data.data || [] // 确保数据为数组
-                allList.value = await Promise.all(raw.map(formatAssetRecord))
-                // 更新分页信息以反映全量数据
-                pagination.total = raw.length
-                pagination.pageNo = 1
-                pagination.pageSize = raw.length || 10
-            } else {
-                emitter.emit('notify', {
-                    message: res.data.message || '获取全部记录失败',
-                    type: 'error'
+            const data = handleApiResponse<RawAssetRecord[]>(response, '获取全部资产记录')
+            if (!data) return // 需要重新登录
+
+            // 🔥 修复类型警告，确保data是数组类型
+            const records = Array.isArray(data) ? data : []
+            allList.value = await Promise.all(
+                records.map((record: RawAssetRecord) => formatAssetRecord(record))
+            ) as unknown as FormattedAssetRecord[]
+
+            // 更新分页信息
+            pagination.total = records.length
+            pagination.pageNo = 1
+            pagination.pageSize = records.length || DEFAULT_PAGE_SIZE
+
+            if (isDev) {
+                console.log('🟢 [获取全部资产记录] 全量查询成功', {
+                    count: allList.value.length
                 })
             }
-        } catch (err) {
-            await handleError('获取全部资产记录', err)
+        } catch (error) {
+            handleError('获取全部资产记录', error)
         } finally {
-            loadingList.value = false
-            recordController = null
+            loadingState.list = false
         }
     }
 
-    // --- 查询参数更新，增加持久化 ---
-    function updateQuery(newQuery: Partial<typeof query>) {
-        Object.assign(query, newQuery)
-        saveQueryToStorage() // 保存到本地存储
-    }
-
-    function setPageNo(page: number) {
-        pagination.pageNo = page
-    }
-
-    function setPageSize(size: number) {
-        pagination.pageSize = size
-        pagination.pageNo = 1
-    }
-
-    // --- 重置查询参数，增加持久化 ---
-    function resetQuery() {
-        query.assetNameIdList = []
-        query.assetLocationIdList = []
-        query.assetTypeIdList = []
-        query.startDate = ''
-        query.endDate = ''
-        query.remark = ''
-        pagination.pageNo = 1
-        saveQueryToStorage() // 保存到本地存储
-    }
-
-    // --- 统计 ---
-    async function loadStats() {
-        if (statsController) statsController.abort()
-        statsController = new AbortController()
-        loadingStats.value = true
+    async function loadStats(): Promise<void> {
+        const controller = requestManager.create('stats')
+        loadingState.stats = true
 
         try {
-            const res = await axiosInstance.get('/api/asset-record/latest-stats', {
-                signal: statsController.signal
+            const response = await axiosInstance.get('/api/asset-record/latest-stats', {
+                signal: controller.signal
             })
 
-            if (res.data.success) {
-                Object.assign(stats, res.data.data)
-            } else {
-                emitter.emit('notify', {
-                    message: res.data.message || '获取统计失败',
-                    type: 'error'
-                })
+            const data = handleApiResponse<StatsData>(response, '获取统计')
+            if (!data) return // 需要重新登录
+
+            Object.assign(stats, data)
+
+            if (isDev) {
+                console.log('🟢 [获取统计] 统计查询成功')
             }
-        } catch (err) {
-            await handleError('获取统计', err)
+        } catch (error) {
+            handleError('获取统计', error)
         } finally {
-            loadingStats.value = false
-            statsController = null
+            loadingState.stats = false
         }
     }
 
-    // --- 增删改，调整逻辑使其与 fitnessStore 一致 ---
-    async function addRecord(data: any) {
+    // 🔥 防抖版本的加载函数
+    function loadListDebounced(delay = DEFAULT_DEBOUNCE_DELAY): void {
+        clearDebounceTimer()
+        debounceTimer = setTimeout(() => loadList(true), delay)
+    }
+
+    function loadAllRecordsDebounced(delay = DEFAULT_DEBOUNCE_DELAY): void {
+        clearDebounceTimer()
+        debounceTimer = setTimeout(() => loadAllRecords(true), delay)
+    }
+
+    // 🔥 数据操作函数
+    async function addRecord(data: any): Promise<boolean> {
+        loadingState.operation = true
+
         try {
-            const res = await axiosInstance.post('/api/asset-record/add', formatTime(data))
-            if (res.data.success) {
-                emitter.emit('notify', {message: '添加成功', type: 'success'})
-                await loadList() // 添加后重新加载列表
-                return true // 成功时返回 true
-            } else {
-                throw new Error(res.data.message || '添加失败') // 失败时抛出错误
+            const response = await axiosInstance.post('/api/asset-record/add', formatTime(data))
+            const result = handleApiResponse(response, '添加记录')
+
+            if (result !== null) {
+                emitter.emit('notify', { message: '添加成功', type: 'success' })
+                await loadList(true)
+                return true
             }
-        } catch (err: any) {
-            // 🔥 只有非认证错误才抛出，认证错误由 handleError 静默处理
-            if (err?.message !== 'AUTH_CANCELED' &&
-                err?.message !== '用户未登录，请先登录' &&
-                err?.message !== '请求已取消') {
-                await handleError('添加记录', err)
-                throw err // 重新抛出错误
-            } else {
-                await handleError('添加记录', err)
-                // 认证错误不抛出，让组件可以正常处理
-                return false
+            return false
+        } catch (error) {
+            if (!isAuthError(error)) {
+                handleError('添加记录', error)
+                throw error
             }
+            return false
+        } finally {
+            loadingState.operation = false
         }
     }
 
-    async function updateRecord(data: any) {
+    async function updateRecord(data: any): Promise<boolean> {
+        loadingState.operation = true
+
         try {
-            const res = await axiosInstance.put('/api/asset-record/update', formatTime(data))
-            if (res.data.success) {
-                emitter.emit('notify', {message: '更新成功', type: 'success'})
-                await loadList() // 更新后重新加载列表
-                return true // 成功时返回 true
-            } else {
-                throw new Error(res.data.message || '更新失败') // 失败时抛出错误
+            const response = await axiosInstance.put('/api/asset-record/update', formatTime(data))
+            const result = handleApiResponse(response, '更新记录')
+
+            if (result !== null) {
+                emitter.emit('notify', { message: '更新成功', type: 'success' })
+                await loadList(true)
+                return true
             }
-        } catch (err: any) {
-            // 🔥 只有非认证错误才抛出，认证错误由 handleError 静默处理
-            if (err?.message !== 'AUTH_CANCELED' &&
-                err?.message !== '用户未登录，请先登录' &&
-                err?.message !== '请求已取消') {
-                await handleError('更新记录', err)
-                throw err // 重新抛出错误
-            } else {
-                await handleError('更新记录', err)
-                // 认证错误不抛出，让组件可以正常处理
-                return false
+            return false
+        } catch (error) {
+            if (!isAuthError(error)) {
+                handleError('更新记录', error)
+                throw error
             }
+            return false
+        } finally {
+            loadingState.operation = false
         }
     }
 
-    async function handleDelete(id: number | string) {
+    async function handleDelete(id: number | string): Promise<boolean> {
+        loadingState.operation = true
+
         try {
-            const res = await axiosInstance.delete(`/api/asset-record/delete/${id}`)
-            if (res.data.success) {
-                emitter.emit('notify', {message: '删除成功', type: 'success'})
-                await loadList() // 删除后重新加载列表
-                return true // 🔥 删除成功也返回 true
-            } else {
-                throw new Error(res.data.message || '删除失败') // 失败时抛出错误
+            const response = await axiosInstance.delete(`/api/asset-record/delete/${id}`)
+            const result = handleApiResponse(response, '删除记录')
+
+            if (result !== null) {
+                emitter.emit('notify', { message: '删除成功', type: 'success' })
+                await loadList(true)
+                return true
             }
-        } catch (err: any) {
-            // 🔥 只有非认证错误才抛出，认证错误由 handleError 静默处理
-            if (err?.message !== 'AUTH_CANCELED' &&
-                err?.message !== '用户未登录，请先登录' &&
-                err?.message !== '请求已取消') {
-                await handleError('删除记录', err)
-                throw err // 重新抛出错误
-            } else {
-                await handleError('删除记录', err)
-                // 认证错误不抛出，让组件可以正常处理
-                return false
+            return false
+        } catch (error) {
+            if (!isAuthError(error)) {
+                handleError('删除记录', error)
+                throw error
             }
+            return false
+        } finally {
+            loadingState.operation = false
         }
     }
 
-    async function copyLastRecords(force = false) {
+    async function copyLastRecords(force = false): Promise<boolean> {
+        loadingState.operation = true
+
         try {
-            const res = await axiosInstance.post('/api/asset-record/copy-last' + (force ? '?force=true' : ''))
-            if (res.data?.success) {
-                emitter.emit('notify', {message: '复制成功', type: 'success'})
-                await loadList() // 🔥 复制成功后重新加载列表
-                return true // 🔥 复制成功返回 true
-            } else {
-                throw new Error(res.data?.message || '复制失败')
+            const response = await axiosInstance.post(`/api/asset-record/copy-last${force ? '?force=true' : ''}`)
+            const result = handleApiResponse(response, '复制记录')
+
+            if (result !== null) {
+                emitter.emit('notify', { message: '复制成功', type: 'success' })
+                await loadList(true)
+                return true
             }
-        } catch (err: any) {
-            // 🔥 只有非认证错误才抛出和显示错误，认证错误静默处理
-            if (err?.message !== 'AUTH_CANCELED' &&
-                err?.message !== '用户未登录，请先登录' &&
-                err?.message !== '请求已取消') {
-                emitter.emit('notify', {
-                    message: `复制失败: ${err.message || '未知错误'}`,
-                    type: 'error'
-                })
-                throw err
-            } else {
-                console.log('[复制记录] 认证相关错误，等待用户登录:', err.message)
-                // 认证错误不抛出，让组件可以正常处理
-                return false
+            return false
+        } catch (error) {
+            if (!isAuthError(error)) {
+                handleError('复制记录', error)
+                throw error
             }
+            return false
+        } finally {
+            loadingState.operation = false
         }
     }
 
-    // OCR识别图片
-    async function recognizeAssetImage(formData: FormData) {
+    // 🔥 OCR识别功能
+    async function recognizeAssetImage(formData: FormData): Promise<RawAssetRecord[] | null> {
+        loadingState.recognition = true
+
         try {
-            const res = await axiosInstance.post('/api/asset-record/recognize-image', formData, {
+            const response = await axiosInstance.post('/api/asset-record/recognize-image', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             })
 
-            if (res.data.success) {
-                return res.data.data // 返回 AssetRecordDTO 数组
-            } else {
-                throw new Error(res.data.message || '图片识别失败')
+            const data = handleApiResponse<RawAssetRecord[]>(response, '图片识别')
+            return data // 返回识别结果或null
+        } catch (error) {
+            if (!isAuthError(error)) {
+                handleError('图片识别', error)
+                throw error
             }
-        } catch (err) {
-            await handleError('图片识别', err)
-            throw err
+            return null
+        } finally {
+            loadingState.recognition = false
         }
     }
 
-// 批量添加资产记录
-    async function batchAddRecords(records: any[]) {
-        try {
-            const res = await axiosInstance.post('/api/asset-record/batch-add', records.map(item => formatTime(item)))
+    // 🔥 批量添加功能
+    async function batchAddRecords(records: any[]): Promise<boolean> {
+        loadingState.operation = true
 
-            if (res.data.success) {
+        try {
+            const formattedRecords = records.map(item => formatTime(item))
+            const response = await axiosInstance.post('/api/asset-record/batch-add', formattedRecords)
+
+            const result = handleApiResponse<number | BatchAddResult>(response, '批量添加记录')
+
+            if (result !== null) {
+                // 处理不同类型的返回值
+                let successCount = 0
+                if (typeof result === 'number') {
+                    successCount = result
+                } else if (result && typeof result.successCount === 'number') {
+                    successCount = result.successCount
+                }
+
                 emitter.emit('notify', {
-                    message: `成功添加 ${res.data.data} 条记录`,
+                    message: `成功添加 ${successCount} 条记录`,
                     type: 'success'
                 })
-                await loadList() // 添加后重新加载列表
+                await loadList(true)
                 return true
-            } else {
-                throw new Error(res.data.message || '批量添加失败')
             }
-        } catch (err: any) {
-            if (err?.message !== 'AUTH_CANCELED' &&
-                err?.message !== '用户未登录，请先登录' &&
-                err?.message !== '请求已取消') {
-                await handleError('批量添加记录', err)
-                throw err
-            } else {
-                await handleError('批量添加记录', err)
-                return false
+            return false
+        } catch (error) {
+            if (!isAuthError(error)) {
+                handleError('批量添加记录', error)
+                throw error
             }
+            return false
+        } finally {
+            loadingState.operation = false
+        }
+    }
+
+    // 🔥 查询参数管理
+    function updateQuery(newQuery: Partial<QueryConditions>): void {
+        const hasChanged = Object.keys(newQuery).some(key => {
+            return (query as any)[key] !== (newQuery as any)[key]
+        })
+
+        if (hasChanged) {
+            Object.assign(query, newQuery)
+            saveQueryToStorage()
+
+            if (isDev) {
+                console.log('🟡 [查询条件] 已更新', query)
+            }
+        }
+    }
+
+    function setPageNo(page: number): void {
+        if (pagination.pageNo !== page) {
+            pagination.pageNo = page
+        }
+    }
+
+    function setPageSize(size: number): void {
+        if (pagination.pageSize !== size) {
+            pagination.pageSize = size
+            pagination.pageNo = 1
+        }
+    }
+
+    function resetQuery(): void {
+        Object.assign(query, {
+            assetNameIdList: [],
+            assetLocationIdList: [],
+            assetTypeIdList: [],
+            startDate: '',
+            endDate: '',
+            remark: ''
+        })
+        pagination.pageNo = 1
+        saveQueryToStorage()
+        lastRequestParams = '' // 清除参数缓存
+
+        if (isDev) {
+            console.log('🟡 [查询条件] 已重置')
+        }
+    }
+
+    // 🔥 清理函数
+    function cleanup(): void {
+        requestManager.cleanup()
+        clearDebounceTimer()
+
+        if (isDev) {
+            console.log('🟡 [Store清理] 已清理所有请求和定时器')
         }
     }
 
@@ -410,25 +665,36 @@ export const useAssetStore = defineStore('asset', () => {
         allList,
         query,
         pagination,
-        loadingList,
         stats,
-        loadingStats,
+        loadingState,
+
+        // 计算属性
         hasRecords,
         recordCount,
+        isLoading,
 
-        // 方法
+        // 加载函数
         loadList,
         loadAllRecords,
-        updateQuery,
-        setPageNo,
-        setPageSize,
-        resetQuery,
         loadStats,
+        loadListDebounced,
+        loadAllRecordsDebounced,
+
+        // 数据操作
         addRecord,
         updateRecord,
         handleDelete,
         copyLastRecords,
         recognizeAssetImage,
         batchAddRecords,
+
+        // 查询管理
+        updateQuery,
+        setPageNo,
+        setPageSize,
+        resetQuery,
+
+        // 工具函数
+        cleanup
     }
 })
