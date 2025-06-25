@@ -7,9 +7,12 @@
       :loading="loading"
       @delete="handleDelete"
   >
-    <!-- 扫描结果列 - 移除 title 属性，让 BaseTable 的 tooltip 接管 -->
+    <!-- 扫描结果列 - 添加 tooltip 数据属性 -->
     <template #cell-assetName="{ record }">
-      <span class="text-sm text-gray-900 dark:text-gray-100 block truncate">
+      <span
+          class="text-sm text-gray-900 dark:text-gray-100 block truncate"
+          :data-tooltip="record.assetName || '暂无扫描结果'"
+      >
         {{ record.assetName || '暂无扫描结果' }}
       </span>
     </template>
@@ -68,6 +71,7 @@
 </template>
 
 <script setup lang="ts">
+// script 部分保持不变
 import { computed, onMounted, ref } from 'vue'
 import { Trash2 } from 'lucide-vue-next'
 import { useAssetNameStore } from '@/store/assetNameStore'

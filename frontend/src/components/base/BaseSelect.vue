@@ -15,9 +15,7 @@
             'input-base flex justify-between items-center w-full pr-8',
             showError ? 'msg-error' : ''
           ]"
-            @click="handleButtonClick"
         >
-          <!-- 按钮内容保持不变 -->
           <span
               class="truncate whitespace-nowrap block max-w-full"
               :class="{
@@ -45,14 +43,11 @@
 
         <ListboxOptions
             :class="[
-            'absolute z-[2500] w-full overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
+            'absolute z-[9999] w-full overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
             direction === 'up' ? 'mb-1 bottom-full' : 'mt-1 top-full',
             'min-h-[80px] max-h-60'
           ]"
-            @before-enter="handleDropdownOpen"
-            @after-leave="handleDropdownClose"
         >
-          <!-- 选项内容保持不变 -->
           <ListboxOption
               v-for="item in safeOptions"
               :key="item.value"
@@ -86,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import {
   Listbox,
   ListboxButton,
@@ -123,13 +118,12 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: string | number | (string | number)[] | null]
   'blur': []
-  'dropdown-open': []    // 新增：下拉框打开事件
-  'dropdown-close': []   // 新增：下拉框关闭事件
+  'dropdown-open': []
+  'dropdown-close': []
 }>()
 
 const listBoxRef = ref<InstanceType<typeof Listbox> | null>(null)
 const showError = ref(false)
-const isDropdownOpen = ref(false)
 
 // 处理模型值更新
 const handleUpdateModelValue = (val: string | number | (string | number)[] | null) => {
@@ -137,7 +131,6 @@ const handleUpdateModelValue = (val: string | number | (string | number)[] | nul
   showError.value = false
 }
 
-// 其他计算属性保持不变...
 const safeOptions = computed(() => props.options ?? [])
 
 function isArrayValue(val: unknown): val is (string | number)[] {
@@ -170,51 +163,6 @@ const hasValue = computed(() =>
         : !!props.modelValue
 )
 
-// 处理下拉框状态变化
-const handleButtonClick = () => {
-  nextTick(() => {
-    // 检查下拉框是否打开
-    const isOpen = listBoxRef.value?.$el?.getAttribute('data-headlessui-state')?.includes('open')
-    if (isOpen && !isDropdownOpen.value) {
-      handleDropdownOpen()
-    }
-  })
-}
-
-const handleDropdownOpen = () => {
-  isDropdownOpen.value = true
-  emit('dropdown-open')
-}
-
-const handleDropdownClose = () => {
-  isDropdownOpen.value = false
-  emit('dropdown-close')
-}
-
-// 监听 Headless UI 状态变化
-watch(() => listBoxRef.value, (listbox) => {
-  if (listbox?.$el) {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'data-headlessui-state') {
-          const target = mutation.target as HTMLElement
-          const state = target.getAttribute('data-headlessui-state')
-          const isOpen = state?.includes('open') ?? false
-
-          if (isOpen && !isDropdownOpen.value) {
-            handleDropdownOpen()
-          } else if (!isOpen && isDropdownOpen.value) {
-            handleDropdownClose()
-          }
-        }
-      })
-    })
-
-    observer.observe(listbox.$el, { attributes: true })
-    return () => observer.disconnect()
-  }
-}, { immediate: true })
-
 function clearSelection() {
   const newValue = props.multiple ? [] : null
   emit('update:modelValue', newValue)
@@ -242,6 +190,7 @@ function onBlur() {
   }
 }
 
+// 暴露验证方法
 defineExpose({
   validate: () => {
     onBlur()

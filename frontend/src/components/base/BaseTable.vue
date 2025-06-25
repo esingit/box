@@ -71,22 +71,23 @@
             class="hover:bg-gray-50 transition-colors"
             :class="{ 'relative z-[100]': activeRowIndex === rowIndex }"
         >
+          <!--src/components/base/BaseTable.vue 关键部分修改-->
           <td
               v-for="col in columns"
               :key="col.key"
               class="px-3 py-2 whitespace-nowrap"
               :style="{
-                  width: columnWidths[col.key] + 'px',
-                  maxWidth: columnWidths[col.key] + 'px',
-                  minWidth: columnWidths[col.key] + 'px',
-                  position: hasDropdown(col) && activeRowIndex === rowIndex ? 'relative' : 'static',
-                  zIndex: hasDropdown(col) && activeRowIndex === rowIndex ? 200 : 'auto',
-                  overflow: hasDropdown(col) ? 'visible' : 'hidden'
-                }"
+                width: columnWidths[col.key] + 'px',
+                maxWidth: columnWidths[col.key] + 'px',
+                minWidth: columnWidths[col.key] + 'px',
+                position: hasDropdown(col) && activeRowIndex === rowIndex ? 'relative' : 'static',
+                zIndex: hasDropdown(col) && activeRowIndex === rowIndex ? 200 : 'auto',
+                overflow: hasDropdown(col) ? 'visible' : 'hidden'
+              }"
               :class="getCellAlignClass(col)"
-              @mouseenter="!isEditable(col) && col.key !== 'actions' && onMouseEnter(rowIndex, col.key, $event)"
-              @mousemove="!isEditable(col) && col.key !== 'actions' && onMouseMove($event)"
-              @mouseleave="!isEditable(col) && col.key !== 'actions' && onMouseLeave()"
+              @mouseenter="!hasDropdown(col) && !col.actions && onMouseEnter(rowIndex, col.key, $event)"
+              @mousemove="!hasDropdown(col) && !col.actions && onMouseMove($event)"
+              @mouseleave="!hasDropdown(col) && !col.actions && onMouseLeave()"
           >
             <!-- 操作列 -->
             <template v-if="col.actions">
@@ -353,6 +354,17 @@ function onMouseLeave() {
   currentRow = null
   currentField = null
   tooltipContent.value = ''
+}
+
+function shouldShowTooltip(col) {
+  // 操作列不显示 tooltip
+  if (col.actions || col.key === 'actions') return false
+
+  // 包含下拉框的列在展开时不显示 tooltip
+  if (hasDropdown(col) && activeRowIndex.value !== null) return false
+
+  // 其他情况都显示 tooltip
+  return true
 }
 
 function formatTooltipContent(row, key) {
