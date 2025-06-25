@@ -324,13 +324,24 @@ const shouldShowStats = safeComputed(() => {
 const effectiveTypeIds = safeComputed(() => {
   if (!props.fitnessTypeOptions?.length) return []
 
-  return query?.value?.typeIdList?.length > 0
-      ? query.value.typeIdList
-      : props.fitnessTypeOptions.map(item => item.value || item.id).filter(Boolean)
-}, [])
+  // 获取实际有数据的类型ID
+  const dataTypeIds = new Set<string>()
+  fitnessRecords.value.forEach(record => {
+    if (record?.typeId) {
+      dataTypeIds.add(String(record.typeId))
+    }
+  })
 
-// 优化：使用Map缓存日期数据
-const dateDataCache = new Map<string, Map<string, number>>()
+  // 如果有查询条件，使用查询条件与实际数据的交集
+  if (query?.value?.typeIdList?.length > 0) {
+    return query.value.typeIdList.filter(id =>
+        dataTypeIds.has(String(id))
+    )
+  }
+
+  // 否则返回所有有数据的类型
+  return Array.from(dataTypeIds)
+}, [])
 
 const allDates = safeComputed(() => {
   const dateSet = new Set<string>()
@@ -514,43 +525,69 @@ const chartSeries = safeComputed(() => {
   if (!hasData.value || !allDates.value.length) return []
 
   try {
-    // 清除缓存
-    dateDataCache.clear()
+    // 每次计算都创建新的缓存，避免污染
+    const dateDataCache = new Map<string, Map<string, number>>()
 
-    // 预处理数据，建立缓存
+    // 收集实际有数据的类型
+    const actualTypeIds = new Set<string>()
+
+    // 预处理数据
     for (const record of fitnessRecords.value) {
-      if (record?.finishTime) {
+      if (record?.finishTime && record?.typeId) {
         const date = record.finishTime.split('T')[0]
-        const typeId = String(record.typeId || '')
-        if (!typeId) continue
+        const typeId = String(record.typeId)
+
+        // 记录实际存在的类型
+        actualTypeIds.add(typeId)
 
         if (!dateDataCache.has(date)) {
           dateDataCache.set(date, new Map())
         }
 
         const typeMap = dateDataCache.get(date)!
-        const pageNoValue = typeMap.get(typeId) || 0
-        typeMap.set(typeId, pageNoValue + Number(record.count || 0))
+        const currentValue = typeMap.get(typeId) || 0
+        typeMap.set(typeId, currentValue + Number(record.count || 0))
       }
     }
 
-    return effectiveTypeIds.value
-        .map((typeId, index) => {
-          if (!typeId) return null
+    console.log('📊 实际数据中的类型：', Array.from(actualTypeIds))
+    console.log('📊 计划显示的类型：', effectiveTypeIds.value)
 
+    // 根据查询条件决定显示哪些类型
+    let typeIdsToShow: (string | number)[]
+
+    if (query?.value?.typeIdList?.length > 0) {
+      // 如果有查询条件，只显示查询的类型（与实际数据的交集）
+      typeIdsToShow = query.value.typeIdList.filter(id =>
+          actualTypeIds.has(String(id))
+      )
+    } else {
+      // 如果没有查询条件，只显示有数据的类型
+      typeIdsToShow = Array.from(actualTypeIds)
+    }
+
+    console.log('📊 最终显示的类型：', typeIdsToShow)
+
+    // 只为有数据的类型生成系列
+    return typeIdsToShow
+        .map((typeId, index) => {
           const typeOption = props.fitnessTypeOptions?.find(item =>
               String(item.value) === String(typeId) ||
               String(item.id) === String(typeId)
           )
           const typeName = typeOption?.value1 || typeOption?.label || `类型${typeId}`
 
-          // 使用缓存的数据
+          // 获取该类型的数据
           const data = allDates.value.map(date => {
             const typeMap = dateDataCache.get(date)
             return typeMap?.get(String(typeId)) || 0
           })
 
-          if (!data.some(value => value > 0)) return null
+          // 确认这个类型确实有数据
+          if (!data.some(value => value > 0)) {
+            console.log(`📊 类型 ${typeName} 没有数据，跳过`)
+            return null
+          }
 
           const color = CHART_COLORS[index % CHART_COLORS.length]
 
@@ -786,15 +823,15 @@ async function updateChartData(): Promise<void> {
   isUpdatingChart.value = true
 
   try {
-    // 如果图表实例存在，直接更新数据
     if (chartInstance.value) {
+      // 🔥 关键：使用 notMerge: true 完全替换配置
       chartInstance.value.setOption(echartConfig.value as EChartsOption, {
-        notMerge: false, // 合并配置而不是完全替换
-        lazyUpdate: false // 立即更新
+        notMerge: true,  // 👈 改为 true，不合并，完全替换
+        lazyUpdate: false
       })
-      console.log('✅ 图表数据更新成功')
+
+      console.log('✅ 图表数据完全替换成功')
     } else {
-      // 首次创建图表
       await initializeChart()
     }
   } catch (error) {

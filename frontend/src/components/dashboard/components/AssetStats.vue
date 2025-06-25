@@ -765,15 +765,15 @@ async function updateChartData(): Promise<void> {
   isUpdatingChart.value = true
 
   try {
-    // 如果图表实例存在，直接更新数据
     if (chartInstance.value) {
+      // 🔥 先清空图表，再设置新配置
+      chartInstance.value.clear()
       chartInstance.value.setOption(echartConfig.value, {
-        notMerge: false, // 合并配置而不是完全替换
-        lazyUpdate: false // 立即更新
+        notMerge: true,  // 👈 改为 true，完全替换
+        lazyUpdate: false
       })
-      console.log('✅ 图表数据更新成功')
+      console.log('✅ 图表数据完全替换成功')
     } else {
-      // 首次创建图表
       await initializeChart()
     }
   } catch (error) {
