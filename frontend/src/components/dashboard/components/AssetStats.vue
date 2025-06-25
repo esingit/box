@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, reactive, nextTick, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
-import type { EChartsOption, ECharts } from 'echarts'
+import type {EChartsCoreOption, EChartsType} from 'echarts/core'
 import AssetSearch from '@/components/asset/AssetSearch.vue'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import { useAssetStore } from '@/store/assetStore'
@@ -123,7 +123,7 @@ const isChartReady = ref(false)
 const isUpdatingChart = ref(false)
 const isSearching = ref(false)
 const hasInitialData = ref(false)
-const chartInstance = shallowRef<ECharts | null>(null)
+const chartInstance = shallowRef<EChartsType | null>(null)
 
 // 图表选项管理
 const getSavedChartOptions = (): Partial<ChartOptionsType> => {
@@ -749,7 +749,7 @@ const echartConfig = computed(() => {
       animation: true,
       animationDuration: 600,
       animationEasing: 'cubicOut'
-    } as EChartsOption
+    } as EChartsCoreOption
   } catch (error) {
     console.error('Error generating chart config:', error)
     return null

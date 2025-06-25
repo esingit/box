@@ -193,46 +193,70 @@ export const useUserStore = defineStore('user', {
         },
 
         // 🔥 用户注销
-        // 🔥 用户注销
         async logout(clearUI = true, router?: Router): Promise<void> {
-            // 🔥 设置注销标记
+            // 🔥 立即设置注销标记（在任何API调用之前）
             this.isLoggingOut = true
+            localStorage.setItem('__user_logging_out__', 'true')
+            sessionStorage.setItem('__user_logging_out__', 'true') // 双重保险
+
+            if (isDev) {
+                console.log('🚀 [Logout] 开始注销流程，已设置注销标记')
+            }
 
             try {
-                await axiosInstance.post('/api/user/logout')
+                // 🔥 延迟一下确保标记已经设置
+                await new Promise(resolve => setTimeout(resolve, 50))
+
+                await axiosInstance.post('/api/user/logout', {}, {
+                    skipAuthRetry: true,
+                } as any)
+
+                if (isDev) {
+                    console.log('✅ [Logout] 注销API调用成功')
+                }
             } catch (error) {
                 if (isDev) {
                     console.log('🟡 [Logout] 注销请求失败，继续清理本地状态')
                 }
             }
 
-            // 🔥 修改clearAuth，不让它直接跳转页面
-            await this.clearAuth(false) // 传入false避免页面重新加载
+            // 清理本地状态
+            await this.clearAuth(false)
 
             if (clearUI) {
-                // 手动显示通知
                 emitter.emit('notify', {
                     message: '已注销',
                     type: 'success'
                 })
             }
 
-            // 🔥 使用路由跳转而不是页面重新加载
+            // 页面跳转
             if (router && router.currentRoute.value.path !== '/home') {
                 await router.replace('/home')
             } else if (!router) {
-                // 如果没有router，延迟跳转确保状态清理完成
                 setTimeout(() => {
                     window.location.replace('/home')
-                }, 200)
+                }, 100)
             }
 
-            // 🔥 重置注销标记
+            // 🔥 清理注销标记
             this.isLoggingOut = false
+            localStorage.removeItem('__user_logging_out__')
+            sessionStorage.removeItem('__user_logging_out__')
+
+            if (isDev) {
+                console.log('🏁 [Logout] 注销流程完成，已清理注销标记')
+            }
         },
 
         // 🔥 清理认证状态
         async clearAuth(clearUI = true): Promise<void> {
+            // 🔥 如果是通过clearAuth清理，也设置标记防止401弹窗
+            if (!this.isLoggingOut) {
+                localStorage.setItem('__user_logging_out__', 'true')
+                sessionStorage.setItem('__user_logging_out__', 'true')
+            }
+
             this.setAuth(null)
             tokenService.clearAllTokens()
             this.user = {} as User
@@ -248,7 +272,6 @@ export const useUserStore = defineStore('user', {
                     }
                 }
 
-                // 只在主动注销时显示消息
                 emitter.emit('notify', {
                     message: '已注销',
                     type: 'success'
@@ -256,6 +279,12 @@ export const useUserStore = defineStore('user', {
 
                 window.location.replace('/home')
             }
+
+            // 🔥 延迟清理标记
+            setTimeout(() => {
+                localStorage.removeItem('__user_logging_out__')
+                sessionStorage.removeItem('__user_logging_out__')
+            }, 1000)
         },
 
         // 🔥 用户注册

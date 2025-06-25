@@ -22,12 +22,12 @@ type CustomRequestConfig = InternalAxiosRequestConfig & {
     signal?: AbortSignal
     _isRetry?: boolean
 }
-
 const AUTH_WHITELIST: string[] = [
     '/api/user/login',
     '/api/user/register',
     '/api/captcha',
     '/api/user/refresh-token',
+    '/api/user/logout',
 ]
 
 const instance = axios.create(axiosConfig)
@@ -82,7 +82,6 @@ instance.interceptors.response.use(
     },
     async (error: unknown) => {
         if (axios.isAxiosError(error)) {
-            // 🔥 正确类型化 AxiosError
             const axiosErr = error as AxiosError<ApiErrorResponse>
             const config = axiosErr.config as CustomRequestConfig | undefined
 
@@ -100,19 +99,24 @@ instance.interceptors.response.use(
                 return Promise.reject(axiosErr)
             }
 
-            // 🔥 401错误完全静默处理 - 修复config可能为undefined的警告
+            // 🔥 401错误处理 - 在最开始就检查注销状态
             if (response.status === 401) {
-                // 确保config存在才调用处理函数
+                // 🔥 立即检查注销状态，如果正在注销则直接返回
+                if (isUserLoggingOut()) {
+                    if (import.meta.env.DEV) {
+                        console.log('🟡 [401] 用户正在注销，直接返回成功响应')
+                    }
+                    return createLogoutSuccessResponse()
+                }
+
                 if (config) {
                     return handle401ErrorSilently(axiosErr, config)
                 } else {
-                    // config为undefined时的备用处理
                     ErrorHandler.handle401Silently(axiosErr)
                     return Promise.reject(axiosErr)
                 }
             }
 
-            // 🔥 只有非401错误才显示错误消息给用户
             ErrorHandler.handleOtherErrors(response.status, response.data as ApiErrorResponse)
             return ErrorHandler.handleRetry(axiosErr, config!)
         }
@@ -121,34 +125,42 @@ instance.interceptors.response.use(
     }
 )
 
+// 🔥 同步检查用户是否正在注销
+function isUserLoggingOut(): boolean {
+    // 检查localStorage标记
+    const logoutFlag = localStorage.getItem('__user_logging_out__')
+    if (logoutFlag === 'true') {
+        return true
+    }
+
+    // 检查sessionStorage标记（备用）
+    const sessionLogoutFlag = sessionStorage.getItem('__user_logging_out__')
+    return sessionLogoutFlag === 'true'
+}
+
+// 🔥 创建注销时的成功响应
+function createLogoutSuccessResponse(): AxiosResponse {
+    return {
+        data: {
+            success: true,
+            message: '注销成功',
+            data: null
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {} as any,
+        config: {} as any
+    }
+}
+
 // 🔥 401错误的静默处理方法
 async function handle401ErrorSilently(
     axiosErr: AxiosError<ApiErrorResponse>,
     config: CustomRequestConfig
 ): Promise<AxiosResponse | never> {
-    // 调用静默处理方法，记录日志但不显示错误消息
     ErrorHandler.handle401Silently(axiosErr)
 
-    // 🔥 检查用户是否正在注销过程中
-    try {
-        // 动态导入避免循环依赖
-        const { useUserStore } = await import('@/store/userStore')
-        const userStore = useUserStore()
-
-        if (userStore.isLoggingOut) {
-            if (import.meta.env.DEV) {
-                console.log('🟡 [401Handler] 用户正在注销，跳过401处理逻辑')
-            }
-            return createAuthRequiredResponse()
-        }
-    } catch (error) {
-        // 如果获取store失败，继续正常流程
-        if (import.meta.env.DEV) {
-            console.warn('🟡 [401Handler] 无法获取用户状态，继续正常处理')
-        }
-    }
-
-    // 白名单接口直接返回错误，让业务层处理
+    // 白名单接口直接返回错误
     if (config.skipAuthRetry || isWhitelistUrl(config.url)) {
         return Promise.reject(axiosErr)
     }
@@ -156,12 +168,10 @@ async function handle401ErrorSilently(
     try {
         const result = await ErrorHandler.handle401Error(axiosErr, config)
         if (result === null) {
-            // 🔥 返回一个表示需要登录的友好响应
             return createAuthRequiredResponse()
         }
         return result
     } catch (e) {
-        // 🔥 401错误处理失败时返回友好响应，不让业务层看到401错误
         if (import.meta.env.DEV) {
             console.warn('🔐 401错误处理失败，返回友好响应给业务层')
         }

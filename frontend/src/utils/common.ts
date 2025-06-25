@@ -88,37 +88,31 @@ export function useChart() {
     let resizeObserver: ResizeObserver | null = null
     let chartInstance: EChartsType | null = null
 
-    async function initChart(options: EChartsCoreOption): Promise<EChartsType | undefined> {
+    async function initChart(options: EChartsCoreOption): Promise<EChartsType | null> {
         if (!chartRef.value) {
             console.warn('Chart container not found')
-            return
+            return null
         }
 
-        // 🔥 确保在 ECharts 初始化前应用 patch
         applyGlobalEventListenerPatch()
-
         await nextTick()
-
         destroyChart()
 
         try {
-            // 🔥 初始化 ECharts 实例
             chartInstance = echarts.init(chartRef.value, undefined, {
-                // 🔥 添加配置选项来优化性能
                 devicePixelRatio: window.devicePixelRatio || 1,
-                renderer: 'canvas', // 明确指定渲染器
-                useDirtyRect: true, // 启用脏矩形优化
+                renderer: 'canvas',
+                useDirtyRect: true,
             })
 
             chartInstance.setOption(options, true)
             chartInstance.resize()
-
-            // 🔥 使用 ResizeObserver 替代 window resize 事件，性能更好
             setupResizeObserver()
 
             return chartInstance
         } catch (error) {
             console.error('ECharts 初始化失败:', error)
+            return null
         }
     }
 

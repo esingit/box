@@ -46,10 +46,10 @@ const USER_FRIENDLY_MESSAGES: Record<ErrorType, string> = {
 
 // 特殊端点配置
 const SPECIAL_ENDPOINTS = {
-  LOGOUT: '/logout',
-  LOGIN: '/login',
-  REGISTER: '/register',
-  REFRESH_TOKEN: '/refresh-token'
+  LOGOUT: '/api/user/logout',
+  LOGIN: '/api/user/login',
+  REGISTER: '/api/user/register',
+  REFRESH_TOKEN: '/api/user/refresh-token'
 } as const
 
 // 全局状态管理
@@ -58,6 +58,7 @@ class ErrorHandlerState {
   private isHandlingAuthError = false
   private authErrorTimeout: ReturnType<typeof setTimeout> | null = null
   private isDev = import.meta.env.DEV
+  private lastLoginPromptTime = 0 // 🔥 添加上次显示登录弹窗的时间
 
   static getInstance(): ErrorHandlerState {
     if (!ErrorHandlerState.instance) {
@@ -97,6 +98,29 @@ class ErrorHandlerState {
       clearTimeout(this.authErrorTimeout)
       this.authErrorTimeout = null
     }
+  }
+
+  // 🔥 添加防抖检查方法
+  shouldShowLoginPrompt(): boolean {
+    const now = Date.now()
+    const timeSinceLastPrompt = now - this.lastLoginPromptTime
+
+    // 1秒内不重复显示登录弹窗
+    if (timeSinceLastPrompt < 1000) {
+      return false
+    }
+
+    // 检查是否正在注销
+    const isLoggingOut = localStorage.getItem('__user_logging_out__') === 'true'
+    if (isLoggingOut) {
+      if (this.isDev) {
+        console.log('🟡 [LoginPrompt] 用户正在注销，跳过登录弹窗')
+      }
+      return false
+    }
+
+    this.lastLoginPromptTime = now
+    return true
   }
 }
 
@@ -281,6 +305,11 @@ export class ErrorHandler {
    * 触发认证失败相关事件
    */
   private static async triggerAuthFailedEvents(): Promise<void> {
+    // 🔥 检查是否应该显示登录弹窗
+    if (!this.state.shouldShowLoginPrompt()) {
+      return
+    }
+
     try {
       const { useAuth } = await this.importUseAuth()
       const { onAuthFailed } = useAuth()
