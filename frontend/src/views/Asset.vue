@@ -47,10 +47,7 @@
       <div class="flex justify-start gap-2">
         <BaseButton title="添加资产" @click="handleAdd" color="primary" :icon="LucidePlus"/>
         <BaseButton title="复制上回记录" @click="onCopyClick" color="outline" :icon="LucideCopy"/>
-        <BaseButton title="扫图批量添加" @click="showAssetScanAddFlag" color="outline" :icon="LucideScanText">
-          <Camera class="w-5 h-5" />
-          扫图批量添加
-        </BaseButton>
+        <BaseButton title="扫图批量添加" @click="showAssetScanAddModal" color="outline" :icon="LucideScanText"/>
       </div>
       <AssetSearch
           :query="query"

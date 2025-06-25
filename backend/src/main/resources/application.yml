@@ -90,9 +90,9 @@ app:
       # - Homebrew Apple Silicon: /opt/homebrew/share/tessdata
       # - MacPorts: /opt/local/share/tessdata
       # 自动检测路径（在启动类中实现）
-      data-path: /usr/local/share/tessdata
+      data-path: /opt/homebrew/share/tessdata
       # 备用路径（Apple Silicon）
-      data-path-alt: /opt/homebrew/share/tessdata
+      data-path-alt: /usr/local/share/tessdata
       # 语言包：中文简体+英文
       language: chi_sim+eng
       # OCR 引擎模式

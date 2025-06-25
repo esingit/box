@@ -25,7 +25,6 @@
 </template>
 
 <script setup lang="ts">
-import {watch} from 'vue'
 import {storeToRefs} from 'pinia'
 import {useAssetStore} from '@/store/assetStore'
 import AssetTable from './AssetTable.vue'
@@ -40,12 +39,6 @@ const store = useAssetStore()
 const { list, pagination, loadingList } = storeToRefs(store)
 const { loadList, setPageNo, setPageSize } = store
 
-watch(
-    () => [pagination.value.pageNo, pagination.value.pageSize],
-    async () => {
-      await loadList()
-    }
-)
 
 // 翻页
 async function onPageChange(page: number) {

@@ -1,3 +1,4 @@
+<!--src/components/asset/AssetTable.vue-->
 <template>
   <BaseTable
       :columns="columns"

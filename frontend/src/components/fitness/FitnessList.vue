@@ -24,7 +24,6 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useFitnessStore } from '@/store/fitnessStore'
 import FitnessTable from './FitnessTable.vue'
@@ -39,18 +38,6 @@ const store = useFitnessStore()
 const { list, pagination, loadingList } = storeToRefs(store)
 const { loadList, setPageNo, setPageSize } = store
 
-// 初次加载
-onMounted(async () => {
-  await loadList()
-})
-
-// 防止外部修改 pagination 后未刷新
-watch(
-    () => [pagination.value.pageNo, pagination.value.pageSize],
-    async () => {
-      await loadList()
-    }
-)
 
 // 翻页
 async function onPageChange(page: number) {

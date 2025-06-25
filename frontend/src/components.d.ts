@@ -42,6 +42,7 @@ declare module 'vue' {
     FitnessTable: typeof import('./components/fitness/FitnessTable.vue')['default']
     LoginModal: typeof import('./components/auth/LoginModal.vue')['default']
     Profile: typeof import('./components/layout/Profile.vue')['default']
+    RecognizedAssetsTable: typeof import('./components/asset/RecognizedAssetsTable.vue')['default']
     RegisterModal: typeof import('./components/auth/RegisterModal.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

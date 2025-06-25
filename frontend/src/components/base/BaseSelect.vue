@@ -94,7 +94,7 @@ interface Option {
 }
 
 const props = withDefaults(defineProps<{
-  modelValue?: string | number | (string | number)[]
+  modelValue?: string | number | (string | number)[] | null
   options?: Option[]
   placeholder?: string
   title: string
