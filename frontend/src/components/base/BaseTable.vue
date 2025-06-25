@@ -1,10 +1,10 @@
 <!--src/components/base/BaseTable.vue-->
 <template>
-  <!-- 移除所有overflow限制，让下拉框能够完全展示 -->
-  <div class="relative border border-gray-200 rounded-xl" style="min-height: 520px;">
+  <!-- 固定表格容器宽度 -->
+  <div class="relative border border-gray-200 rounded-xl" style="min-height: 520px; width: 100%;">
     <!-- 表格头部区域 -->
     <div class="sticky top-0 z-20 bg-gray-50 rounded-t-xl">
-      <table class="min-w-full table-fixed text-sm text-gray-800">
+      <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
         <thead>
         <tr>
           <th
@@ -29,9 +29,18 @@
       </table>
     </div>
 
-    <!-- 表格内容区域 - 设置最大高度和滚动 -->
+    <!-- 表格内容区域 -->
     <div class="relative" style="max-height: 460px; overflow-y: auto;">
-      <table class="min-w-full table-fixed text-sm text-gray-800">
+      <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
+        <!-- 隐藏的列宽定义行 -->
+        <colgroup>
+          <col
+              v-for="col in columns"
+              :key="col.key"
+              :style="{ width: columnWidths[col.key] + 'px' }"
+          />
+        </colgroup>
+
         <tbody>
         <tr v-if="loading">
           <td :colspan="columns.length" class="py-8">
@@ -68,8 +77,12 @@
               class="px-3 py-2 whitespace-nowrap"
               :style="{
                   width: columnWidths[col.key] + 'px',
+                  maxWidth: columnWidths[col.key] + 'px',
+                  minWidth: columnWidths[col.key] + 'px',
                   position: hasDropdown(col) && activeRowIndex === rowIndex ? 'relative' : 'static',
-                  zIndex: hasDropdown(col) && activeRowIndex === rowIndex ? 200 : 'auto'
+                  zIndex: hasDropdown(col) && activeRowIndex === rowIndex ? 200 : 'auto',
+                  // 根据是否包含下拉框来设置overflow
+                  overflow: hasDropdown(col) ? 'visible' : 'hidden'
                 }"
               :class="cellAlignClass(col.key)"
               @mouseenter="!isEditable(col) && col.key !== 'actions' && onMouseEnter(rowIndex, col.key, $event)"
@@ -91,38 +104,55 @@
 
             <!-- 自定义单元格内容 -->
             <template v-else-if="$slots[`cell-${col.key}`]">
-              <slot
-                  :name="`cell-${col.key}`"
-                  :record="row"
-                  :index="rowIndex"
-                  :column="col"
-                  :value="row[col.key]"
-                  :set-active-row="setActiveRow"
-                  :clear-active-row="clearActiveRow"
-              />
+              <!-- 根据是否包含下拉框使用不同的容器样式 -->
+              <div
+                  :class="[
+                    'w-full',
+                    hasDropdown(col) ? 'overflow-visible' : 'overflow-hidden'
+                  ]"
+              >
+                <slot
+                    :name="`cell-${col.key}`"
+                    :record="row"
+                    :index="rowIndex"
+                    :column="col"
+                    :value="row[col.key]"
+                    :set-active-row="setActiveRow"
+                    :clear-active-row="clearActiveRow"
+                />
+              </div>
             </template>
 
             <!-- 可编辑单元格 -->
             <template v-else-if="isEditable(col)">
-              <component
-                  :is="getEditorComponent(col)"
-                  :model-value="row[col.key]"
-                  :column="col"
-                  :record="row"
-                  :index="rowIndex"
-                  @update:model-value="handleCellChange(rowIndex, col.key, $event)"
-                  @blur="handleCellBlur(rowIndex, col.key)"
-              />
+              <div
+                  :class="[
+                    'w-full',
+                    hasDropdown(col) ? 'overflow-visible' : 'overflow-hidden'
+                  ]"
+              >
+                <component
+                    :is="getEditorComponent(col)"
+                    :model-value="row[col.key]"
+                    :column="col"
+                    :record="row"
+                    :index="rowIndex"
+                    @update:model-value="handleCellChange(rowIndex, col.key, $event)"
+                    @blur="handleCellBlur(rowIndex, col.key)"
+                />
+              </div>
             </template>
 
-            <!-- 普通显示单元格 -->
+            <!-- 普通显示单元格 - 充分利用空间 -->
             <template v-else>
-                <span
-                    :title="formatTooltipContent(row, col.key)"
-                    class="block truncate"
-                >
-                  {{ formatCell(row, col.key) }}
-                </span>
+              <div class="w-full overflow-hidden">
+                  <span
+                      :title="formatTooltipContent(row, col.key)"
+                      class="block truncate"
+                  >
+                    {{ formatCell(row, col.key) }}
+                  </span>
+              </div>
             </template>
           </td>
         </tr>
@@ -164,8 +194,9 @@ const emit = defineEmits(['edit', 'delete', 'cell-change', 'cell-blur'])
 
 const DEFAULT_WIDTH = 100
 const columnWidths = reactive({})
-const activeRowIndex = ref(null) // 跟踪当前活动行
+const activeRowIndex = ref(null)
 
+// 初始化列宽
 props.columns.forEach(col => {
   columnWidths[col.key] = col.defaultWidth || DEFAULT_WIDTH
 })
@@ -178,9 +209,10 @@ const editorComponents = {
   date: markRaw(DateEditor)
 }
 
-// 判断列是否包含下拉框
+// 判断列是否包含下拉框 - 更精确的判断
 function hasDropdown(col) {
-  return col.type === 'select' || col.key === 'assetNameId'
+  return col.type === 'select' || col.key === 'assetNameId' ||
+      (col.type === 'custom' && col.key === 'assetNameId')
 }
 
 // 设置活动行
@@ -192,12 +224,6 @@ function setActiveRow(rowIndex) {
 function clearActiveRow() {
   activeRowIndex.value = null
 }
-
-// 暴露方法给插槽使用
-defineExpose({
-  setActiveRow,
-  clearActiveRow
-})
 
 // 判断列是否可编辑
 function isEditable(col) {
@@ -219,7 +245,7 @@ function handleCellBlur(rowIndex, key) {
   emit('cell-blur', props.data[rowIndex], key, rowIndex)
 }
 
-// 拖拽列宽（保持原有逻辑）
+// 拖拽列宽调整
 let resizingKey = null
 let startX = 0
 let startWidth = 0
@@ -230,7 +256,8 @@ function doResize(e) {
   if (resizeTimer) return
   resizeTimer = setTimeout(() => {
     const delta = e.pageX - startX
-    columnWidths[resizingKey] = Math.max(60, startWidth + delta)
+    const newWidth = Math.max(60, startWidth + delta)
+    columnWidths[resizingKey] = newWidth
     resizeTimer = null
   }, 16)
 }
@@ -258,7 +285,7 @@ function resetColumnWidth(key) {
   columnWidths[key] = col?.defaultWidth || DEFAULT_WIDTH
 }
 
-// 对齐类（保持原有逻辑）
+// 对齐类
 function textAlignClass(key) {
   if (['amount', 'count'].includes(key)) return 'text-right'
   if (['acquireTime', 'finishTime'].includes(key)) return 'text-center'
@@ -275,7 +302,7 @@ function cellAlignClass(key) {
   return textAlignClass(key)
 }
 
-// Tooltip 控制（保持原有逻辑）
+// Tooltip 控制
 const tooltipVisible = ref(false)
 const tooltipContent = ref('')
 const tooltipPosition = reactive({x: 0, y: 0})
@@ -318,7 +345,7 @@ function formatTooltipContent(row, key) {
   return row[key] ?? '-'
 }
 
-// 格式化显示（保持原有逻辑）
+// 格式化显示
 function formatCell(row, key) {
   if (key === 'amount' || key === 'count') {
     return formatAmount(row[key]) + (row.unitValue ? ` ${row.unitValue}` : '')
