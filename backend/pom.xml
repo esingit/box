@@ -121,7 +121,7 @@
         <dependency>
             <groupId>net.sourceforge.tess4j</groupId>
             <artifactId>tess4j</artifactId>
-            <version>${tess4j.version}</version>
+            <version>5.8.0</version>
             <exclusions>
                 <!-- 排除可能冲突的日志依赖 -->
                 <exclusion>

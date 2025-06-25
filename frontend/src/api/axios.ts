@@ -124,10 +124,29 @@ instance.interceptors.response.use(
 // 🔥 401错误的静默处理方法
 async function handle401ErrorSilently(
     axiosErr: AxiosError<ApiErrorResponse>,
-    config: CustomRequestConfig // 确保config必须存在
+    config: CustomRequestConfig
 ): Promise<AxiosResponse | never> {
     // 调用静默处理方法，记录日志但不显示错误消息
     ErrorHandler.handle401Silently(axiosErr)
+
+    // 🔥 检查用户是否正在注销过程中
+    try {
+        // 动态导入避免循环依赖
+        const { useUserStore } = await import('@/store/userStore')
+        const userStore = useUserStore()
+
+        if (userStore.isLoggingOut) {
+            if (import.meta.env.DEV) {
+                console.log('🟡 [401Handler] 用户正在注销，跳过401处理逻辑')
+            }
+            return createAuthRequiredResponse()
+        }
+    } catch (error) {
+        // 如果获取store失败，继续正常流程
+        if (import.meta.env.DEV) {
+            console.warn('🟡 [401Handler] 无法获取用户状态，继续正常处理')
+        }
+    }
 
     // 白名单接口直接返回错误，让业务层处理
     if (config.skipAuthRetry || isWhitelistUrl(config.url)) {

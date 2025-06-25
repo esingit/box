@@ -43,6 +43,7 @@ export const useUserStore = defineStore('user', {
         isInitialized: false,
         isLoggedIn: false,
         isRefreshing: false,
+        isLoggingOut: false,
     }),
 
     getters: {
@@ -192,21 +193,42 @@ export const useUserStore = defineStore('user', {
         },
 
         // 🔥 用户注销
+        // 🔥 用户注销
         async logout(clearUI = true, router?: Router): Promise<void> {
+            // 🔥 设置注销标记
+            this.isLoggingOut = true
+
             try {
                 await axiosInstance.post('/api/user/logout')
             } catch (error) {
-                // 静默处理注销错误
                 if (isDev) {
                     console.log('🟡 [Logout] 注销请求失败，继续清理本地状态')
                 }
             }
 
-            await this.clearAuth(clearUI)
+            // 🔥 修改clearAuth，不让它直接跳转页面
+            await this.clearAuth(false) // 传入false避免页面重新加载
 
-            if (router && router.currentRoute.value.path !== '/home') {
-                router.push('/home')
+            if (clearUI) {
+                // 手动显示通知
+                emitter.emit('notify', {
+                    message: '已注销',
+                    type: 'success'
+                })
             }
+
+            // 🔥 使用路由跳转而不是页面重新加载
+            if (router && router.currentRoute.value.path !== '/home') {
+                await router.replace('/home')
+            } else if (!router) {
+                // 如果没有router，延迟跳转确保状态清理完成
+                setTimeout(() => {
+                    window.location.replace('/home')
+                }, 200)
+            }
+
+            // 🔥 重置注销标记
+            this.isLoggingOut = false
         },
 
         // 🔥 清理认证状态
