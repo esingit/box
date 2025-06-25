@@ -84,7 +84,6 @@ app:
     max-size: 10485760  # 10MB
   ocr:
     tesseract:
-      # Tesseract 数据路径配置
       # Mac mini 上的路径（根据安装方式选择）：
       # - Homebrew Intel: /usr/local/share/tessdata
       # - Homebrew Apple Silicon: /opt/homebrew/share/tessdata
