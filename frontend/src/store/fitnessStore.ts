@@ -47,13 +47,6 @@ interface StatsData {
     carbsIntake: number
 }
 
-interface ApiResponse<T = any> {
-    success: boolean
-    message?: string
-    data?: T
-    code?: string
-}
-
 interface PaginatedResponse<T> {
     records: T[]
     total: number
@@ -62,18 +55,8 @@ interface PaginatedResponse<T> {
 }
 
 // 🔥 常量定义
-const QUERY_STORAGE_KEY = 'fitness_query_conditions'
 const DEFAULT_DEBOUNCE_DELAY = 300
 const DEFAULT_PAGE_SIZE = 10
-
-// 🔥 请求状态枚举
-enum RequestStatus {
-    IDLE = 'idle',
-    LOADING = 'loading',
-    SUCCESS = 'success',
-    ERROR = 'error',
-    CANCELLED = 'cancelled'
-}
 
 // 🔥 请求管理器类
 class RequestManager {
@@ -118,8 +101,7 @@ export const useFitnessStore = defineStore('fitness', () => {
         typeIdList: [],
         startDate: '',
         endDate: '',
-        remark: '',
-        ...getSavedQuery()
+        remark: ''
     })
 
     const pagination = reactive<PaginationInfo>({
@@ -158,29 +140,6 @@ export const useFitnessStore = defineStore('fitness', () => {
     const hasRecords = computed(() => list.value.length > 0)
     const recordCount = computed(() => pagination.total)
     const isLoading = computed(() => Object.values(loadingState).some(Boolean))
-
-    // 🔥 工具函数
-    function getSavedQuery(): Partial<QueryConditions> {
-        try {
-            const saved = localStorage.getItem(QUERY_STORAGE_KEY)
-            return saved ? JSON.parse(saved) : {}
-        } catch (error) {
-            if (isDev) {
-                console.warn('Failed to parse saved query:', error)
-            }
-            return {}
-        }
-    }
-
-    function saveQueryToStorage(): void {
-        try {
-            localStorage.setItem(QUERY_STORAGE_KEY, JSON.stringify(query))
-        } catch (error) {
-            if (isDev) {
-                console.warn('Failed to save query to localStorage:', error)
-            }
-        }
-    }
 
     function buildParams(includePageInfo = true): Record<string, any> {
         const baseParams: Record<string, any> = {
@@ -519,7 +478,6 @@ export const useFitnessStore = defineStore('fitness', () => {
 
         if (hasChanged) {
             Object.assign(query, newQuery)
-            saveQueryToStorage()
 
             if (isDev) {
                 console.log('🟡 [查询条件] 已更新', query)
@@ -548,7 +506,6 @@ export const useFitnessStore = defineStore('fitness', () => {
             remark: ''
         })
         pagination.pageNo = 1
-        saveQueryToStorage()
         lastRequestParams = '' // 清除参数缓存
 
         if (isDev) {
