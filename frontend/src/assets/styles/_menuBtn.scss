@@ -2,7 +2,7 @@
   @apply text-left px-5 py-3 rounded-full transition-shadow duration-150 ease-in-out flex items-center gap-3;
 
   height: var(--menu-h);
-  font-family: var(--font-family);
+  font-family: var(--font-family), serif;
   font-weight: var(--font-semibold);
   font-size: var(--font-md);
   color: var(--color-primary);

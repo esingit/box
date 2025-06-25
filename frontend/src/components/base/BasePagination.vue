@@ -5,15 +5,15 @@
         type="button"
         title="上一页"
         color="outline"
-        :disabled="current <= 1"
-        @click="changePage(current - 1)"
+        :disabled="pageNo <= 1"
+        @click="changePage(pageNo - 1)"
     />
 
     <!-- 页码按钮与省略号 -->
     <template v-for="(page, idx) in pagesToShow" :key="idx">
       <BaseButton
           v-if="page !== '...'"
-          :color="page === current ? 'primary' : 'outline'"
+          :color="page === pageNo ? 'primary' : 'outline'"
           @click="changePage(page as number)"
       >
         {{ page }}
@@ -26,8 +26,8 @@
         type="button"
         title="下一页"
         color="outline"
-        :disabled="current >= totalPages || totalPages === 0"
-        @click="changePage(current + 1)"
+        :disabled="pageNo >= totalPages || totalPages === 0"
+        @click="changePage(pageNo + 1)"
     >
       下一页
     </BaseButton>
@@ -60,7 +60,7 @@ import { Field } from 'vee-validate'
 import BaseSelect from './BaseSelect.vue'
 
 const props = defineProps<{
-  current: number
+  pageNo: number
   total: number
   pageSize: number
 }>()
@@ -78,50 +78,44 @@ const totalPages = computed(() =>
 
 const pagesToShow = computed((): (number | '...')[] => {
   const total = totalPages.value
-  const current = props.current
+  const pageNo = props.pageNo
   if (total === 0) return []
 
-  // 如果总页数小于等于7，显示全部页码，避免省略号
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1)
   }
 
-  const sideCount = 3    // 前后固定页数
-  const range = 1        // 当前页前后范围
+  const sideCount = 3
+  const range = 1
   const result: (number | '...')[] = []
 
   const firstPages = [1, 2, 3]
   const lastPages = [total - 2, total - 1, total].filter(n => n > sideCount)
 
   const middle: number[] = []
-  const frontThresh = sideCount + range       // 4
-  const tailThresh  = total - sideCount - range + 1  // e.g. 8
+  const frontThresh = sideCount + range
+  const tailThresh = total - sideCount - range + 1
 
-  if (current <= frontThresh) {
-    // 靠前：显示 4,5,6
+  if (pageNo <= frontThresh) {
     for (let i = sideCount + 1; i <= sideCount + range * 2 + 1; i++) {
       middle.push(i)
     }
-  } else if (current >= tailThresh) {
-    // 靠后：显示 total-5,total-4,total-3
+  } else if (pageNo >= tailThresh) {
     for (let i = total - sideCount - range * 2; i <= total - sideCount; i++) {
       middle.push(i)
     }
   } else {
-    // 中间：显示 current-1, current, current+1
-    for (let i = current - range; i <= current + range; i++) {
+    for (let i = pageNo - range; i <= pageNo + range; i++) {
       if (i > sideCount && i < total - sideCount + 1) {
         middle.push(i)
       }
     }
   }
 
-  // 合并去重并排序
   const merged = [...firstPages, ...middle, ...lastPages]
       .filter(p => p >= 1 && p <= total)
   const sorted = Array.from(new Set(merged)).sort((a, b) => a - b)
 
-  // 插入省略号
   for (let i = 0; i < sorted.length; i++) {
     result.push(sorted[i])
     const nxt = sorted[i + 1]
@@ -134,7 +128,7 @@ const pagesToShow = computed((): (number | '...')[] => {
 })
 
 function changePage(page: number) {
-  if (page < 1 || page > totalPages.value || page === props.current) return
+  if (page < 1 || page > totalPages.value || page === props.pageNo) return
   emit('page-change', page)
 }
 </script>

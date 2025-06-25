@@ -80,8 +80,6 @@ const {
   isShowingRegisterModal,
   showLogin,
   showRegister,
-  hideLogin,
-  hideRegister,
   onLoginSuccess,
   clearToken
 } = auth

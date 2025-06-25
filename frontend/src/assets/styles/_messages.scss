@@ -2,7 +2,7 @@
   /* 基础提示文字样式 */
   %msg-base {
     @apply text-sm mt-1;
-    font-family: var(--font-family);
+    font-family: var(--font-family), serif;
     line-height: 1.5;
   }
 

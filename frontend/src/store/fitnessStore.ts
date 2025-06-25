@@ -6,53 +6,9 @@ import emitter from '@/utils/eventBus'
 import qs from 'qs'
 import { formatFitnessRecord } from '@/utils/commonMeta'
 import { formatTime } from '@/utils/formatters'
+import type { Pagination } from '@/types/common'
+import type { FormattedFitnessRecord, StatsData, RawFitnessRecord, QueryConditions } from '@/types/fitness'
 
-// 🔥 类型定义
-interface RawFitnessRecord {
-    id: number | string
-    assetTypeId: string | number
-    unitId: string | number
-    date: string
-    duration?: number
-    remark?: string
-    [key: string]: any
-}
-
-interface FormattedFitnessRecord extends RawFitnessRecord {
-    typeValue?: string
-    unitValue?: string
-    typeName?: string
-    [key: string]: any
-}
-
-interface QueryConditions {
-    typeIdList: number[]
-    startDate: string
-    endDate: string
-    remark: string
-}
-
-interface PaginationInfo {
-    pageNo: number
-    pageSize: number
-    total: number
-}
-
-interface StatsData {
-    monthlyCount: number
-    weeklyCount: number
-    lastWorkoutDays: number
-    nextWorkoutDay: string
-    proteinIntake: number
-    carbsIntake: number
-}
-
-interface PaginatedResponse<T> {
-    records: T[]
-    total: number
-    current: number
-    size: number
-}
 
 // 🔥 常量定义
 const DEFAULT_DEBOUNCE_DELAY = 300
@@ -104,10 +60,11 @@ export const useFitnessStore = defineStore('fitness', () => {
         remark: ''
     })
 
-    const pagination = reactive<PaginationInfo>({
+    const pagination = reactive<Pagination<any>>({
         pageNo: 1,
         pageSize: DEFAULT_PAGE_SIZE,
-        total: 0
+        total: 0,
+        records: []
     })
 
     const stats = reactive<StatsData>({
@@ -119,12 +76,17 @@ export const useFitnessStore = defineStore('fitness', () => {
         carbsIntake: 0
     })
 
-    // 🔥 加载状态管理
+    // 🔥 加载状态管理 - 改进版本
     const loadingState = reactive({
         list: false,
         stats: false,
-        operation: false // 添加、更新、删除操作的加载状态
+        operation: false
     })
+
+    // 添加独立的加载状态标识，便于模板中使用
+    const loadingList = ref(false)
+    const loadingStats = ref(false)
+    const loadingOperation = ref(false)
 
     // 🔥 请求管理
     const requestManager = new RequestManager()
@@ -136,10 +98,28 @@ export const useFitnessStore = defineStore('fitness', () => {
     // 参数缓存用于去重
     let lastRequestParams: string = ''
 
+    // 🔥 统一的加载状态管理函数
+    function setLoadingState(type: 'list' | 'stats' | 'operation', loading: boolean): void {
+        switch (type) {
+            case 'list':
+                loadingList.value = loading
+                loadingState.list = loading
+                break
+            case 'stats':
+                loadingStats.value = loading
+                loadingState.stats = loading
+                break
+            case 'operation':
+                loadingOperation.value = loading
+                loadingState.operation = loading
+                break
+        }
+    }
+
     // 🔥 计算属性
     const hasRecords = computed(() => list.value.length > 0)
     const recordCount = computed(() => pagination.total)
-    const isLoading = computed(() => Object.values(loadingState).some(Boolean))
+    const isLoading = computed(() => loadingList.value || loadingStats.value || loadingOperation.value)
 
     function buildParams(includePageInfo = true): Record<string, any> {
         const baseParams: Record<string, any> = {
@@ -266,7 +246,7 @@ export const useFitnessStore = defineStore('fitness', () => {
 
         clearDebounceTimer()
         const controller = requestManager.create('list')
-        loadingState.list = true
+        setLoadingState('list', true)
 
         try {
             if (isDev) {
@@ -279,7 +259,7 @@ export const useFitnessStore = defineStore('fitness', () => {
                 paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
             })
 
-            const data = handleApiResponse<PaginatedResponse<RawFitnessRecord>>(response, '获取健身记录')
+            const data = handleApiResponse<Pagination<RawFitnessRecord>>(response, '获取健身记录')
             if (!data) return // 需要重新登录
 
             if (!data.records || !Array.isArray(data.records)) {
@@ -294,8 +274,8 @@ export const useFitnessStore = defineStore('fitness', () => {
             ) as FormattedFitnessRecord[]
 
             pagination.total = Number(data.total ?? 0)
-            pagination.pageNo = Number(data.current ?? pagination.pageNo)
-            pagination.pageSize = Number(data.size ?? pagination.pageSize)
+            pagination.pageNo = Number(data.pageNo ?? pagination.pageNo)
+            pagination.pageSize = Number(data.pageSize ?? pagination.pageSize)
 
             if (isDev) {
                 console.log('🟢 [获取健身记录] 分页查询成功', {
@@ -306,7 +286,7 @@ export const useFitnessStore = defineStore('fitness', () => {
         } catch (error) {
             handleError('获取健身记录', error)
         } finally {
-            loadingState.list = false
+            setLoadingState('list', false)
         }
     }
 
@@ -323,7 +303,7 @@ export const useFitnessStore = defineStore('fitness', () => {
 
         clearDebounceTimer()
         const controller = requestManager.create('allRecords')
-        loadingState.list = true
+        setLoadingState('list', true)
 
         try {
             if (isDev) {
@@ -358,13 +338,13 @@ export const useFitnessStore = defineStore('fitness', () => {
         } catch (error) {
             handleError('获取全部记录', error)
         } finally {
-            loadingState.list = false
+            setLoadingState('list', false)
         }
     }
 
     async function loadStats(): Promise<void> {
         const controller = requestManager.create('stats')
-        loadingState.stats = true
+        setLoadingState('stats', true)
 
         try {
             const response = await axiosInstance.get('/api/fitness-record/stats', {
@@ -382,7 +362,7 @@ export const useFitnessStore = defineStore('fitness', () => {
         } catch (error) {
             handleError('获取统计', error)
         } finally {
-            loadingState.stats = false
+            setLoadingState('stats', false)
         }
     }
 
@@ -399,7 +379,7 @@ export const useFitnessStore = defineStore('fitness', () => {
 
     // 🔥 数据操作函数
     async function addRecord(data: any): Promise<boolean> {
-        loadingState.operation = true
+        setLoadingState('operation', true)
 
         try {
             const response = await axiosInstance.post('/api/fitness-record/add', formatTime(data))
@@ -418,12 +398,12 @@ export const useFitnessStore = defineStore('fitness', () => {
             }
             return false
         } finally {
-            loadingState.operation = false
+            setLoadingState('operation', false)
         }
     }
 
     async function updateRecord(data: any): Promise<boolean> {
-        loadingState.operation = true
+        setLoadingState('operation', true)
 
         try {
             const response = await axiosInstance.put('/api/fitness-record/update', formatTime(data))
@@ -442,12 +422,12 @@ export const useFitnessStore = defineStore('fitness', () => {
             }
             return false
         } finally {
-            loadingState.operation = false
+            setLoadingState('operation', false)
         }
     }
 
     async function deleteRecord(id: number | string): Promise<boolean> {
-        loadingState.operation = true
+        setLoadingState('operation', true)
 
         try {
             const response = await axiosInstance.delete(`/api/fitness-record/delete/${id}`)
@@ -466,7 +446,7 @@ export const useFitnessStore = defineStore('fitness', () => {
             }
             return false
         } finally {
-            loadingState.operation = false
+            setLoadingState('operation', false)
         }
     }
 
@@ -531,6 +511,11 @@ export const useFitnessStore = defineStore('fitness', () => {
         pagination,
         stats,
         loadingState,
+
+        // 👈 新增：独立的加载状态，便于模板使用
+        loadingList,
+        loadingStats,
+        loadingOperation,
 
         // 计算属性
         hasRecords,

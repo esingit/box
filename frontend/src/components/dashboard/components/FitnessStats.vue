@@ -106,36 +106,13 @@ import {useFitnessStore} from '@/store/fitnessStore'
 import {useChart, useDateRange} from '@/utils/common'
 import emitter from '@/utils/eventBus'
 import type {EChartsOption, ECharts} from 'echarts'
-
-// 类型定义
-interface FormattedFitnessRecord {
-  id: number | string
-  assetTypeId?: string | number
-  unitId?: string | number
-  typeId?: number | string
-  typeName?: string
-  typeValue?: string
-  unitValue?: string
-  count?: string | number
-  finishTime?: string
-  date?: string
-  duration?: number
-  remark?: string
-  [key: string]: any
-}
+import {FormattedFitnessRecord} from '@/types/fitness'
+import type {Option} from '@/types/common'
+import {clearCommonMetaCache} from "@/utils/commonMeta";
 
 // 为了兼容，创建别名
 type FitnessRecord = FormattedFitnessRecord
 
-interface Option {
-  label: string
-  value: string | number
-  id?: string | number
-  value1?: string
-  key1?: string
-  key2?: string
-  key3?: string
-}
 
 // 常量
 const EXERCISE_TYPE_KEY = 'EXERCISE'
@@ -157,7 +134,6 @@ const fitnessStore = useFitnessStore()
 const {query, allList, loadingState} = storeToRefs(fitnessStore)
 // 直接从 store 获取方法
 const {
-  loadAllRecords,
   loadAllRecordsDebounced,
   updateQuery,
   resetQuery,
@@ -553,8 +529,8 @@ const chartSeries = safeComputed(() => {
         }
 
         const typeMap = dateDataCache.get(date)!
-        const currentValue = typeMap.get(typeId) || 0
-        typeMap.set(typeId, currentValue + Number(record.count || 0))
+        const pageNoValue = typeMap.get(typeId) || 0
+        typeMap.set(typeId, pageNoValue + Number(record.count || 0))
       }
     }
 
@@ -1132,6 +1108,7 @@ onBeforeUnmount(() => {
 
     // 清理缓存
     dateDataCache.clear()
+    clearCommonMetaCache()
   } catch (error) {
     console.warn('Cleanup error:', error)
   }

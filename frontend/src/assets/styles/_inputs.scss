@@ -1,7 +1,7 @@
 .input-base{
   @apply flex w-full px-4 py-2 text-sm outline-none appearance-none items-center justify-between;
 
-  font-family: var(--font-family);
+  font-family: var(--font-family), serif;
   background-color: var(--bg-main);
   color: var(--text-main);
   border: 1px solid var(--color-border);

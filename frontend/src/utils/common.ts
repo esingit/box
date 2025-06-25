@@ -1,6 +1,7 @@
 // src/utils/common.ts
-import { ref, computed, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import {computed, nextTick, ref} from 'vue'
+import type {EChartsCoreOption, EChartsType} from 'echarts/core'
+import * as echarts from 'echarts/core'
 
 export function useDateRange() {
     const dateRange = ref('')
@@ -13,7 +14,7 @@ export function useDateRange() {
 
     const dateRangeDisplay = computed(() => {
         if (!isDateRangeValid.value) return '未设置'
-        const { startDate, endDate } = parseDateRange(dateRange.value)
+        const {startDate, endDate} = parseDateRange(dateRange.value)
         return `${startDate} 至 ${endDate}`
     })
 
@@ -51,7 +52,7 @@ function applyGlobalEventListenerPatch() {
 
     const originalAddEventListener = EventTarget.prototype.addEventListener
 
-    EventTarget.prototype.addEventListener = function(
+    EventTarget.prototype.addEventListener = function (
         type: string,
         listener: EventListenerOrEventListenerObject,
         options?: boolean | AddEventListenerOptions
@@ -84,10 +85,10 @@ function applyGlobalEventListenerPatch() {
 
 export function useChart() {
     const chartRef = ref<HTMLDivElement | null>(null)
-    let chartInstance: echarts.ECharts | null = null
     let resizeObserver: ResizeObserver | null = null
+    let chartInstance: EChartsType | null = null
 
-    async function initChart(options: echarts.EChartsOption): Promise<void> {
+    async function initChart(options: EChartsCoreOption): Promise<EChartsType | undefined> {
         if (!chartRef.value) {
             console.warn('Chart container not found')
             return
@@ -115,6 +116,7 @@ export function useChart() {
             // 🔥 使用 ResizeObserver 替代 window resize 事件，性能更好
             setupResizeObserver()
 
+            return chartInstance
         } catch (error) {
             console.error('ECharts 初始化失败:', error)
         }
@@ -177,10 +179,4 @@ export function useChart() {
         destroyChart,
         resizeChart
     }
-}
-
-// 🔥 导出清理函数
-export function cleanupGlobalPatches() {
-    // 如果需要恢复原始行为，可以在这里实现
-    // 但通常不需要，因为 passive: true 是更好的默认行为
 }

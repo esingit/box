@@ -117,13 +117,6 @@ const emit = defineEmits(['update:modelValue'])
 
 const listBoxRef = ref<InstanceType<typeof Listbox> | null>(null)
 
-const safeModelValue = computed(() => {
-  if (props.modelValue === undefined || props.modelValue === null) {
-    return props.multiple ? [] : ''
-  }
-  return props.modelValue
-})
-
 const modelValue = computed({
   get: () => props.modelValue,
   set: val => {

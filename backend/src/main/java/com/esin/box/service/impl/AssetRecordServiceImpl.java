@@ -15,12 +15,16 @@ import com.esin.box.service.AssetNameService;
 import com.esin.box.service.AssetRecordService;
 import com.esin.box.service.CommonMetaService;
 import net.sourceforge.tess4j.ITesseract;
+import net.sourceforge.tess4j.TesseractException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +34,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -373,7 +381,6 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         return assetRecordConverter.toDTOList(entityList);
     }
 
-
     @Override
     public List<AssetRecordDTO> recognizeAssetImage(MultipartFile image) throws Exception {
         List<AssetRecordDTO> results = new ArrayList<>();
@@ -392,17 +399,47 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             tempFile = new File(dir, fileName);
             image.transferTo(tempFile);
 
-            // 使用Tesseract进行OCR识别
-            // ITesseract tesseract = new Tesseract();
-            // tesseract.setDatapath("/usr/local/share/tessdata");
-            // tesseract.setLanguage("chi_sim+eng");
+            log.info("图片保存成功: {}", tempFile.getAbsolutePath());
 
-            // 直接使用注入的 tesseract
-            String text = tesseract.doOCR(tempFile);
-            log.info("OCR识别结果: {}", text);
+            // 验证文件状态
+            System.out.println("文件存在: " + tempFile.exists());
+            System.out.println("文件路径: " + tempFile.getAbsolutePath());
+            System.out.println("文件大小: " + tempFile.length());
+            System.out.println("可读权限: " + tempFile.canRead());
 
-            // 解析识别的文本
-            results = parseOCRText(text);
+            // 验证图片可以读取
+            try {
+                BufferedImage testImage = ImageIO.read(tempFile);
+                System.out.println("图片宽度: " + testImage.getWidth());
+                System.out.println("图片高度: " + testImage.getHeight());
+                System.out.println("图片类型: " + testImage.getType());
+            } catch (Exception e) {
+                System.err.println("图片读取失败: " + e.getMessage());
+                throw new RuntimeException("图片文件无效或损坏");
+            }
+
+            // 检查Tesseract配置
+            System.out.println("=== Tesseract配置检查 ===");
+            try {
+                System.out.println("Tesseract类: " + tesseract.getClass().getName());
+                if (tesseract instanceof net.sourceforge.tess4j.Tesseract) {
+                    net.sourceforge.tess4j.Tesseract tess = (net.sourceforge.tess4j.Tesseract) tesseract;
+                }
+            } catch (Exception e) {
+                System.err.println("获取Tesseract配置失败: " + e.getMessage());
+            }
+
+            // 使用CompletableFuture进行OCR识别，添加超时控制
+            String ocrText = performOCRWithTimeout(tempFile);
+
+            if (ocrText != null && !ocrText.trim().isEmpty()) {
+                System.out.println("OCR识别结果: " + ocrText);
+                // 解析OCR文本，提取资产信息
+                results = parseOCRText(ocrText);
+                log.info("解析出 {} 条资产记录", results.size());
+            } else {
+                log.warn("OCR识别结果为空");
+            }
 
         } catch (Exception e) {
             log.error("图片识别失败", e);
@@ -410,11 +447,68 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         } finally {
             // 清理临时文件
             if (tempFile != null && tempFile.exists()) {
-                tempFile.delete();
+                boolean deleted = tempFile.delete();
+                log.debug("临时文件清理: {}", deleted ? "成功" : "失败");
             }
         }
 
         return results;
+    }
+
+    /**
+     * 执行OCR识别，带超时控制
+     */
+    private String performOCRWithTimeout(File tempFile) throws Exception {
+        try {
+            System.out.println("开始OCR识别...");
+            System.out.println("当前线程: " + Thread.currentThread().getName());
+            System.out.println("可用内存: " + Runtime.getRuntime().freeMemory() / 1024 / 1024 + "MB");
+
+            CompletableFuture<String> ocrTask = CompletableFuture.supplyAsync(() -> {
+                System.out.println("=== 进入异步OCR任务 ===");
+                System.out.println("异步线程: " + Thread.currentThread().getName());
+                try {
+                    System.out.println("开始执行doOCR...");
+                    long startTime = System.currentTimeMillis();
+                    String result = tesseract.doOCR(tempFile);
+                    long endTime = System.currentTimeMillis();
+                    System.out.println("doOCR执行完成，耗时: " + (endTime - startTime) + "ms");
+                    System.out.println("识别结果长度: " + (result != null ? result.length() : 0));
+                    return result;
+                } catch (TesseractException e) {
+                    System.err.println("Tesseract异常: " + e.getMessage());
+                    e.printStackTrace();
+                    throw new RuntimeException("OCR识别失败: " + e.getMessage(), e);
+                } catch (Exception e) {
+                    System.err.println("异步任务中的其他异常: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                    e.printStackTrace();
+                    throw new RuntimeException("OCR执行失败", e);
+                }
+            });
+
+            System.out.println("等待OCR结果...");
+            String text = ocrTask.get(60, TimeUnit.SECONDS); // 60秒超时
+            System.out.println("OCR识别成功");
+            return text;
+
+        } catch (TimeoutException e) {
+            System.err.println("OCR识别超时（60秒）");
+            throw new RuntimeException("OCR识别超时，请尝试使用更小的图片或更清晰的图片", e);
+        } catch (ExecutionException e) {
+            System.err.println("OCR执行异常: " + e.getCause());
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            } else {
+                throw new RuntimeException("OCR执行失败: " + cause.getMessage(), cause);
+            }
+        } catch (InterruptedException e) {
+            System.err.println("OCR被中断");
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("OCR被中断", e);
+        } finally {
+            System.out.println("OCR识别流程结束");
+        }
     }
 
     /**
@@ -426,6 +520,8 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         if (text == null || text.trim().isEmpty()) {
             return results;
         }
+
+        log.debug("开始解析OCR文本: {}", text);
 
         // 按行分割文本
         String[] lines = text.split("\\n");
@@ -442,6 +538,7 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             line = line.trim();
             if (line.isEmpty()) continue;
 
+            log.debug("处理行: {}", line);
             AssetRecordDTO item = null;
 
             // 尝试匹配模式2（优先级最高，因为有明确的分隔符）
@@ -450,6 +547,7 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                 item = new AssetRecordDTO();
                 item.setAssetName(matcher2.group(1).trim());
                 item.setAmount(parseAmount(matcher2.group(2)));
+                log.debug("匹配模式2: {} - {}", item.getAssetName(), item.getAmount());
             }
 
             // 尝试匹配模式1
@@ -462,6 +560,7 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                         item = new AssetRecordDTO();
                         item.setAssetName(name);
                         item.setAmount(parseAmount(matcher1.group(2)));
+                        log.debug("匹配模式1: {} - {}", item.getAssetName(), item.getAmount());
                     }
                 }
             }
@@ -475,6 +574,7 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                         item = new AssetRecordDTO();
                         item.setAssetName(name);
                         item.setAmount(parseAmount(matcher3.group(1)));
+                        log.debug("匹配模式3: {} - {}", item.getAssetName(), item.getAmount());
                     }
                 }
             }
@@ -483,9 +583,9 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             if (item != null && item.getAmount() != null && item.getAmount().compareTo(BigDecimal.ZERO) > 0) {
                 // 设置默认值
                 item.setAcquireTime(LocalDateTime.now());
-                item.setRemark("批量导入");
+                item.setRemark("图片识别导入");
                 results.add(item);
-                log.debug("解析成功: {} - {}", item.getAssetName(), item.getAmount());
+                log.info("解析成功: {} - {}", item.getAssetName(), item.getAmount());
             }
         }
 

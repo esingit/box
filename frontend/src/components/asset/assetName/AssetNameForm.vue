@@ -58,7 +58,13 @@ const emit = defineEmits(['submit', 'closeModal', 'update:formData', 'clearError
 
 const { formData } = toRefs(props)
 
-const form = reactive({
+interface FormData {
+  id: number | null
+  name: string
+  description: string
+}
+
+const form = reactive<FormData>({
   id: null,
   name: '',
   description: ''

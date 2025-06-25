@@ -73,51 +73,9 @@ import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import { useAssetStore } from '@/store/assetStore'
 import { useDateRange, useChart } from '@/utils/common'
 import emitter from '@/utils/eventBus'
-
-// 类型定义
-interface AssetRecord {
-  id: string
-  assetNameId: string
-  assetTypeId: string
-  amount: string
-  unitId: string
-  assetLocationId: string
-  acquireTime: string
-  assetName?: string | null
-  assetTypeName?: string | null
-  assetTypeValue?: string
-  unitName?: string | null
-  unitValue?: string
-  assetLocationName?: string | null
-  assetLocationValue?: string
-  remark?: string
-}
-
-interface Option {
-  label: string
-  value: string | number
-  id?: string | number
-  value1?: string
-  key1?: string
-  key2?: string
-  key3?: string
-}
-
-interface SearchQuery {
-  assetNameIdList: (string | number)[]
-  assetTypeIdList: (string | number)[]
-  assetLocationIdList: (string | number)[]
-  startDate: string
-  endDate: string
-  remark: string
-}
-
-interface ChartOptionsType {
-  showTotalTrend: boolean
-  showNameDimension: boolean
-  showTypeDimension: boolean
-  showLocationDimension: boolean
-}
+import type {AssetRecord, ChartOptionsType, QueryConditions} from '@/types/asset'
+import type { Option } from '@/types/common'
+import {clearCommonMetaCache} from "@/utils/commonMeta";
 
 // 常量定义
 const CHART_OPTIONS_STORAGE_KEY = 'asset_chart_options'
@@ -154,7 +112,7 @@ const props = defineProps<{
 
 // Store & Composables
 const assetStore = useAssetStore()
-const { query, allList } = storeToRefs(assetStore)
+const { query } = storeToRefs(assetStore)
 const { getDefaultRange, parseDateRange } = useDateRange()
 const { chartRef, initChart, destroyChart, resizeChart } = useChart()
 
@@ -854,8 +812,7 @@ async function initializeChart(): Promise<void> {
     }
 
     // 创建新图表
-    const instance = await initChart(echartConfig.value)
-    chartInstance.value = instance
+    chartInstance.value = await initChart(echartConfig.value)
 
     console.log('✅ 图表初始化成功')
   } catch (error) {
@@ -907,7 +864,7 @@ async function loadData(): Promise<void> {
 }
 
 // 处理搜索事件
-async function handleSearch(searchQuery?: SearchQuery): Promise<void> {
+async function handleSearch(searchQuery?: QueryConditions): Promise<void> {
   try {
     console.log('🟢 处理搜索请求')
 
@@ -1010,6 +967,7 @@ onBeforeUnmount(() => {
 
   // 清理缓存
   dateDataCache.clear()
+  clearCommonMetaCache()
 })
 
 // 监听器

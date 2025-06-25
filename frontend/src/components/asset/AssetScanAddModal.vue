@@ -85,6 +85,7 @@ import { Loader2, LucideScanText } from 'lucide-vue-next'
 import { useAssetStore } from '@/store/assetStore'
 import { useMetaStore } from '@/store/metaStore'
 import emitter from '@/utils/eventBus'
+import { RawAssetRecord, RecognizedAssetItem } from '@/types/asset'
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -98,7 +99,8 @@ const metaStore = useMetaStore()
 const imageFile = ref<File | null>(null)
 const imagePreview = ref('')
 const isRecognizing = ref(false)
-const recognizedData = ref<{ assetName: string; amount: number }[]>([])
+// 修改为识别专用的数据结构
+const recognizedData = ref<RecognizedAssetItem[]>([])
 
 const commonAttributes = ref({ assetTypeId: null, assetLocationId: null })
 
@@ -127,7 +129,6 @@ function handleImageUpload(file: File) {
   reader.readAsDataURL(file)
 }
 
-
 async function recognizeImage() {
   if (!imageFile.value) return
   isRecognizing.value = true
@@ -135,7 +136,8 @@ async function recognizeImage() {
     const formData = new FormData()
     formData.append('image', imageFile.value)
     const result = await assetStore.recognizeAssetImage(formData)
-    recognizedData.value = result || []
+    // 确保结果是 RecognizedAssetItem[] 格式
+    recognizedData.value = (result || []) as RecognizedAssetItem[]
     emitter.emit('notify', {
       type: recognizedData.value.length ? 'success' : 'warning',
       message: recognizedData.value.length
@@ -160,16 +162,23 @@ function handleSubmit() {
   if (!canSubmit.value) {
     emitter.emit('notify', {
       type: 'warning',
-      message: '请检查所有数据，确保名称和金额有效，且已选择资金类型和位置'
+      message: '请检查所有数据，确保名称和金额有效，且已选择资产类型和位置'
     })
     return
   }
-  const records = recognizedData.value.map(item => ({
-    ...item,
-    ...commonAttributes.value,
-    acquireTime: new Date().toISOString().split('T')[0],
+
+  // 转换为 RawAssetRecord 格式
+  const records: RawAssetRecord[] = recognizedData.value.map((item, index) => ({
+    id: Date.now() + index, // 生成临时ID
+    assetNameId: item.assetName, // 将 assetName 映射到 assetNameId
+    assetLocationId: commonAttributes.value.assetLocationId!,
+    assetTypeId: commonAttributes.value.assetTypeId!,
+    unitId: item.unit || 'default', // 设置默认单位
+    amount: item.amount,
+    date: new Date().toISOString().split('T')[0],
     remark: '批量导入'
   }))
+
   emit('submit', records)
   handleClose()
 }

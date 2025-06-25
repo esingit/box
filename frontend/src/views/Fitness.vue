@@ -101,9 +101,11 @@ import { storeToRefs } from 'pinia'
 import { LucidePlus, LucideRefreshCw } from 'lucide-vue-next'
 import { useFitnessStore } from '@/store/fitnessStore'
 import { useMetaStore } from '@/store/metaStore'
+import {clearCommonMetaCache} from '@/utils/commonMeta'
 import emitter from '@/utils/eventBus'
 import { formatDate } from '@/utils/formatters'
 
+import type { FitnessFormData, FitnessRecord } from '@/types/fitness'
 import BaseStatCard from '@/components/base/BaseStatCard.vue'
 import FitnessList from '@/components/fitness/FitnessList.vue'
 import FitnessForm from '@/components/fitness/FitnessForm.vue'
@@ -158,7 +160,7 @@ async function refreshData() {
   }
 }
 
-function handlePageChange(newPage) {
+function handlePageChange(newPage: number) {
   fitnessStore.setPageNo(newPage)
   refreshData()
 }
@@ -172,14 +174,14 @@ function closeAddModal() {
   showAddModal.value = false
 }
 
-async function handleAddRecord(data) {
+async function handleAddRecord(data: FitnessFormData) {
   const payload = { ...data, count: Number(data.count) || 0 }
   await fitnessStore.addRecord(payload)
   showAddModal.value = false
   await refreshData()
 }
 
-function editRecord(recordId) {
+function editRecord(recordId: number) {
   const idx = list.value.findIndex((r) => r.id === recordId)
   if (idx !== -1) editingIdx.value = idx
 }
@@ -188,7 +190,7 @@ function cancelEdit() {
   editingIdx.value = null
 }
 
-async function saveEdit(data) {
+async function saveEdit(data: FitnessFormData) {
   if (editingIdx.value === null) return
   const original = list.value[editingIdx.value]
   if (!original || !original.id) return
@@ -205,7 +207,7 @@ async function saveEdit(data) {
   await refreshData()
 }
 
-function handleDelete(record) {
+function handleDelete(record: FitnessRecord) {
   const dataInfo = `[${record.typeValue || '类型未知'},${record.count}${record.unitValue},${formatDate(record.finishTime)}]`
   emitter.emit('confirm', {
     title: '删除确认',
@@ -247,5 +249,9 @@ const isNextWorkoutOverdue = computed(() => {
 onMounted(async () => {
   await metaStore.initAll()
   await refreshData()
+})
+
+onBeforeUnmount(() => {
+  clearCommonMetaCache()
 })
 </script>

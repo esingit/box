@@ -1,15 +1,14 @@
-// /store/metaStore.ts
+// src/store/metaStore.ts
 import { defineStore } from 'pinia'
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 
-// 请求参数 DTO，只包含 typeCode
+// 🔥 类型定义
 export interface CommonMetaQueryDTO {
     typeCode: string
 }
 
-// 元数据返回 VO 类型
 export interface CommonMetaVO extends Required<Pick<CommonMetaQueryDTO, 'typeCode'>> {
     id: number
     typeCode: string
@@ -33,15 +32,74 @@ interface ApiResponse<T = any> {
     code?: string
 }
 
+// 🔥 常量定义
+const DEFAULT_DEBOUNCE_DELAY = 300
+
+// 🔥 请求管理器类
+class RequestManager {
+    private controllers = new Map<string, AbortController>()
+    private isDev = import.meta.env.DEV
+
+    abort(key: string, reason = '新请求开始'): void {
+        const controller = this.controllers.get(key)
+        if (controller) {
+            if (this.isDev) {
+                console.log(`🟡 [请求管理] ${reason}，取消 ${key} 请求`)
+            }
+            controller.abort(reason)
+            this.controllers.delete(key)
+        }
+    }
+
+    create(key: string): AbortController {
+        this.abort(key)
+        const controller = new AbortController()
+        this.controllers.set(key, controller)
+        return controller
+    }
+
+    cleanup(): void {
+        this.controllers.forEach((controller, key) => {
+            controller.abort('Store cleanup')
+        })
+        this.controllers.clear()
+        if (this.isDev) {
+            console.log('🟡 [请求管理] 已清理所有请求')
+        }
+    }
+}
+
 export const useMetaStore = defineStore('meta', () => {
-    // 状态管理
+    // 🔥 加载状态管理 - 改进版本
     const loadingState = reactive({
         query: false,
         init: false
     })
 
-    // 是否开发环境
+    // 添加独立的加载状态标识，便于模板中使用
+    const loadingQuery = ref(false)
+    const loadingInit = ref(false)
+
+    // 🔥 请求管理
+    const requestManager = new RequestManager()
     const isDev = import.meta.env.DEV
+
+    // 防抖定时器
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+    // 🔥 统一的加载状态管理函数
+    function setLoadingState(type: 'query' | 'init', loading: boolean): void {
+        switch (type) {
+            case 'query':
+                loadingQuery.value = loading
+                loadingState.query = loading
+                break
+            case 'init':
+                loadingInit.value = loading
+                loadingState.init = loading
+                break
+        }
+    }
 
     // 缓存每类 typeCode 的元数据列表
     const typeMap = reactive<Record<string, CommonMetaVO[]>>({})
@@ -53,6 +111,28 @@ export const useMetaStore = defineStore('meta', () => {
         'ASSET_TYPE',
         'ASSET_LOCATION'
     ])
+
+    // 缓存查询参数，避免重复请求
+    let lastQueryParams: string = ''
+
+    function clearDebounceTimer(): void {
+        if (debounceTimer) {
+            clearTimeout(debounceTimer)
+            debounceTimer = null
+        }
+    }
+
+    function hasQueryParamsChanged(newParams: CommonMetaQueryDTO[]): boolean {
+        const newParamsStr = JSON.stringify(newParams.sort((a, b) => a.typeCode.localeCompare(b.typeCode)))
+        const changed = newParamsStr !== lastQueryParams
+        lastQueryParams = newParamsStr
+        return changed
+    }
+
+    // 🔥 计算属性
+    const isLoading = computed(() => loadingQuery.value || loadingInit.value)
+    const loadedTypes = computed(() => Object.keys(typeMap))
+    const hasCache = computed(() => loadedTypes.value.length > 0)
 
     /**
      * 处理API响应
@@ -155,27 +235,53 @@ export const useMetaStore = defineStore('meta', () => {
      * 请求通用元数据（按 typeCode 合并查询，自动缓存）
      * @param dtoList 请求参数列表，只包含 typeCode
      * @param useCache 是否使用缓存，默认 true
+     * @param force 是否强制刷新缓存，默认 false
      */
-    async function queryMeta(dtoList: CommonMetaQueryDTO[], useCache = true): Promise<CommonMetaVO[]> {
+    async function queryMeta(
+        dtoList: CommonMetaQueryDTO[],
+        useCache = true,
+        force = false
+    ): Promise<CommonMetaVO[]> {
         // 验证参数
         if (!Array.isArray(dtoList) || dtoList.length === 0) {
             return []
         }
 
-        const needQueryList = dtoList.filter(dto => {
-            if (!dto.typeCode) return false
-            return !useCache || !typeMap[dto.typeCode]
-        })
+        // 去重并排序
+        const uniqueDtoList = dtoList.filter((dto, index, arr) =>
+            dto.typeCode && arr.findIndex(item => item.typeCode === dto.typeCode) === index
+        )
 
-        // 如果全部已缓存，直接返回缓存数据
-        if (needQueryList.length === 0) {
-            return dtoList.flatMap(dto => typeMap[dto.typeCode] || [])
+        // 检查参数变化
+        if (!force && !hasQueryParamsChanged(uniqueDtoList)) {
+            if (isDev) {
+                console.log('🟡 [获取元数据] 参数未变化，跳过重复请求')
+            }
+            return uniqueDtoList.flatMap(dto => typeMap[dto.typeCode] || [])
         }
 
-        loadingState.query = true
+        const needQueryList = uniqueDtoList.filter(dto => {
+            if (!dto.typeCode) return false
+            return force || !useCache || !typeMap[dto.typeCode]
+        })
+
+        // 如果全部已缓存且不强制刷新，直接返回缓存数据
+        if (needQueryList.length === 0) {
+            if (isDev) {
+                console.log('🟡 [获取元数据] 使用缓存数据')
+            }
+            return uniqueDtoList.flatMap(dto => typeMap[dto.typeCode] || [])
+        }
+
+        clearDebounceTimer()
+        const controller = requestManager.create('query')
+        setLoadingState('query', true)
 
         try {
-            const controller = new AbortController()
+            if (isDev) {
+                console.log('🟢 [获取元数据] 开始查询', needQueryList.map(d => d.typeCode))
+            }
+
             const response = await axiosInstance.post('/api/common-meta/query', needQueryList, {
                 signal: controller.signal
             })
@@ -190,50 +296,110 @@ export const useMetaStore = defineStore('meta', () => {
             }
 
             if (isDev) {
-                console.log(`✅ 成功获取 ${needQueryList.map(d => d.typeCode).join(', ')} 元数据`)
+                console.log(`🟢 [获取元数据] 查询成功`, {
+                    types: needQueryList.map(d => d.typeCode),
+                    totalCount: data.length
+                })
             }
 
-            return dtoList.flatMap(dto => typeMap[dto.typeCode] || [])
+            return uniqueDtoList.flatMap(dto => typeMap[dto.typeCode] || [])
         } catch (error) {
             handleError('获取元数据', error)
             return []
         } finally {
-            loadingState.query = false
+            setLoadingState('query', false)
         }
+    }
+
+    /**
+     * 防抖版本的查询函数
+     * @param dtoList 请求参数列表
+     * @param useCache 是否使用缓存
+     * @param delay 防抖延迟时间
+     */
+    function queryMetaDebounced(
+        dtoList: CommonMetaQueryDTO[],
+        useCache = true,
+        delay = DEFAULT_DEBOUNCE_DELAY
+    ): Promise<CommonMetaVO[]> {
+        return new Promise((resolve) => {
+            clearDebounceTimer()
+            debounceTimer = setTimeout(async () => {
+                const result = await queryMeta(dtoList, useCache, true)
+                resolve(result)
+            }, delay)
+        })
     }
 
     /**
      * 初始化默认类型的元数据
      * 通常在应用启动时调用
      */
-    async function initAll(): Promise<boolean> {
-        if (loadingState.init) return false
+    async function initAll(force = false): Promise<boolean> {
+        if (!force && loadingInit.value) {
+            if (isDev) {
+                console.log('🟡 [初始化元数据] 正在初始化中，跳过重复请求')
+            }
+            return false
+        }
 
-        loadingState.init = true
+        const controller = requestManager.create('init')
+        setLoadingState('init', true)
+
         try {
             if (isDev) {
-                console.log('🔄 初始化元数据...')
+                console.log('🟢 [初始化元数据] 开始初始化', defaultTypeCodes.value)
             }
 
             const dtoList: CommonMetaQueryDTO[] = defaultTypeCodes.value.map(code => ({ typeCode: code }))
-            const result = await queryMeta(dtoList, true)
+            const result = await queryMeta(dtoList, !force, force)
 
-            return result.length > 0
+            const success = result.length > 0
+            if (isDev) {
+                console.log(`🟢 [初始化元数据] 初始化${success ? '成功' : '失败'}`, {
+                    totalCount: result.length,
+                    loadedTypes: loadedTypes.value
+                })
+            }
+
+            return success
         } catch (error) {
             handleError('初始化元数据', error)
             return false
         } finally {
-            loadingState.init = false
+            setLoadingState('init', false)
         }
     }
 
     /**
      * 获取某类元数据选项列表
      * @param typeCode 类型编码
+     * @param autoLoad 如果未缓存是否自动加载，默认 false
      */
-    function getOptions(typeCode: string): CommonMetaVO[] {
+    function getOptions(typeCode: string, autoLoad = false): CommonMetaVO[] {
         if (!typeCode) return []
-        return typeMap[typeCode] || []
+
+        const cached = typeMap[typeCode]
+        if (cached) {
+            return cached
+        }
+
+        // 自动加载未缓存的元数据
+        if (autoLoad && !loadingQuery.value) {
+            queryMeta([{ typeCode }], true)
+        }
+
+        return []
+    }
+
+    /**
+     * 根据typeCode和value获取具体的元数据项
+     * @param typeCode 类型编码
+     * @param value 值
+     */
+    function getOptionByValue(typeCode: string, value: string | number): CommonMetaVO | undefined {
+        const options = getOptions(typeCode)
+        return options.find(item => item.value === value)
     }
 
     /**
@@ -244,37 +410,101 @@ export const useMetaStore = defineStore('meta', () => {
     function setTypeMap(typeCode: string, list: CommonMetaVO[]): void {
         if (!typeCode) return
         typeMap[typeCode] = Array.isArray(list) ? list : []
-    }
 
-    /**
-     * 清空所有缓存数据
-     */
-    function clearCache(): void {
-        Object.keys(typeMap).forEach(code => delete typeMap[code])
         if (isDev) {
-            console.log('🧹 已清空元数据缓存')
+            console.log(`🟡 [设置元数据] 已更新 ${typeCode}`, {
+                count: typeMap[typeCode].length
+            })
         }
     }
 
     /**
-     * 获取元数据加载状态
+     * 清空指定类型的缓存
+     * @param typeCode 类型编码，不传则清空所有
      */
-    const isLoading = computed(() => loadingState.query || loadingState.init)
+    function clearCache(typeCode?: string): void {
+        if (typeCode) {
+            delete typeMap[typeCode]
+            if (isDev) {
+                console.log(`🧹 [清空缓存] 已清空 ${typeCode} 元数据缓存`)
+            }
+        } else {
+            Object.keys(typeMap).forEach(code => delete typeMap[code])
+            lastQueryParams = ''
+            if (isDev) {
+                console.log('🧹 [清空缓存] 已清空所有元数据缓存')
+            }
+        }
+    }
 
     /**
-     * 获取已加载的元数据类型
+     * 预加载指定类型的元数据
+     * @param typeCodes 类型编码列表
      */
-    const loadedTypes = computed(() => Object.keys(typeMap))
+    async function preloadTypes(typeCodes: string[]): Promise<boolean> {
+        if (!Array.isArray(typeCodes) || typeCodes.length === 0) {
+            return false
+        }
+
+        const dtoList = typeCodes.map(code => ({ typeCode: code }))
+        const result = await queryMeta(dtoList, true)
+        return result.length > 0
+    }
+
+    /**
+     * 刷新指定类型的元数据
+     * @param typeCodes 类型编码列表，不传则刷新所有已加载的类型
+     */
+    async function refreshTypes(typeCodes?: string[]): Promise<boolean> {
+        const targetTypes = typeCodes || loadedTypes.value
+        if (targetTypes.length === 0) {
+            return false
+        }
+
+        const dtoList = targetTypes.map(code => ({ typeCode: code }))
+        const result = await queryMeta(dtoList, false, true)
+        return result.length > 0
+    }
+
+    // 🔥 清理函数
+    function cleanup(): void {
+        requestManager.cleanup()
+        clearDebounceTimer()
+
+        if (isDev) {
+            console.log('🟡 [Store清理] 已清理所有请求和定时器')
+        }
+    }
 
     return {
-        loadingState,
-        isLoading,
+        // 状态
         typeMap,
+        loadingState,
+        defaultTypeCodes,
+
+        // 👈 新增：独立的加载状态，便于模板使用
+        loadingQuery,
+        loadingInit,
+
+        // 计算属性
+        isLoading,
         loadedTypes,
-        initAll,
+        hasCache,
+
+        // 核心方法
         queryMeta,
+        queryMetaDebounced,
+        initAll,
+
+        // 工具方法
         getOptions,
+        getOptionByValue,
         setTypeMap,
-        clearCache
+        clearCache,
+        preloadTypes,
+        refreshTypes,
+
+        // 清理函数
+        cleanup
     }
 })

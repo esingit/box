@@ -4,65 +4,11 @@ import { ref, reactive, computed } from 'vue'
 import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
+import type {BatchAddResult, RawAssetRecord} from '@/types/asset'
 import { formatAssetRecord } from '@/utils/commonMeta'
 import { formatTime } from '@/utils/formatters'
-
-// 🔥 类型定义
-interface RawAssetRecord {
-    id: number | string
-    assetNameId: string | number
-    assetLocationId: string | number
-    assetTypeId: string | number
-    unitId: string | number  // 添加这一行
-    amount?: number
-    date: string
-    remark?: string
-    [key: string]: any
-}
-
-interface FormattedAssetRecord extends RawAssetRecord {
-    assetNameValue?: string
-    assetLocationValue?: string
-    assetTypeValue?: string
-    formattedAmount?: string
-    [key: string]: any
-}
-
-interface QueryConditions {
-    assetNameIdList: number[]
-    assetLocationIdList: number[]
-    assetTypeIdList: number[]
-    startDate: string
-    endDate: string
-    remark: string
-}
-
-interface PaginationInfo {
-    pageNo: number
-    pageSize: number
-    total: number
-}
-
-interface StatsData {
-    formattedDate: string
-    totalAssets: number
-    assetsChange: number
-    totalLiabilities: number
-    liabilitiesChange: number
-}
-
-interface PaginatedResponse<T> {
-    records: T[]
-    total: number
-    current: number
-    size: number
-}
-
-interface BatchAddResult {
-    successCount: number
-    failedCount?: number
-    errors?: string[]
-}
+import type { Pagination } from '@/types/common'
+import type { AssetRecord, QueryConditions, StatsData } from '@/types/asset'
 
 // 🔥 常量定义
 const DEFAULT_DEBOUNCE_DELAY = 300
@@ -104,8 +50,8 @@ class RequestManager {
 
 export const useAssetStore = defineStore('asset', () => {
     // 🔥 状态定义
-    const list = ref<FormattedAssetRecord[]>([])
-    const allList = ref<FormattedAssetRecord[]>([])
+    const list = ref<AssetRecord[]>([])
+    const allList = ref<AssetRecord[]>([])
 
     const query = reactive<QueryConditions>({
         assetNameIdList: [],
@@ -116,10 +62,11 @@ export const useAssetStore = defineStore('asset', () => {
         remark: ''
     })
 
-    const pagination = reactive<PaginationInfo>({
+    const pagination = reactive<Pagination<any>>({
         pageNo: 1,
         pageSize: DEFAULT_PAGE_SIZE,
-        total: 0
+        total: 0,
+        records: []
     })
 
     const stats = reactive<StatsData>({
@@ -130,13 +77,19 @@ export const useAssetStore = defineStore('asset', () => {
         liabilitiesChange: 0,
     })
 
-    // 🔥 加载状态管理
+    // 🔥 加载状态管理 - 改进版本
     const loadingState = reactive({
         list: false,
         stats: false,
-        operation: false, // 添加、更新、删除操作的加载状态
-        recognition: false // OCR识别的加载状态
+        operation: false,
+        recognition: false
     })
+
+    // 添加独立的加载状态标识，便于模板中使用
+    const loadingList = ref(false)
+    const loadingStats = ref(false)
+    const loadingOperation = ref(false)
+    const loadingRecognition = ref(false)
 
     // 🔥 请求管理
     const requestManager = new RequestManager()
@@ -148,10 +101,32 @@ export const useAssetStore = defineStore('asset', () => {
     // 参数缓存用于去重
     let lastRequestParams: string = ''
 
+    // 🔥 统一的加载状态管理函数
+    function setLoadingState(type: 'list' | 'stats' | 'operation' | 'recognition', loading: boolean): void {
+        switch (type) {
+            case 'list':
+                loadingList.value = loading
+                loadingState.list = loading
+                break
+            case 'stats':
+                loadingStats.value = loading
+                loadingState.stats = loading
+                break
+            case 'operation':
+                loadingOperation.value = loading
+                loadingState.operation = loading
+                break
+            case 'recognition':
+                loadingRecognition.value = loading
+                loadingState.recognition = loading
+                break
+        }
+    }
+
     // 🔥 计算属性
     const hasRecords = computed(() => list.value.length > 0)
     const recordCount = computed(() => pagination.total)
-    const isLoading = computed(() => Object.values(loadingState).some(Boolean))
+    const isLoading = computed(() => loadingList.value || loadingStats.value || loadingOperation.value || loadingRecognition.value)
 
     function buildParams(includePageInfo = true): Record<string, any> {
         const baseParams: Record<string, any> = {
@@ -280,7 +255,7 @@ export const useAssetStore = defineStore('asset', () => {
 
         clearDebounceTimer()
         const controller = requestManager.create('list')
-        loadingState.list = true
+        setLoadingState('list', true)
 
         try {
             if (isDev) {
@@ -293,7 +268,7 @@ export const useAssetStore = defineStore('asset', () => {
                 paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
             })
 
-            const data = handleApiResponse<PaginatedResponse<RawAssetRecord>>(response, '获取资产记录')
+            const data = handleApiResponse<Pagination<RawAssetRecord>>(response, '获取资产记录')
             if (!data) return // 需要重新登录
 
             if (!data.records || !Array.isArray(data.records)) {
@@ -305,11 +280,11 @@ export const useAssetStore = defineStore('asset', () => {
             // 🔥 明确类型转换
             list.value = await Promise.all(
                 data.records.map((record: RawAssetRecord) => formatAssetRecord(record))
-            ) as unknown as FormattedAssetRecord[]
+            ) as unknown as AssetRecord[]
 
             pagination.total = Number(data.total ?? 0)
-            pagination.pageNo = Number(data.current ?? pagination.pageNo)
-            pagination.pageSize = Number(data.size ?? pagination.pageSize)
+            pagination.pageNo = Number(data.pageNo ?? pagination.pageNo)
+            pagination.pageSize = Number(data.pageSize ?? pagination.pageSize)
 
             if (isDev) {
                 console.log('🟢 [获取资产记录] 分页查询成功', {
@@ -320,7 +295,7 @@ export const useAssetStore = defineStore('asset', () => {
         } catch (error) {
             handleError('获取资产记录', error)
         } finally {
-            loadingState.list = false
+            setLoadingState('list', false)
         }
     }
 
@@ -337,7 +312,7 @@ export const useAssetStore = defineStore('asset', () => {
 
         clearDebounceTimer()
         const controller = requestManager.create('allRecords')
-        loadingState.list = true
+        setLoadingState('list', true)
 
         try {
             if (isDev) {
@@ -357,7 +332,7 @@ export const useAssetStore = defineStore('asset', () => {
             const records = Array.isArray(data) ? data : []
             allList.value = await Promise.all(
                 records.map((record: RawAssetRecord) => formatAssetRecord(record))
-            ) as unknown as FormattedAssetRecord[]
+            ) as unknown as AssetRecord[]
 
             // 更新分页信息
             pagination.total = records.length
@@ -372,13 +347,13 @@ export const useAssetStore = defineStore('asset', () => {
         } catch (error) {
             handleError('获取全部资产记录', error)
         } finally {
-            loadingState.list = false
+            setLoadingState('list', false)
         }
     }
 
     async function loadStats(): Promise<void> {
         const controller = requestManager.create('stats')
-        loadingState.stats = true
+        setLoadingState('stats', true)
 
         try {
             const response = await axiosInstance.get('/api/asset-record/latest-stats', {
@@ -396,7 +371,7 @@ export const useAssetStore = defineStore('asset', () => {
         } catch (error) {
             handleError('获取统计', error)
         } finally {
-            loadingState.stats = false
+            setLoadingState('stats', false)
         }
     }
 
@@ -413,7 +388,7 @@ export const useAssetStore = defineStore('asset', () => {
 
     // 🔥 数据操作函数
     async function addRecord(data: any): Promise<boolean> {
-        loadingState.operation = true
+        setLoadingState('operation', true)
 
         try {
             const response = await axiosInstance.post('/api/asset-record/add', formatTime(data))
@@ -432,12 +407,12 @@ export const useAssetStore = defineStore('asset', () => {
             }
             return false
         } finally {
-            loadingState.operation = false
+            setLoadingState('operation', false)
         }
     }
 
     async function updateRecord(data: any): Promise<boolean> {
-        loadingState.operation = true
+        setLoadingState('operation', true)
 
         try {
             const response = await axiosInstance.put('/api/asset-record/update', formatTime(data))
@@ -456,12 +431,12 @@ export const useAssetStore = defineStore('asset', () => {
             }
             return false
         } finally {
-            loadingState.operation = false
+            setLoadingState('operation', false)
         }
     }
 
     async function handleDelete(id: number | string): Promise<boolean> {
-        loadingState.operation = true
+        setLoadingState('operation', true)
 
         try {
             const response = await axiosInstance.delete(`/api/asset-record/delete/${id}`)
@@ -480,12 +455,12 @@ export const useAssetStore = defineStore('asset', () => {
             }
             return false
         } finally {
-            loadingState.operation = false
+            setLoadingState('operation', false)
         }
     }
 
     async function copyLastRecords(force = false): Promise<boolean> {
-        loadingState.operation = true
+        setLoadingState('operation', true)
 
         try {
             const response = await axiosInstance.post(`/api/asset-record/copy-last${force ? '?force=true' : ''}`)
@@ -504,13 +479,13 @@ export const useAssetStore = defineStore('asset', () => {
             }
             return false
         } finally {
-            loadingState.operation = false
+            setLoadingState('operation', false)
         }
     }
 
     // 🔥 OCR识别功能
     async function recognizeAssetImage(formData: FormData): Promise<RawAssetRecord[] | null> {
-        loadingState.recognition = true
+        setLoadingState('recognition', true)
 
         try {
             const response = await axiosInstance.post('/api/asset-record/recognize-image', formData, {
@@ -519,8 +494,7 @@ export const useAssetStore = defineStore('asset', () => {
                 }
             })
 
-            const data = handleApiResponse<RawAssetRecord[]>(response, '图片识别')
-            return data // 返回识别结果或null
+            return handleApiResponse<RawAssetRecord[]>(response, '图片识别')
         } catch (error) {
             if (!isAuthError(error)) {
                 handleError('图片识别', error)
@@ -528,13 +502,13 @@ export const useAssetStore = defineStore('asset', () => {
             }
             return null
         } finally {
-            loadingState.recognition = false
+            setLoadingState('recognition', false)
         }
     }
 
     // 🔥 批量添加功能
     async function batchAddRecords(records: any[]): Promise<boolean> {
-        loadingState.operation = true
+        setLoadingState('operation', true)
 
         try {
             const formattedRecords = records.map(item => formatTime(item))
@@ -547,7 +521,7 @@ export const useAssetStore = defineStore('asset', () => {
                 let successCount = 0
                 if (typeof result === 'number') {
                     successCount = result
-                } else if (result && typeof result.successCount === 'number') {
+                } else if (result) {
                     successCount = result.successCount
                 }
 
@@ -566,7 +540,7 @@ export const useAssetStore = defineStore('asset', () => {
             }
             return false
         } finally {
-            loadingState.operation = false
+            setLoadingState('operation', false)
         }
     }
 
@@ -633,6 +607,12 @@ export const useAssetStore = defineStore('asset', () => {
         pagination,
         stats,
         loadingState,
+
+        // 👈 新增：独立的加载状态，便于模板使用
+        loadingList,
+        loadingStats,
+        loadingOperation,
+        loadingRecognition,
 
         // 计算属性
         hasRecords,

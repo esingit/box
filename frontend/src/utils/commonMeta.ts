@@ -1,5 +1,6 @@
 import axiosInstance from '@/api/axios'
 import { useMetaStore } from '@/store/metaStore'
+import { AssetNameRecord } from '@/types/assetName'
 
 const cache = new Map<string | number, { typeName: string; value1: string }>()
 
@@ -108,12 +109,7 @@ function isValidMetaId(value: any): boolean {
 /**
  * 格式化资产名称记录中的所有元数据字段
  */
-export async function formatAssetNameRecord<
-    T extends {
-        name: string | number
-        description: string | number
-    } & Record<string, any>
->(record: T): Promise<T> {
+export async function formatAssetNameRecord(record: AssetNameRecord): Promise<AssetNameRecord> {
     if (!record) return record
 
     const nameId = isValidMetaId(record.name) ? record.name : undefined

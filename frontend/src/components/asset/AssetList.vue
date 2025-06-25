@@ -13,7 +13,7 @@
     <!-- 分页器 -->
     <div class="flex" v-if="pagination.total > 0">
       <BasePagination
-          :current="pagination.pageNo"
+          :pageNo="pagination.pageNo"
           :total="pagination.total"
           :page-size="pagination.pageSize"
           @page-change="onPageChange"

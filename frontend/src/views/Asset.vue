@@ -122,6 +122,7 @@ import AssetList from '@/components/asset/AssetList.vue'
 import AssetForm from '@/components/asset/AssetForm.vue'
 import AssetSearch from '@/components/asset/AssetSearch.vue'
 import AssetScanAddModal from '@/components/asset/AssetScanAddModal.vue'
+import {clearCommonMetaCache} from "@/utils/commonMeta";
 
 const assetStore = useAssetStore()
 const assetNameStore = useAssetNameStore()
@@ -355,6 +356,10 @@ onMounted(async () => {
     assetNameStore.fetchAssetName(),
     refreshData()
   ])
+})
+
+onBeforeUnmount(() => {
+  clearCommonMetaCache()
 })
 </script>
 
