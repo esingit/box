@@ -1,6 +1,7 @@
 package com.esin.box.filter;
 
 import com.esin.box.config.UserContextHolder;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -29,8 +30,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Set<String> PUBLIC_PATHS = Set.of(
             "/api/user/login",
             "/api/user/register",
+            "/api/captcha",
             "/api/user/verify-token",
-            "/api/captcha"
+            "/api/user/refresh-token"
     );
 
     public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, CustomUserDetailsService userDetailsService) {
@@ -39,77 +41,114 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request, 
-                                  @NonNull HttpServletResponse response, 
-                                  @NonNull FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         try {
             String token = getJwtFromRequest(request);
-            
+
             if (!StringUtils.hasText(token)) {
                 handleNoToken(request, response, filterChain);
                 return;
             }
-            
+
             try {
                 handleValidToken(token, request, response, filterChain);
+            } catch (ExpiredJwtException e) {
+                // 特殊处理：token过期
+                if (!isPublicPath(request.getRequestURI())) {
+                    handleExpiredToken(response);
+                    return;
+                }
+                filterChain.doFilter(request, response);
             } catch (Exception e) {
-                handleTokenError(response, e);
+                if (!isPublicPath(request.getRequestURI())) {
+                    handleTokenError(response, e);
+                    return;
+                }
+                filterChain.doFilter(request, response);
             }
         } finally {
             UserContextHolder.clear();
         }
     }
 
-    private void handleNoToken(HttpServletRequest request, 
-                             HttpServletResponse response, 
-                             FilterChain filterChain) throws IOException, ServletException {
+    private void handleNoToken(HttpServletRequest request,
+                               HttpServletResponse response,
+                               FilterChain filterChain) throws IOException, ServletException {
         String path = request.getRequestURI();
         if (isPublicPath(path)) {
             filterChain.doFilter(request, response);
             return;
         }
-        sendUnauthorizedError(response, "未登录或Token已过期");
+        sendUnauthorizedError(response, "NO_TOKEN", "未登录或Token缺失");
     }
 
     private boolean isPublicPath(String path) {
         return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
     }
 
-    private void handleValidToken(String token, 
-                                HttpServletRequest request,
-                                HttpServletResponse response, 
-                                FilterChain filterChain) throws IOException, ServletException {
+    private void handleValidToken(String token,
+                                  HttpServletRequest request,
+                                  HttpServletResponse response,
+                                  FilterChain filterChain) throws IOException, ServletException {
         String path = request.getRequestURI();
+
+        // 先检查token类型
         try {
-            // 验证token
-            boolean isValidToken = jwtTokenProvider.validateToken(token);
-            // 特殊处理verify-token接口，不需要设置认证信息
-            if (path.equals("/api/user/verify-token")) {
+            String tokenType = jwtTokenProvider.getTokenType(token);
+            if (!"access".equals(tokenType)) {
+                if (!isPublicPath(path)) {
+                    sendUnauthorizedError(response, "INVALID_TOKEN_TYPE", "无效的Token类型");
+                    return;
+                }
                 filterChain.doFilter(request, response);
                 return;
             }
-            
+        } catch (Exception e) {
+            logger.warn("获取Token类型失败: {}", e.getMessage());
+            if (!isPublicPath(path)) {
+                sendUnauthorizedError(response, "INVALID_TOKEN", "无效的Token");
+                return;
+            }
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // 特殊处理verify-token接口
+        if (path.equals("/api/user/verify-token")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        try {
+            // 验证token - 这里可能抛出 ExpiredJwtException
+            boolean isValidToken = jwtTokenProvider.validateToken(token);
+
             if (isValidToken) {
                 String username = jwtTokenProvider.getUsernameFromJWT(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                
+
                 if (userDetails != null) {
                     setAuthentication(request, userDetails);
                     setUserContext(username);
-                    
-                    // 检查是否需要刷新token
-                    if (jwtTokenProvider.shouldRefreshToken(token)) {
-                        String newToken = jwtTokenProvider.refreshToken(token);
-                        if (newToken != null) {
-                            response.setHeader("Authorization", "Bearer " + newToken);
-                        }
-                    }
-                    
                     filterChain.doFilter(request, response);
                     return;
                 }
             }
+
+            // 如果token无效且不是公开路径，返回错误
+            if (!isPublicPath(path)) {
+                sendUnauthorizedError(response, "INVALID_TOKEN", "Token验证失败");
+                return;
+            }
+            filterChain.doFilter(request, response);
+
+        } catch (ExpiredJwtException e) {
+            logger.warn("Token已过期: {}", e.getMessage());
+            // 抛出异常让外层处理
+            throw e;
         } catch (JwtException e) {
             logger.warn("Token验证失败: {}", e.getMessage());
             if (isPublicPath(path)) {
@@ -125,12 +164,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
             throw new JwtException("Token处理失败", e);
         }
-        
-        if (isPublicPath(path)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-        throw new JwtException("Token验证失败");
     }
 
     private void setAuthentication(HttpServletRequest request, UserDetails userDetails) {
@@ -144,16 +177,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UserContextHolder.setCurrentUser(username);
     }
 
-    private void handleTokenError(HttpServletResponse response, Exception e) throws IOException {
+    private void handleExpiredToken(HttpServletResponse response) throws IOException {
         SecurityContextHolder.clearContext();
-        String message = e instanceof JwtException ? e.getMessage() : "Token已过期或无效";
-        sendUnauthorizedError(response, message);
+        sendUnauthorizedError(response, "TOKEN_EXPIRED", "Token已过期");
     }
 
-    private void sendUnauthorizedError(HttpServletResponse response, String message) throws IOException {
+    private void handleTokenError(HttpServletResponse response, Exception e) throws IOException {
+        SecurityContextHolder.clearContext();
+        String code = "INVALID_TOKEN";
+        String message = "Token无效";
+
+        // 检查是否是过期异常
+        if (e instanceof ExpiredJwtException) {
+            code = "TOKEN_EXPIRED";
+            message = "Token已过期";
+        } else if (e instanceof JwtException) {
+            // 检查异常消息中是否包含"过期"相关信息
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && (errorMsg.contains("过期") || errorMsg.contains("expired"))) {
+                code = "TOKEN_EXPIRED";
+                message = "Token已过期";
+            } else {
+                message = errorMsg != null ? errorMsg : "Token验证失败";
+            }
+        }
+
+        sendUnauthorizedError(response, code, message);
+    }
+
+    private void sendUnauthorizedError(HttpServletResponse response, String code, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write(String.format("{\"success\":false,\"message\":\"%s\"}", message));
+        response.getWriter().write(String.format(
+                "{\"success\":false,\"code\":\"%s\",\"message\":\"%s\"}",
+                code,
+                message
+        ));
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {

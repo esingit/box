@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia'
 import type { Router } from 'vue-router'
 import { tokenService } from '@/api/tokenService'
-import axiosInstance from '@/api/axios' // 使用统一的axios实例
+import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 
 interface User {
@@ -25,6 +25,11 @@ interface LoginResponse {
     needCaptcha?: boolean
 }
 
+interface TokenPair {
+    accessToken: string
+    refreshToken: string
+}
+
 export const useUserStore = defineStore('user', {
     state: () => ({
         token: null as string | null,
@@ -35,8 +40,8 @@ export const useUserStore = defineStore('user', {
     }),
 
     getters: {
-        currentUser: state => state.user,
-        isAuthenticated: state => state.isLoggedIn && !!state.token,
+        currentUser: (state) => state.user,
+        isAuthenticated: (state) => state.isLoggedIn && !!state.token,
     },
 
     actions: {
@@ -55,7 +60,9 @@ export const useUserStore = defineStore('user', {
             if (this.isInitialized) return this.isLoggedIn
 
             this.token = tokenService.getToken()
-            if (!this.token) {
+            const refreshToken = tokenService.getRefreshToken()
+
+            if (!this.token || !refreshToken) {
                 await this.clearAuth(false)
                 this.isInitialized = true
                 return false
@@ -64,12 +71,7 @@ export const useUserStore = defineStore('user', {
             this.setAuth(this.token)
 
             try {
-                const valid = await this.verifyToken()
-                if (!valid) {
-                    await this.clearAuth(false)
-                    this.isInitialized = true
-                    return false
-                }
+                // 直接获取用户信息，让拦截器处理 token 刷新
                 await this.fetchUser()
                 this.isInitialized = true
                 return true
@@ -80,42 +82,11 @@ export const useUserStore = defineStore('user', {
             }
         },
 
-        async verifyToken(): Promise<boolean> {
-            try {
-                const res = await axiosInstance.get<ApiResponse<{ shouldRefresh?: boolean }>>('/api/user/verify-token')
-                if (res.data.success) {
-                    if (res.data.data?.shouldRefresh && !this.isRefreshing) {
-                        return await this.refreshToken()
-                    }
-                    return true
-                }
-                return false
-            } catch {
-                return false
-            }
-        },
-
-        async refreshToken(): Promise<boolean> {
-            if (this.isRefreshing) return false
-
-            this.isRefreshing = true
-
-            try {
-                const res = await axiosInstance.post<ApiResponse<string>>('/api/user/refresh-token')
-                if (res.data.success && res.data.data) {
-                    this.setAuth(res.data.data)
-                    return true
-                }
-                return false
-            } catch {
-                return false
-            } finally {
-                this.isRefreshing = false
-            }
-        },
-
         async fetchUser(): Promise<void> {
-            if (!this.token) return await this.clearAuth(false)
+            if (!this.token) {
+                await this.clearAuth(false)
+                return
+            }
 
             try {
                 const res = await axiosInstance.get<ApiResponse<User>>('/api/user/profile')
@@ -126,38 +97,35 @@ export const useUserStore = defineStore('user', {
                     await this.clearAuth(false)
                 }
             } catch {
-                await this.clearAuth(false)
+                // 错误已经被拦截器处理，这里只需要确保状态正确
+                if (!tokenService.getToken()) {
+                    await this.clearAuth(false)
+                }
             }
         },
 
         async login(credentials: Record<string, any>): Promise<LoginResponse> {
             try {
-                console.log('🟡 开始登录流程')
-
-                const res = await axiosInstance.post<ApiResponse<string>>('/api/user/login', credentials)
+                const res = await axiosInstance.post<ApiResponse<TokenPair>>('/api/user/login', credentials)
                 if (res.data.success && res.data.data) {
-                    console.log('🟢 登录API调用成功，设置认证信息')
+                    // 🔥 确保使用 setTokenPair 而不是单独设置
+                    tokenService.setTokenPair(res.data.data)
+                    this.setAuth(res.data.data.accessToken)
 
-                    // 设置token和登录状态
-                    this.setAuth(res.data.data)
-
-                    // 获取用户信息
                     await this.fetchUser()
-
-                    console.log('🟢 登录流程完成')
                     return { success: true, message: '登录成功' }
                 }
-
                 return {
                     success: false,
                     message: res.data.message || '登录失败',
-                    needCaptcha: res.data.needCaptcha
+                    needCaptcha: res.data.needCaptcha,
                 }
             } catch (err: any) {
                 console.error('🔴 登录过程中出现错误:', err)
                 return {
                     success: false,
-                    message: err.response?.data?.message || '登录失败，请重试'
+                    message: err.response?.data?.message || '登录失败，请重试',
+                    needCaptcha: err.response?.data?.needCaptcha,
                 }
             }
         },
@@ -188,21 +156,18 @@ export const useUserStore = defineStore('user', {
         },
 
         async clearAuth(clearUI = true): Promise<void> {
-            console.log('🟡 清理认证状态')
-
             this.setAuth(null)
+            tokenService.clearAllTokens()
             this.user = {} as User
             this.isRefreshing = false
             this.isLoggedIn = false
 
             if (clearUI) {
-                // 🔥 在清理UI时也清理浏览器记忆（但保留必要的认证数据）
                 try {
                     tokenService.clearBrowserMemoryExceptAuth()
                 } catch (error) {
                     console.error('清理浏览器记忆时出错:', error)
                 }
-
                 emitter.emit('notify', { message: '已注销', type: 'success' })
                 window.location.replace('/home')
             }
@@ -226,7 +191,7 @@ export const useUserStore = defineStore('user', {
                 const res = await axiosInstance.post<ApiResponse>('/api/user/reset-password', {
                     username: this.user?.username,
                     oldPassword,
-                    newPassword
+                    newPassword,
                 })
 
                 if (res.data.success) {
@@ -237,9 +202,9 @@ export const useUserStore = defineStore('user', {
             } catch (err: any) {
                 return {
                     success: false,
-                    message: err.response?.data?.message || '请求失败'
+                    message: err.response?.data?.message || '请求失败',
                 }
             }
-        }
-    }
+        },
+    },
 })

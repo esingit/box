@@ -30,8 +30,9 @@ public class SecurityConfig {
     private static final String[] PUBLIC_URLS = {
             "/api/user/login",
             "/api/user/register",
-            "/api/user/verify-token",
             "/api/captcha/**",
+            "/api/user/verify-token",
+            "/api/user/refresh-token",
             "/swagger-ui/**",
             "/v3/api-docs/**"
     };

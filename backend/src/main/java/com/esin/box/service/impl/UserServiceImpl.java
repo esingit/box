@@ -10,6 +10,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -36,14 +38,24 @@ public class UserServiceImpl implements UserService {
         return userMapper.insert(user) > 0;
     }
 
+    /**
+     * 登录方法改为返回Map，包含accessToken和refreshToken
+     */
     @Override
-    public String login(String username, String password) {
+    public Map<String, String> login(String username, String password) {
         User user = findByUsername(username);
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
-            // 登录成功，记录最后登录时间
+            // 记录登录时间
             recordLogin(user.getId(), LocalDateTime.now());
-            // 登录成功，生成Token
-            return jwtTokenProvider.generateToken(user.getUsername()); // 使用JwtTokenProvider生成Token
+            // 生成一对token
+            String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername());
+            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername());
+
+            Map<String, String> tokens = new HashMap<>();
+            tokens.put("accessToken", accessToken);
+            tokens.put("refreshToken", refreshToken);
+
+            return tokens;
         }
         return null;
     }
