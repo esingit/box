@@ -22,4 +22,9 @@ public interface AssetRecordMapper extends BaseMapper<AssetRecord> {
                                              @Param("startDate") String startDate,
                                              @Param("endDate") String endDate,
                                              @Param("createUser") String createUser);
+
+    /**
+     * 批量插入记录
+     */
+    void insertBatch(@Param("records") List<AssetRecord> records);
 }

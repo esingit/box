@@ -3,9 +3,7 @@ package com.esin.box.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.esin.box.config.UserContextHolder;
-import com.esin.box.dto.ApiResponse;
-import com.esin.box.dto.AssetRecordDTO;
-import com.esin.box.dto.AssetStatsDTO;
+import com.esin.box.dto.*;
 import com.esin.box.entity.AssetRecord;
 import com.esin.box.service.AssetRecordService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -143,13 +141,31 @@ public class AssetRecordController {
         }
     }
 
-    @Operation(summary = "批量添加资产记录")
-    @PostMapping("/batch-add")
-    public ApiResponse<Integer> batchAddRecords(@Validated @RequestBody List<AssetRecordDTO> batchDTO) {
+    @Operation(summary = "检查今日是否有记录")
+    @GetMapping("/check-today")
+    public ApiResponse<Boolean> checkTodayRecords() {
         try {
             String currentUser = UserContextHolder.getCurrentUsername();
-            int count = assetRecordService.batchAddRecords(batchDTO, currentUser);
-            return ApiResponse.success(count);
+            boolean hasRecords = assetRecordService.hasTodayRecords(currentUser);
+            return ApiResponse.success(hasRecords);
+        } catch (Exception e) {
+            log.error("Failed to check today records:", e);
+            return ApiResponse.error("检查今日记录失败：" + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "批量添加资产记录")
+    @PostMapping("/batch-add")
+    public ApiResponse<BatchAddResult> batchAddRecords(@Validated @RequestBody BatchAddAssetRequest request) {
+        try {
+            String currentUser = UserContextHolder.getCurrentUsername();
+            BatchAddResult result = assetRecordService.smartBatchAddRecords(
+                    request.getRecords(),
+                    request.isForceOverwrite(),
+                    request.isCopyLast(), // 新增参数
+                    currentUser
+            );
+            return ApiResponse.success(result);
         } catch (Exception e) {
             log.error("Failed to batch add records:", e);
             return ApiResponse.error("批量添加失败：" + e.getMessage());

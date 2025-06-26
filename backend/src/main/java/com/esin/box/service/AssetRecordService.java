@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.esin.box.dto.AssetRecordDTO;
 import com.esin.box.dto.AssetStatsDTO;
+import com.esin.box.dto.BatchAddAssetRequest;
+import com.esin.box.dto.BatchAddResult;
 import com.esin.box.entity.AssetRecord;
 
 import java.util.List;
@@ -32,11 +34,18 @@ public interface AssetRecordService {
                                           String createUser);
 
     /**
-     * 批量添加资产记录
-     *
-     * @param records    资产记录列表
-     * @param createUser 创建用户
-     * @return 成功添加的记录数
+     * 检查指定用户今日是否有记录
      */
-    int batchAddRecords(List<AssetRecordDTO> records, String createUser);
+    boolean hasTodayRecords(String username);
+
+    /**
+     * 智能批量添加资产记录
+     *
+     * @param records        识别的资产记录列表
+     * @param forceOverwrite 是否强制覆盖（当今日已有记录时）
+     * @param copyLast       是否复制上回记录（当今日无记录时）
+     * @param createUser     创建用户
+     * @return 批量添加结果
+     */
+    BatchAddResult smartBatchAddRecords(List<AssetRecordDTO> records, boolean forceOverwrite, boolean copyLast, String createUser);
 }

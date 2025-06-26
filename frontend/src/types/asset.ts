@@ -52,11 +52,41 @@ export interface AssetRecord {
     [key: string]: any
 }
 
-// 批量添加结果
 export interface BatchAddResult {
+    /**
+     * 成功处理的记录数
+     */
     successCount: number
-    failedCount?: number
-    errors?: string[]
+
+    /**
+     * 总记录数
+     */
+    totalCount: number
+
+    /**
+     * 是否覆盖了现有记录
+     */
+    overwrote: boolean
+
+    /**
+     * 是否复制了历史记录
+     */
+    copied: boolean
+
+    /**
+     * 更新记录数
+     */
+    updateCount: number
+
+    /**
+     * 新增记录数
+     */
+    addCount: number
+
+    /**
+     * 操作结果消息
+     */
+    message: string
 }
 
 // 图表配置

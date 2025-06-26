@@ -505,42 +505,108 @@ export const useAssetStore = defineStore('asset', () => {
         }
     }
 
-    // 🔥 批量添加功能
-    async function batchAddRecords(records: any[]): Promise<boolean> {
+
+    // 🔥 检查今日是否有记录
+    async function checkTodayRecords(): Promise<boolean> {
+        try {
+            const response = await axiosInstance.get('/api/asset-record/check-today')
+            return handleApiResponse<boolean>(response, '检查今日记录') || false
+        } catch (error) {
+            if (!isAuthError(error)) {
+                handleError('检查今日记录', error)
+                throw error
+            }
+            return false
+        }
+    }
+
+    // assetStore.ts 中修复 smartBatchAddRecords 方法
+    async function smartBatchAddRecords(
+        records: any[],
+        forceOverwrite = false,
+        copyLast = false
+    ): Promise<BatchAddResult | null> {
         setLoadingState('operation', true)
 
         try {
-            const formattedRecords = records.map(item => formatTime(item))
-            const response = await axiosInstance.post('/api/asset-record/batch-add', formattedRecords)
+            // 🔥 添加参数验证
+            if (!records) {
+                throw new Error('records 参数不能为空')
+            }
 
-            const result = handleApiResponse<number | BatchAddResult>(response, '批量添加记录')
+            if (!Array.isArray(records)) {
+                console.error('records 参数类型错误:', typeof records, records)
+                throw new Error('records 必须是数组类型')
+            }
 
-            if (result !== null) {
-                // 处理不同类型的返回值
-                let successCount = 0
-                if (typeof result === 'number') {
-                    successCount = result
-                } else if (result) {
-                    successCount = result.successCount
+            if (records.length === 0) {
+                throw new Error('records 数组不能为空')
+            }
+
+            console.log('收到的 records 参数:', records)
+            console.log('records 类型:', typeof records, 'isArray:', Array.isArray(records))
+
+            // 🔥 确保ID字段保持为字符串
+            const formattedRecords = records.map((item, index) => {
+                if (!item || typeof item !== 'object') {
+                    console.error(`记录 ${index} 格式错误:`, item)
+                    throw new Error(`第 ${index + 1} 条记录格式错误`)
                 }
 
+                const formatted = formatTime(item)
+
+                // 确保关键ID字段为字符串
+                return {
+                    ...formatted,
+                    assetNameId: String(formatted.assetNameId || item.assetNameId),
+                    assetTypeId: String(formatted.assetTypeId || item.assetTypeId),
+                    assetLocationId: String(formatted.assetLocationId || item.assetLocationId),
+                    unitId: String(formatted.unitId || item.unitId)
+                }
+            })
+
+            console.log('格式化后的数据:', formattedRecords)
+
+            const response = await axiosInstance.post('/api/asset-record/batch-add', {
+                records: formattedRecords,
+                forceOverwrite,
+                copyLast
+            })
+
+            const result = handleApiResponse<BatchAddResult>(response, '批量添加记录')
+
+            if (result !== null) {
+                console.log('后端返回结果:', result)
+
                 emitter.emit('notify', {
-                    message: `成功添加 ${successCount} 条记录`,
+                    message: result.message,
                     type: 'success'
                 })
-                await loadList(true)
-                return true
+
+                await Promise.all([
+                    loadList(true),
+                    loadStats()
+                ])
+
+                return result
             }
-            return false
-        } catch (error) {
+            return null
+        } catch (error: any) {
+            console.error('smartBatchAddRecords 错误详情:', error)
             if (!isAuthError(error)) {
                 handleError('批量添加记录', error)
                 throw error
             }
-            return false
+            return null
         } finally {
             setLoadingState('operation', false)
         }
+    }
+
+    // 保留原方法以保持兼容性
+    async function batchAddRecords(records: any[], forceOverwrite = false): Promise<boolean> {
+        const result = await smartBatchAddRecords(records, forceOverwrite, false)
+        return result !== null
     }
 
     // 🔥 查询参数管理
@@ -632,6 +698,8 @@ export const useAssetStore = defineStore('asset', () => {
         copyLastRecords,
         recognizeAssetImage,
         batchAddRecords,
+        smartBatchAddRecords,
+        checkTodayRecords,
 
         // 查询管理
         updateQuery,

@@ -115,7 +115,7 @@
       </div>
     </div>
 
-    <!-- 底部按钮 - 使用 footer 插槽，只有有数据时才显示 -->
+    <!-- 底部按钮 -->
     <template #footer v-if="recognizedData.length > 0">
       <div class="flex justify-end gap-3">
         <BaseButton type="button" title="取消" color="outline" @click="handleClose"/>
@@ -123,10 +123,11 @@
             type="button"
             title="批量添加"
             color="primary"
-            :disabled="!canSubmit"
+            :disabled="!canSubmit || isSubmitting"
             @click="handleSubmit"
         >
-          批量添加 ({{ validItemsCount }} 条)
+          <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin"/>
+          <span>{{ isSubmitting ? '处理中...' : `批量添加 (${validItemsCount} 条)` }}</span>
         </BaseButton>
       </div>
     </template>
@@ -142,7 +143,7 @@ import {useAssetStore} from '@/store/assetStore'
 import {useMetaStore} from '@/store/metaStore'
 import {useAssetNameStore} from '@/store/assetNameStore'
 import emitter from '@/utils/eventBus'
-import {RawAssetRecord, RecognizedAssetItem} from '@/types/asset'
+import {RawAssetRecord, RecognizedAssetItem, BatchAddResult} from '@/types/asset'
 
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
@@ -171,6 +172,7 @@ const imageFile = ref<File | null>(null)
 const imagePreview = ref('')
 const assetNameRef = ref()
 const isRecognizing = ref(false)
+const isSubmitting = ref(false)
 const today = new Date().toISOString().slice(0, 10)
 
 // 识别数据
@@ -252,18 +254,11 @@ const canSubmit = computed(() => {
       validItemsCount.value > 0
 })
 
-// 安全处理大数ID的函数
+// 安全处理ID的函数
 function safeParseId(id: any): string | null {
   if (id === null || id === undefined || id === '') {
     return null
   }
-
-  // 如果已经是字符串，直接返回
-  if (typeof id === 'string') {
-    return id
-  }
-
-  // 如果是数字，转换为字符串（但可能已经丢失精度）
   return String(id)
 }
 
@@ -301,7 +296,6 @@ async function recognizeImage() {
 
   isRecognizing.value = true
   try {
-    // 确保资产名称数据已加载
     await forceLoadAssetNames()
 
     if (recognizedAssetsTableRef.value?.forceLoadAssetNames) {
@@ -313,10 +307,8 @@ async function recognizeImage() {
 
     const result = await assetStore.recognizeAssetImage(formData)
 
-    // 处理识别结果 - 保持ID为字符串类型避免精度丢失
     recognizedData.value = (result || []).map((item: any) => ({
       ...item,
-      // 关键修改：保持ID为字符串类型，避免精度丢失
       assetNameId: safeParseId(item.assetNameId),
       amount: item.amount || null,
       remark: item.remark || '',
@@ -345,19 +337,16 @@ async function recognizeImage() {
 function updateItem(index: number, field: string, value: any) {
   if (recognizedData.value[index]) {
     if (field === 'assetNameId') {
-      // 保持为字符串类型
       value = safeParseId(value)
     }
     ;(recognizedData.value[index] as any)[field] = value
   }
 }
 
-// 方法 - 数据操作
 function removeItem(index: number) {
   recognizedData.value.splice(index, 1)
 }
 
-// 方法 - ��单操作
 function validateForm(): boolean {
   if (validationErrors.value.length > 0) {
     emitter.emit('notify', {
@@ -378,33 +367,192 @@ function validateForm(): boolean {
   return true
 }
 
-function handleSubmit() {
+// 🔥 修复 executeBatchAdd 方法
+async function executeBatchAdd(
+    records: RawAssetRecord[],
+    forceOverwrite: boolean,
+    copyLast: boolean = false
+): Promise<boolean> {
+  try {
+    console.log('=== executeBatchAdd 开始 ===')
+    console.log('参数检查:', {
+      records: records,
+      recordsType: typeof records,
+      isArray: Array.isArray(records),
+      length: records?.length,
+      forceOverwrite,
+      copyLast
+    })
+
+    if (!records || !Array.isArray(records)) {
+      console.error('records 参数错误:', records)
+      throw new Error('记录数据格式错误')
+    }
+
+    if (records.length === 0) {
+      throw new Error('没有要处理的记录')
+    }
+
+    // 🔥 直接调用 smartBatchAddRecords，不要经过其他方法
+    const result = await assetStore.smartBatchAddRecords(records, forceOverwrite, copyLast)
+
+    if (result) {
+      let message = result.message || `批量操作完成：成功处理 ${result.successCount} 条记录`
+      const details: string[] = []
+
+      if (result.copied) {
+        details.push('已复制历史记录')
+      }
+      if (result.overwrote) {
+        details.push('已覆盖今日记录')
+      }
+      if (result.updateCount && result.updateCount > 0) {
+        details.push(`更新${result.updateCount}条`)
+      }
+      if (result.addCount && result.addCount > 0) {
+        details.push(`新增${result.addCount}条`)
+      }
+
+      if (details.length > 0) {
+        message = `${message}（${details.join('，')}）`
+      }
+
+      emitter.emit('notify', {
+        type: 'success',
+        message
+      })
+
+      // 🔥 直接触发 submit 事件，不要包装数据
+      emit('submit', records) // 直接传递 records 数组
+
+      return true
+    }
+
+    return false
+  } catch (error: any) {
+    console.error('executeBatchAdd 错误:', error)
+    emitter.emit('notify', {
+      type: 'error',
+      message: `批量添加失败：${error.message || '未知错误'}`
+    })
+    return false
+  }
+}
+
+// 🔥 修复 handleSubmit 方法，增加详细的调试日志
+async function handleSubmit() {
   if (!validateForm()) return
 
-  // 只提交有效的记录
-  const validItems = recognizedData.value.filter(item =>
-      item.assetNameId && item.amount && item.amount > 0
-  )
+  isSubmitting.value = true
 
-  // 转换为 RawAssetRecord 格式
-  const records: RawAssetRecord[] = validItems.map((item, index) => ({
-    id: Date.now() + index,
-    assetNameId: item.assetNameId!, // 保持字符串类型
-    assetLocationId: commonAttributes.value.assetLocationId!,
-    assetTypeId: commonAttributes.value.assetTypeId!,
-    unitId: commonAttributes.value.unitId!,
-    amount: item.amount!,
-    date: commonAttributes.value.acquireTime,
-    remark: item.remark || ''
-  }))
+  try {
+    console.log('=== 开始 handleSubmit ===')
+    console.log('recognizedData:', recognizedData.value)
+    console.log('commonAttributes:', commonAttributes.value)
 
-  emitter.emit('notify', {
-    type: 'success',
-    message: `准备添加 ${records.length} 条资产记录`
-  })
+    // 准备有效记录
+    const validItems = recognizedData.value.filter(item => {
+      const isValid = item.assetNameId && item.amount && item.amount > 0
+      console.log('校验记录:', item, '有效:', isValid)
+      return isValid
+    })
 
-  emit('submit', records)
-  handleClose()
+    console.log('有效记录数:', validItems.length)
+
+    if (validItems.length === 0) {
+      throw new Error('没有有效的记录可提交')
+    }
+
+    // 🔥 修复：确保所有字段都正确设置
+    const records: RawAssetRecord[] = validItems.map((item, index) => {
+      const record = {
+        id: String(Date.now() + index),
+        assetNameId: String(item.assetNameId!),
+        assetLocationId: String(commonAttributes.value.assetLocationId!),
+        assetTypeId: String(commonAttributes.value.assetTypeId!),
+        unitId: String(commonAttributes.value.unitId!),
+        amount: Number(item.amount!),
+        date: commonAttributes.value.acquireTime,
+        remark: item.remark || ''
+      }
+
+      console.log(`构建记录 ${index}:`, record)
+      return record
+    })
+
+    console.log('最终构建的 records 数组:', records)
+    console.log('records 类型检查:', typeof records, Array.isArray(records))
+
+    // 检查今日是否已有记录
+    const hasRecordsToday = await assetStore.checkTodayRecords()
+    console.log('今日是否有记录:', hasRecordsToday)
+
+    if (hasRecordsToday) {
+      // 今日已有记录的处理逻辑
+      emitter.emit('confirm', {
+        title: '今日已有记录',
+        message: `检测到今日已有记录，请选择处理方式：
+
+• 智能合并：保留现有记录，更新相同资产名称的金额，添加新资产
+• 完全覆盖：删除今日所有记录后重新添加
+
+将处理 ${records.length} 条记录`,
+        type: 'primary',
+        confirmText: '智能合并',
+        cancelText: '完全覆盖',
+        onConfirm: async () => {
+          console.log('用户选择：智能合并')
+          const success = await executeBatchAdd(records, false, false)
+          if (success) handleClose()
+        },
+        onCancel: async () => {
+          console.log('用户选择：完全覆盖')
+          emitter.emit('confirm', {
+            title: '确认覆盖',
+            message: '⚠️ 此操作将删除今日所有现有记录，是否确认？',
+            type: 'danger',
+            confirmText: '确认覆盖',
+            cancelText: '取消',
+            onConfirm: async () => {
+              console.log('用户确认覆盖')
+              const success = await executeBatchAdd(records, true, false)
+              if (success) handleClose()
+            }
+          })
+        }
+      })
+    } else {
+      // 今日无记录的处理逻辑
+      emitter.emit('confirm', {
+        title: '是否复制历史记录',
+        message: `今日暂无记录，请选择操作方式：
+
+• 复制并添加：先复制上次记录作为基础，再添加 ${records.length} 条新记录
+• 仅添加新记录：直接添加 ${records.length} 条新记录`,
+        type: 'primary',
+        confirmText: '复制并添加',
+        cancelText: '仅添加新记录',
+        onConfirm: async () => {
+          console.log('用户选择：复制并添加')
+          const success = await executeBatchAdd(records, false, true)
+          if (success) handleClose()
+        },
+        onCancel: async () => {
+          console.log('用户选择：仅添加新记录')
+          const success = await executeBatchAdd(records, false, false)
+          if (success) handleClose()
+        }
+      })
+    }
+  } catch (error: any) {
+    console.error('handleSubmit 错误:', error)
+    emitter.emit('notify', {
+      type: 'error',
+      message: `操作失败：${error.message || '未知错误'}`
+    })
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 function handleClose() {
@@ -423,16 +571,15 @@ function resetForm() {
     acquireTime: today,
     unitId: null
   }
+  isSubmitting.value = false
 }
 
-// 修改 setFieldValue
 function setFieldValue(field: string, value: any) {
   if (field in commonAttributes.value) {
     (commonAttributes.value as any)[field] = value
   }
 }
 
-// 修改 setDefaultUnit
 async function setDefaultUnit(
     typeId: string,
     setFieldValue?: (field: string, value: any) => void,
@@ -467,7 +614,6 @@ async function setDefaultUnit(
   }
 }
 
-// 修复类型错误：修改函数签名以匹配期望的类型
 function onAssetTypeChange(value: string | number | (string | number)[] | null) {
   const assetTypeId = Array.isArray(value) ? value[0] : value
 
@@ -481,12 +627,10 @@ function onAssetTypeChange(value: string | number | (string | number)[] | null) 
   })
 }
 
-// 在 mounted 中加载必要数据
 onMounted(async () => {
   await forceLoadAssetNames()
 })
 
-// 监听可见性变化，确保每次打开时都有最新数据
 watch(() => props.visible, async (newVal) => {
   if (newVal) {
     await forceLoadAssetNames()

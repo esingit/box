@@ -317,7 +317,6 @@ function handleCellMouseEnter(rowIndex, fieldKey, event, row, col) {
   if (col.actions) return
   if (col.key === 'actions') return
   if (hasDropdown(col) && activeRowIndex.value === rowIndex) return
-  if (['amount', 'remark'].includes(col.key)) return // 这些是输入框，不需要 tooltip
 
   // 生成 tooltip 内容
   let content = ''

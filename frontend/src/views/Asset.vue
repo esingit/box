@@ -123,6 +123,7 @@ import AssetForm from '@/components/asset/AssetForm.vue'
 import AssetSearch from '@/components/asset/AssetSearch.vue'
 import AssetScanAddModal from '@/components/asset/AssetScanAddModal.vue'
 import {clearCommonMetaCache} from "@/utils/commonMeta";
+import {RawAssetRecord} from "@/types/asset";
 
 const assetStore = useAssetStore()
 const assetNameStore = useAssetNameStore()
@@ -264,14 +265,33 @@ function closeAssetScanAddModal() {
   showAssetScanAddFlag.value = false
 }
 
-async function handleAssetScanAddRecord(records: any[]) {
-  try {
-    await assetStore.batchAddRecords(records)
-    showAssetScanAddFlag.value = false
-    await refreshData()
-  } catch (error) {
-    console.error('批量添加失败:', error)
+// 🔥 修复 handleAssetScanAddRecord 方法
+function handleAssetScanAddRecord(records: RawAssetRecord[]) {
+  console.log('=== handleAssetScanAddRecord ===')
+  console.log('接收到的 records:', records)
+  console.log('records 类型:', typeof records, Array.isArray(records))
+
+  // 🔥 确保 records 是数组
+  if (!Array.isArray(records)) {
+    console.error('handleAssetScanAddRecord 接收到错误的数据格式:', records)
+    emitter.emit('notify', {
+      type: 'error',
+      message: '数据格式错误，请重试'
+    })
+    return
   }
+
+  console.log(`准备添加 ${records.length} 条扫描记录`)
+
+  // 🔥 这里应该只是刷新列表，不要再次调用批量添加
+  // 因为批量添加已经在 AssetScanAddModal 中完成了
+  assetStore.loadList(true)
+  assetStore.loadStats()
+
+  emitter.emit('notify', {
+    type: 'success',
+    message: `扫描添加完成，共 ${records.length} 条记录`
+  })
 }
 
 function closeAddModal() {
