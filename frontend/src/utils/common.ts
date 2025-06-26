@@ -176,3 +176,12 @@ export function useChart() {
         resizeChart
     }
 }
+
+// 🔥 判断某个记录的 ID 是否在列表中
+export function isIdInList(recordId: string | number | undefined, idList: (string | number)[]): boolean {
+    if (recordId === undefined || recordId === null) return false
+
+    // 统一转换为字符串进行比较，避免类型问题
+    const recordIdStr = String(recordId)
+    return idList.some(id => String(id) === recordIdStr)
+}

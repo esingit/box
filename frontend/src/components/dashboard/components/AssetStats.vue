@@ -79,7 +79,7 @@ import type {EChartsCoreOption, EChartsType} from 'echarts/core'
 import AssetSearch from '@/components/asset/AssetSearch.vue'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import { useAssetStore } from '@/store/assetStore'
-import { useDateRange, useChart } from '@/utils/common'
+import { useDateRange, useChart, isIdInList } from '@/utils/common'
 import emitter from '@/utils/eventBus'
 import type {AssetRecord, ChartOptionsType, QueryConditions} from '@/types/asset'
 import type { Option } from '@/types/common'
@@ -279,22 +279,22 @@ const assetRecords = computed<AssetRecord[]>(() => {
 const filteredRecords = computed<AssetRecord[]>(() => {
   let records = [...allLoadedRecords.value]
 
-  // 根据查询条件过滤
+  // 根据查询条件过滤 - 使用类型安全的比较函数
   if (query.value.assetTypeIdList?.length > 0) {
     records = records.filter(record =>
-        query.value.assetTypeIdList.includes(String(record.assetTypeId))
+        isIdInList(record.assetTypeId, query.value.assetTypeIdList)
     )
   }
 
   if (query.value.assetNameIdList?.length > 0) {
     records = records.filter(record =>
-        query.value.assetNameIdList.includes(String(record.assetNameId))
+        isIdInList(record.assetNameId, query.value.assetNameIdList)
     )
   }
 
   if (query.value.assetLocationIdList?.length > 0) {
     records = records.filter(record =>
-        query.value.assetLocationIdList.includes(String(record.assetLocationId))
+        isIdInList(record.assetLocationId, query.value.assetLocationIdList)
     )
   }
 
@@ -485,20 +485,23 @@ const amountByDimension = computed(() => {
     const date = record.acquireTime.split('T')[0]
     const amount = parseFloat(record.amount) || 0
 
-    // 缓存日期数据
+    // 缓存日期数据 - 修复类型问题
     if (!dateDataCache.has(date)) {
       dateDataCache.set(date, new Map())
     }
     const dateMap = dateDataCache.get(date)!
-    dateMap.set(record.assetNameId, (dateMap.get(record.assetNameId) || 0) + amount)
+    // 🔧 将 assetNameId 转换为字符串类型
+    const assetNameIdKey = String(record.assetNameId)
+    dateMap.set(assetNameIdKey, (dateMap.get(assetNameIdKey) || 0) + amount)
 
     // 按维度聚合
-    const nameKey = getDisplayName(record.assetNameId, nameMapping.value, record.assetName, '资产')
+    // 🔧 确保传入 getDisplayName 的 ID 是字符串类型
+    const nameKey = getDisplayName(String(record.assetNameId), nameMapping.value, record.assetName, '资产')
     if (!byName[nameKey]) byName[nameKey] = {}
     byName[nameKey][date] = (byName[nameKey][date] || 0) + amount
 
     const typeKey = getDisplayName(
-        record.assetTypeId,
+        String(record.assetTypeId), // 🔧 转换为字符串
         typeMapping.value,
         record.assetTypeName || record.assetTypeValue,
         '类型'
@@ -507,7 +510,7 @@ const amountByDimension = computed(() => {
     byType[typeKey][date] = (byType[typeKey][date] || 0) + amount
 
     const locationKey = getDisplayName(
-        record.assetLocationId,
+        String(record.assetLocationId), // 🔧 转换为字符串
         locationMapping.value,
         record.assetLocationName || record.assetLocationValue,
         '位置'
@@ -1156,15 +1159,3 @@ watch(
     { deep: true }
 )
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>
