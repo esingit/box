@@ -26,6 +26,7 @@
                   :modelValue="value"
                   :options="assetNameStore.assetNameOptions"
                   clearable
+                  required
                   searchable
                   @update:modelValue="val => setValue(val)"
               />
@@ -54,6 +55,7 @@
                 :modelValue="value"
                 :options="assetTypes"
                 clearable
+                required
                 :multiple="false"
                 searchable
                 @update:modelValue="val => {
@@ -76,6 +78,7 @@
                 :modelValue="value"
                 :options="assetLocations"
                 clearable
+                required
                 searchable
                 @update:modelValue="val => setValue(val)"
             />
@@ -114,6 +117,7 @@
                 :modelValue="value"
                 :options="units"
                 clearable
+                required
                 searchable
                 @update:modelValue="val => setValue(val)"
             />
@@ -250,7 +254,7 @@ watch(
 )
 
 function onAssetTypeChange(
-    assetTypeId: string | number | null,
+    assetTypeId: string | number | (string | number)[] | null,
     setFieldValue: (field: string, value: any) => void
 ) {
   if (!assetTypeId) {

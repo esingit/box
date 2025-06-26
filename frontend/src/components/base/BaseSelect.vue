@@ -25,7 +25,7 @@
                 class="truncate whitespace-nowrap block w-full text-left"
                 :class="{
                   'text-gray-400': !selectedLabels.length && !showError,
-                  'msg-error': !selectedLabels.length && showError, // 当没有选中值且显示错误时文字为红色
+                  'text-[var(--color-error)]': !selectedLabels.length && showError, // 当没有选中值且显示错误时文字为红色
                   'text-black': selectedLabels.length
                 }"
             >
