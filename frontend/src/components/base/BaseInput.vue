@@ -16,8 +16,9 @@
         @blur="validate"
         class="input-base pr-12 appearance-none"
         :class="{
-        'msg-error': showError,
-        'min-h-[80px] resize-y': isTextareaType
+          'msg-error': showError,
+          'min-h-[80px] resize-y': isTextareaType,
+          'hide-number-arrows': isNumberType
         }"
     />
 
@@ -29,10 +30,10 @@
         tabindex="-1"
         title="清空"
         :class="[
-        'absolute text-gray-400 hover:text-gray-600 transition',
-        isTextareaType ? 'top-2 right-2' : 'top-1/2 -translate-y-1/2',
-        isNumberType && !isTextareaType ? 'right-10' : 'right-5'
-      ]"
+          'absolute text-gray-400 hover:text-gray-600 transition',
+          isTextareaType ? 'top-2 right-2' : 'top-1/2 -translate-y-1/2',
+          isNumberType && !isTextareaType ? 'right-10' : 'right-5'
+        ]"
     >
       <LucideX class="w-4 h-4" />
     </button>
@@ -67,14 +68,9 @@
       </button>
     </div>
   </div>
-
-  <p v-if="showError" class="msg-error mt-1 ml-1">
-    {{ requiredMessage || `请输入${title || '内容'}` }}
-  </p>
 </template>
 
 <script setup lang="ts">
-
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { LucideX, LucideChevronUp, LucideChevronDown } from 'lucide-vue-next'
 
@@ -127,9 +123,12 @@ const errorTooltip = computed(() =>
     showError.value ? (props.requiredMessage || `请输入${props.title || '内容'}`) : ''
 )
 
-const computedPlaceholder = computed(() =>
-    props.placeholder || `请输入${props.title || '内容'}`
-)
+const computedPlaceholder = computed(() => {
+  if (showError.value && props.required) {
+    return `请输入${props.title || '内容'}`
+  }
+  return props.placeholder || `请输入${props.title || '内容'}`
+})
 
 defineOptions({ inheritAttrs: false })
 
@@ -144,7 +143,7 @@ function clearInput() {
   if (props.disabled) return
   innerValue.value = ''
   emit('update:modelValue', '')
-  showError.value = false
+  showError.value = props.required
   inputRef.value?.focus()
 }
 
@@ -219,3 +218,21 @@ onMounted(() => {
   })
 })
 </script>
+
+<style scoped>
+/* 隐藏数字输入框的上下箭头 */
+.hide-number-arrows::-webkit-outer-spin-button,
+.hide-number-arrows::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.hide-number-arrows {
+  -moz-appearance: textfield;
+}
+
+/* 错误状态下的 placeholder 样式 */
+.msg-error::placeholder {
+  color: var(--color-error);
+}
+</style>

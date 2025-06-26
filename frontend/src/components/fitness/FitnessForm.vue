@@ -22,6 +22,7 @@
                 title="健身类型"
                 :modelValue="value"
                 clearable
+                required
                 searchable
                 :disabled="loading"
                 :options="fitnessTypesFiltered"
@@ -131,6 +132,7 @@
 import { ref, computed, watch } from 'vue'
 import { Form, Field, ErrorMessage } from 'vee-validate'
 import * as yup from 'yup'
+import dayjs from 'dayjs'
 import { useMetaStore } from '@/store/metaStore'
 import { setDefaultUnit } from '@/utils/commonMeta'
 import BaseModal from '@/components/base/BaseModal.vue'
@@ -190,6 +192,16 @@ const schema = yup.object({
       .test('is-not-future', '完成时间不能大于今天', val => {
         if (!val) return false
         return val <= today
+      }),
+  acquireTime: yup
+      .string()
+      .required()
+      .test('is-not-future', '日期不能大于今日', val => {
+        if (!val) return true // 为空时不进行此验证
+        const inputDate = dayjs(val).startOf('day')
+        const todayDate = dayjs().startOf('day')
+        // 使用 unix() 或 valueOf() 进行比较
+        return inputDate.valueOf() <= todayDate.valueOf()
       }),
   remark: yup.string().nullable(),
 })

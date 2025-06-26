@@ -179,6 +179,7 @@
 import {ref, computed, watch} from 'vue'
 import {ErrorMessage, Field, Form} from 'vee-validate'
 import * as yup from 'yup'
+import dayjs from 'dayjs'
 import {LucideSettings} from 'lucide-vue-next'
 import {useAssetNameStore} from '@/store/assetNameStore'
 import {useMetaStore} from '@/store/metaStore'
@@ -231,11 +232,15 @@ const schema = yup.object({
   unitId: yup.string().required('请选择货币单位'),
   acquireTime: yup
       .string()
-      .required('请选择日期')
+      .required()
       .test('is-not-future', '日期不能大于今日', val => {
-        if (!val) return false
-        return val <= today
+        if (!val) return true // 为空时不进行此验证
+        const inputDate = dayjs(val).startOf('day')
+        const todayDate = dayjs().startOf('day')
+        // 使用 unix() 或 valueOf() 进行比较
+        return inputDate.valueOf() <= todayDate.valueOf()
       }),
+
   remark: yup.string().nullable()
 })
 
