@@ -9,7 +9,7 @@
         :placeholder="placeholderText"
         :class="[
           'input-base pr-12 appearance-none bg-white text-black rounded-md w-full cursor-pointer',
-          showError ? 'input-error' : 'input-normal'
+          showError ? 'input-error placeholder-red' : 'input-normal'
         ]"
         @click.stop="togglePopover"
         @blur="onBlur"
@@ -106,11 +106,6 @@
         <BaseButton type="button" title="确认" color="primary" @click="confirm" />
       </div>
     </div>
-
-    <!-- 错误提示信息 -->
-    <p v-if="showError" class="mt-1 ml-1 text-sm text-red-500">
-      {{ requiredMessage || `请选择${title || '日期'}` }}
-    </p>
   </div>
 </template>
 
@@ -527,3 +522,9 @@ defineExpose({
   validate,
 })
 </script>
+
+<style scoped>
+.placeholder-red::placeholder {
+  color: var(--color-error);
+}
+</style>

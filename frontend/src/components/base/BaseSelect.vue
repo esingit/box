@@ -19,16 +19,17 @@
             @blur="onBlur"
             @click="handleButtonClick(open, close)"
         >
+
           <div class="flex-1 min-w-0 mr-2 text-left">
             <span
                 class="truncate whitespace-nowrap block w-full text-left"
                 :class="{
                   'text-gray-400': !selectedLabels.length && !showError,
-                  'text-red-500': showError,
-                  'text-black': selectedLabels.length && !showError
+                  'msg-error': !selectedLabels.length && showError, // 当没有选中值且显示错误时文字为红色
+                  'text-black': selectedLabels.length
                 }"
             >
-              {{ showError ? (requiredMessage || '此项为必填') : selectedText }}
+              {{ selectedText }}  <!-- 直接使用 selectedText,不再显示错误信息 -->
             </span>
           </div>
 
@@ -296,7 +297,7 @@ const computedPlaceholder = computed(() => props.placeholder || `请选择${prop
 const MAX_DISPLAY_ITEMS = 2
 const selectedText = computed(() => {
   if (!selectedLabels.value.length) {
-    return computedPlaceholder.value
+    return `请选择${props.title || ''}` // 简化提示文本
   }
 
   if (props.multiple && selectedLabels.value.length > MAX_DISPLAY_ITEMS) {
