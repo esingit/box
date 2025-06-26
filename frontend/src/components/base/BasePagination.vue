@@ -43,7 +43,7 @@
             placeholder="每页条数"
             clearable
             searchable
-            @update:modelValue="val => emit('page-size-change', val)"
+            @update:modelValue="val => emit('page-size-change', val as number)"
         />
       </Field>
     </div>
