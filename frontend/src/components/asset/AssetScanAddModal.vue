@@ -84,7 +84,7 @@
               @click="assetNameRef?.open()"
               :icon="LucideSettings"
               variant="search"
-              class="w-52"
+              class="w-60"
           />
         </div>
       </div>

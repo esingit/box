@@ -2,7 +2,12 @@
 <template>
   <div class="relative border border-gray-200 rounded-xl" style="min-height: 520px; max-height: 520px; width: 100%;">
     <!-- 表格头部区域 -->
-    <div class="sticky top-0 z-20 bg-gray-50 rounded-t-xl">
+    <div
+        :class="[
+        'top-0 z-20 bg-gray-50 rounded-t-xl',
+        shouldStickyHeader ? 'sticky' : ''
+      ]"
+    >
       <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
         <thead>
         <tr>
@@ -29,7 +34,12 @@
     </div>
 
     <!-- 表格内容区域 -->
-    <div class="relative" style="height: 480px; overflow-y: auto;">
+    <div
+        ref="contentRef"
+        class="relative"
+        style="height: 480px; overflow-y: auto;"
+        @scroll="checkScrollable"
+    >
       <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
         <colgroup>
           <col
@@ -172,7 +182,7 @@
 </template>
 
 <script setup>
-import {reactive, ref, markRaw} from 'vue'
+import { reactive, ref, markRaw, computed, nextTick, onMounted, watch } from 'vue'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import BaseActions from '@/components/base/BaseActions.vue'
 // 编辑器组件
@@ -193,6 +203,22 @@ const emit = defineEmits(['edit', 'delete', 'cell-change', 'cell-blur'])
 const DEFAULT_WIDTH = 100
 const columnWidths = reactive({})
 const activeRowIndex = ref(null)
+const contentRef = ref()
+const isContentScrollable = ref(false)
+
+// 计算是否需要固定表头
+const shouldStickyHeader = computed(() => {
+  // 只有当内容可滚动且有数据时才固定表头
+  return isContentScrollable.value && props.data.length > 0 && !props.loading
+})
+
+// 检查内容是否可滚动
+function checkScrollable() {
+  if (!contentRef.value) return
+
+  const element = contentRef.value
+  isContentScrollable.value = element.scrollHeight > element.clientHeight
+}
 
 // 初始化列宽
 props.columns.forEach(col => {
@@ -383,4 +409,21 @@ function handleEdit(row, index) {
 function handleDelete(row, index) {
   emit('delete', row, index)
 }
+
+// 监听数据变化，重新检查是否需要滚动
+watch(() => props.data, async () => {
+  await nextTick()
+  checkScrollable()
+}, { deep: true })
+
+watch(() => props.loading, async () => {
+  await nextTick()
+  checkScrollable()
+})
+
+onMounted(() => {
+  nextTick(() => {
+    checkScrollable()
+  })
+})
 </script>

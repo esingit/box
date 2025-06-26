@@ -1,4 +1,4 @@
-<!-- BaseSelect.vue -->
+<!-- BaseSelect.vue 修复位移问题 -->
 <template>
   <div class="relative w-full" ref="containerRef">
     <Listbox
@@ -6,7 +6,7 @@
         :multiple="multiple"
         @update:model-value="handleUpdateModelValue"
         as="div"
-        v-slot="{ open }"
+        v-slot="{ open, close }"
     >
       <div class="relative w-full">
         <ListboxButton
@@ -14,17 +14,18 @@
             :title="showError ? (requiredMessage || '此项为必填') : selectedText"
             :class="[
               'input-base flex justify-between items-center w-full pr-8 min-w-0 text-left',
-              showError ? 'msg-error' : ''
+              showError ? 'input-error' : 'input-normal'
             ]"
             @blur="onBlur"
-            @click="handleButtonClick(open)"
+            @click="handleButtonClick(open, close)"
         >
           <div class="flex-1 min-w-0 mr-2 text-left">
             <span
                 class="truncate whitespace-nowrap block w-full text-left"
                 :class="{
                   'text-gray-400': !selectedLabels.length && !showError,
-                  'text-black': selectedLabels.length || showError
+                  'text-red-500': showError,
+                  'text-black': selectedLabels.length && !showError
                 }"
             >
               {{ showError ? (requiredMessage || '此项为必填') : selectedText }}
@@ -63,11 +64,11 @@
                 v-if="open"
                 ref="floatingRef"
                 :class="[
-            'absolute z-[9999] overflow-hidden rounded-2xl bg-white border border-gray-300 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
-            props.direction === 'up' ? 'origin-bottom' : 'origin-top'
-          ]"
+                  'absolute z-[9999] overflow-hidden rounded-2xl bg-white border border-gray-300 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
+                  props.direction === 'up' ? 'origin-bottom' : 'origin-top'
+                ]"
                 :style="floatingStyles"
-                @blur="onOptionsBlur"
+                @blur="() => onOptionsBlur(close)"
             >
               <!-- 搜索框 -->
               <div v-if="searchable" class="p-2 border-b border-gray-200">
@@ -80,7 +81,7 @@
                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
                       @click.stop
                       @keydown.stop
-                      @keydown.esc="closeDropdown"
+                      @keydown.esc="() => closeDropdown(close)"
                   />
                   <LucideSearch class="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 </div>
@@ -97,6 +98,7 @@
                     :key="item.value"
                     :value="item.value"
                     v-slot="{ active, selected }"
+                    @click="() => closeDropdown(close)"
                 >
                   <div
                       class="flex items-center px-3 py-2 rounded-xl cursor-pointer select-none transition-colors duration-150 text-left"
@@ -131,6 +133,7 @@
 </template>
 
 <script setup lang="ts">
+// ... script 部分保持不变，不需要修改 ...
 import { computed, nextTick, ref, watch, onMounted, onUnmounted } from 'vue'
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/vue'
 import { CheckCircle, Circle, LucideChevronDown, LucideSearch } from 'lucide-vue-next'
@@ -180,6 +183,7 @@ const searchInput = ref<HTMLInputElement | null>(null)
 const showError = ref(false)
 const searchQuery = ref('')
 const isDropdownOpen = ref(false)
+const closeFunction = ref<(() => void) | null>(null)
 
 // 使用 floating-ui 进行定位
 const { floatingStyles, update } = useFloating(referenceRef, floatingRef, {
@@ -211,8 +215,10 @@ const handleUpdateModelValue = (val: string | number | (string | number)[] | nul
 }
 
 // 处理按钮点击
-const handleButtonClick = (open: boolean) => {
+const handleButtonClick = (open: boolean, close: () => void) => {
   isDropdownOpen.value = open
+  closeFunction.value = close
+
   if (open) {
     emit('dropdown-open')
     // 延迟聚焦搜索框
@@ -225,21 +231,25 @@ const handleButtonClick = (open: boolean) => {
     }
     // 更新浮动位置
     nextTick(() => {
-      update()
+      if (update) {
+        update()
+      }
     })
   } else {
     emit('dropdown-close')
+    closeFunction.value = null
   }
 }
 
 // 关闭下拉框
-const closeDropdown = () => {
+const closeDropdown = (close?: () => void) => {
+  const closeFunc = close || closeFunction.value
+  if (closeFunc) {
+    closeFunc()
+  }
   isDropdownOpen.value = false
   emit('dropdown-close')
-  // 手动触发 ListboxButton 的关闭
-  if (referenceRef.value) {
-    referenceRef.value.click()
-  }
+  closeFunction.value = null
 }
 
 const safeOptions = computed(() => props.options ?? [])
@@ -321,11 +331,11 @@ function onBlur() {
   }, 150)
 }
 
-function onOptionsBlur() {
+function onOptionsBlur(close: () => void) {
   // 当选项区域失去焦点时的处理
   setTimeout(() => {
     if (!document.activeElement?.closest('.relative')) {
-      closeDropdown()
+      closeDropdown(close)
     }
   }, 100)
 }
@@ -374,7 +384,7 @@ defineExpose({
     return !showError.value
   },
   resetSearch,
-  closeDropdown,
+  closeDropdown: () => closeDropdown(),
   update
 })
 </script>

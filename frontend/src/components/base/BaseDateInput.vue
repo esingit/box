@@ -7,8 +7,12 @@
         readonly
         :value="displayValue"
         :placeholder="placeholderText"
-        class="input-base pr-12 appearance-none bg-white text-black border border-gray-300 rounded-md w-full cursor-pointer"
+        :class="[
+          'input-base pr-12 appearance-none bg-white text-black rounded-md w-full cursor-pointer',
+          showError ? 'input-error' : 'input-normal'
+        ]"
         @click.stop="togglePopover"
+        @blur="onBlur"
     />
     <!-- 清除按钮 -->
     <button
@@ -103,14 +107,15 @@
       </div>
     </div>
 
-    <p v-if="showError" class="msg-error mt-1 ml-1 text-sm msg-error">
-      {{ requiredMessage || `请输入${title}` }}
+    <!-- 错误提示信息 -->
+    <p v-if="showError" class="mt-1 ml-1 text-sm text-red-500">
+      {{ requiredMessage || `请选择${title || '日期'}` }}
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import dayjs from 'dayjs'
 import { LucideX, LucideCalendar } from 'lucide-vue-next'
 import BaseButton from './BaseButton.vue'
@@ -135,11 +140,13 @@ const props = withDefaults(
       requiredMessage: '',
       type: 'date',
       range: false,
+      disabled: false
     }
 )
 
 const emit = defineEmits<{
   (e: 'update:modelValue', val: string): void
+  (e: 'blur'): void
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -163,15 +170,25 @@ const showTime = computed(() => props.type === 'time' || props.type === 'datetim
 
 const hasValue = computed(() => {
   if (props.range) {
-    return !!(rangeStart.value || rangeEnd.value)
+    return !!(rangeStart.value && rangeEnd.value)
   } else {
     return !!singleDate.value
   }
 })
 
-const placeholderText = computed(() => props.placeholder || `请选择${props.title || '内容'}`)
+const placeholderText = computed(() => {
+  if (showError.value && props.required) {
+    return props.requiredMessage || `请选择${props.title || '日期'}`
+  }
+  return props.placeholder || `请选择${props.title || '日期'}`
+})
 
 const displayValue = computed(() => {
+  // 如果显示错误，不显示任何值
+  if (showError.value && props.required) {
+    return ''
+  }
+
   const fmt = (d: string | null, t: any) => {
     if (!d || !dayjs(d).isValid()) return ''
     let str = ''
@@ -182,6 +199,7 @@ const displayValue = computed(() => {
     }
     return str
   }
+
   if (props.range) {
     if (rangeStart.value && rangeEnd.value) {
       return `${fmt(rangeStart.value, timeStart.value)} ~ ${fmt(rangeEnd.value, timeEnd.value)}`
@@ -214,14 +232,47 @@ function togglePopover() {
   open.value = !open.value
 }
 
-// 新增：弹窗关闭时同步数据到外层，保证点击空白关闭弹窗时同步
+// 失焦事件处理
+function onBlur() {
+  // 延迟执行，避免与弹窗点击冲突
+  setTimeout(() => {
+    if (!open.value) {
+      emit('blur')
+      validateRequired()
+    }
+  }, 150)
+}
+
+// 必填验证
+function validateRequired() {
+  if (props.required) {
+    const valid = props.range
+        ? !!(rangeStart.value && rangeEnd.value)
+        : !!singleDate.value
+    showError.value = !valid
+    return valid
+  }
+  showError.value = false
+  return true
+}
+
+// 弹窗关闭时同步数据到外层，保证点击空白关闭弹窗时同步
 watch(open, (val, oldVal) => {
   if (oldVal === true && val === false) {
     // 弹窗从开变关，主动同步当前值给外层
-    emit('update:modelValue', displayValue.value)
+    const currentValue = displayValue.value
+    emit('update:modelValue', currentValue)
+
+    // 弹窗关闭后进行验证
+    setTimeout(() => {
+      if (props.required) {
+        validateRequired()
+      }
+    }, 100)
   }
 })
 
+// 修复清空函数
 function clearAll() {
   if (props.range) {
     rangeStart.value = rangeEnd.value = null
@@ -231,19 +282,37 @@ function clearAll() {
     singleDate.value = null
     singleTime.value = { h: 0, m: 0, s: 0 }
   }
-  showError.value = false
+
   emit('update:modelValue', '')
+
+  // 清空后如果是必填字段，需要显示错误提示
+  if (props.required) {
+    // 使用 nextTick 确保 DOM 更新后再验证
+    nextTick(() => {
+      showError.value = true
+    })
+  } else {
+    showError.value = false
+  }
 }
 
 function applyQuick(opt: any) {
   opt.apply()
   quickOptions.value.forEach(o => (o.isActive = o === opt))
+  // 选择后清除错误状态
+  if (hasValue.value) {
+    showError.value = false
+  }
 }
 
 function updateRange(which: 'start' | 'end', val: string) {
   if (which === 'start') rangeStart.value = val
   else rangeEnd.value = val
   quickOptions.value.forEach(o => (o.isActive = false))
+  // 选择后清除错误状态
+  if (hasValue.value) {
+    showError.value = false
+  }
 }
 
 function cancel() {
@@ -253,17 +322,12 @@ function cancel() {
 }
 
 function validate() {
-  if (props.required) {
-    const valid = props.range ? !!rangeStart.value && !!rangeEnd.value : !!singleDate.value
-    showError.value = !valid
-    return valid
-  }
-  showError.value = false
-  return true
+  return validateRequired()
 }
 
 function confirm() {
   if (!validate()) return
+
   if (props.range) {
     if (rangeEnd.value && dayjs(rangeEnd.value).isBefore(dayjs(rangeStart.value))) {
       const tmpDate = rangeStart.value
@@ -274,6 +338,7 @@ function confirm() {
       timeEnd.value = tmpTime
     }
   }
+
   emit('update:modelValue', displayValue.value)
   open.value = false
   showError.value = false
@@ -290,9 +355,18 @@ function handleConfirm() {
 function syncFromModel() {
   const val = props.modelValue || ''
   if (!val) {
-    clearAll()
+    if (props.range) {
+      rangeStart.value = rangeEnd.value = null
+      timeStart.value = { h: 0, m: 0, s: 0 }
+      timeEnd.value = { h: 23, m: 59, s: 59 }
+    } else {
+      singleDate.value = null
+      singleTime.value = { h: 0, m: 0, s: 0 }
+    }
+    // 不要在这里清除错误状态，让验证函数来处理
     return
   }
+
   if (props.range) {
     const parts = val.split('~').map(p => p.trim())
     if (parts.length === 2) {
@@ -311,7 +385,14 @@ function syncFromModel() {
         rangeEnd.value = null
       }
     } else {
-      clearAll()
+      if (props.range) {
+        rangeStart.value = rangeEnd.value = null
+        timeStart.value = { h: 0, m: 0, s: 0 }
+        timeEnd.value = { h: 23, m: 59, s: 59 }
+      } else {
+        singleDate.value = null
+        singleTime.value = { h: 0, m: 0, s: 0 }
+      }
     }
   } else {
     const d = dayjs(val, getFormat())
@@ -320,7 +401,13 @@ function syncFromModel() {
       singleTime.value = { h: d.hour(), m: d.minute(), s: d.second() }
     } else {
       singleDate.value = null
+      singleTime.value = { h: 0, m: 0, s: 0 }
     }
+  }
+
+  // 同步后如果有值则清除错误状态
+  if (hasValue.value && showError.value) {
+    showError.value = false
   }
 }
 
@@ -329,6 +416,20 @@ function getFormat() {
   if (props.type === 'time') return 'HH:mm:ss'
   return 'YYYY-MM-DD HH:mm:ss'
 }
+
+// 监听单个日期选择，清除错误状态
+watch(singleDate, (newVal) => {
+  if (newVal && showError.value) {
+    showError.value = false
+  }
+})
+
+// 监听范围日期选择，清除错误状态
+watch([rangeStart, rangeEnd], ([newStart, newEnd]) => {
+  if (props.range && newStart && newEnd && showError.value) {
+    showError.value = false
+  }
+})
 
 // 快捷选项（只在区间模式下显示）
 const quickOptions = ref([
@@ -403,7 +504,9 @@ const quickOptions = ref([
 const showQuickOptions = computed(() => props.range)
 
 function onClickOutside(e: MouseEvent) {
-  if (!container.value?.contains(e.target as Node)) open.value = false
+  if (!container.value?.contains(e.target as Node)) {
+    open.value = false
+  }
 }
 
 onMounted(() => {
@@ -415,9 +518,12 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', onClickOutside)
 })
 
+// 监听 modelValue 变化
+watch(() => props.modelValue, () => {
+  syncFromModel()
+})
+
 defineExpose({
   validate,
 })
-
-watch(() => props.modelValue, () => syncFromModel())
 </script>
