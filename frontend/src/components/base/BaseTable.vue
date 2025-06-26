@@ -1,6 +1,6 @@
 <!--src/components/base/BaseTable.vue-->
 <template>
-  <div class="relative border border-gray-200 rounded-xl" style="min-height: 600px; max-height: 600px; width: 100%;">
+  <div class="relative border border-gray-200 rounded-xl" style="min-height: 520px; max-height: 520px; width: 100%;">
     <!-- 表格头部区域 -->
     <div class="sticky top-0 z-20 bg-gray-50 rounded-t-xl">
       <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
@@ -29,7 +29,7 @@
     </div>
 
     <!-- 表格内容区域 -->
-    <div class="relative" style="height: 540px; overflow-y: auto;">
+    <div class="relative" style="height: 480px; overflow-y: auto;">
       <table class="min-w-full table-fixed text-sm text-gray-800 border-separate border-spacing-0">
         <colgroup>
           <col
