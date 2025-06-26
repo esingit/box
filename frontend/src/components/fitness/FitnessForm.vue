@@ -188,15 +188,8 @@ const schema = yup.object({
   unitId: yup.string().required('请选择单位'),
   finishTime: yup
       .string()
-      .required('请输入完成时间')
-      .test('is-not-future', '完成时间不能大于今天', val => {
-        if (!val) return false
-        return val <= today
-      }),
-  acquireTime: yup
-      .string()
       .required()
-      .test('is-not-future', '日期不能大于今日', val => {
+      .test('is-not-future', '完成日期不能大于今日', val => {
         if (!val) return true // 为空时不进行此验证
         const inputDate = dayjs(val).startOf('day')
         const todayDate = dayjs().startOf('day')

@@ -233,7 +233,7 @@ const schema = yup.object({
   acquireTime: yup
       .string()
       .required()
-      .test('is-not-future', '日期不能大于今日', val => {
+      .test('is-not-future', '登记日期不能大于今日', val => {
         if (!val) return true // 为空时不进行此验证
         const inputDate = dayjs(val).startOf('day')
         const todayDate = dayjs().startOf('day')
