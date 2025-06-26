@@ -58,9 +58,9 @@
                 required
                 :multiple="false"
                 searchable
-                @update:modelValue="val => {
+                @update:modelValue="(val) => {
                   setValue(val)
-                  onAssetTypeChange(val, setFieldValue)
+                  onAssetTypeChange(val as SingleValue, setFieldValue)
                 }"
             />
           </Field>
@@ -188,6 +188,7 @@ import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseDateInput from '@/components/base/BaseDateInput.vue'
 import AssetName from './assetName/AssetName.vue'
 import BaseButton from "@/components/base/BaseButton.vue"
+import {SingleValue} from "@/types/common"
 
 const props = defineProps({
   visible: Boolean,
@@ -254,7 +255,7 @@ watch(
 )
 
 function onAssetTypeChange(
-    assetTypeId: string | number | (string | number)[] | null,
+    assetTypeId: string | number | null,
     setFieldValue: (field: string, value: any) => void
 ) {
   if (!assetTypeId) {

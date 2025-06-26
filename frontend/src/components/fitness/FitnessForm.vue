@@ -27,7 +27,7 @@
                 :options="fitnessTypesFiltered"
                 @update:modelValue="val => {
                 setValue(val)
-                setDefaultUnit(val, setFieldValue, values)
+                setDefaultUnit(val as SingleValue, setFieldValue, values)
               }"
             />
           </Field>
@@ -137,6 +137,7 @@ import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseDateInput from "@/components/base/BaseDateInput.vue"
+import {SingleValue} from "@/types/common";
 
 const props = defineProps({
   visible: Boolean,

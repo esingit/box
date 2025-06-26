@@ -131,7 +131,7 @@ export async function formatAssetNameRecord(record: AssetNameRecord): Promise<As
  * 根据类型设置默认单位
  */
 export async function setDefaultUnit(
-    typeId: string | number | (string | number)[] | null,  // 完整的类型定义
+    typeId: string | number | null,  // 完整的类型定义
     setFieldValue?: (field: string, value: any) => void,
     values?: { unitId?: string | number }
 ) {

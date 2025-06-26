@@ -15,3 +15,7 @@ export interface Pagination<T> {
     pageSize: number
     total: number
 }
+
+export type SingleValue = string | number | null
+export type MultipleValue = (string | number)[]
+export type SelectValue = SingleValue | MultipleValue

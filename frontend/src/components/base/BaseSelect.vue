@@ -1,4 +1,3 @@
-<!-- BaseSelect.vue 修复位移问题 -->
 <template>
   <div class="relative w-full" ref="containerRef">
     <Listbox
@@ -19,17 +18,16 @@
             @blur="onBlur"
             @click="handleButtonClick(open, close)"
         >
-
           <div class="flex-1 min-w-0 mr-2 text-left">
             <span
                 class="truncate whitespace-nowrap block w-full text-left"
                 :class="{
                   'text-gray-400': !selectedLabels.length && !showError,
-                  'text-[var(--color-error)]': !selectedLabels.length && showError, // 当没有选中值且显示错误时文字为红色
+                  'text-[var(--color-error)]': !selectedLabels.length && showError,
                   'text-black': selectedLabels.length
                 }"
             >
-              {{ selectedText }}  <!-- 直接使用 selectedText,不再显示错误信息 -->
+              {{ selectedText }}
             </span>
           </div>
 
@@ -51,7 +49,6 @@
           </div>
         </ListboxButton>
 
-        <!-- 使用 Teleport 渲染下拉框到 body -->
         <Teleport to="body">
           <Transition
               enter-active-class="dropdown-enter-active"
@@ -134,11 +131,15 @@
 </template>
 
 <script setup lang="ts">
-// ... script 部分保持不变，不需要修改 ...
 import { computed, nextTick, ref, watch, onMounted, onUnmounted } from 'vue'
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/vue'
 import { CheckCircle, Circle, LucideChevronDown, LucideSearch } from 'lucide-vue-next'
 import { useFloating, autoUpdate, offset, flip, shift, size } from '@floating-ui/vue'
+
+// 类型定义
+type SingleValue = string | number | null
+type MultipleValue = (string | number)[]
+type SelectValue = SingleValue | MultipleValue
 
 interface Option {
   label: string
@@ -146,7 +147,7 @@ interface Option {
 }
 
 interface BaseSelectProps {
-  modelValue?: string | number | (string | number)[] | null
+  modelValue?: SelectValue
   options?: Option[]
   placeholder?: string
   title: string
@@ -170,7 +171,7 @@ const props = withDefaults(defineProps<BaseSelectProps>(), {
 })
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string | number | (string | number)[] | null]
+  'update:modelValue': [value: SelectValue]
   'blur': []
   'dropdown-open': []
   'dropdown-close': []
@@ -186,7 +187,7 @@ const searchQuery = ref('')
 const isDropdownOpen = ref(false)
 const closeFunction = ref<(() => void) | null>(null)
 
-// 使用 floating-ui 进行定位
+// Floating UI
 const { floatingStyles, update } = useFloating(referenceRef, floatingRef, {
   placement: props.direction === 'up' ? 'top-start' : 'bottom-start',
   middleware: [
@@ -210,7 +211,7 @@ const { floatingStyles, update } = useFloating(referenceRef, floatingRef, {
 })
 
 // 处理模型值更新
-const handleUpdateModelValue = (val: string | number | (string | number)[] | null) => {
+const handleUpdateModelValue = (val: SelectValue) => {
   emit('update:modelValue', val)
   showError.value = false
 }
@@ -222,7 +223,6 @@ const handleButtonClick = (open: boolean, close: () => void) => {
 
   if (open) {
     emit('dropdown-open')
-    // 延迟聚焦搜索框
     if (props.searchable) {
       nextTick(() => {
         setTimeout(() => {
@@ -230,7 +230,6 @@ const handleButtonClick = (open: boolean, close: () => void) => {
         }, 100)
       })
     }
-    // 更新浮动位置
     nextTick(() => {
       if (update) {
         update()
@@ -291,13 +290,9 @@ const selectedLabels = computed(() => {
   }
 })
 
-const computedPlaceholder = computed(() => props.placeholder || `请选择${props.title}`)
-
-// 优化多选显示
-const MAX_DISPLAY_ITEMS = 2
 const selectedText = computed(() => {
   if (!selectedLabels.value.length) {
-    return `请选择${props.title || ''}` // 简化提示文本
+    return `请选择${props.title || ''}`
   }
 
   if (props.multiple && selectedLabels.value.length > MAX_DISPLAY_ITEMS) {
@@ -321,7 +316,6 @@ function clearSelection() {
 }
 
 function onBlur() {
-  // 延迟执行，避免与选项点击冲突
   setTimeout(() => {
     emit('blur')
     if (props.required) {
@@ -333,7 +327,6 @@ function onBlur() {
 }
 
 function onOptionsBlur(close: () => void) {
-  // 当选项区域失去焦点时的处理
   setTimeout(() => {
     if (!document.activeElement?.closest('.relative')) {
       closeDropdown(close)
@@ -341,33 +334,30 @@ function onOptionsBlur(close: () => void) {
   }, 100)
 }
 
-// 重置搜索查询
+const MAX_DISPLAY_ITEMS = 2
+
 const resetSearch = () => {
   searchQuery.value = ''
 }
 
-// 监听 dropdown 状态变化，重置搜索
 watch(isDropdownOpen, (newVal) => {
   if (!newVal) {
     resetSearch()
   }
 })
 
-// 处理滚动时更新位置
 const handleScroll = () => {
   if (isDropdownOpen.value && update) {
     update()
   }
 }
 
-// 处理窗口大小变化
 const handleResize = () => {
   if (isDropdownOpen.value && update) {
     update()
   }
 }
 
-// 生命周期钩子
 onMounted(() => {
   document.addEventListener('scroll', handleScroll, true)
   window.addEventListener('resize', handleResize)
@@ -378,7 +368,6 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
 
-// 暴露方法
 defineExpose({
   validate: () => {
     onBlur()
