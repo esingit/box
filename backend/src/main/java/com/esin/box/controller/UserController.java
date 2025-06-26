@@ -277,6 +277,30 @@ public class UserController {
         }
     }
 
+    @PostMapping("/reset-password")
+    public Result<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            // 1. 查找用户
+            User user = userService.findByUsername(request.getUsername());
+            if (user == null) {
+                return Result.error("用户不存在");
+            }
+            // 2. 校验旧密码
+            if (!userService.checkPassword(user, request.getOldPassword())) {
+                return Result.error("旧密码错误");
+            }
+            // 3. 更新新密码
+            boolean updated = userService.updatePassword(user, request.getNewPassword());
+            if (updated) {
+                return Result.success();
+            } else {
+                return Result.error("密码重置失败");
+            }
+        } catch (Exception e) {
+            return Result.error("服务器异常: " + e.getMessage());
+        }
+    }
+
     // 添加调试接口
     @GetMapping("/token-stats")
     public Result<Map<String, Object>> getTokenStats(HttpServletRequest request) {
