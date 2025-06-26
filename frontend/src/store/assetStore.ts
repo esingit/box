@@ -487,7 +487,7 @@ export const useAssetStore = defineStore('asset', () => {
         setLoadingState('recognition', true)
 
         try {
-            const response = await axiosInstance.post('/api/asset-record/recognize-image', formData, {
+            const response = await axiosInstance.post('/api/asset/recognition/image', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }

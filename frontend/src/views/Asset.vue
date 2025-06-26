@@ -285,7 +285,7 @@ async function handleAddRecord(data: typeof form) {
 }
 
 function editRecord(id: number) {
-  const idx = list.value.findIndex(r => r.id === id)
+  const idx = list.value.findIndex(r => String(r.id) === String(id))
   if (idx !== -1) editingIdx.value = idx
 }
 
@@ -318,10 +318,12 @@ function handleDelete(record: any) {
 }
 
 function onCopyClick() {
+  const PRIMARY_TYPE = 'primary'
+
   emitter.emit('confirm', {
     title: '复制确认',
     message: '是否复制上回记录？',
-    type: 'primary',
+    type: PRIMARY_TYPE,
     confirmText: '复制',
     cancelText: '取消',
     onConfirm: async () => {
@@ -331,17 +333,24 @@ function onCopyClick() {
       } catch (e: any) {
         const msg = e.message || ''
         if (msg.includes('已有记录')) {
-          emitter.emit('confirm', {
-            title: '覆盖确认',
-            message: '今日已有记录，是否强制覆盖？',
-            confirmText: '覆盖',
-            cancelText: '取消',
-            type: 'primary',
-            onConfirm: async () => {
-              await assetStore.copyLastRecords(true)
-              await refreshData()
-            }
-          })
+          setTimeout(() => {
+            emitter.emit('confirm', {
+              title: '覆盖确认',
+              message: '今日已有记录，是否强制覆盖？',
+              confirmText: '覆盖',
+              cancelText: '取消',
+              type: PRIMARY_TYPE,
+              onConfirm: async () => {
+                try {
+                  await assetStore.copyLastRecords(true)
+                  await refreshData()
+                  notifyToast('复制成功', 'success')
+                } catch (error: any) {
+                  notifyToast(`覆盖失败：${error.message || '未知错误'}`, 'error')
+                }
+              }
+            })
+          }, 300)
         } else {
           notifyToast(`复制失败：${msg}`, 'error')
         }

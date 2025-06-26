@@ -143,28 +143,6 @@ public class AssetRecordController {
         }
     }
 
-    @Operation(summary = "识别图片中的资产信息")
-    @PostMapping("/recognize-image")
-    public ApiResponse<List<AssetRecordDTO>> recognizeImage(@RequestParam("image") MultipartFile image) {
-        try {
-            if (image.isEmpty()) {
-                return ApiResponse.error("请选择要上传的图片");
-            }
-
-            // 检查文件类型
-            String contentType = image.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
-                return ApiResponse.error("请上传有效的图片文件");
-            }
-
-            List<AssetRecordDTO> results = assetRecordService.recognizeAssetImage(image);
-            return ApiResponse.success(results);
-        } catch (Exception e) {
-            log.error("Failed to recognize image:", e);
-            return ApiResponse.error("图片识别失败：" + e.getMessage());
-        }
-    }
-
     @Operation(summary = "批量添加资产记录")
     @PostMapping("/batch-add")
     public ApiResponse<Integer> batchAddRecords(@Validated @RequestBody List<AssetRecordDTO> batchDTO) {
