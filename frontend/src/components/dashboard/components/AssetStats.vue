@@ -8,9 +8,10 @@
         :asset-name-options="assetNameOptions"
         :asset-type-options="assetTypeOptions"
         :asset-location-options="assetLocationOptions"
-        :result-count="assetRecords.length"
+        :result-count="filteredRecords.length"
         @search="handleSearch"
         @reset="handleReset"
+        @update:query="handleQueryUpdate"
     />
 
     <!-- 图表显示选项 -->
@@ -41,6 +42,13 @@
             <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
             <span>{{ loadingText }}</span>
           </div>
+        </div>
+      </transition>
+
+      <!-- 实时更新提示 -->
+      <transition name="fade">
+        <div v-if="isFilterUpdating && !showLoading" class="absolute top-2 right-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-sm z-10">
+          更新中...
         </div>
       </transition>
 
@@ -124,6 +132,8 @@ const isUpdatingChart = ref(false)
 const isSearching = ref(false)
 const hasInitialData = ref(false)
 const chartInstance = shallowRef<EChartsType | null>(null)
+const isFilterUpdating = ref(false)
+const allLoadedRecords = ref<AssetRecord[]>([])
 
 // 图表选项管理
 const getSavedChartOptions = (): Partial<ChartOptionsType> => {
@@ -265,8 +275,44 @@ const assetRecords = computed<AssetRecord[]>(() => {
   return Array.isArray(assetStore.allList) ? assetStore.allList : []
 })
 
+// 添加过滤后的记录计算属性
+const filteredRecords = computed<AssetRecord[]>(() => {
+  let records = [...allLoadedRecords.value]
+
+  // 根据查询条件过滤
+  if (query.value.assetTypeIdList?.length > 0) {
+    records = records.filter(record =>
+        query.value.assetTypeIdList.includes(String(record.assetTypeId))
+    )
+  }
+
+  if (query.value.assetNameIdList?.length > 0) {
+    records = records.filter(record =>
+        query.value.assetNameIdList.includes(String(record.assetNameId))
+    )
+  }
+
+  if (query.value.assetLocationIdList?.length > 0) {
+    records = records.filter(record =>
+        query.value.assetLocationIdList.includes(String(record.assetLocationId))
+    )
+  }
+
+  if (query.value.remark?.trim()) {
+    const searchTerm = query.value.remark.trim().toLowerCase()
+    records = records.filter(record =>
+        record.remark?.toLowerCase().includes(searchTerm) ||
+        record.assetName?.toLowerCase().includes(searchTerm) ||
+        record.assetTypeName?.toLowerCase().includes(searchTerm) ||
+        record.assetLocationName?.toLowerCase().includes(searchTerm)
+    )
+  }
+
+  return records
+})
+
 const hasData = computed(() => {
-  return assetRecords.value.length > 0
+  return filteredRecords.value.length > 0
 })
 
 const hasSearchConditions = computed(() => {
@@ -327,7 +373,7 @@ const dateDataCache = new Map<string, Map<string, number>>()
 
 const allDates = computed(() => {
   const dateSet = new Set<string>()
-  assetRecords.value.forEach(record => {
+  filteredRecords.value.forEach(record => {
     if (record?.acquireTime) {
       const date = record.acquireTime.split('T')[0]
       if (date) dateSet.add(date)
@@ -349,7 +395,7 @@ const lastDateWithRecords = computed(() => {
 
 const lastDateRecords = computed(() => {
   if (!lastDateWithRecords.value) return []
-  return assetRecords.value.filter(record =>
+  return filteredRecords.value.filter(record =>
       record?.acquireTime?.startsWith(lastDateWithRecords.value)
   )
 })
@@ -432,8 +478,8 @@ const amountByDimension = computed(() => {
   // 清除缓存
   dateDataCache.clear()
 
-  // 预处理数据
-  for (const record of assetRecords.value) {
+  // 预处理数据 - 使用过滤后的数据
+  for (const record of filteredRecords.value) {
     if (!record?.acquireTime) continue
 
     const date = record.acquireTime.split('T')[0]
@@ -475,7 +521,7 @@ const amountByDimension = computed(() => {
 
 const totalAmountByDate = computed(() => {
   const map: Record<string, number> = {}
-  for (const record of assetRecords.value) {
+  for (const record of filteredRecords.value) {
     if (!record?.acquireTime) continue
     const date = record.acquireTime.split('T')[0]
     const amount = parseFloat(record.amount) || 0
@@ -834,6 +880,9 @@ const debouncedLoadData = debounce(async () => {
   try {
     await assetStore.loadAllRecords()
 
+    // 保存所有加载的数据
+    allLoadedRecords.value = [...assetRecords.value]
+
     await nextTick()
     if (hasData.value) {
       showNotification('资产数据加载成功', 'success')
@@ -846,6 +895,21 @@ const debouncedLoadData = debounce(async () => {
     isLoading.value = false
   }
 }, 100)
+
+// 添加一个专门的防抖函数用于过滤更新
+const debouncedFilterUpdate = debounce(async () => {
+  isFilterUpdating.value = true
+
+  await nextTick()
+
+  if (shouldShowChart.value) {
+    await updateChartData()
+  }
+
+  setTimeout(() => {
+    isFilterUpdating.value = false
+  }, 300)
+}, 150)
 
 // 数据加载
 async function loadData(): Promise<void> {
@@ -863,27 +927,65 @@ async function loadData(): Promise<void> {
   await debouncedLoadData()
 }
 
+// 添加处理查询条件更新的函数
+async function handleQueryUpdate(newQuery: Partial<QueryConditions>) {
+  console.log('🔄 查询条件实时更新', newQuery)
+
+  // 更新 store 中的查询条件
+  assetStore.updateQuery(newQuery)
+
+  // 如果是日期范围变化，需要重新加载数据
+  if (newQuery.startDate !== undefined || newQuery.endDate !== undefined) {
+    await loadData()
+  } else {
+    // 其他条件变化只需要更新图表
+    isFilterUpdating.value = true
+
+    // 使用 nextTick 确保计算属性更新完成
+    await nextTick()
+
+    // 更新图表
+    if (shouldShowChart.value) {
+      await debouncedUpdateChart()
+    }
+
+    setTimeout(() => {
+      isFilterUpdating.value = false
+    }, 300)
+  }
+}
+
 // 处理搜索事件
 async function handleSearch(searchQuery?: QueryConditions): Promise<void> {
   try {
-    console.log('🟢 处理搜索请求')
+    console.log('🟢 处理搜索请求', searchQuery)
 
     // 设置搜索状态
     isSearching.value = true
 
-    // 如果传入了查询参数，更新 store
+    // 如果传入了查询参数
     if (searchQuery) {
+      const needReload = searchQuery.startDate !== query.value.startDate ||
+          searchQuery.endDate !== query.value.endDate
+
+      // 更新 store
       assetStore.updateQuery(searchQuery)
+
+      if (needReload) {
+        // 日期变化需要重新加载数据
+        await loadData()
+      } else {
+        // 其他条件变化只需要更新图表
+        await debouncedFilterUpdate()
+      }
+    } else {
+      // 没有传入参数，使用当前条件加载数据
+      await loadData()
     }
-
-    // 清除错误信息
-    errorMessage.value = ''
-
-    // 加载数据
-    await loadData()
   } catch (error) {
     console.error('❌ 处理搜索请求失败', error)
     showNotification('搜索失败，请重试', 'error')
+  } finally {
     isSearching.value = false
   }
 }
@@ -1025,6 +1127,33 @@ watch(
     () => {
       assetStore.updateQuery({ assetNameIdList: [] })
     }
+)
+
+// 添加监听器，监听非日期查询条件的变化
+watch(
+    () => ({
+      assetTypeIdList: [...query.value.assetTypeIdList],
+      assetNameIdList: [...query.value.assetNameIdList],
+      assetLocationIdList: [...query.value.assetLocationIdList],
+      remark: query.value.remark
+    }),
+    (newVal, oldVal) => {
+      // 跳过初始化和数据加载中的变化
+      if (isLoading.value || !hasInitialData.value) return
+
+      // 检查是否有实际变化
+      const hasChange =
+          JSON.stringify(newVal.assetTypeIdList) !== JSON.stringify(oldVal.assetTypeIdList) ||
+          JSON.stringify(newVal.assetNameIdList) !== JSON.stringify(oldVal.assetNameIdList) ||
+          JSON.stringify(newVal.assetLocationIdList) !== JSON.stringify(oldVal.assetLocationIdList) ||
+          newVal.remark !== oldVal.remark
+
+      if (hasChange) {
+        console.log('🔄 过滤条件变化，实时更新图表')
+        debouncedFilterUpdate()
+      }
+    },
+    { deep: true }
 )
 </script>
 

@@ -33,11 +33,11 @@ export interface RawAssetRecord {
 // 类型定义
 export interface AssetRecord {
     id: string
-    assetNameId: string
-    assetTypeId: string
+    assetNameId: string | number
+    assetTypeId: string | number
     amount: string
     unitId: string
-    assetLocationId: string
+    assetLocationId: string | number
     acquireTime: string
     assetName?: string | null
     assetTypeName?: string | null
