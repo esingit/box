@@ -10,6 +10,7 @@
             :options="localFitnessTypeOptions"
             multiple
             clearable
+            searchable
             placeholder="全部健身类型"
             class="w-full"
         />

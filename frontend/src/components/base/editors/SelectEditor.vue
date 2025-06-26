@@ -8,6 +8,7 @@
         :multiple="column.multiple"
         :clearable="column.clearable"
         :placeholder="column.placeholder"
+        :searchable="column.searchable"
         class="w-full relative z-2500"
         @update:model-value="handleChange"
         @blur="$emit('blur')"

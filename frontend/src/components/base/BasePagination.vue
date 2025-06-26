@@ -42,6 +42,7 @@
             :options="pageSizeOptions.map(n => ({ label: `每页${n}条`, value: n }))"
             placeholder="每页条数"
             clearable
+            searchable
             @update:modelValue="val => emit('page-size-change', val)"
         />
       </Field>

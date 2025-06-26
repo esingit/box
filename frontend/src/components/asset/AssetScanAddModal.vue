@@ -50,6 +50,7 @@
               :options="assetTypeOptions"
               required
               clearable
+              searchable
               @update:model-value="onAssetTypeChange"
           />
           <BaseSelect
@@ -58,6 +59,7 @@
               :options="assetLocationOptions"
               required
               clearable
+              searchable
           />
           <BaseDateInput
               title="登记日期"
@@ -73,6 +75,7 @@
               :options="unitOptions"
               required
               clearable
+              searchable
           />
           <BaseButton
               type="button"

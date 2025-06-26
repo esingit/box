@@ -26,6 +26,7 @@
                   :modelValue="value"
                   :options="assetNameStore.assetNameOptions"
                   clearable
+                  searchable
                   @update:modelValue="val => setValue(val)"
               />
               <BaseButton
@@ -53,6 +54,8 @@
                 :modelValue="value"
                 :options="assetTypes"
                 clearable
+                :multiple="false"
+                searchable
                 @update:modelValue="val => {
                   setValue(val)
                   onAssetTypeChange(val, setFieldValue)
@@ -73,6 +76,7 @@
                 :modelValue="value"
                 :options="assetLocations"
                 clearable
+                searchable
                 @update:modelValue="val => setValue(val)"
             />
           </Field>
@@ -110,6 +114,7 @@
                 :modelValue="value"
                 :options="units"
                 clearable
+                searchable
                 @update:modelValue="val => setValue(val)"
             />
           </Field>
@@ -244,12 +249,15 @@ watch(
     {immediate: true}
 )
 
-function onAssetTypeChange(assetTypeId: string, setFieldValue: (field: string, value: any) => void) {
+function onAssetTypeChange(
+    assetTypeId: string | number | null,
+    setFieldValue: (field: string, value: any) => void
+) {
   if (!assetTypeId) {
     setFieldValue('unitId', null)
     return
   }
-  setDefaultUnit(assetTypeId, setFieldValue, {unitId: form.value.unitId})
+  setDefaultUnit(String(assetTypeId), setFieldValue, {unitId: form.value.unitId})
 }
 
 function onSubmit(values: any) {

@@ -22,6 +22,7 @@
                 title="健身类型"
                 :modelValue="value"
                 clearable
+                searchable
                 :disabled="loading"
                 :options="fitnessTypesFiltered"
                 @update:modelValue="val => {
@@ -64,6 +65,7 @@
                 :modelValue="value"
                 clearable
                 required
+                searchable
                 :disabled="loading"
                 :options="unitsFiltered"
                 @update:modelValue="setValue"

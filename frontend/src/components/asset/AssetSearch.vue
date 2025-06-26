@@ -11,6 +11,7 @@
             placeholder="全部资产名称"
             multiple
             clearable
+            searchable
             class="w-full"
         />
       </div>
@@ -23,6 +24,7 @@
           placeholder="全部资产类型"
           multiple
           clearable
+          searchable
           class="w-full"
       />
 
@@ -34,6 +36,7 @@
           placeholder="全部资产位置"
           multiple
           clearable
+          searchable
           class="w-full"
       />
 
@@ -54,6 +57,7 @@
           placeholder="全部资产名称"
           multiple
           clearable
+          searchable
           class="w-full"
       />
       <BaseSelect
@@ -72,6 +76,7 @@
           placeholder="全部资产位置"
           multiple
           clearable
+          searchable
           class="w-full"
       />
       <div class="flex items-center gap-2 justify-end">

@@ -27,8 +27,8 @@
             :model-value="record.assetNameId"
             :title="'资产名称'"
             :options="assetNameOptions"
-            :multiple="false"
-            :clearable="true"
+            clearable
+            searchable
             placeholder="请选择资产名称"
             class="w-full"
             @update:model-value="handleFieldChange(index, 'assetNameId', $event)"
