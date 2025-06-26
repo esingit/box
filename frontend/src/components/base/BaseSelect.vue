@@ -12,15 +12,15 @@
         <ListboxButton
             :title="showError ? (requiredMessage || '此项为必填') : selectedText"
             :class="[
-              'input-base flex justify-between items-center w-full pr-8 min-w-0',
+              'input-base flex justify-between items-center w-full pr-8 min-w-0 text-left', // 添加 text-left
               showError ? 'msg-error' : ''
             ]"
             @blur="onBlur"
             @click="handleButtonClick(open)"
         >
-          <div class="flex-1 min-w-0 mr-2">
+          <div class="flex-1 min-w-0 mr-2 text-left"> <!-- 添加 text-left -->
             <span
-                class="truncate whitespace-nowrap block w-full"
+                class="truncate whitespace-nowrap block w-full text-left"
                 :class="{
                   'text-gray-400': !selectedLabels.length && !showError,
                   'text-black': selectedLabels.length || showError
@@ -73,7 +73,7 @@
                     v-model="searchQuery"
                     type="text"
                     placeholder="搜索..."
-                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
                     @click.stop
                     @keydown.stop
                     @keydown.esc="closeDropdown"
@@ -95,7 +95,7 @@
                   v-slot="{ active, selected }"
               >
                 <div
-                    class="flex items-center px-3 py-2 rounded-xl cursor-pointer select-none transition-colors duration-150"
+                    class="flex items-center px-3 py-2 rounded-xl cursor-pointer select-none transition-colors duration-150 text-left"
                     :class="{
                       'bg-gray-100': active,
                       'font-semibold text-black': selected,
@@ -111,7 +111,10 @@
                       />
                     </span>
                   </template>
-                  <span v-html="highlightMatch(item.label, searchQuery)"></span>
+                  <span
+                      class="text-left"
+                      v-html="highlightMatch(item.label, searchQuery)"
+                  ></span>
                 </div>
               </ListboxOption>
             </div>
@@ -123,6 +126,7 @@
 </template>
 
 <script setup lang="ts">
+// script 部分保持不变
 import {computed, nextTick, ref, watch} from 'vue'
 import {Listbox, ListboxButton, ListboxOption, ListboxOptions} from '@headlessui/vue'
 import {CheckCircle, Circle, LucideChevronDown, LucideSearch} from 'lucide-vue-next'

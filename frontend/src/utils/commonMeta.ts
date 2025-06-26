@@ -131,10 +131,30 @@ export async function formatAssetNameRecord(record: AssetNameRecord): Promise<As
  * 根据类型设置默认单位
  */
 export async function setDefaultUnit(
-    typeId: string,
+    typeId: string | number | (string | number)[] | null,  // 完整的类型定义
     setFieldValue?: (field: string, value: any) => void,
     values?: { unitId?: string | number }
 ) {
+    // 处理各种类型情况
+    let actualTypeId: string | number | null = null
+
+    if (Array.isArray(typeId)) {
+        // 如果是数组，取第一个有效值
+        actualTypeId = typeId.length > 0 ? typeId[0] : null
+    } else {
+        // 单个值或 null
+        actualTypeId = typeId
+    }
+
+    // 类型检查和早期返回
+    if (!actualTypeId) {
+        setFieldValue?.('unitId', '')
+        return
+    }
+
+    // 确保 typeId 是字符串类型用于比较
+    const stringTypeId = String(actualTypeId)
+
     const metaStore = useMetaStore()
 
     const fitnessTypes = metaStore.typeMap?.FITNESS_TYPE || []
@@ -142,7 +162,7 @@ export async function setDefaultUnit(
     const unitList = metaStore.typeMap?.UNIT || []
 
     const types = [...fitnessTypes, ...assetTypes]
-    const selectedType = types.find(type => String(type.id) === String(typeId))
+    const selectedType = types.find(type => String(type.id) === stringTypeId)
 
     if (!selectedType?.key3) {
         setFieldValue?.('unitId', '')
@@ -150,7 +170,10 @@ export async function setDefaultUnit(
     }
 
     const defaultUnit = unitList.find(unit => unit.key1 === selectedType.key3)
-    if (!defaultUnit) return
+    if (!defaultUnit) {
+        setFieldValue?.('unitId', '')
+        return
+    }
 
     const currentUnitId = values?.unitId
     if (!currentUnitId || String(currentUnitId) !== String(defaultUnit.id)) {

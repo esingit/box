@@ -80,7 +80,6 @@
         :form="form"
         title="添加记录"
         confirm-text="确定"
-        remark-placeholder="备注（可选）"
         @submit="handleAddRecord"
         @close="closeAddModal"
     />
@@ -90,7 +89,6 @@
         :form="form"
         title="编辑记录"
         confirm-text="保存"
-        remark-placeholder="备注（可选）"
         @submit="saveEdit"
         @close="cancelEdit"
     />

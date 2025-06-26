@@ -71,9 +71,6 @@
         :form="form"
         title="添加记录"
         confirm-text="确定"
-        remark-placeholder="备注（可选）"
-        :fitnessTypeOptions="fitnessTypeOptions"
-        :fitnessUnitOptions="fitnessUnitOptions"
         @submit="handleAddRecord"
         @close="closeAddModal"
     />
@@ -86,9 +83,6 @@
         :loading="false"
         title="编辑记录"
         confirm-text="保存"
-        remark-placeholder="备注（可选）"
-        :fitnessTypeOptions="fitnessTypeOptions"
-        :fitnessUnitOptions="fitnessUnitOptions"
         @submit="saveEdit"
         @close="cancelEdit"
     />
