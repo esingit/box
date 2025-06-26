@@ -1,6 +1,6 @@
 <!-- BaseSelect.vue -->
 <template>
-  <div class="relative w-full">
+  <div class="relative w-full" ref="containerRef">
     <Listbox
         :model-value="modelValue"
         :multiple="multiple"
@@ -10,15 +10,16 @@
     >
       <div class="relative w-full">
         <ListboxButton
+            ref="referenceRef"
             :title="showError ? (requiredMessage || '此项为必填') : selectedText"
             :class="[
-              'input-base flex justify-between items-center w-full pr-8 min-w-0 text-left', // 添加 text-left
+              'input-base flex justify-between items-center w-full pr-8 min-w-0 text-left',
               showError ? 'msg-error' : ''
             ]"
             @blur="onBlur"
             @click="handleButtonClick(open)"
         >
-          <div class="flex-1 min-w-0 mr-2 text-left"> <!-- 添加 text-left -->
+          <div class="flex-1 min-w-0 mr-2 text-left">
             <span
                 class="truncate whitespace-nowrap block w-full text-left"
                 :class="{
@@ -48,88 +49,92 @@
           </div>
         </ListboxButton>
 
-        <Transition
-            enter-active-class="transition duration-100 ease-out"
-            enter-from-class="transform scale-95 opacity-0"
-            enter-to-class="transform scale-100 opacity-100"
-            leave-active-class="transition duration-75 ease-in"
-            leave-from-class="transform scale-100 opacity-100"
-            leave-to-class="transform scale-95 opacity-0"
-        >
-          <ListboxOptions
-              v-show="open"
-              :class="[
-                'absolute z-[9999] overflow-hidden rounded-2xl bg-white border border-gray-300 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
-                direction === 'up' ? 'mb-1 bottom-full' : 'mt-1 top-full',
-                'w-full min-w-[200px]'
-              ]"
-              @blur="onOptionsBlur"
+        <!-- 使用 Teleport 渲染下拉框到 body -->
+        <Teleport to="body">
+          <Transition
+              enter-active-class="dropdown-enter-active"
+              enter-from-class="dropdown-enter-from"
+              enter-to-class="dropdown-enter-to"
+              leave-active-class="dropdown-leave-active"
+              leave-from-class="dropdown-leave-from"
+              leave-to-class="dropdown-leave-to"
           >
-            <!-- 搜索框 -->
-            <div v-if="searchable" class="p-2 border-b border-gray-200">
-              <div class="relative">
-                <input
-                    ref="searchInput"
-                    v-model="searchQuery"
-                    type="text"
-                    placeholder="搜索..."
-                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
-                    @click.stop
-                    @keydown.stop
-                    @keydown.esc="closeDropdown"
-                />
-                <LucideSearch class="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-
-            <!-- 选项列表 -->
-            <div class="max-h-60 overflow-auto p-2">
-              <div v-if="!filteredOptions.length" class="px-3 py-8 text-center text-gray-500">
-                {{ searchQuery ? '未找到匹配项' : '暂无数据' }}
-              </div>
-
-              <ListboxOption
-                  v-for="item in filteredOptions"
-                  :key="item.value"
-                  :value="item.value"
-                  v-slot="{ active, selected }"
-              >
-                <div
-                    class="flex items-center px-3 py-2 rounded-xl cursor-pointer select-none transition-colors duration-150 text-left"
-                    :class="{
-                      'bg-gray-100': active,
-                      'font-semibold text-black': selected,
-                      'text-gray-800': !selected
-                    }"
-                >
-                  <template v-if="multiple">
-                    <span class="mr-2 flex items-center justify-center w-5 h-5">
-                      <component
-                          :is="selected ? CheckCircle : Circle"
-                          class="w-5 h-5"
-                          :class="selected ? 'text-black' : 'text-black'"
-                      />
-                    </span>
-                  </template>
-                  <span
-                      class="text-left"
-                      v-html="highlightMatch(item.label, searchQuery)"
-                  ></span>
+            <ListboxOptions
+                v-if="open"
+                ref="floatingRef"
+                :class="[
+            'absolute z-[9999] overflow-hidden rounded-2xl bg-white border border-gray-300 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
+            props.direction === 'up' ? 'origin-bottom' : 'origin-top'
+          ]"
+                :style="floatingStyles"
+                @blur="onOptionsBlur"
+            >
+              <!-- 搜索框 -->
+              <div v-if="searchable" class="p-2 border-b border-gray-200">
+                <div class="relative">
+                  <input
+                      ref="searchInput"
+                      v-model="searchQuery"
+                      type="text"
+                      placeholder="搜索..."
+                      class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
+                      @click.stop
+                      @keydown.stop
+                      @keydown.esc="closeDropdown"
+                  />
+                  <LucideSearch class="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 </div>
-              </ListboxOption>
-            </div>
-          </ListboxOptions>
-        </Transition>
+              </div>
+
+              <!-- 选项列表 -->
+              <div class="max-h-60 overflow-auto p-2">
+                <div v-if="!filteredOptions.length" class="px-3 py-8 text-center text-gray-500">
+                  {{ searchQuery ? '未找到匹配项' : '暂无数据' }}
+                </div>
+
+                <ListboxOption
+                    v-for="item in filteredOptions"
+                    :key="item.value"
+                    :value="item.value"
+                    v-slot="{ active, selected }"
+                >
+                  <div
+                      class="flex items-center px-3 py-2 rounded-xl cursor-pointer select-none transition-colors duration-150 text-left"
+                      :class="{
+                        'bg-gray-100': active,
+                        'font-semibold text-black': selected,
+                        'text-gray-800': !selected
+                      }"
+                  >
+                    <template v-if="multiple">
+                      <span class="mr-2 flex items-center justify-center w-5 h-5">
+                        <component
+                            :is="selected ? CheckCircle : Circle"
+                            class="w-5 h-5"
+                            :class="selected ? 'text-black' : 'text-black'"
+                        />
+                      </span>
+                    </template>
+                    <span
+                        class="text-left"
+                        v-html="highlightMatch(item.label, searchQuery)"
+                    ></span>
+                  </div>
+                </ListboxOption>
+              </div>
+            </ListboxOptions>
+          </Transition>
+        </Teleport>
       </div>
     </Listbox>
   </div>
 </template>
 
 <script setup lang="ts">
-// script 部分保持不变
-import {computed, nextTick, ref, watch} from 'vue'
-import {Listbox, ListboxButton, ListboxOption, ListboxOptions} from '@headlessui/vue'
-import {CheckCircle, Circle, LucideChevronDown, LucideSearch} from 'lucide-vue-next'
+import { computed, nextTick, ref, watch, onMounted, onUnmounted } from 'vue'
+import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/vue'
+import { CheckCircle, Circle, LucideChevronDown, LucideSearch } from 'lucide-vue-next'
+import { useFloating, autoUpdate, offset, flip, shift, size } from '@floating-ui/vue'
 
 interface Option {
   label: string
@@ -167,10 +172,37 @@ const emit = defineEmits<{
   'dropdown-close': []
 }>()
 
+// Refs
+const containerRef = ref<HTMLElement>()
+const referenceRef = ref<HTMLElement>()
+const floatingRef = ref<HTMLElement>()
 const searchInput = ref<HTMLInputElement | null>(null)
 const showError = ref(false)
 const searchQuery = ref('')
 const isDropdownOpen = ref(false)
+
+// 使用 floating-ui 进行定位
+const { floatingStyles, update } = useFloating(referenceRef, floatingRef, {
+  placement: props.direction === 'up' ? 'top-start' : 'bottom-start',
+  middleware: [
+    offset(4),
+    flip({
+      fallbackPlacements: ['top-start', 'bottom-start', 'top-end', 'bottom-end']
+    }),
+    shift({ padding: 8 }),
+    size({
+      apply({ rects, elements }) {
+        Object.assign(elements.floating.style, {
+          width: `${rects.reference.width}px`,
+          minWidth: `${rects.reference.width}px`,
+          maxWidth: `${Math.max(rects.reference.width, 200)}px`
+        })
+      }
+    })
+  ],
+  whileElementsMounted: autoUpdate,
+  strategy: 'fixed'
+})
 
 // 处理模型值更新
 const handleUpdateModelValue = (val: string | number | (string | number)[] | null) => {
@@ -191,6 +223,10 @@ const handleButtonClick = (open: boolean) => {
         }, 100)
       })
     }
+    // 更新浮动位置
+    nextTick(() => {
+      update()
+    })
   } else {
     emit('dropdown-close')
   }
@@ -200,6 +236,10 @@ const handleButtonClick = (open: boolean) => {
 const closeDropdown = () => {
   isDropdownOpen.value = false
   emit('dropdown-close')
+  // 手动触发 ListboxButton 的关闭
+  if (referenceRef.value) {
+    referenceRef.value.click()
+  }
 }
 
 const safeOptions = computed(() => props.options ?? [])
@@ -302,6 +342,31 @@ watch(isDropdownOpen, (newVal) => {
   }
 })
 
+// 处理滚动时更新位置
+const handleScroll = () => {
+  if (isDropdownOpen.value && update) {
+    update()
+  }
+}
+
+// 处理窗口大小变化
+const handleResize = () => {
+  if (isDropdownOpen.value && update) {
+    update()
+  }
+}
+
+// 生命周期钩子
+onMounted(() => {
+  document.addEventListener('scroll', handleScroll, true)
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('scroll', handleScroll, true)
+  window.removeEventListener('resize', handleResize)
+})
+
 // 暴露方法
 defineExpose({
   validate: () => {
@@ -309,6 +374,7 @@ defineExpose({
     return !showError.value
   },
   resetSearch,
-  closeDropdown
+  closeDropdown,
+  update
 })
 </script>
