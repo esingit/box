@@ -83,8 +83,9 @@ export const useAssetNameStore = defineStore('assetName', () => {
     // 防抖定时器
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-    // 参数缓存用于去重
-    let lastRequestParams: string = ''
+    // 🔥 修复：参数缓存用于去重 - 分别缓存分页和全量查询的参数
+    let lastListRequestParams: string = ''
+    let lastFetchRequestParams: string = ''
 
     // 🔥 统一的加载状态管理函数
     function setLoadingState(type: 'list' | 'operation' | 'fetch', loading: boolean): void {
@@ -127,11 +128,20 @@ export const useAssetNameStore = defineStore('assetName', () => {
         )
     }
 
-    function hasParamsChanged(newParams: Record<string, any>): boolean {
+    // 🔥 修复：改为纯函数，不产生副作用
+    function checkParamsChanged(newParams: Record<string, any>, lastParams: string): boolean {
         const newParamsStr = JSON.stringify(newParams)
-        const changed = newParamsStr !== lastRequestParams
-        lastRequestParams = newParamsStr
-        return changed
+        return newParamsStr !== lastParams
+    }
+
+    // 🔥 修复：单独的函数更新缓存参数
+    function updateCachedParams(newParams: Record<string, any>, type: 'list' | 'fetch'): void {
+        const newParamsStr = JSON.stringify(newParams)
+        if (type === 'list') {
+            lastListRequestParams = newParamsStr
+        } else {
+            lastFetchRequestParams = newParamsStr
+        }
     }
 
     function clearDebounceTimer(): void {
@@ -141,7 +151,7 @@ export const useAssetNameStore = defineStore('assetName', () => {
         }
     }
 
-    // 🔥 统一的 API 响应处理
+    // 🔥 修复：统一的 API 响应处理 - 修复空返回值问题
     function handleApiResponse<T>(response: any, operationName: string): T | null {
         // 检查是否需要重新登录
         if (response?.data?.code === 'AUTH_REQUIRED') {
@@ -152,7 +162,10 @@ export const useAssetNameStore = defineStore('assetName', () => {
         }
 
         if (response?.data?.success) {
-            return response.data.data
+            // 🔥 修复：对于成功但无数据的情况（如删除操作），返回空对象而不是 null/undefined
+            // 这样确保 result !== null 的判断能正确工作
+            const data = response.data.data
+            return data !== null && data !== undefined ? data : ({} as T)
         }
 
         // 业务逻辑错误
@@ -220,15 +233,19 @@ export const useAssetNameStore = defineStore('assetName', () => {
         return typeof error === 'string' ? error : '未知错误'
     }
 
-    // 🔥 API 调用函数
+    // 🔥 修复：API 调用函数 - 修复缓存逻辑
     async function loadList(force = false): Promise<void> {
         const params = buildParams()
 
-        if (!force && !hasParamsChanged(params) && list.value.length > 0) {
-            if (isDev) {
-                console.log('🟡 [获取资产名称记录] 参数未变化，跳过重复请求')
+        // 🔥 修复：force = true 时直接跳过缓存检查
+        if (!force) {
+            const hasChanged = checkParamsChanged(params, lastListRequestParams)
+            if (!hasChanged && list.value.length > 0) {
+                if (isDev) {
+                    console.log('🟡 [获取资产名称记录] 参数未变化，跳过重复请求')
+                }
+                return
             }
-            return
         }
 
         clearDebounceTimer()
@@ -237,7 +254,7 @@ export const useAssetNameStore = defineStore('assetName', () => {
 
         try {
             if (isDev) {
-                console.log('🟢 [获取资产名称记录] 开始分页查询', params)
+                console.log(`🟢 [获取资产名称记录] 开始分页查询${force ? ' (强制刷新)' : ''}`, params)
             }
 
             const response = await axiosInstance.get('/api/asset-name/list', {
@@ -252,6 +269,8 @@ export const useAssetNameStore = defineStore('assetName', () => {
             if (!data.records || !Array.isArray(data.records)) {
                 list.value = []
                 pagination.total = 0
+                // 🔥 修复：请求成功后更新缓存参数
+                updateCachedParams(params, 'list')
                 return
             }
 
@@ -264,6 +283,9 @@ export const useAssetNameStore = defineStore('assetName', () => {
             pagination.total = Number(data.total ?? 0)
             pagination.pageNo = Number(data.pageNo ?? pagination.pageNo)
             pagination.pageSize = Number(data.pageSize ?? pagination.pageSize)
+
+            // 🔥 修复：请求成功后更新缓存参数
+            updateCachedParams(params, 'list')
 
             if (isDev) {
                 console.log('🟢 [获取资产名称记录] 分页查询成功', {
@@ -278,13 +300,16 @@ export const useAssetNameStore = defineStore('assetName', () => {
         }
     }
 
-    // 获取全部数据
+    // 🔥 修复：获取全部数据 - 修复缓存逻辑
     async function fetchAssetName(force = false): Promise<void> {
-        if (!force && assetName.value.length > 0) {
-            if (isDev) {
-                console.log('🟡 [获取资产名称列表] 已有缓存，跳过请求')
+        // 🔥 修复：force = true 时直接跳过缓存检查
+        if (!force) {
+            if (assetName.value.length > 0) {
+                if (isDev) {
+                    console.log('🟡 [获取资产名称列表] 已有缓存，跳过请求')
+                }
+                return
             }
-            return
         }
 
         const controller = requestManager.create('fetch')
@@ -292,7 +317,7 @@ export const useAssetNameStore = defineStore('assetName', () => {
 
         try {
             if (isDev) {
-                console.log('🟢 [获取资产名称列表] 开始全量查询')
+                console.log(`🟢 [获取资产名称列表] 开始全量查询${force ? ' (强制刷新)' : ''}`)
             }
 
             const response = await axiosInstance.get('/api/asset-name/all', {
@@ -303,6 +328,9 @@ export const useAssetNameStore = defineStore('assetName', () => {
             if (!data) return // 需要重新登录
 
             assetName.value = Array.isArray(data) ? data : []
+
+            // 🔥 修复：请求成功后更新缓存标识
+            updateCachedParams({}, 'fetch')
 
             if (isDev) {
                 console.log('🟢 [获取资产名称列表] 全量查询成功', {
@@ -380,6 +408,10 @@ export const useAssetNameStore = defineStore('assetName', () => {
             const response = await axiosInstance.delete(`/api/asset-name/${id}`)
             const result = handleApiResponse(response, '删除记录')
 
+            if (isDev) {
+                console.log('🟢 [删除记录] 响应结果:', { response: response?.data, result })
+            }
+
             if (result !== null) {
                 emitter.emit('notify', { message: '删除成功', type: 'success' })
                 await loadList(true)
@@ -433,7 +465,9 @@ export const useAssetNameStore = defineStore('assetName', () => {
             remark: ''
         })
         pagination.pageNo = 1
-        lastRequestParams = '' // 清除参数缓存
+        // 🔥 修复：清除所有缓存参数
+        lastListRequestParams = ''
+        lastFetchRequestParams = ''
 
         if (isDev) {
             console.log('🟡 [查询条件] 已重置')

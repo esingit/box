@@ -15,14 +15,14 @@
           @addNew="openAddModal"
       />
       <AssetNameList
-        :list="list"
-        :loadingList="loadingList"
-        :pagination="pagination"
-        :totalPages="totalPages"
-        @edit="openEditModal"
-        @delete="handleDelete"
-        @changePage="changePage"
-    />
+          :list="list"
+          :loadingList="loadingList"
+          :pagination="pagination"
+          :totalPages="totalPages"
+          @edit="openEditModal"
+          @delete="handleDelete"
+          @changePage="changePage"
+      />
     </div>
   </BaseModal>
 
@@ -103,7 +103,7 @@ function open() {
   visible.value = true
   resetQuery()
   setPageNo(1)
-  loadList()
+  loadList(true) // 🔥 修改：强制刷新
 }
 
 function close() {
@@ -121,7 +121,7 @@ watch(searchTerm, val => {
   timer = window.setTimeout(() => {
     updateQuery({ name: val })
     setPageNo(1)
-    loadList()
+    loadList(true) // 🔥 修改：搜索时强制刷新
   }, 300)
 })
 
@@ -185,7 +185,7 @@ async function handleAddSubmit(form: { id: null; name: string; description: stri
     })
     addModalVisible.value = false
     emit('refresh')
-    await loadList()
+    // 🔥 修改：添加后不需要再次刷新，因为 store 中的 addRecord 已经调用了 loadList(true)
   } catch (err: any) {
     formError.value = err.message || '新增失败'
   } finally {
@@ -208,7 +208,7 @@ async function handleEditSubmit(form: { id: number | null; name: string; descrip
     })
     editModalVisible.value = false
     emit('refresh')
-    await loadList()
+    // 🔥 修改：编辑后不需要再次刷新，因为 store 中的 updateRecord 已经调用了 loadList(true)
   } catch (err: any) {
     formError.value = err.message || '更新失败'
   } finally {
@@ -227,8 +227,13 @@ function handleDelete(record: any) {
     confirmText: '删除',
     cancelText: '取消',
     async onConfirm() {
-      await assetNameStore.handleDelete(record.id)
-      await loadList()
+      try {
+        await assetNameStore.handleDelete(record.id)
+        // 🔥 修改：删除后不需要再次刷新，因为 store 中的 handleDelete 已经调用了 loadList(true)
+        emit('refresh') // 通知父组件刷新
+      } catch (error) {
+        // 错误处理已在 store 中完成
+      }
     }
   })
 }
@@ -236,6 +241,6 @@ function handleDelete(record: any) {
 function changePage(page: number) {
   if (page < 1 || page > totalPages.value) return
   setPageNo(page)
-  loadList()
+  loadList(true) // 🔥 修改：翻页时强制刷新确保数据准确性
 }
 </script>

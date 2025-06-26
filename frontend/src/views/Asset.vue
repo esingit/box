@@ -107,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { LucideCopy, LucidePlus, LucideRefreshCw, LucideScanText } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { format } from 'date-fns'
@@ -222,10 +222,15 @@ function notifyToast(message: string, type: 'success' | 'error' = 'success') {
   emitter.emit('notify', { message, type, duration: 3000 })
 }
 
-async function refreshData() {
+// 🔥 修改：添加 force 参数，支持强制刷新
+async function refreshData(force = true) {
   loading.value = true
   try {
-    await Promise.all([assetStore.loadStats(), assetStore.loadList()])
+    // 🔥 修改：传入 force 参数进行强制刷新
+    await Promise.all([
+      assetStore.loadStats(),
+      assetStore.loadList(force)
+    ])
     resultCount.value = assetStore.pagination.total
     notifyToast(`成功查询出 ${resultCount.value} 条数据`)
   } catch (e: any) {
@@ -237,18 +242,18 @@ async function refreshData() {
 
 function resetQuery() {
   assetStore.resetQuery()
-  refreshData()
+  refreshData(true) // 🔥 重置搜索时强制刷新
 }
 
 async function handleQuery(newQuery: Partial<typeof query.value>) {
   assetStore.updateQuery(newQuery)
   assetStore.setPageNo(1)
-  await refreshData()
+  await refreshData(true) // 🔥 搜索时强制刷新
 }
 
 function handlePageChange(page: number) {
   assetStore.setPageNo(page)
-  refreshData()
+  refreshData(true) // 🔥 翻页时强制刷新确保数据准确性
 }
 
 function handleAdd() {
@@ -299,14 +304,26 @@ function closeAddModal() {
 }
 
 async function handleAddRecord(data: typeof form) {
-  await assetStore.addRecord({ ...data, amount: Number(data.amount) || 0 })
-  showAddModal.value = false
-  await refreshData()
+  try {
+    await assetStore.addRecord({ ...data, amount: Number(data.amount) || 0 })
+    showAddModal.value = false
+    // 🔥 修改：添加后不需要再次刷新，因为 store 中的 addRecord 已经调用了 loadList(true)
+    // 但为了更新统计数据，我们只刷新统计
+    await assetStore.loadStats()
+    resultCount.value = assetStore.pagination.total
+  } catch (error) {
+    // 错误处理已在 store 中完成
+  }
 }
 
 function editRecord(id: number) {
   const idx = list.value.findIndex(r => String(r.id) === String(id))
-  if (idx !== -1) editingIdx.value = idx
+  if (idx !== -1) {
+    editingIdx.value = idx
+    // 🔥 修改：编辑时填充表单数据
+    const record = list.value[idx]
+    initFormByRecord(record)
+  }
 }
 
 function cancelEdit() {
@@ -315,11 +332,24 @@ function cancelEdit() {
 
 async function saveEdit(data: typeof form) {
   if (editingIdx.value === null) return
-  const original = list.value[editingIdx.value]
-  if (!original?.id) return
-  await assetStore.updateRecord({ ...data, id: original.id, amount: Number(data.amount) || 0 })
-  editingIdx.value = null
-  await refreshData()
+
+  try {
+    const original = list.value[editingIdx.value]
+    if (!original?.id) return
+
+    await assetStore.updateRecord({
+      ...data,
+      id: original.id,
+      amount: Number(data.amount) || 0
+    })
+    editingIdx.value = null
+    // 🔥 修改：编辑后不需要再次刷新，因为 store 中的 updateRecord 已经调用了 loadList(true)
+    // 但为了更新统计数据，我们只刷新统计
+    await assetStore.loadStats()
+    resultCount.value = assetStore.pagination.total
+  } catch (error) {
+    // 错误处理已在 store 中完成
+  }
 }
 
 function handleDelete(record: any) {
@@ -331,8 +361,15 @@ function handleDelete(record: any) {
     confirmText: '删除',
     cancelText: '取消',
     async onConfirm() {
-      await assetStore.handleDelete(record.id)
-      await refreshData()
+      try {
+        await assetStore.handleDelete(record.id)
+        // 🔥 修改：删除后不需要再次刷新，因为 store 中的 handleDelete 已经调用了 loadList(true)
+        // 但为了更新统计数据，我们只刷新统计
+        await assetStore.loadStats()
+        resultCount.value = assetStore.pagination.total
+      } catch (error) {
+        // 错误处理已在 store 中完成
+      }
     }
   })
 }
@@ -349,7 +386,7 @@ function onCopyClick() {
     onConfirm: async () => {
       try {
         await assetStore.copyLastRecords()
-        await refreshData()
+        await refreshData(true) // 🔥 复制后强制刷新
       } catch (e: any) {
         const msg = e.message || ''
         if (msg.includes('已有记录')) {
@@ -363,7 +400,7 @@ function onCopyClick() {
               onConfirm: async () => {
                 try {
                   await assetStore.copyLastRecords(true)
-                  await refreshData()
+                  await refreshData(true) // 🔥 覆盖后强制刷新
                   notifyToast('复制成功', 'success')
                 } catch (error: any) {
                   notifyToast(`覆盖失败：${error.message || '未知错误'}`, 'error')
@@ -383,7 +420,7 @@ onMounted(async () => {
   await Promise.all([
     metaStore.initAll(),
     assetNameStore.fetchAssetName(),
-    refreshData()
+    refreshData(true) // 🔥 初始加载时强制刷新
   ])
 })
 
@@ -391,4 +428,3 @@ onBeforeUnmount(() => {
   clearCommonMetaCache()
 })
 </script>
-

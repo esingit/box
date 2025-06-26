@@ -95,8 +95,9 @@ export const useFitnessStore = defineStore('fitness', () => {
     // 防抖定时器
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-    // 参数缓存用于去重
-    let lastRequestParams: string = ''
+    // 参数缓存用于去重 - 分别缓存分页和全量查询的参数
+    let lastListRequestParams: string = ''
+    let lastAllRequestParams: string = ''
 
     // 🔥 统一的加载状态管理函数
     function setLoadingState(type: 'list' | 'stats' | 'operation', loading: boolean): void {
@@ -140,11 +141,20 @@ export const useFitnessStore = defineStore('fitness', () => {
         )
     }
 
-    function hasParamsChanged(newParams: Record<string, any>): boolean {
+    // 🔥 修复：改为纯函数，不产生副作用
+    function checkParamsChanged(newParams: Record<string, any>, lastParams: string): boolean {
         const newParamsStr = JSON.stringify(newParams)
-        const changed = newParamsStr !== lastRequestParams
-        lastRequestParams = newParamsStr
-        return changed
+        return newParamsStr !== lastParams
+    }
+
+    // 🔥 修复：单独的函数更新缓存参数
+    function updateCachedParams(newParams: Record<string, any>, type: 'list' | 'all'): void {
+        const newParamsStr = JSON.stringify(newParams)
+        if (type === 'list') {
+            lastListRequestParams = newParamsStr
+        } else {
+            lastAllRequestParams = newParamsStr
+        }
     }
 
     function clearDebounceTimer(): void {
@@ -154,7 +164,7 @@ export const useFitnessStore = defineStore('fitness', () => {
         }
     }
 
-    // 🔥 统一的 API 响应处理
+    // 🔥 修改 handleApiResponse 函数
     function handleApiResponse<T>(response: any, operationName: string): T | null {
         // 检查是否需要重新登录
         if (response?.data?.code === 'AUTH_REQUIRED') {
@@ -165,7 +175,8 @@ export const useFitnessStore = defineStore('fitness', () => {
         }
 
         if (response?.data?.success) {
-            return response.data.data
+            // 🔥 修复：对于成功但无数据的情况（如删除操作），返回空对象而不是 null/undefined
+            return response.data.data ?? ({} as T)
         }
 
         // 业务逻辑错误
@@ -233,15 +244,19 @@ export const useFitnessStore = defineStore('fitness', () => {
         return typeof error === 'string' ? error : '未知错误'
     }
 
-    // 🔥 API 调用函数
+    // 🔥 API 调用函数 - 修复缓存逻辑
     async function loadList(force = false): Promise<void> {
         const params = buildParams()
 
-        if (!force && !hasParamsChanged(params) && list.value.length > 0) {
-            if (isDev) {
-                console.log('🟡 [获取健身记录] 参数未变化，跳过重复请求')
+        // 🔥 修复：force = true 时直接跳过缓存检查
+        if (!force) {
+            const hasChanged = checkParamsChanged(params, lastListRequestParams)
+            if (!hasChanged && list.value.length > 0) {
+                if (isDev) {
+                    console.log('🟡 [获取健身记录] 参数未变化，跳过重复请求')
+                }
+                return
             }
-            return
         }
 
         clearDebounceTimer()
@@ -250,7 +265,7 @@ export const useFitnessStore = defineStore('fitness', () => {
 
         try {
             if (isDev) {
-                console.log('🟢 [获取健身记录] 开始分页查询', params)
+                console.log(`🟢 [获取健身记录] 开始分页查询${force ? ' (强制刷新)' : ''}`, params)
             }
 
             const response = await axiosInstance.get('/api/fitness-record/list', {
@@ -265,6 +280,8 @@ export const useFitnessStore = defineStore('fitness', () => {
             if (!data.records || !Array.isArray(data.records)) {
                 list.value = []
                 pagination.total = 0
+                // 🔥 修复：请求成功后更新缓存参数
+                updateCachedParams(params, 'list')
                 return
             }
 
@@ -276,6 +293,9 @@ export const useFitnessStore = defineStore('fitness', () => {
             pagination.total = Number(data.total ?? 0)
             pagination.pageNo = Number(data.pageNo ?? pagination.pageNo)
             pagination.pageSize = Number(data.pageSize ?? pagination.pageSize)
+
+            // 🔥 修复：请求成功后更新缓存参数
+            updateCachedParams(params, 'list')
 
             if (isDev) {
                 console.log('🟢 [获取健身记录] 分页查询成功', {
@@ -290,15 +310,19 @@ export const useFitnessStore = defineStore('fitness', () => {
         }
     }
 
+    // 🔥 修复：同样修复 loadAllRecords 函数
     async function loadAllRecords(force = false): Promise<void> {
         const params = buildParams(false)
-        const paramKey = { ...params, type: 'all' }
 
-        if (!force && !hasParamsChanged(paramKey) && allList.value.length > 0) {
-            if (isDev) {
-                console.log('🟡 [获取全部记录] 参数未变化，跳过重复请求')
+        // 🔥 修复：force = true 时直接跳过缓存检查
+        if (!force) {
+            const hasChanged = checkParamsChanged(params, lastAllRequestParams)
+            if (!hasChanged && allList.value.length > 0) {
+                if (isDev) {
+                    console.log('🟡 [获取全部记录] 参数未变化，跳过重复请求')
+                }
+                return
             }
-            return
         }
 
         clearDebounceTimer()
@@ -307,7 +331,7 @@ export const useFitnessStore = defineStore('fitness', () => {
 
         try {
             if (isDev) {
-                console.log('🟢 [获取全部记录] 开始全量查询', params)
+                console.log(`🟢 [获取全部记录] 开始全量查询${force ? ' (强制刷新)' : ''}`, params)
             }
 
             const response = await axiosInstance.get('/api/fitness-record/listAll', {
@@ -328,6 +352,9 @@ export const useFitnessStore = defineStore('fitness', () => {
             // 更新分页信息
             pagination.total = records.length
             pagination.pageNo = 1
+
+            // 🔥 修复：请求成功后更新缓存参数
+            updateCachedParams(params, 'all')
 
             if (isDev) {
                 console.log('🟢 [获取全部记录] 全量查询成功', {
@@ -485,7 +512,9 @@ export const useFitnessStore = defineStore('fitness', () => {
             remark: ''
         })
         pagination.pageNo = 1
-        lastRequestParams = '' // 清除参数缓存
+        // 🔥 修复：清除所有缓存参数
+        lastListRequestParams = ''
+        lastAllRequestParams = ''
 
         if (isDev) {
             console.log('🟡 [查询条件] 已重置')
