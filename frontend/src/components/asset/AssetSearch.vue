@@ -1,9 +1,9 @@
 <!--src/components/asset/AssetSearch.vue-->
 <template>
   <div class="relative w-full bg-white border rounded-xl p-4 space-y-4 transition">
-    <!-- 搜索行 -->
-    <div class="flex flex-wrap items-center gap-3">
-      <div class="flex-1 min-w-[200px]">
+    <!-- 搜索行 - 使用 grid 布局 -->
+    <div class="grid grid-cols-[1fr_200px_200px_auto] gap-3 items-center">
+      <div class="min-w-0"> <!-- min-w-0 防止内容溢出 -->
         <BaseSelect
             title="资产名称"
             v-model="query.assetNameIdList"
@@ -15,7 +15,7 @@
         />
       </div>
 
-      <!-- 资产类型 -->
+      <!-- 资产类型 - 固定 200px -->
       <BaseSelect
           title="资产类型"
           v-model="query.assetTypeIdList"
@@ -23,10 +23,10 @@
           placeholder="全部资产类型"
           multiple
           clearable
-          class="w-full max-w-[200px]"
+          class="w-full"
       />
 
-      <!-- 资产位置 -->
+      <!-- 资产位置 - 固定 200px -->
       <BaseSelect
           title="资产位置"
           v-model="query.assetLocationIdList"
@@ -34,11 +34,47 @@
           placeholder="全部资产位置"
           multiple
           clearable
-          class="w-full max-w-[200px]"
+          class="w-full"
       />
 
       <!-- 按钮组 -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <BaseButton type="button" @click="onSearch" color="outline" :icon="LucideSearch" variant="search"/>
+        <BaseButton type="button" @click="onReset" color="outline" :icon="LucideRotateCcw" variant="search"/>
+        <BaseButton type="button" @click="toggleMore" color="outline" :icon="showMore ? LucideChevronUp : LucideChevronDown" variant="search"/>
+      </div>
+    </div>
+
+    <!-- 响应式处理：小屏幕时改为垂直布局 -->
+    <div class="md:hidden grid grid-cols-1 gap-3">
+      <BaseSelect
+          title="资产名称"
+          v-model="query.assetNameIdList"
+          :options="localAssetNameOptions"
+          placeholder="全部资产名称"
+          multiple
+          clearable
+          class="w-full"
+      />
+      <BaseSelect
+          title="资产类型"
+          v-model="query.assetTypeIdList"
+          :options="assetTypeOptions"
+          placeholder="全部资产类型"
+          multiple
+          clearable
+          class="w-full"
+      />
+      <BaseSelect
+          title="资产位置"
+          v-model="query.assetLocationIdList"
+          :options="assetLocationOptions"
+          placeholder="全部资产位置"
+          multiple
+          clearable
+          class="w-full"
+      />
+      <div class="flex items-center gap-2 justify-end">
         <BaseButton type="button" @click="onSearch" color="outline" :icon="LucideSearch" variant="search"/>
         <BaseButton type="button" @click="onReset" color="outline" :icon="LucideRotateCcw" variant="search"/>
         <BaseButton type="button" @click="toggleMore" color="outline" :icon="showMore ? LucideChevronUp : LucideChevronDown" variant="search"/>

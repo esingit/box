@@ -12,21 +12,24 @@
         <ListboxButton
             :title="showError ? (requiredMessage || '此项为必填') : selectedText"
             :class="[
-            'input-base flex justify-between items-center w-full pr-8',
-            showError ? 'msg-error' : ''
-          ]"
+              'input-base flex justify-between items-center w-full pr-8 min-w-0', // 添加 min-w-0
+              showError ? 'msg-error' : ''
+            ]"
         >
-          <span
-              class="truncate whitespace-nowrap block max-w-full"
-              :class="{
-              'text-gray-400': !selectedLabels.length && !showError,
-              'text-black': selectedLabels.length || showError
-            }"
-          >
-            {{ showError ? (requiredMessage || '此项为必填') : selectedText }}
-          </span>
+          <!-- 使用固定容器包裹文本，防止撑大 -->
+          <div class="flex-1 min-w-0 mr-2">
+            <span
+                class="truncate whitespace-nowrap block w-full"
+                :class="{
+                  'text-gray-400': !selectedLabels.length && !showError,
+                  'text-black': selectedLabels.length || showError
+                }"
+            >
+              {{ showError ? (requiredMessage || '此项为必填') : selectedText }}
+            </span>
+          </div>
 
-          <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-[15px]">
+          <div class="flex items-center gap-[15px] flex-shrink-0">
             <button
                 v-if="clearable && hasValue"
                 @click.stop="clearSelection"
@@ -43,10 +46,12 @@
 
         <ListboxOptions
             :class="[
-            'absolute z-[9999] w-full overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
-            direction === 'up' ? 'mb-1 bottom-full' : 'mt-1 top-full',
-            'min-h-[80px] max-h-60'
-          ]"
+              'absolute z-[9999] overflow-auto rounded-2xl bg-white border border-gray-300 p-2 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none',
+              direction === 'up' ? 'mb-1 bottom-full' : 'mt-1 top-full',
+              'min-h-[80px] max-h-60',
+              // 下拉选项使用固定宽度，不跟随内容变化
+              'w-full min-w-[200px]'
+            ]"
         >
           <ListboxOption
               v-for="item in safeOptions"

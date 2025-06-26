@@ -1,10 +1,9 @@
 <!--src/components/fitness/FitnessSearch.vue-->
 <template>
   <div class="relative w-full bg-white border rounded-xl p-4 space-y-4 transition">
-    <!-- 搜索行 -->
-    <div class="flex flex-wrap items-center gap-3">
-      <!-- 健身类型 -->
-      <div class="flex-1 min-w-[200px]">
+    <!-- 搜索行 - 使用响应式 grid -->
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center">
+      <div class="min-w-0 w-full">
         <BaseSelect
             title="健身类型"
             v-model="query.typeIdList"
@@ -17,18 +16,19 @@
       </div>
 
       <!-- 日期范围 -->
-      <div class="w-[325px]">
+      <div class="w-full md:w-[325px]">
         <BaseDateInput
             v-model="rangeValue"
             type="date"
             range
             clearable
             placeholder="请选择日期范围"
+            class="w-full"
         />
       </div>
 
       <!-- 按钮组 -->
-      <div class="flex gap-2 flex-shrink-0 ml-auto">
+      <div class="flex gap-2 flex-shrink-0 justify-end md:justify-start">
         <BaseButton @click="onSearch" color="outline" :icon="LucideSearch" variant="search" />
         <BaseButton @click="onReset" color="outline" :icon="LucideRotateCcw" variant="search" />
         <BaseButton
@@ -47,6 +47,7 @@
           placeholder="备注关键词"
           type="text"
           clearable
+          class="w-full md:w-auto md:min-w-[200px]"
       />
     </div>
   </div>
