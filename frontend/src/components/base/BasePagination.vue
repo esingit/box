@@ -33,7 +33,7 @@
     </BaseButton>
 
     <!-- 每页条数选择 -->
-    <div class="w-[170px]">
+    <div class="w-[130px]">
       <Field name="pageSize" v-slot="{ value, setValue }">
         <BaseSelect
             title="每页条数"

@@ -2,8 +2,57 @@
 <template>
   <div class="relative w-full bg-white border rounded-xl p-4 space-y-4 transition">
     <!-- 搜索行 - 使用 grid 布局 -->
-    <div class="grid grid-cols-[1fr_200px_200px_auto] gap-3 items-center">
-      <div class="min-w-0"> <!-- min-w-0 防止内容溢出 -->
+    <div class="flex items-center gap-3 w-full">
+      <!-- 资产类型 - 固定 200px -->
+      <div class="w-[300px] min-w-[250px] flex-shrink-0">
+        <BaseSelect
+            title="资产类型"
+            v-model="query.assetTypeIdList"
+            :options="assetTypeOptions"
+            placeholder="全部资产类型"
+            multiple
+            clearable
+            searchable
+            class="w-full"
+        />
+      </div>
+
+      <!-- 资产位置 - 固定 200px -->
+      <div class="w-[450px] min-w-[350px] flex-shrink-0">
+        <BaseSelect
+            title="资产位置"
+            v-model="query.assetLocationIdList"
+            :options="assetLocationOptions"
+            placeholder="全部资产位置"
+            multiple
+            clearable
+            searchable
+            class="w-full"
+        />
+      </div>
+      <div class="w-[325px] flex-shrink-0">
+        <BaseDateInput
+            v-model="rangeValue"
+            type="date"
+            range
+            clearable
+            class="w-full"
+            placeholder="请选择日期范围"
+        />
+      </div>
+
+      <!-- 按钮组 -->
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <BaseButton type="button" @click="onSearch" color="outline" :icon="LucideSearch" variant="search"/>
+        <BaseButton type="button" @click="onReset" color="outline" :icon="LucideRotateCcw" variant="search"/>
+        <BaseButton type="button" @click="toggleMore" color="outline"
+                    :icon="showMore ? LucideChevronUp : LucideChevronDown" variant="search"/>
+      </div>
+    </div>
+
+    <!-- 更多条件 -->
+    <div v-if="showMore" class="flex flex-col md:flex-row md:items-center md:gap-3 gap-2">
+      <div class="w-[763px] flex-shrink-0">
         <BaseSelect
             title="资产名称"
             v-model="query.assetNameIdList"
@@ -15,102 +64,20 @@
             class="w-full"
         />
       </div>
-
-      <!-- 资产类型 - 固定 200px -->
-      <BaseSelect
-          title="资产类型"
-          v-model="query.assetTypeIdList"
-          :options="assetTypeOptions"
-          placeholder="全部资产类型"
-          multiple
-          clearable
-          searchable
-          class="w-full"
-      />
-
-      <!-- 资产位置 - 固定 200px -->
-      <BaseSelect
-          title="资产位置"
-          v-model="query.assetLocationIdList"
-          :options="assetLocationOptions"
-          placeholder="全部资产位置"
-          multiple
-          clearable
-          searchable
-          class="w-full"
-      />
-
-      <!-- 按钮组 -->
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <BaseButton type="button" @click="onSearch" color="outline" :icon="LucideSearch" variant="search"/>
-        <BaseButton type="button" @click="onReset" color="outline" :icon="LucideRotateCcw" variant="search"/>
-        <BaseButton type="button" @click="toggleMore" color="outline" :icon="showMore ? LucideChevronUp : LucideChevronDown" variant="search"/>
-      </div>
-    </div>
-
-    <!-- 响应式处理：小屏幕时改为垂直布局 -->
-    <div class="md:hidden grid grid-cols-1 gap-3">
-      <BaseSelect
-          title="资产名称"
-          v-model="query.assetNameIdList"
-          :options="localAssetNameOptions"
-          placeholder="全部资产名称"
-          multiple
-          clearable
-          searchable
-          class="w-full"
-      />
-      <BaseSelect
-          title="资产类型"
-          v-model="query.assetTypeIdList"
-          :options="assetTypeOptions"
-          placeholder="全部资产类型"
-          multiple
-          clearable
-          class="w-full"
-      />
-      <BaseSelect
-          title="资产位置"
-          v-model="query.assetLocationIdList"
-          :options="assetLocationOptions"
-          placeholder="全部资产位置"
-          multiple
-          clearable
-          searchable
-          class="w-full"
-      />
-      <div class="flex items-center gap-2 justify-end">
-        <BaseButton type="button" @click="onSearch" color="outline" :icon="LucideSearch" variant="search"/>
-        <BaseButton type="button" @click="onReset" color="outline" :icon="LucideRotateCcw" variant="search"/>
-        <BaseButton type="button" @click="toggleMore" color="outline" :icon="showMore ? LucideChevronUp : LucideChevronDown" variant="search"/>
-      </div>
-    </div>
-
-    <!-- 更多条件 -->
-    <div v-if="showMore" class="flex flex-col md:flex-row md:items-center md:gap-3 gap-2">
-      <!-- 日期范围，改为使用 BaseDateInput -->
-        <BaseDateInput
-            v-model="rangeValue"
-            type="date"
-            range
-            clearable
-            class="w-full"
-            placeholder="请选择日期范围"
-        />
-
       <!-- 备注关键词 -->
       <BaseInput
           type="text"
           v-model="query.remark"
           placeholder="备注关键词"
           clearable
+          class="w-full"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import {ref, watch} from 'vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseDateInput from '@/components/base/BaseDateInput.vue'
@@ -146,10 +113,10 @@ watch(
     (val) => {
       localAssetNameOptions.value = val || []
     },
-    { immediate: true }
+    {immediate: true}
 )
 
-const showMore = ref(false)
+const showMore = ref(true)
 const toggleMore = () => {
   showMore.value = !showMore.value
 }
@@ -166,7 +133,7 @@ function joinRangeDates(start: string, end: string) {
 
 // 工具函数：拆分range字符串为start和end
 function splitRangeDates(rangeStr: string) {
-  if (!rangeStr) return { start: '', end: '' }
+  if (!rangeStr) return {start: '', end: ''}
   const parts = rangeStr.split('~').map(s => s.trim())
   return {
     start: parts[0] || '',
@@ -180,18 +147,18 @@ watch(
     ([start, end]) => {
       rangeValue.value = joinRangeDates(start, end)
     },
-    { immediate: true }
+    {immediate: true}
 )
 
 // 监听 rangeValue，拆分回 startDate 和 endDate，赋值给 props.query
 watch(rangeValue, (val) => {
-  const { start, end } = splitRangeDates(val)
+  const {start, end} = splitRangeDates(val)
   props.query.startDate = start
   props.query.endDate = end
 })
 
 function onSearch() {
-  emit('search', { ...props.query })
+  emit('search', {...props.query})
 }
 
 function onReset() {

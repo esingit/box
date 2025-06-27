@@ -2,8 +2,8 @@
 <template>
   <div class="relative w-full bg-white border rounded-xl p-4 space-y-4 transition">
     <!-- 搜索行 - 使用响应式 grid -->
-    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center">
-      <div class="min-w-0 w-full">
+    <div class="flex items-center gap-3 w-full">
+      <div class="flex-1 min-w-[520px]">
         <BaseSelect
             title="健身类型"
             v-model="query.typeIdList"
@@ -17,7 +17,7 @@
       </div>
 
       <!-- 日期范围 -->
-      <div class="w-full md:w-[325px]">
+      <div class="w-[325px] flex-shrink-0">
         <BaseDateInput
             v-model="rangeValue"
             type="date"
@@ -42,7 +42,7 @@
     </div>
 
     <!-- 更多条件 -->
-    <div v-if="showMore" class="flex flex-wrap gap-3">
+    <div v-if="showMore" class="flex items-center gap-3 w-full">
       <BaseInput
           v-model="query.remark"
           placeholder="备注关键词"
