@@ -48,7 +48,6 @@ public class GeneralStructureStrategy implements RecognitionStrategy {
         }
 
         if (list.isEmpty()) {
-            log.info("Fallback to intelligent matching...");
             list = RecognitionHelper.parseWithIntelligentMatching(lines);
         }
         return list;
