@@ -29,28 +29,32 @@ const columns = [
     label: '类型',
     resizable: true,
     defaultWidth: 200,
-    type: 'text'
+    type: 'text',
+    sortable: true
   },
   {
     key: 'count',
     label: '数量',
     resizable: true,
     defaultWidth: 100,
-    type: 'count'
+    type: 'count',
+    sortable: true
   },
   {
     key: 'finishTime',
     label: '日期',
     resizable: true,
     defaultWidth: 200,
-    type: 'date'
+    type: 'date',
+    sortable: true
   },
   {
     key: 'remark',
     label: '备注',
     resizable: true,
     defaultWidth: 200,
-    type: 'text'
+    type: 'text',
+    sortable: true
   },
   {
     key: 'actions',

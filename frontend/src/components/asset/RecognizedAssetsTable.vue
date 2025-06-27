@@ -136,7 +136,8 @@ const columns = [
     defaultWidth: 300,
     type: 'test',
     headerAlign: 'left',
-    align: 'left'
+    align: 'left',
+    sortable: true
   },
   {
     key: 'assetNameId',
@@ -145,7 +146,8 @@ const columns = [
     defaultWidth: 400,
     type: 'custom',
     headerAlign: 'left',
-    align: 'left'
+    align: 'left',
+    sortable: true
   },
   {
     key: 'amount',
@@ -154,7 +156,8 @@ const columns = [
     defaultWidth: 150,
     type: 'custom',
     headerAlign: 'right',
-    align: 'right'
+    align: 'right',
+    sortable: true
   },
   {
     key: 'remark',
@@ -163,7 +166,8 @@ const columns = [
     defaultWidth: 150,
     type: 'custom',
     headerAlign: 'left',
-    align: 'left'
+    align: 'left',
+    sortable: true
   },
   {
     key: 'actions',

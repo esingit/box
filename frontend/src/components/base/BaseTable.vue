@@ -23,7 +23,7 @@
                   'w-full flex items-center gap-1',
                   getHeaderTextAlignClass(col),
                   'select-none truncate pr-2',
-                  col.sortable ? 'cursor-pointer hover:text-blue-600 transition-colors' : ''
+                  col.sortable ? 'cursor-pointer hover:text-green-600 transition-colors' : ''
                 ]"
                 @click="col.sortable ? handleSort(col.key) : null"
             >
@@ -42,7 +42,7 @@
                     stroke-width="2"
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    class="text-blue-600"
+                    class="text-green-600"
                 >
                   <path d="m18 15-6-6-6 6"/>
                 </svg>
@@ -58,7 +58,7 @@
                     stroke-width="2"
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    class="text-blue-600"
+                    class="text-green-600"
                 >
                   <path d="m6 9 6 6 6-6"/>
                 </svg>
@@ -137,7 +137,7 @@
             v-else
             v-for="(row, rowIndex) in sortedData"
             :key="row.id || rowIndex"
-            class="hover:bg-gray-50 transition-colors"
+            class="hover:bg-gray-100 transition-colors"
             :class="{ 'relative z-[100]': activeRowIndex === rowIndex }"
         >
           <td
@@ -313,13 +313,28 @@ function compareValues(aVal, bVal, order) {
     return order === 'asc' ? result : -result
   }
 
-  // 日期比较（YYYY-MM-DD 格式）
-  const dateRegex = /^\d{4}-\d{2}-\d{2}/
-  if (dateRegex.test(aStr) && dateRegex.test(bStr)) {
-    const aDate = new Date(aStr)
-    const bDate = new Date(bStr)
-    const result = aDate.getTime() - bDate.getTime()
-    return order === 'asc' ? result : -result
+  // 日期比较（支持多种格式）
+  const dateRegex = /^\d{4}-\d{2}-\d{2}/ // YYYY-MM-DD 格式
+  const timeRegex = /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/ // YYYY-MM-DD HH:mm 格式
+  if ((dateRegex.test(aStr) || timeRegex.test(aStr)) &&
+      (dateRegex.test(bStr) || timeRegex.test(bStr))) {
+    // 提取日期时间部分（去除可能的额外字符）
+    const extractDateTime = (str) => {
+      const match = str.match(/^\d{4}-\d{2}-\d{2}(\s+\d{2}:\d{2}(:\d{2})?)?/)
+      return match ? match[0] : str
+    }
+
+    const aDateTime = extractDateTime(aStr)
+    const bDateTime = extractDateTime(bStr)
+
+    const aDate = new Date(aDateTime)
+    const bDate = new Date(bDateTime)
+
+    // 确保日期有效
+    if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
+      const result = aDate.getTime() - bDate.getTime()
+      return order === 'asc' ? result : -result
+    }
   }
 
   // 字符串比较（支持中文）

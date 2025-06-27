@@ -28,8 +28,8 @@ const emit = defineEmits(['edit', 'delete'])
 
 // 列定义
 const columns = [
-  {key: 'name', label: '名称', resizable: true, defaultWidth: 400, type: 'text'},
-  {key: 'description', label: '描述', resizable: true, defaultWidth: 200, type: 'text'},
+  {key: 'name', label: '名称', resizable: true, defaultWidth: 400, type: 'text', sortable: true},
+  {key: 'description', label: '描述', resizable: true, defaultWidth: 200, type: 'text', sortable: true},
   {key: 'actions', label: '操作', resizable: false, defaultWidth: 100, actions: true}
 ]
 
