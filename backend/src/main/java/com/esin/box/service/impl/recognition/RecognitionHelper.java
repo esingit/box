@@ -105,7 +105,7 @@ public class RecognitionHelper {
         dto.setAssetName(name);
         dto.setAmount(amount);
         dto.setAcquireTime(LocalDateTime.now());
-        dto.setRemark("图片识别导入");
+        dto.setRemark("[]");
         return dto;
     }
 

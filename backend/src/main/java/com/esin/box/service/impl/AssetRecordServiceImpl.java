@@ -3,18 +3,21 @@ package com.esin.box.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.esin.box.config.UserContextHolder;
 import com.esin.box.converter.AssetRecordConverter;
 import com.esin.box.dto.AssetRecordDTO;
 import com.esin.box.dto.AssetStatsDTO;
 import com.esin.box.dto.BatchAddResult;
+import com.esin.box.entity.AssetName;
 import com.esin.box.entity.AssetRecord;
 import com.esin.box.entity.CommonMeta;
+import com.esin.box.mapper.AssetNameMapper;
 import com.esin.box.mapper.AssetRecordMapper;
-import com.esin.box.service.AssetNameService;
 import com.esin.box.service.AssetRecordService;
 import com.esin.box.service.CommonMetaService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,8 +27,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * 资产记录服务实现类
+ */
+@Slf4j
 @Service
 @Transactional
 public class AssetRecordServiceImpl implements AssetRecordService {
@@ -40,30 +49,17 @@ public class AssetRecordServiceImpl implements AssetRecordService {
     private AssetRecordConverter assetRecordConverter;
 
     @Autowired
-    private AssetNameService assetNameService;
+    private AssetNameMapper assetNameMapper;
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AssetRecordServiceImpl.class);
+    // 线程局部缓存，避免重复查询
+    private final ThreadLocal<Map<Long, String>> assetNameCacheHolder = new ThreadLocal<>();
 
     @Override
     public void addRecord(AssetRecord record) {
         log.debug("Adding new record: {}", record);
 
         // 参数验证
-        if (record.getAssetNameId() == null) {
-            throw new RuntimeException("资产名称不能为空");
-        }
-        if (record.getAssetTypeId() == null) {
-            throw new RuntimeException("资产类型不能为空");
-        }
-        if (record.getAmount() == null || record.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("金额必须大于0");
-        }
-        if (record.getUnitId() == null) {
-            throw new RuntimeException("货币单位不能为空");
-        }
-        if (record.getAssetLocationId() == null) {
-            throw new RuntimeException("资产位置不能为空");
-        }
+        validateRecord(record);
 
         try {
             // 设置创建人
@@ -106,187 +102,62 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
     @Override
     @Transactional(readOnly = true)
-    public IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, List<Long> assetNameIdList, List<Long> assetLocationIdList,
-                                                  List<Long> assetTypeIdList, String remark, String startDate, String endDate, String createUser) {
-        return assetRecordMapper.selectPageWithMeta(page, assetNameIdList, assetLocationIdList, assetTypeIdList, remark, startDate, endDate, createUser);
+    public IPage<AssetRecordDTO> pageByConditions(Page<AssetRecord> page, List<Long> assetNameIdList,
+                                                  List<Long> assetLocationIdList, List<Long> assetTypeIdList,
+                                                  String remark, String startDate, String endDate, String createUser) {
+        return assetRecordMapper.selectPageWithMeta(page, assetNameIdList, assetLocationIdList,
+                assetTypeIdList, remark, startDate, endDate, createUser);
     }
 
     @Override
     public void copyLastRecords(boolean force) {
         String currentUser = UserContextHolder.getCurrentUsername();
-
         // 调用通用复制方法，保持原有逻辑
         int copiedCount = copyLastRecordsCommon(currentUser, force, true);
-
         log.info("复制操作完成，用户: {}, 复制记录数: {}", currentUser, copiedCount);
     }
 
     @Override
     @Transactional
-    public BatchAddResult smartBatchAddRecords(List<AssetRecordDTO> records, boolean forceOverwrite, boolean copyLast, String createUser) {
+    public BatchAddResult smartBatchAddRecords(List<AssetRecordDTO> records, boolean forceOverwrite,
+                                               boolean copyLast, String createUser) {
         if (records == null || records.isEmpty()) {
             throw new RuntimeException("记录列表不能为空");
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        boolean hasTodayRecords = hasTodayRecords(createUser);
-
-        int successCount = 0;
-        int updateCount = 0;
-        int addCount = 0;
-        boolean overwrote = false;
-        boolean copied = false;
-
         try {
+            // 预加载资产名称缓存
+            Map<Long, String> cache = loadAssetNameCache(records);
+            assetNameCacheHolder.set(cache);
+
+            LocalDateTime now = LocalDateTime.now();
+            boolean hasTodayRecords = hasTodayRecords(createUser);
+
+            int successCount;
+            int updateCount = 0;
+            int addCount;
+            boolean overwrote = false;
+            boolean copied = false;
+
             log.info("开始智能批量添加，用户: {}, 记录数: {}, 强制覆盖: {}, 复制历史: {}",
                     createUser, records.size(), forceOverwrite, copyLast);
 
-            log.info("=== 输入的原始记录 ===");
-            for (int i = 0; i < records.size(); i++) {
-                AssetRecordDTO dto = records.get(i);
-                log.info("[{}] AssetNameId: {}, Amount: {}, Remark: {}",
-                        i, dto.getAssetNameId(), dto.getAmount(), dto.getRemark());
-            }
-            // 🔥 处理逻辑重构：明确区分强制覆盖和非强制覆盖场景
-
-            // 场景1：强制覆盖模式 - 删除所有今日记录
+            // 场景1：强制覆盖模式
             if (forceOverwrite) {
-                if (hasTodayRecords) {
-                    int deletedCount = deleteTodayRecords(createUser);
-                    overwrote = true;
-                    log.info("强制覆盖模式：已清空今日 {} 条记录", deletedCount);
-                }
-
-                // 强制覆盖模式下，需要对输入记录去重（保留最后一条）
-                Map<Long, AssetRecordDTO> uniqueRecordsMap = records.stream()
-                        .collect(Collectors.toMap(
-                                AssetRecordDTO::getAssetNameId,
-                                dto -> dto,
-                                (existing, replacement) -> replacement,
-                                LinkedHashMap::new
-                        ));
-
-                List<AssetRecord> recordsToInsert = new ArrayList<>();
-                for (AssetRecordDTO dto : uniqueRecordsMap.values()) {
-                    AssetRecord newRecord = convertToEntity(dto, createUser, now);
-                    recordsToInsert.add(newRecord);
-                    addCount++;
-                }
-
-                if (!recordsToInsert.isEmpty()) {
-                    batchInsert(recordsToInsert);
-                    log.info("强制覆盖模式：批量插入完成 {} 条记录", recordsToInsert.size());
-                }
-
+                BatchAddResult result = handleForceOverwriteMode(records, createUser, now, hasTodayRecords);
+                overwrote = result.isOverwrote();
+                addCount = result.getAddCount();
             } else {
                 // 场景2：非强制覆盖模式
-
-                // 2.1 如果今日无记录且需要复制历史记录
-                if (!hasTodayRecords && copyLast) {
-                    int copiedCount = copyLastRecordsCommon(createUser, false, false);
-                    if (copiedCount > 0) {
-                        copied = true;
-                        log.info("已复制 {} 条历史记录到今日", copiedCount);
-                    } else {
-                        log.warn("没有找到可复制的历史记录，继续执行后续操作");
-                    }
-                }
-
-                // 2.2 获取当前所有今日记录（包括刚复制的）
-                List<AssetRecord> todayRecords = getTodayRecords(createUser);
-                log.info("获取到今日现有记录: {} 条", todayRecords.size());
-
-                Map<Long, AssetRecord> existingRecordsMap = todayRecords.stream()
-                        .collect(Collectors.toMap(
-                                AssetRecord::getAssetNameId,
-                                record -> record,
-                                (existing, replacement) -> existing
-                        ));
-                log.info("建立资产名称映射: {} 个", existingRecordsMap.size());
-
-                // 2.3 🔥 关键修改：按 asset_name_id 分组输入记录
-                Map<Long, List<AssetRecordDTO>> groupedRecords = records.stream()
-                        .collect(Collectors.groupingBy(AssetRecordDTO::getAssetNameId));
-
-// 🔥 添加调试日志
-                for (Map.Entry<Long, List<AssetRecordDTO>> entry : groupedRecords.entrySet()) {
-                    Long assetNameId = entry.getKey();
-                    List<AssetRecordDTO> dtoList = entry.getValue();
-
-                    log.info("资产名称ID: {} 的所有输入记录：", assetNameId);
-                    for (int i = 0; i < dtoList.size(); i++) {
-                        AssetRecordDTO dto = dtoList.get(i);
-                        log.info("  [{}] 金额: {}, 备注: {}", i, dto.getAmount(), dto.getRemark());
-                    }
-                }
-
-                // 2.4 处理每个资产名称ID
-                List<AssetRecord> recordsToInsert = new ArrayList<>();
-                Set<Long> processedAssetNameIds = new HashSet<>();
-
-                for (Map.Entry<Long, List<AssetRecordDTO>> entry : groupedRecords.entrySet()) {
-                    Long assetNameId = entry.getKey();
-                    List<AssetRecordDTO> dtoList = entry.getValue();
-
-                    AssetRecord existingRecord = existingRecordsMap.get(assetNameId);
-
-                    if (existingRecord != null) {
-                        // 🔥 核心逻辑：找到金额最接近的记录
-                        AssetRecordDTO closestDto = findClosestAmountRecord(existingRecord.getAmount(), dtoList);
-
-                        log.info("资产名称ID: {} 有 {} 条输入记录，选择最接近的金额: {} (原金额: {})",
-                                assetNameId, dtoList.size(), closestDto.getAmount(), existingRecord.getAmount());
-
-                        // 使用UpdateWrapper直接更新
-                        UpdateWrapper<AssetRecord> updateWrapper = new UpdateWrapper<>();
-                        updateWrapper.eq("id", existingRecord.getId())
-                                .set("amount", closestDto.getAmount())
-                                .set("update_time", now)
-                                .set("update_user", createUser);
-
-                        if (closestDto.getAcquireTime() != null) {
-                            updateWrapper.set("acquire_time", closestDto.getAcquireTime());
-                        }
-
-                        if (closestDto.getRemark() != null) {
-                            updateWrapper.set("remark", closestDto.getRemark());
-                        }
-
-                        int updateResult = assetRecordMapper.update(null, updateWrapper);
-                        if (updateResult > 0) {
-                            updateCount++;
-                            log.info("更新记录成功，ID: {}, 资产名称ID: {}, 金额: {} -> {}",
-                                    existingRecord.getId(), assetNameId, existingRecord.getAmount(), closestDto.getAmount());
-                        } else {
-                            log.error("更新记录失败，ID: {}, 资产名称ID: {}",
-                                    existingRecord.getId(), assetNameId);
-                            throw new RuntimeException("更新记录失败，记录ID: " + existingRecord.getId());
-                        }
-                    } else {
-                        // 新增记录：如果有多条，选择金额最大的那条
-                        AssetRecordDTO selectedDto = dtoList.stream()
-                                .max(Comparator.comparing(AssetRecordDTO::getAmount))
-                                .orElse(dtoList.get(0));
-
-                        log.info("新增记录，资产名称ID: {}, 有 {} 条输入，选择金额: {}",
-                                assetNameId, dtoList.size(), selectedDto.getAmount());
-
-                        AssetRecord newRecord = convertToEntity(selectedDto, createUser, now);
-                        recordsToInsert.add(newRecord);
-                        addCount++;
-                    }
-                }
-
-                // 2.5 执行批量插入新记录
-                if (!recordsToInsert.isEmpty()) {
-                    batchInsert(recordsToInsert);
-                    log.info("批量插入完成: {} 条记录", recordsToInsert.size());
-                }
+                BatchAddResult result = handleNormalMode(records, createUser, now, hasTodayRecords, copyLast);
+                copied = result.isCopied();
+                updateCount = result.getUpdateCount();
+                addCount = result.getAddCount();
             }
 
             // 计算最终结果
             successCount = updateCount + addCount;
-            String message = buildResultMessage(overwrote, copied, updateCount, addCount, records.size());
+            String message = buildResultMessage(overwrote, copied, updateCount, addCount);
 
             log.info("智能批量添加完成，用户: {}, 成功: {}, 更新: {}, 新增: {}, 覆盖: {}, 复制: {}",
                     createUser, successCount, updateCount, addCount, overwrote, copied);
@@ -301,71 +172,420 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                     .message(message)
                     .build();
 
+        } catch (RuntimeException e) {
+            // 直接抛出业务异常，不再包装
+            log.error("批量添加失败，用户: {}, 错误: {}", createUser, e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("批量添加失败，用户: {}", createUser, e);
             throw new RuntimeException("批量添加失败：" + e.getMessage());
+        } finally {
+            // 清理缓存
+            assetNameCacheHolder.remove();
         }
     }
 
     /**
-     * 🔥 新增方法：找到金额最接近的记录
+     * 处理强制覆盖模式
      */
-    private AssetRecordDTO findClosestAmountRecord(BigDecimal targetAmount, List<AssetRecordDTO> dtoList) {
-        if (dtoList.size() == 1) {
-            return dtoList.get(0);
+    private BatchAddResult handleForceOverwriteMode(List<AssetRecordDTO> records, String createUser,
+                                                    LocalDateTime now, boolean hasTodayRecords) {
+        boolean overwrote = false;
+        int addCount = 0;
+
+        if (hasTodayRecords) {
+            int deletedCount = deleteTodayRecords(createUser);
+            overwrote = true;
+            log.info("强制覆盖模式：已清空今日 {} 条记录", deletedCount);
         }
 
-        return dtoList.stream()
-                .min(Comparator.comparing(dto -> {
-                    BigDecimal diff = dto.getAmount().subtract(targetAmount).abs();
-                    log.debug("比较金额差异 - 目标: {}, 候选: {}, 差异: {}",
-                            targetAmount, dto.getAmount(), diff);
-                    return diff;
-                }))
-                .orElse(dtoList.get(0));
+        // 检查输入数据中的重复
+        validateNoDuplicates(records);
+
+        List<AssetRecord> recordsToInsert = new ArrayList<>();
+        for (AssetRecordDTO dto : records) {
+            AssetRecord newRecord = convertToEntity(dto, createUser, now);
+            recordsToInsert.add(newRecord);
+            addCount++;
+        }
+
+        if (!recordsToInsert.isEmpty()) {
+            batchInsert(recordsToInsert);
+            log.info("强制覆盖模式：批量插入完成 {} 条记录", recordsToInsert.size());
+        }
+
+        return BatchAddResult.builder()
+                .overwrote(overwrote)
+                .addCount(addCount)
+                .build();
     }
 
     /**
-     * 🔥 通用的复制上回记录方法
-     *
-     * @param username 用户名
-     * @param force 是否强制覆盖今日记录
-     * @param throwIfNoHistory 如果没有历史记录是否抛出异常
-     * @return 复制的记录数量
+     * 处理非强制覆盖模式
+     */
+    private BatchAddResult handleNormalMode(List<AssetRecordDTO> records, String createUser,
+                                            LocalDateTime now, boolean hasTodayRecords, boolean copyLast) {
+        boolean copied = false;
+        int updateCount = 0;
+        int addCount = 0;
+
+        // 如果今日无记录且需要复制历史记录
+        if (!hasTodayRecords && copyLast) {
+            int copiedCount = copyLastRecordsCommon(createUser, false, false);
+            if (copiedCount > 0) {
+                copied = true;
+                log.info("已复制 {} 条历史记录到今日", copiedCount);
+            } else {
+                log.warn("没有找到可复制的历史记录，继续执行后续操作");
+            }
+        }
+
+        // 获取当前所有今日记录（包括刚复制的）
+        List<AssetRecord> todayRecords = getTodayRecords(createUser);
+        log.info("获取到今日现有记录: {} 条", todayRecords.size());
+
+        // 构建多级索引
+        Map<Long, Map<String, List<AssetRecord>>> existingRecordsIndex = buildMultiLevelIndex(todayRecords);
+
+        // 处理每条输入记录
+        List<AssetRecord> recordsToInsert = new ArrayList<>();
+
+        for (AssetRecordDTO dto : records) {
+            AssetRecord matchedRecord = findExactMatch(dto, existingRecordsIndex);
+
+            if (matchedRecord != null) {
+                // 更新现有记录
+                int result = updateExistingRecord(matchedRecord, dto, createUser, now);
+                if (result > 0) {
+                    updateCount++;
+                }
+            } else {
+                // 新增记录
+                log.info("未找到匹配记录，新增：资产名称ID: {}, 金额: {}, 备注: {}",
+                        dto.getAssetNameId(), dto.getAmount(), dto.getRemark());
+                AssetRecord newRecord = convertToEntity(dto, createUser, now);
+                recordsToInsert.add(newRecord);
+                addCount++;
+            }
+        }
+
+        // 执行批量插入新记录
+        if (!recordsToInsert.isEmpty()) {
+            batchInsert(recordsToInsert);
+            log.info("批量插入完成: {} 条记录", recordsToInsert.size());
+        }
+
+        return BatchAddResult.builder()
+                .copied(copied)
+                .updateCount(updateCount)
+                .addCount(addCount)
+                .build();
+    }
+
+    /**
+     * 更新现有记录
+     */
+    private int updateExistingRecord(AssetRecord matchedRecord, AssetRecordDTO dto,
+                                     String createUser, LocalDateTime now) {
+        log.info("找到匹配记录，ID: {}, 资产名称: {}, 备注: {}, 原金额: {}, 新金额: {}",
+                matchedRecord.getId(), getAssetNameById(dto.getAssetNameId()),
+                dto.getRemark(), matchedRecord.getAmount(), dto.getAmount());
+
+        UpdateWrapper<AssetRecord> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", matchedRecord.getId())
+                .set("amount", dto.getAmount())
+                .set("update_time", now)
+                .set("update_user", createUser);
+
+        if (dto.getAcquireTime() != null) {
+            updateWrapper.set("acquire_time", dto.getAcquireTime());
+        }
+
+        if (dto.getRemark() != null) {
+            updateWrapper.set("remark", dto.getRemark());
+        }
+
+        int updateResult = assetRecordMapper.update(null, updateWrapper);
+        if (updateResult > 0) {
+            log.info("更新记录成功");
+        } else {
+            throw new RuntimeException("更新记录失败，记录ID: " + matchedRecord.getId());
+        }
+
+        return updateResult;
+    }
+
+    /**
+     * 构建多级索引 - 使用方括号编号作为索引键
+     */
+    private Map<Long, Map<String, List<AssetRecord>>> buildMultiLevelIndex(List<AssetRecord> records) {
+        Map<Long, Map<String, List<AssetRecord>>> index = new HashMap<>();
+
+        for (AssetRecord record : records) {
+            Long assetNameId = record.getAssetNameId();
+            String bracketCode = extractBracketCode(record.getRemark());
+
+            index.computeIfAbsent(assetNameId, k -> new HashMap<>())
+                    .computeIfAbsent(bracketCode, k -> new ArrayList<>())
+                    .add(record);
+        }
+
+        return index;
+    }
+
+    /**
+     * 精确匹配记录 - 基于方括号编号匹配
+     */
+    private AssetRecord findExactMatch(AssetRecordDTO dto, Map<Long, Map<String, List<AssetRecord>>> index) {
+        Map<String, List<AssetRecord>> codeMap = index.get(dto.getAssetNameId());
+        if (codeMap == null) {
+            return null;
+        }
+
+        List<AssetRecord> allMatches = codeMap.values().stream()
+                .flatMap(List::stream)
+                .toList();
+
+        if (allMatches.size() == 1) {
+            return allMatches.get(0);
+        }
+
+        // 获取资产名称
+        String assetName = getAssetNameById(dto.getAssetNameId());
+
+        // 检查是否有[首次导入]标记
+        if (isFirstTimeAdd(dto.getRemark())) {
+            log.info("资产[{}]存在{}条记录，但输入记录标记为[首次导入]，将作为新记录添加",
+                    assetName, allMatches.size());
+            return null;
+        }
+
+        // 有多条记录，必须通过编号匹配
+        String dtoBracketCode = extractBracketCode(dto.getRemark());
+
+        if (dtoBracketCode.isEmpty()) {
+            Set<String> existingCodes = codeMap.keySet().stream()
+                    .filter(code -> !code.isEmpty())
+                    .collect(Collectors.toSet());
+
+            throw new RuntimeException(String.format(
+                    """
+                            资产[%s]存在%d条记录，必须在备注中添加编号（如[001]）来指定更新哪条记录。
+                            现有编号：%s
+                            如果要添加新记录，请在备注中加入[首次导入]标记。""",
+                    assetName,
+                    allMatches.size(),
+                    existingCodes.isEmpty() ? "无" : String.join(", ", existingCodes)
+            ));
+        }
+
+        // 有编号，进行严格匹配
+        List<AssetRecord> codeMatches = codeMap.get(dtoBracketCode);
+
+        if (codeMatches == null || codeMatches.isEmpty()) {
+            Set<String> existingCodes = codeMap.keySet().stream()
+                    .filter(code -> !code.isEmpty())
+                    .collect(Collectors.toSet());
+
+            throw new RuntimeException(String.format(
+                    """
+                            资产[%s]存在%d条记录，但没有编号为[%s]的记录。
+                            现有编号：%s
+                            请检查编号是否正确，或使用[首次导入]标记来添加新记录。""",
+                    assetName,
+                    allMatches.size(),
+                    dtoBracketCode,
+                    existingCodes.isEmpty() ? "无" : String.join(", ", existingCodes)
+            ));
+        }
+
+        if (codeMatches.size() > 1) {
+            throw new RuntimeException(String.format(
+                    "资产[%s]编号[%s]匹配到%d条记录，无法确定更新哪一条。\n" +
+                            "请确保资产名称和编号的组合是唯一的。",
+                    assetName,
+                    dtoBracketCode,
+                    codeMatches.size()
+            ));
+        }
+
+        return codeMatches.get(0);
+    }
+
+    /**
+     * 获取资产名称
+     */
+    private String getAssetNameById(Long assetNameId) {
+        if (assetNameId == null) {
+            return "未知资产";
+        }
+
+        // 先从缓存获取
+        Map<Long, String> cache = assetNameCacheHolder.get();
+        if (cache != null && cache.containsKey(assetNameId)) {
+            return cache.get(assetNameId);
+        }
+
+        // 从数据库查询
+        AssetName assetName = assetNameMapper.selectById(assetNameId);
+        if (assetName != null && StringUtils.isNotEmpty(assetName.getName())) {
+            return assetName.getName();
+        }
+
+        return "资产ID:" + assetNameId;
+    }
+
+    /**
+     * 预加载资产名称缓存
+     */
+    private Map<Long, String> loadAssetNameCache(List<AssetRecordDTO> records) {
+        Set<Long> assetNameIds = records.stream()
+                .map(AssetRecordDTO::getAssetNameId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (assetNameIds.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        List<AssetName> assetNames = assetNameMapper.selectBatchIds(assetNameIds);
+        return assetNames.stream()
+                .collect(Collectors.toMap(
+                        AssetName::getId,
+                        AssetName::getName,
+                        (v1, v2) -> v1
+                ));
+    }
+
+    /**
+     * 验证记录字段
+     */
+    private void validateRecord(AssetRecord record) {
+        if (record.getAssetNameId() == null) {
+            throw new RuntimeException("资产名称不能为空");
+        }
+        if (record.getAssetTypeId() == null) {
+            throw new RuntimeException("资产类型不能为空");
+        }
+        if (record.getAmount() == null || record.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("金额必须大于0");
+        }
+        if (record.getUnitId() == null) {
+            throw new RuntimeException("货币单位不能为空");
+        }
+        if (record.getAssetLocationId() == null) {
+            throw new RuntimeException("资产位置不能为空");
+        }
+    }
+
+    /**
+     * 检查备注中是否包含[首次导入]标记
+     */
+    private boolean isFirstTimeAdd(String remark) {
+        if (StringUtils.isEmpty(remark)) {
+            return false;
+        }
+        return remark.contains("[首次导入]") || remark.contains("【首次导入】");
+    }
+
+    /**
+     * 验证输入数据中没有重复
+     */
+    private void validateNoDuplicates(List<AssetRecordDTO> records) {
+        Map<String, List<AssetRecordDTO>> normalRecords = new HashMap<>();
+        Map<Long, Integer> firstTimeAddCount = new HashMap<>();
+
+        for (AssetRecordDTO dto : records) {
+            if (isFirstTimeAdd(dto.getRemark())) {
+                firstTimeAddCount.merge(dto.getAssetNameId(), 1, Integer::sum);
+            } else {
+                String bracketCode = extractBracketCode(dto.getRemark());
+                String key = dto.getAssetNameId() + "_" + bracketCode;
+                normalRecords.computeIfAbsent(key, k -> new ArrayList<>()).add(dto);
+            }
+        }
+
+        List<String> duplicates = new ArrayList<>();
+
+        for (Map.Entry<String, List<AssetRecordDTO>> entry : normalRecords.entrySet()) {
+            List<AssetRecordDTO> dtoList = entry.getValue();
+            if (dtoList.size() > 1) {
+                AssetRecordDTO first = dtoList.get(0);
+                String bracketCode = extractBracketCode(first.getRemark());
+                String assetName = getAssetNameById(first.getAssetNameId());
+                duplicates.add(String.format("资产[%s]编号[%s]出现%d次",
+                        assetName,
+                        bracketCode.isEmpty() ? "空" : bracketCode,
+                        dtoList.size()));
+            }
+        }
+
+        for (Map.Entry<Long, Integer> entry : firstTimeAddCount.entrySet()) {
+            if (entry.getValue() > 1) {
+                String assetName = getAssetNameById(entry.getKey());
+                log.info("资产[{}]有{}条[首次导入]记录，都将作为新记录添加",
+                        assetName, entry.getValue());
+            }
+        }
+
+        if (!duplicates.isEmpty()) {
+            throw new RuntimeException("输入数据中存在重复的编号记录：" + String.join("; ", duplicates));
+        }
+    }
+
+    /**
+     * 从备注中提取方括号内的编号（排除[首次导入]）
+     */
+    private String extractBracketCode(String remark) {
+        if (StringUtils.isEmpty(remark)) {
+            return "";
+        }
+
+        // 先移除[首次导入]标记
+        String cleanedRemark = remark
+                .replace("[首次导入]", "")
+                .replace("【首次导入】", "");
+
+        // 正则表达式匹配方括号内的内容
+        Pattern pattern = Pattern.compile("\\[([^]]+)]|【([^】]+)】");
+        Matcher matcher = pattern.matcher(cleanedRemark);
+
+        if (matcher.find()) {
+            String code = matcher.group(1);
+            if (code == null) {
+                code = matcher.group(2);
+            }
+            return code.trim();
+        }
+
+        return "";
+    }
+
+    /**
+     * 通用的复制上回记录方法
      */
     private int copyLastRecordsCommon(String username, boolean force, boolean throwIfNoHistory) {
         try {
-            log.info("开始复制上回记录，用户: {}, 强制模式: {}, 抛异常模式: {}", username, force, throwIfNoHistory);
+            log.info("开始复制上回记录，用户: {}, 强制模式: {}, 抛异常模式: {}",
+                    username, force, throwIfNoHistory);
 
-            // 1. 检查今日是否已有记录（仅在需要时检查）
+            // 检查今日是否已有记录
             if (force) {
                 boolean hasTodayRecords = hasTodayRecords(username);
                 if (hasTodayRecords) {
-                    // 强制模式下，先删除今日所有记录
                     int deletedCount = deleteTodayRecords(username);
                     log.info("强制模式：已删除今日 {} 条记录", deletedCount);
                 }
             } else {
-                // 非强制模式，检查今日是否已有记录
                 boolean hasTodayRecords = hasTodayRecords(username);
                 if (hasTodayRecords && throwIfNoHistory) {
                     throw new RuntimeException("今日已有记录，如需重复复制请使用强制模式");
                 }
             }
 
-            // 2. 查找最近的记录日期（不包括今天）
-            LocalDate today = LocalDate.now();
-            QueryWrapper<AssetRecord> dateWrapper = new QueryWrapper<>();
-            dateWrapper.select("DATE(acquire_time) as record_date")
-                    .eq("create_user", username)
-                    .eq("deleted", 0)
-                    .apply("DATE(acquire_time) < CURDATE()") // 排除今天
-                    .groupBy("DATE(acquire_time)")
-                    .orderByDesc("DATE(acquire_time)")
-                    .last("LIMIT 1");
-
-            List<Map<String, Object>> dateResults = assetRecordMapper.selectMaps(dateWrapper);
-            if (dateResults.isEmpty()) {
+            // 查找最近的记录日期
+            String lastDate = findLastRecordDate(username);
+            if (lastDate == null) {
                 String message = String.format("用户 %s 没有找到历史记录可复制", username);
                 log.warn(message);
                 if (throwIfNoHistory) {
@@ -374,21 +594,9 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                 return 0;
             }
 
-            String lastDate = dateResults.get(0).get("record_date").toString();
-            log.info("找到用户 {} 最近记录日期: {}", username, lastDate);
-
-            // 3. 获取该日期的所有记录
-            QueryWrapper<AssetRecord> recordWrapper = new QueryWrapper<>();
-            recordWrapper.eq("create_user", username)
-                    .eq("deleted", 0)
-                    .apply("DATE(acquire_time) = {0}", lastDate)
-                    .orderByAsc("create_time");
-
-            List<AssetRecord> recordsToCopy = assetRecordMapper.selectList(recordWrapper);
-
+            // 获取该日期的所有记录
+            List<AssetRecord> recordsToCopy = getRecordsByDate(username, lastDate);
             if (recordsToCopy.isEmpty()) {
-                String message = String.format("在日期 %s 没有找到用户 %s 的记录", lastDate, username);
-                log.warn(message);
                 if (throwIfNoHistory) {
                     throw new RuntimeException("在最近的记录日期中没有找到可复制的记录");
                 }
@@ -397,41 +605,10 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
             log.info("找到 {} 条记录需要复制，从日期: {}", recordsToCopy.size(), lastDate);
 
-            // 4. 复制记录到今天
-            LocalDateTime now = LocalDateTime.now();
-            List<AssetRecord> newRecords = new ArrayList<>();
+            // 复制记录到今天
+            List<AssetRecord> newRecords = createCopiedRecords(recordsToCopy, username, lastDate);
 
-            for (AssetRecord record : recordsToCopy) {
-                AssetRecord newRecord = new AssetRecord();
-
-                // 复制所有必要字段
-                newRecord.setAssetNameId(record.getAssetNameId());
-                newRecord.setAssetTypeId(record.getAssetTypeId());
-                newRecord.setUnitId(record.getUnitId());
-                newRecord.setAssetLocationId(record.getAssetLocationId());
-                newRecord.setAmount(record.getAmount());
-                newRecord.setRemark(record.getRemark() != null ? record.getRemark() : "复制自" + lastDate);
-
-                // 设置时间和用户信息
-                newRecord.setAcquireTime(now);
-                newRecord.setCreateTime(now);
-                newRecord.setUpdateTime(now);
-                newRecord.setCreateUser(username);
-                newRecord.setUpdateUser(username);
-                newRecord.setDeleted(0);
-
-                // 如果有版本字段，设置为0
-                if (hasVersionField()) {
-                    newRecord.setVersion(0);
-                }
-
-                newRecords.add(newRecord);
-
-                log.debug("准备复制记录: 资产名称ID={}, 类型ID={}, 金额={}",
-                        record.getAssetNameId(), record.getAssetTypeId(), record.getAmount());
-            }
-
-            // 5. 批量插入新记录
+            // 批量插入新记录
             batchInsert(newRecords);
 
             log.info("成功复制 {} 条历史记录到今日，用户: {}", newRecords.size(), username);
@@ -439,12 +616,9 @@ public class AssetRecordServiceImpl implements AssetRecordService {
 
         } catch (Exception e) {
             log.error("复制历史记录失败，用户: {}, 错误: {}", username, e.getMessage(), e);
-
-            // 根据配置决定是否抛出异常
             if (throwIfNoHistory) {
                 throw new RuntimeException("复制历史记录失败：" + e.getMessage());
             } else {
-                // 在批量添加场景中，复制失败不应该影响后续的添加操作
                 log.warn("复制历史记录失败，但不影响后续操作：{}", e.getMessage());
                 return 0;
             }
@@ -452,8 +626,82 @@ public class AssetRecordServiceImpl implements AssetRecordService {
     }
 
     /**
+     * 查找最近的记录日期
+     */
+    private String findLastRecordDate(String username) {
+        QueryWrapper<AssetRecord> dateWrapper = new QueryWrapper<>();
+        dateWrapper.select("DATE(acquire_time) as record_date")
+                .eq("create_user", username)
+                .eq("deleted", 0)
+                .apply("DATE(acquire_time) < CURDATE()")
+                .groupBy("DATE(acquire_time)")
+                .orderByDesc("DATE(acquire_time)")
+                .last("LIMIT 1");
+
+        List<Map<String, Object>> dateResults = assetRecordMapper.selectMaps(dateWrapper);
+        if (dateResults.isEmpty()) {
+            return null;
+        }
+
+        return dateResults.get(0).get("record_date").toString();
+    }
+
+    /**
+     * 获取指定日期的记录
+     */
+    private List<AssetRecord> getRecordsByDate(String username, String date) {
+        QueryWrapper<AssetRecord> recordWrapper = new QueryWrapper<>();
+        recordWrapper.eq("create_user", username)
+                .eq("deleted", 0)
+                .apply("DATE(acquire_time) = {0}", date)
+                .orderByAsc("create_time");
+
+        return assetRecordMapper.selectList(recordWrapper);
+    }
+
+    /**
+     * 创建复制的记录
+     */
+    private List<AssetRecord> createCopiedRecords(List<AssetRecord> recordsToCopy,
+                                                  String username, String lastDate) {
+        LocalDateTime now = LocalDateTime.now();
+        List<AssetRecord> newRecords = new ArrayList<>();
+
+        for (AssetRecord record : recordsToCopy) {
+            AssetRecord newRecord = new AssetRecord();
+
+            // 复制所有必要字段
+            newRecord.setAssetNameId(record.getAssetNameId());
+            newRecord.setAssetTypeId(record.getAssetTypeId());
+            newRecord.setUnitId(record.getUnitId());
+            newRecord.setAssetLocationId(record.getAssetLocationId());
+            newRecord.setAmount(record.getAmount());
+            newRecord.setRemark(record.getRemark() != null ? record.getRemark() : "复制自" + lastDate);
+
+            // 设置时间和用户信息
+            newRecord.setAcquireTime(now);
+            newRecord.setCreateTime(now);
+            newRecord.setUpdateTime(now);
+            newRecord.setCreateUser(username);
+            newRecord.setUpdateUser(username);
+            newRecord.setDeleted(0);
+
+            // 如果有版本字段，设置为0
+            if (hasVersionField()) {
+                newRecord.setVersion(0);
+            }
+
+            newRecords.add(newRecord);
+
+            log.debug("准备复制记录: 资产名称ID={}, 类型ID={}, 金额={}",
+                    record.getAssetNameId(), record.getAssetTypeId(), record.getAmount());
+        }
+
+        return newRecords;
+    }
+
+    /**
      * 检查实体是否有版本字段
-     * 这个方法可以根据实际的实体类结构来实现
      */
     private boolean hasVersionField() {
         try {
@@ -539,7 +787,8 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         log.info("批量插入完成，总计: {} 条记录", records.size());
     }
 
-    private String buildResultMessage(boolean overwrote, boolean copied, int updateCount, int addCount, int totalInput) {
+    private String buildResultMessage(boolean overwrote, boolean copied, int updateCount,
+                                      int addCount) {
         StringBuilder message = new StringBuilder("批量操作完成：");
 
         if (copied) {
@@ -564,13 +813,58 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         return message.toString();
     }
 
-
     @Override
     @Transactional(readOnly = true)
     public AssetStatsDTO getLatestStats(String createUser, Integer offset) {
         log.debug("获取用户 {} 的资产统计, 偏移天数: {}", createUser, offset);
 
-        // 1. 找到指定偏移日期的记录日期
+        // 找到指定偏移日期的记录日期
+        String latestDate = findStatisticsDate(createUser, offset);
+        if (latestDate == null) {
+            log.info("未找到任何记录，返回零值统计");
+            return AssetStatsDTO.builder()
+                    .totalAssets(0.0)
+                    .totalLiabilities(0.0)
+                    .latestDate(LocalDateTime.now().toString())
+                    .build();
+        }
+
+        // 获取最新日期的资产记录
+        List<AssetRecord> latestRecords = getRecordsByDate(createUser, latestDate);
+
+        // 获取上一个日期的资产记录
+        String previousDate = findPreviousDate(createUser, latestDate);
+        List<AssetRecord> previousRecords = previousDate != null ?
+                getRecordsByDate(createUser, previousDate) : new ArrayList<>();
+
+        // 计算统计数据
+        AssetStats latestStats = calculateStats(latestRecords);
+        AssetStats previousStats = calculateStats(previousRecords);
+
+        // 计算变化额
+        BigDecimal assetsChange = latestStats.totalAssets.subtract(previousStats.totalAssets);
+        BigDecimal liabilitiesChange = latestStats.totalLiabilities.subtract(previousStats.totalLiabilities);
+
+        // 格式化日期显示
+        String formattedDate = formatDate(latestDate);
+
+        log.info("计算完成 - 总资产: {}, 总负债: {}, 资产变化: {}, 负债变化: {}",
+                latestStats.totalAssets, latestStats.totalLiabilities, assetsChange, liabilitiesChange);
+
+        return AssetStatsDTO.builder()
+                .totalAssets(latestStats.totalAssets.doubleValue())
+                .totalLiabilities(latestStats.totalLiabilities.doubleValue())
+                .latestDate(latestDate)
+                .formattedDate(formattedDate)
+                .assetsChange(assetsChange.doubleValue())
+                .liabilitiesChange(liabilitiesChange.doubleValue())
+                .build();
+    }
+
+    /**
+     * 查找统计日期
+     */
+    private String findStatisticsDate(String createUser, Integer offset) {
         QueryWrapper<AssetRecord> dateWrapper = new QueryWrapper<>();
         dateWrapper.select("DATE(acquire_time) as date_only")
                 .eq("create_user", createUser)
@@ -584,64 +878,43 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             dateWrapper.last("LIMIT 1");
         }
 
-        Map<String, Object> dateResult = assetRecordMapper.selectMaps(dateWrapper).stream().findFirst().orElse(null);
-        if (dateResult == null || dateResult.get("date_only") == null) {
-            log.info("未找到任何记录，返回零值统计");
-            return AssetStatsDTO.builder()
-                    .totalAssets(0.0)
-                    .totalLiabilities(0.0)
-                    .latestDate(LocalDateTime.now().toString())
-                    .build();
-        }
+        Map<String, Object> dateResult = assetRecordMapper.selectMaps(dateWrapper).stream()
+                .findFirst().orElse(null);
+        return dateResult != null ? dateResult.get("date_only").toString() : null;
+    }
 
-        String latestDate = dateResult.get("date_only").toString();
-        log.debug("找到最新记录日期: {}", latestDate);
-
-        // 2. 获取最新日期的资产记录，按类型分组统计
-        QueryWrapper<AssetRecord> latestWrapper = new QueryWrapper<>();
-        latestWrapper.eq("create_user", createUser)
-                .eq("deleted", 0)
-                .apply("DATE(acquire_time) = STR_TO_DATE({0}, '%Y-%m-%d')", latestDate);
-
-        List<AssetRecord> latestRecords = assetRecordMapper.selectList(latestWrapper);
-
-        // 3. 获取上一个日期的资产记录，用于计算变化率
+    /**
+     * 查找前一个日期
+     */
+    private String findPreviousDate(String createUser, String currentDate) {
         QueryWrapper<AssetRecord> previousWrapper = new QueryWrapper<>();
         previousWrapper.select("DATE(acquire_time) as date_only")
                 .eq("create_user", createUser)
                 .eq("deleted", 0)
-                .lt("DATE(acquire_time)", latestDate)
+                .lt("DATE(acquire_time)", currentDate)
                 .orderByDesc("acquire_time")
                 .last("LIMIT 1");
 
-        String previousDate = assetRecordMapper.selectMaps(previousWrapper).stream()
+        return assetRecordMapper.selectMaps(previousWrapper).stream()
                 .findFirst()
                 .map(m -> m.get("date_only").toString())
                 .orElse(null);
+    }
 
-        List<AssetRecord> previousRecords = new ArrayList<>();
-        if (previousDate != null) {
-            QueryWrapper<AssetRecord> prevRecordsWrapper = new QueryWrapper<>();
-            prevRecordsWrapper.eq("create_user", createUser)
-                    .eq("deleted", 0)
-                    .apply("DATE(acquire_time) = STR_TO_DATE({0}, '%Y-%m-%d')", previousDate);
-            previousRecords = assetRecordMapper.selectList(prevRecordsWrapper);
-        }
-
-        // 4. 计算最新日期的资产和负债总额
+    /**
+     * 计算资产统计
+     */
+    private AssetStats calculateStats(List<AssetRecord> records) {
         BigDecimal totalAssets = BigDecimal.ZERO;
         BigDecimal totalLiabilities = BigDecimal.ZERO;
         Map<Long, BigDecimal> typeAmounts = new HashMap<>();
 
-        for (AssetRecord record : latestRecords) {
-            CommonMeta type = commonMetaService.getById(record.getAssetTypeId());
-            if (type != null) {
-                // 按类型累加金额
-                typeAmounts.merge(record.getAssetTypeId(), record.getAmount(), BigDecimal::add);
-            }
+        // 按类型累加金额
+        for (AssetRecord record : records) {
+            typeAmounts.merge(record.getAssetTypeId(), record.getAmount(), BigDecimal::add);
         }
 
-        // 5. 按类型统计资产和负债
+        // 按类型统计资产和负债
         for (Map.Entry<Long, BigDecimal> entry : typeAmounts.entrySet()) {
             CommonMeta type = commonMetaService.getById(entry.getKey());
             if (type != null && "ASSET_TYPE".equals(type.getTypeCode()) && "DEBT".equals(type.getKey1())) {
@@ -651,53 +924,32 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             }
         }
 
-        // 6. 计算变化率
-        BigDecimal previousAssets = BigDecimal.ZERO;
-        BigDecimal previousLiabilities = BigDecimal.ZERO;
-        Map<Long, BigDecimal> prevTypeAmounts = new HashMap<>();
+        return new AssetStats(totalAssets, totalLiabilities);
+    }
 
-        for (AssetRecord record : previousRecords) {
-            CommonMeta type = commonMetaService.getById(record.getAssetTypeId());
-            if (type != null) {
-                // 按类型累加金额
-                prevTypeAmounts.merge(record.getAssetTypeId(), record.getAmount(), BigDecimal::add);
-            }
+    /**
+     * 资产统计内部类
+     */
+    private static class AssetStats {
+        final BigDecimal totalAssets;
+        final BigDecimal totalLiabilities;
+
+        AssetStats(BigDecimal totalAssets, BigDecimal totalLiabilities) {
+            this.totalAssets = totalAssets;
+            this.totalLiabilities = totalLiabilities;
         }
+    }
 
-        // 7. 按类型统计前一天的资产和负债
-        for (Map.Entry<Long, BigDecimal> entry : prevTypeAmounts.entrySet()) {
-            CommonMeta type = commonMetaService.getById(entry.getKey());
-            if (type != null && "ASSET_TYPE".equals(type.getTypeCode()) && "DEBT".equals(type.getKey1())) {
-                previousLiabilities = previousLiabilities.add(entry.getValue());
-            } else {
-                previousAssets = previousAssets.add(entry.getValue());
-            }
-        }
-
-        // 8. 计算变化额
-        BigDecimal assetsChange = totalAssets.subtract(previousAssets);
-        BigDecimal liabilitiesChange = totalLiabilities.subtract(previousLiabilities);
-
-        // 格式化日期显示
-        String formattedDate;
+    /**
+     * 格式化日期
+     */
+    private String formatDate(String dateStr) {
         try {
-            LocalDate date = LocalDate.parse(latestDate);
-            formattedDate = date.format(DateTimeFormatter.ofPattern("MM月dd日"));
+            LocalDate date = LocalDate.parse(dateStr);
+            return date.format(DateTimeFormatter.ofPattern("MM月dd日"));
         } catch (Exception e) {
-            formattedDate = latestDate;
+            return dateStr;
         }
-
-        log.info("计算完成 - 总资产: {}, 总负债: {}, 资产变化: {}, 负债变化: {}",
-                totalAssets, totalLiabilities, assetsChange, liabilitiesChange);
-
-        return AssetStatsDTO.builder()
-                .totalAssets(totalAssets.doubleValue())
-                .totalLiabilities(totalLiabilities.doubleValue())
-                .latestDate(latestDate)
-                .formattedDate(formattedDate)
-                .assetsChange(assetsChange.doubleValue())
-                .liabilitiesChange(liabilitiesChange.doubleValue())
-                .build();
     }
 
     @Override

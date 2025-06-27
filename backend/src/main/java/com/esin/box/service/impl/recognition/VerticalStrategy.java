@@ -296,7 +296,7 @@ public class VerticalStrategy implements RecognitionStrategy {
         product.setAssetName(cleanProductName(fullName));
         product.setAmount(candidate.amount);
         product.setAcquireTime(LocalDateTime.now());
-        product.setRemark("图片识别导入");
+        product.setRemark("[]");
 
         return product;
     }

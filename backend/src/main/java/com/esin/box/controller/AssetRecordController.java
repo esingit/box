@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -26,7 +25,7 @@ import java.util.List;
 public class AssetRecordController {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AssetRecordController.class);
-    
+
     private final AssetRecordService assetRecordService;
 
     @Operation(summary = "分页查询资产记录")
@@ -103,7 +102,7 @@ public class AssetRecordController {
     @Operation(summary = "获取最近日期的资产统计")
     @GetMapping("/latest-stats")
     public ApiResponse<AssetStatsDTO> getLatestStats(
-            @Parameter(description = "日期偏移量，0表示最新，1表示昨天，以此类推") 
+            @Parameter(description = "日期偏移量，0表示最新，1表示昨天，以此类推")
             @RequestParam(required = false, defaultValue = "0") Integer offset) {
         try {
             String currentUser = UserContextHolder.getCurrentUsername();
@@ -114,6 +113,7 @@ public class AssetRecordController {
             return ApiResponse.error(e.getMessage());
         }
     }
+
     @Operation(summary = "查询全部资产记录")
     @GetMapping("/listAll")
     public ApiResponse<List<AssetRecordDTO>> listAllRecords(
@@ -159,20 +159,19 @@ public class AssetRecordController {
     public ApiResponse<BatchAddResult> batchAddRecords(@Validated @RequestBody BatchAddAssetRequest request) {
         try {
             String currentUser = UserContextHolder.getCurrentUsername();
-            log.info("接收到批量添加请求，记录数: {}", request.getRecords().size());
-            for (AssetRecordDTO dto : request.getRecords()) {
-                log.info("AssetNameId: {}, Amount: {}", dto.getAssetNameId(), dto.getAmount());
-            }
+
             BatchAddResult result = assetRecordService.smartBatchAddRecords(
                     request.getRecords(),
                     request.isForceOverwrite(),
-                    request.isCopyLast(), // 新增参数
+                    request.isCopyLast(),
                     currentUser
             );
             return ApiResponse.success(result);
+        } catch (RuntimeException e) {
+            return ApiResponse.error(e.getMessage());
         } catch (Exception e) {
-            log.error("Failed to batch add records:", e);
-            return ApiResponse.error("批量添加失败：" + e.getMessage());
+            log.error("批量添加异常", e);
+            return ApiResponse.error("系统异常：" + e.getMessage());
         }
     }
 }

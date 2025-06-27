@@ -41,6 +41,7 @@ declare module 'vue' {
     FitnessSearch: typeof import('./components/fitness/FitnessSearch.vue')['default']
     FitnessStats: typeof import('./components/dashboard/components/FitnessStats.vue')['default']
     FitnessTable: typeof import('./components/fitness/FitnessTable.vue')['default']
+    ImageViewer: typeof import('./components/base/ImageViewer.vue')['default']
     LoginModal: typeof import('./components/auth/LoginModal.vue')['default']
     NumberEditor: typeof import('./components/base/editors/NumberEditor.vue')['default']
     Profile: typeof import('./components/layout/Profile.vue')['default']

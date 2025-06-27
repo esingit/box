@@ -3,7 +3,7 @@
   <BaseModal
       title="扫图批量添加"
       :visible="visible"
-      :width="modalWidth"
+      width="1350px"
       @update:visible="handleClose"
   >
     <!-- 主内容区域 -->
@@ -32,121 +32,173 @@
             <span>{{ isRecognizing ? '识别中...' : '开始识别' }}</span>
           </BaseButton>
         </div>
-        <img
-            v-if="imagePreview"
-            :src="imagePreview"
-            alt="预览"
-            class="max-h-48 rounded border"
-        />
-      </div>
 
-      <!-- 统一属性设置 -->
-      <div v-if="recognizedData.length" class="section-card">
-        <h4 class="text-sm font-medium text-gray-700 mb-3 block">设置共同信息</h4>
-        <div class="grid grid-cols-5 gap-4">
-          <BaseSelect
-              title="资产类型"
-              v-model="commonAttributes.assetTypeId"
-              :options="assetTypeOptions"
-              required
-              clearable
-              searchable
-              @update:model-value="onAssetTypeChange"
+        <!-- 图片预览区 -->
+        <div v-if="imagePreview" class="relative">
+          <img
+              :src="imagePreview"
+              alt="预览"
+              class="max-h-48 rounded border cursor-zoom-in hover:opacity-80 transition-opacity"
+              @click="showImageViewer = true"
           />
-          <BaseSelect
-              title="资产位置"
-              v-model="commonAttributes.assetLocationId"
-              :options="assetLocationOptions"
-              required
-              clearable
-              searchable
-          />
-          <BaseDateInput
-              title="登记日期"
-              v-model="commonAttributes.acquireTime"
-              type="date"
-              :max="today"
-              required
-              clearable
-          />
-          <BaseSelect
-              title="货币单位"
-              v-model="commonAttributes.unitId"
-              :options="unitOptions"
-              required
-              clearable
-              searchable
-          />
-          <BaseButton
-              type="button"
-              title="名称管理"
-              color="outline"
-              @click="assetNameRef?.open()"
-              :icon="LucideSettings"
-              variant="search"
-              class="w-60"
-          />
+          <div class="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+            点击查看大图
+          </div>
         </div>
       </div>
 
-      <!-- 识别结果展示 -->
-      <div v-if="recognizedData.length" class="section-card">
-        <h4 class="text-sm font-medium text-gray-700 mb-3 block">
-          识别结果 ({{ recognizedData.length }} 条)
-          <span v-if="validItemsCount < recognizedData.length" class="text-amber-600">
-            - {{ validItemsCount }} 条有效
-          </span>
-        </h4>
-        <RecognizedAssetsTable
-            ref="recognizedAssetsTableRef"
-            :data="recognizedData"
-            @remove-item="removeItem"
-            @update-item="updateItem"
-        />
-      </div>
+      <!-- 内容区域过渡 -->
+      <transition name="content-fade" mode="out-in">
+        <!-- 识别中的骨架屏 -->
+        <div v-if="isRecognizing" key="loading" class="space-y-6">
+          <div class="section-card">
+            <div class="animate-pulse">
+              <div class="h-4 bg-gray-200 rounded w-1/4 mb-3"></div>
+              <div class="grid grid-cols-5 gap-4">
+                <div class="h-10 bg-gray-200 rounded" v-for="i in 5" :key="i"></div>
+              </div>
+            </div>
+          </div>
 
-      <!-- 校验提示 -->
-      <div v-if="recognizedData.length && validationErrors.length"
-           class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <h5 class="text-sm font-medium text-amber-800 mb-2">请完善以下信息：</h5>
-        <ul class="text-sm text-amber-700 space-y-1">
-          <li v-for="error in validationErrors" :key="error" class="flex items-center gap-2">
-            <span class="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
-            {{ error }}
-          </li>
-        </ul>
-      </div>
+          <div class="section-card">
+            <div class="animate-pulse">
+              <div class="h-4 bg-gray-200 rounded w-1/3 mb-3"></div>
+              <div class="space-y-2">
+                <div class="h-12 bg-gray-200 rounded" v-for="i in 3" :key="i"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 有识别结果时的内容 -->
+        <div v-else-if="recognizedData.length" key="has-data" class="space-y-6">
+          <!-- 统一属性设置 -->
+          <div class="section-card">
+            <h4 class="text-sm font-medium text-gray-700 mb-3 block">设置共同信息</h4>
+            <div class="grid grid-cols-5 gap-4">
+              <BaseSelect
+                  title="资产类型"
+                  v-model="commonAttributes.assetTypeId"
+                  :options="assetTypeOptions"
+                  required
+                  clearable
+                  searchable
+                  @update:model-value="onAssetTypeChange"
+              />
+              <BaseSelect
+                  title="资产位置"
+                  v-model="commonAttributes.assetLocationId"
+                  :options="assetLocationOptions"
+                  required
+                  clearable
+                  searchable
+              />
+              <BaseDateInput
+                  title="登记日期"
+                  v-model="commonAttributes.acquireTime"
+                  type="date"
+                  :max="today"
+                  required
+                  clearable
+              />
+              <BaseSelect
+                  title="货币单位"
+                  v-model="commonAttributes.unitId"
+                  :options="unitOptions"
+                  required
+                  clearable
+                  searchable
+              />
+              <BaseButton
+                  type="button"
+                  title="名称管理"
+                  color="outline"
+                  @click="assetNameRef?.open()"
+                  :icon="LucideSettings"
+                  variant="search"
+                  class="w-60"
+              />
+            </div>
+          </div>
+
+          <!-- 识别结果展示 -->
+          <div class="section-card">
+            <h4 class="text-sm font-medium text-gray-700 mb-3 block">
+              识别结果 ({{ recognizedData.length }} 条)
+              <span v-if="validItemsCount < recognizedData.length" class="text-amber-600">
+                - {{ validItemsCount }} 条有效
+              </span>
+            </h4>
+            <RecognizedAssetsTable
+                ref="recognizedAssetsTableRef"
+                :data="recognizedData"
+                @remove-item="removeItem"
+                @update-item="updateItem"
+            />
+          </div>
+
+          <!-- 校验提示 -->
+          <transition name="validation-fade">
+            <div v-if="validationErrors.length"
+                 class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <h5 class="text-sm font-medium text-amber-800 mb-2">请完善以下信息：</h5>
+              <ul class="text-sm text-amber-700 space-y-1">
+                <li v-for="error in validationErrors" :key="error" class="flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                  {{ error }}
+                </li>
+              </ul>
+            </div>
+          </transition>
+        </div>
+
+        <!-- 无识别结果时的占位内容 -->
+        <div v-else key="no-data" class="text-center py-12 text-gray-500">
+          <LucideScanText class="w-12 h-12 mx-auto mb-4 opacity-50"/>
+          <p>请上传图片并开始识别</p>
+        </div>
+      </transition>
     </div>
 
     <!-- 底部按钮 -->
-    <template #footer v-if="recognizedData.length > 0">
-      <div class="flex justify-end gap-3">
-        <BaseButton type="button" title="取消" color="outline" @click="handleClose"/>
-        <BaseButton
-            type="button"
-            title="批量添加"
-            color="primary"
-            :disabled="!canSubmit || isSubmitting"
-            @click="handleSubmit"
-        >
-          <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin"/>
-          <span>{{ isSubmitting ? '处理中...' : `批量添加 (${validItemsCount} 条)` }}</span>
-        </BaseButton>
-      </div>
+    <template #footer>
+      <transition name="footer-fade">
+        <div v-if="recognizedData.length > 0" class="flex justify-end gap-3">
+          <BaseButton type="button" title="取消" color="outline" @click="handleClose"/>
+          <BaseButton
+              type="button"
+              title="批量添加"
+              color="primary"
+              :disabled="!canSubmit || isSubmitting"
+              @click="handleSubmit"
+          >
+            <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin"/>
+            <span>{{ isSubmitting ? '处理中...' : `批量添加 (${validItemsCount} 条)` }}</span>
+          </BaseButton>
+        </div>
+      </transition>
     </template>
   </BaseModal>
 
+  <!-- 资产名称管理 -->
   <AssetName ref="assetNameRef" @refresh="refreshAssetNames"/>
+
+  <!-- 图片查看器 -->
+  <ImageViewer
+      :visible="showImageViewer"
+      :src="imagePreview"
+      @close="showImageViewer = false"
+  />
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, watch, nextTick} from 'vue'
+import {computed, nextTick, onMounted, ref} from 'vue'
 import {Loader2, LucideScanText, LucideSettings} from 'lucide-vue-next'
 import {useAssetStore} from '@/store/assetStore'
 import {useMetaStore} from '@/store/metaStore'
 import {useAssetNameStore} from '@/store/assetNameStore'
 import emitter from '@/utils/eventBus'
-import {RawAssetRecord, RecognizedAssetItem, BatchAddResult} from '@/types/asset'
+import {RawAssetRecord, RecognizedAssetItem} from '@/types/asset'
 
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
@@ -154,6 +206,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import RecognizedAssetsTable from '@/components/asset/RecognizedAssetsTable.vue'
 import BaseDateInput from "@/components/base/BaseDateInput.vue"
 import AssetName from "@/components/asset/assetName/AssetName.vue"
+import ImageViewer from "@/components/base/ImageViewer.vue"
 
 const props = defineProps<{
   visible: boolean
@@ -163,6 +216,26 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(['close', 'submit', 'update:visible'])
+
+// 自定义防抖函数
+function debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null
+
+  return function (...args: Parameters<T>) {
+    const later = () => {
+      timeout = null
+      func(...args)
+    }
+
+    if (timeout) {
+      clearTimeout(timeout)
+    }
+    timeout = setTimeout(later, wait)
+  }
+}
 
 // Stores
 const assetStore = useAssetStore()
@@ -176,6 +249,7 @@ const imagePreview = ref('')
 const assetNameRef = ref()
 const isRecognizing = ref(false)
 const isSubmitting = ref(false)
+const showImageViewer = ref(false)
 const today = new Date().toISOString().slice(0, 10)
 
 // 识别数据
@@ -187,14 +261,6 @@ const commonAttributes = ref({
   assetLocationId: null as string | null,
   acquireTime: today,
   unitId: null as string | null
-})
-
-// 动态计算弹窗宽度
-const modalWidth = computed(() => {
-  if (recognizedData.value.length === 0) {
-    return '600px'
-  }
-  return '1350px'
 })
 
 // 计算属性 - 选项数据
@@ -282,17 +348,31 @@ async function forceLoadAssetNames() {
   }
 }
 
+// 防抖处理识别结果更新
+const updateRecognizedData = debounce((data: RecognizedAssetItem[]) => {
+  recognizedData.value = data
+}, 150)
+
 // 方法 - 图片处理
 function handleImageUpload(file: File) {
   imageFile.value = file
-  imagePreview.value = ''          // 👉 清空，先不显示
   recognizedData.value = []
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    imagePreview.value = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
 }
 
 async function recognizeImage() {
   if (!imageFile.value) return
 
   isRecognizing.value = true
+
+  // 先清空识别数据，避免闪现旧数据
+  recognizedData.value = []
+
   try {
     await forceLoadAssetNames()
 
@@ -305,7 +385,10 @@ async function recognizeImage() {
 
     const result = await assetStore.recognizeAssetImage(formData)
 
-    recognizedData.value = (result || []).map((item: any) => ({
+    // 等待DOM更新完成
+    await nextTick()
+
+    const processedData = (result || []).map((item: any) => ({
       ...item,
       assetNameId: safeParseId(item.assetNameId),
       amount: item.amount || null,
@@ -315,10 +398,13 @@ async function recognizeImage() {
       originalAssetName: item.originalAssetName || item.assetName || ''
     })) as RecognizedAssetItem[]
 
+    // 使用防抖更新数据
+    updateRecognizedData(processedData)
+
     emitter.emit('notify', {
-      type: recognizedData.value.length ? 'success' : 'warning',
-      message: recognizedData.value.length
-          ? `成功识别 ${recognizedData.value.length} 条数据`
+      type: processedData.length ? 'success' : 'warning',
+      message: processedData.length
+          ? `成功识别 ${processedData.length} 条数据`
           : '未识别到有效数据'
     })
   } catch (err) {
@@ -329,10 +415,6 @@ async function recognizeImage() {
     console.error('识别失败:', err)
   } finally {
     isRecognizing.value = false
-    // 👉 此处才设置预览，避免图片加载与内容刷新叠加造成闪现
-    if (imageFile.value) {
-      imagePreview.value = URL.createObjectURL(imageFile.value)
-    }
   }
 }
 
@@ -369,7 +451,6 @@ function validateForm(): boolean {
   return true
 }
 
-// 🔥 修复 executeBatchAdd 方法
 async function executeBatchAdd(
     records: RawAssetRecord[],
     forceOverwrite: boolean,
@@ -395,7 +476,6 @@ async function executeBatchAdd(
       throw new Error('没有要处理的记录')
     }
 
-    // 🔥 直接调用 smartBatchAddRecords，不要经过其他方法
     const result = await assetStore.smartBatchAddRecords(records, forceOverwrite, copyLast)
 
     if (result) {
@@ -424,9 +504,7 @@ async function executeBatchAdd(
         message
       })
 
-      // 🔥 直接触发 submit 事件，不要包装数据
-      emit('submit', records) // 直接传递 records 数组
-
+      emit('submit', records)
       return true
     }
 
@@ -441,7 +519,6 @@ async function executeBatchAdd(
   }
 }
 
-// 🔥 修复 handleSubmit 方法，增加详细的调试日志
 async function handleSubmit() {
   if (!validateForm()) return
 
@@ -465,7 +542,6 @@ async function handleSubmit() {
       throw new Error('没有有效的记录可提交')
     }
 
-    // 🔥 修复：确保所有字段都正确设置
     const records: RawAssetRecord[] = validItems.map((item, index) => {
       const record = {
         id: String(Date.now() + index),
@@ -490,7 +566,6 @@ async function handleSubmit() {
     console.log('今日是否有记录:', hasRecordsToday)
 
     if (hasRecordsToday) {
-      // 今日已有记录的处理逻辑
       emitter.emit('confirm', {
         title: '今日已有记录',
         message: `检测到今日已有记录，请选择处理方式：
@@ -524,7 +599,6 @@ async function handleSubmit() {
         }
       })
     } else {
-      // 今日无记录的处理逻辑
       emitter.emit('confirm', {
         title: '是否复制历史记录',
         message: `今日暂无记录，请选择操作方式：
@@ -564,12 +638,10 @@ function handleClose() {
 }
 
 function resetForm() {
-  if (imagePreview.value && imagePreview.value.startsWith('blob:')) {
-    URL.revokeObjectURL(imagePreview.value)
-  }
   imageFile.value = null
   imagePreview.value = ''
   recognizedData.value = []
+  showImageViewer.value = false
   commonAttributes.value = {
     assetTypeId: null,
     assetLocationId: null,
@@ -635,7 +707,7 @@ function onAssetTypeChange(value: string | number | (string | number)[] | null) 
 onMounted(async () => {
   await forceLoadAssetNames()
 
-  // 设置默认资产类型为“理财”
+  // 设置默认资产类型为"理财"
   const defaultAssetType = metaStore.typeMap?.ASSET_TYPE?.find(
       (item) => item.value1 === '理财'
   )
@@ -646,7 +718,7 @@ onMounted(async () => {
     })
   }
 
-  // 设置默认资产位置为“兴业银行”
+  // 设置默认资产位置为"兴业银行"
   const defaultAssetLocation = metaStore.typeMap?.ASSET_LOCATION?.find(
       (item) => item.value1 === '兴业银行'
   )
@@ -659,3 +731,68 @@ function refreshAssetNames() {
   forceLoadAssetNames()
 }
 </script>
+
+<style scoped>
+/* 内容区域过渡动画 */
+.content-fade-enter-active,
+.content-fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.content-fade-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.content-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* 校验提示过渡动画 */
+.validation-fade-enter-active,
+.validation-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.validation-fade-enter-from,
+.validation-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* 底部按钮过渡动画 */
+.footer-fade-enter-active,
+.footer-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.footer-fade-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.footer-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* 图片预览增强样式 */
+.section-card {
+  @apply bg-white rounded-lg border border-gray-200 p-4 shadow-sm;
+}
+
+/* 骨架屏动画优化 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+</style>
