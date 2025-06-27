@@ -7,6 +7,7 @@ import com.esin.box.service.AssetNameService;
 import com.esin.box.service.AssetRecognitionService;
 import com.esin.box.service.impl.recognition.RecognitionContext;
 import com.esin.box.service.impl.recognition.RecognitionHelper;
+import com.esin.box.service.impl.recognition.RecognitionScheme;
 import lombok.extern.slf4j.Slf4j;
 import net.sourceforge.tess4j.ITesseract;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
@@ -40,12 +41,37 @@ public class AssetRecognitionServiceImpl implements AssetRecognitionService {
     @Value("${app.upload.temp-dir:/tmp/asset-images}")
     private String tempDir;
 
-    private enum TextFormat {
-        VERTICAL, HORIZONTAL, UNKNOWN
+    @Override
+    public List<AssetScanImageDTO> recognizeWithScheme(MultipartFile image, String createUser, RecognitionScheme scheme) throws Exception {
+        log.info("使用{}进行图片识别", scheme.getDescription());
+
+        String ocrText = performOCR(image);
+        if (!StringUtils.hasText(ocrText)) {
+            return Collections.emptyList();
+        }
+
+        // 直接使用指定方案，不做自动检测和降级
+        List<AssetScanImageDTO> result = recognitionContext.recognizeByScheme(ocrText, scheme);
+
+        if (!result.isEmpty()) {
+            matchAssetNames(result, createUser);
+        }
+
+        log.info("{}识别完成，识别到{}条记录", scheme.getDescription(), result.size());
+        return result;
     }
 
     @Override
+    @Deprecated
     public List<AssetScanImageDTO> recognizeAssetImage(MultipartFile image, String createUser) throws Exception {
+        // 兼容老接口，默认使用通用方案
+        return recognizeWithScheme(image, createUser, RecognitionScheme.GENERAL);
+    }
+
+    @Override
+    @Deprecated
+    public List<AssetScanImageDTO> recognizeImageAuto(MultipartFile image, String createUser) throws Exception {
+        // 兼容老接口，保持原有的自动检测逻辑
         String ocrText = performOCR(image);
         if (!StringUtils.hasText(ocrText)) return Collections.emptyList();
 
@@ -63,11 +89,6 @@ public class AssetRecognitionServiceImpl implements AssetRecognitionService {
         }
 
         return result;
-    }
-
-    @Override
-    public List<AssetScanImageDTO> recognizeImageAuto(MultipartFile image, String createUser) throws Exception {
-        return recognizeAssetImage(image, createUser);
     }
 
     // ===== OCR阶段 =====
@@ -96,8 +117,13 @@ public class AssetRecognitionServiceImpl implements AssetRecognitionService {
         return tmp;
     }
 
-    // ===== 文本格式判断逻辑 =====
+    // ===== 保留原有格式检测逻辑（兼容老接口） =====
+    private enum TextFormat {
+        VERTICAL, HORIZONTAL, UNKNOWN
+    }
+
     private TextFormat detectTextFormat(String text) {
+        // 保持原有逻辑不变...
         String[] lines = text.split("\\n");
         int verticalScore = 0;
         int horizontalScore = 0;

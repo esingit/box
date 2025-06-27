@@ -14,9 +14,6 @@ public class RecognitionHelper {
     public static final Set<String> PRODUCT_KEYWORDS = Set.of("理财", "基金", "债券", "存款", "产品", "固收", "开放", "净值",
             "添益", "尊利", "持盈", "鑫", "恒", "创利", "精选", "成长", "灵活", "稳健", "增利", "宝", "通", "汇", "融", "投");
 
-    public static boolean containsProductKeyword(String line) {
-        return PRODUCT_KEYWORDS.stream().anyMatch(line::contains);
-    }
 
     public static boolean containsAmount(String line) {
         Matcher matcher = Pattern.compile("[\\d.,]+").matcher(line);
@@ -28,19 +25,6 @@ public class RecognitionHelper {
                 if (value.compareTo(BigDecimal.ZERO) > 0) return true;
             } catch (Exception ignored) {}
         }
-        return false;
-    }
-
-    public static boolean shouldSkipLine(String line) {
-        String[] skip = {
-                "总金额", "收起", "温馨提示", "持仓市值", "持仓收益", "可赎回",
-                "最短持有期", "每日可赎", "赎回类型"
-        };
-        for (String p : skip) if (line.startsWith(p)) return true;
-        if (line.contains("持仓") && line.contains("撤单")) return true;
-        if (line.equals("撤单") || line.equals("撤音")) return true;
-        if (line.matches("^\\d{1,2}:\\d{1,2}$")) return true;
-        if (line.matches("^\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}.*$")) return true;
         return false;
     }
 
@@ -151,9 +135,49 @@ public class RecognitionHelper {
         return list;
     }
 
+    /**
+     * 增强的产品关键词匹配 - 支持更多银行理财产品关键词
+     */
+    public static final Set<String> ENHANCED_PRODUCT_KEYWORDS = Set.of(
+            // 原有关键词
+            "理财", "基金", "债券", "存款", "产品", "固收", "开放", "净值",
+            "添益", "尊利", "持盈", "鑫", "恒", "创利", "精选", "成长", "灵活", "稳健", "增利", "宝", "通", "汇", "融", "投",
+            // 工银理财特有关键词
+            "工银", "核心", "优选", "日升", "月恒", "天天", "纯债", "短债", "固定", "收益",
+            // 其他银行理财关键词
+            "招银", "建信", "中银", "农银", "交银", "光大", "民生", "华夏", "浦发", "兴业", "平安"
+    );
+
+    public static boolean containsProductKeyword(String line) {
+        return ENHANCED_PRODUCT_KEYWORDS.stream().anyMatch(line::contains);
+    }
+
+    /**
+     * 更严格的跳过行判断
+     */
+    public static boolean shouldSkipLine(String line) {
+        String[] skip = {
+                "总金额", "收起", "温馨提示", "持仓市值", "持仓收益", "可赎回",
+                "最短持有期", "每日可赎", "赎回类型"
+        };
+        for (String p : skip) if (line.startsWith(p)) return true;
+        if (line.contains("持仓") && line.contains("撤单")) return true;
+        if (line.equals("撤单") || line.equals("撤音")) return true;
+        if (line.matches("^\\d{1,2}:\\d{1,2}$")) return true;
+        if (line.matches("^\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}.*$")) return true;
+        return false;
+    }
+
+    /**
+     * 改进的名称清理
+     */
     public static String cleanName(String name) {
-        return name.trim().replaceAll("\\s+", "")
-                .replaceAll("[':-]", "·")
-                .replaceAll("[《》\"''()\\[\\]{}]", "");
+        if (name == null || name.trim().isEmpty()) return "";
+
+        return name.trim()
+                .replaceAll("\\s+", "") // 移除所有空格
+                .replaceAll("[':-]", "·") // 替换连接符
+                .replaceAll("[《》\"''()\\[\\]{}]", "") // 移除括号引号
+                .replaceAll("[^\\u4e00-\\u9fa5\\w·]", ""); // 只保留中文、字母数字和·
     }
 }
