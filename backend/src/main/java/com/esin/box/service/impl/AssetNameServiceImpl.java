@@ -74,6 +74,8 @@ public class AssetNameServiceImpl extends ServiceImpl<AssetNameMapper, AssetName
         if (StringUtils.isNotBlank(endTime)) {
             query.le("create_time", endTime);
         }
+        query.orderByDesc("create_time");
+
         return this.page(pageObj, query);
     }
 

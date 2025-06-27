@@ -52,7 +52,7 @@
             </if>
             AND fr.deleted = 0
         </where>
-        ORDER BY fr.finish_time DESC
+        ORDER BY fr.finish_time fr.create_time DESC
     </select>
 
     <select id="getMonthlyCount" resultType="int">

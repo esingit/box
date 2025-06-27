@@ -89,6 +89,6 @@
             </if>
             AND ar.deleted = 0
         </where>
-        ORDER BY ar.acquire_time DESC
+        ORDER BY ar.acquire_time, ar.create_time DESC
     </select>
 </mapper>
