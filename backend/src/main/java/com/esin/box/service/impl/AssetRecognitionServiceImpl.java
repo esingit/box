@@ -76,14 +76,12 @@ public class AssetRecognitionServiceImpl implements AssetRecognitionService {
     /**
      * 智能判断最佳识别方案
      */
-    /**
-     * 智能判断最佳识别方案
-     */
     private RecognitionScheme determineBestScheme(String ocrText) {
         String[] lines = ocrText.split("\\n");
 
         int leftRightScore = 0;  // 左右结构得分
         int upDownScore = 0;     // 上下结构得分
+        int columnScore = 0;     // 分栏结构得分
 
         log.debug("开始分析文本结构...");
         log.debug("OCR文本行数: {}", lines.length);
@@ -93,17 +91,33 @@ public class AssetRecognitionServiceImpl implements AssetRecognitionService {
             log.debug("第{}行: [{}]", i, lines[i]);
         }
 
+        // 检测分栏结构特征
+        boolean hasNameHeader = false;
+        boolean hasAmountHeader = false;
+        int nameHeaderIndex = -1;
+        int amountHeaderIndex = -1;
+
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
+
+            // 检测分栏标识
+            if (line.equals("名称")) {
+                hasNameHeader = true;
+                nameHeaderIndex = i;
+            } else if (line.equals("金额")) {
+                hasAmountHeader = true;
+                amountHeaderIndex = i;
+            }
+
             if (line.isEmpty()) continue;
 
-            // 更严格的左右结构判断：名称和金额在同一行，且金额在右侧
+            // 左右结构特征检测
             if (isLeftRightPattern(line)) {
                 leftRightScore += 3;
                 log.debug("左右结构特征 +3: {}", line);
             }
 
-            // 更准确的上下结构判断
+            // 上下结构特征检测
             if (i < lines.length - 1) {
                 String nextLine = lines[i + 1].trim();
                 if (isUpDownPattern(line, nextLine)) {
@@ -112,26 +126,34 @@ public class AssetRecognitionServiceImpl implements AssetRecognitionService {
                 }
             }
 
-            // 检查纯金额行（上下结构的强特征）
+            // 其他特征...
             if (isPureAmountLine(line)) {
                 upDownScore += 2;
                 log.debug("纯金额行特征 +2: {}", line);
             }
 
-            // 检查产品名称行（不包含金额）
             if (isPureProductNameLine(line)) {
                 upDownScore += 1;
                 log.debug("纯产品名称行 +1: {}", line);
             }
         }
 
-        log.info("结构分析结果 - 左右结构得分: {}, 上下结构得分: {}", leftRightScore, upDownScore);
+        // 分栏结构判断
+        if (hasNameHeader && hasAmountHeader && amountHeaderIndex > nameHeaderIndex) {
+            columnScore = 100; // 分栏结构优先级最高
+            log.info("检测到分栏结构标识");
+        }
+
+        log.info("结构分析结果 - 左右结构得分: {}, 上下结构得分: {}, 分栏结构得分: {}",
+                leftRightScore, upDownScore, columnScore);
 
         // 根据得分选择方案
-        if (upDownScore > leftRightScore && upDownScore >= 3) {
-            return RecognitionScheme.SCHEME_2;  // 上下结构
+        if (columnScore > 0) {
+            return RecognitionScheme.COLUMN_BASED;  // 分栏结构
+        } else if (upDownScore > leftRightScore && upDownScore >= 3) {
+            return RecognitionScheme.HORIZONTAL;  // 上下结构
         } else if (leftRightScore > upDownScore && leftRightScore >= 3) {
-            return RecognitionScheme.SCHEME_1;  // 左右结构
+            return RecognitionScheme.VERTICAL;  // 左右结构
         } else {
             log.info("无法确定明确结构特征，使用通用方案");
             return RecognitionScheme.GENERAL;   // 通用方案

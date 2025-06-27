@@ -190,6 +190,7 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                             dto.getAssetNameId(), existingRecord.getAmount(), dto.getAmount());
 
                     existingRecord.setAmount(dto.getAmount());
+                    existingRecord.setAcquireTime(dto.getAcquireTime());
                     existingRecord.setRemark(dto.getRemark() != null ? dto.getRemark() : existingRecord.getRemark());
                     existingRecord.setUpdateTime(now);
                     existingRecord.setUpdateUser(createUser);
@@ -376,9 +377,6 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         }
     }
 
-    // 🔥 移除重复的 copyLastRecordsInternal 方法，因为已经整合到 copyLastRecordsCommon 中
-
-    // 其他方法保持不变...
     private List<AssetRecord> getTodayRecords(String username) {
         QueryWrapper<AssetRecord> wrapper = new QueryWrapper<>();
         wrapper.eq("create_user", username)

@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -17,4 +18,5 @@ public class AssetRecordDTO extends AssetRecord {
     private String assetLocationName;  // 资产位置名称
     private String assetLocationValue; // 资产位置值
     private BigDecimal amount; //金额
+    private LocalDateTime acquireTime;
 }

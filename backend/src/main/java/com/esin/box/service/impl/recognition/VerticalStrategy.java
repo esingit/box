@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Component
-public class Scheme1Strategy implements RecognitionStrategy {
+public class VerticalStrategy implements RecognitionStrategy {
 
     // 金额匹配模式
     private static final Pattern PRECISE_AMOUNT_PATTERN = Pattern.compile("(\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2}))");

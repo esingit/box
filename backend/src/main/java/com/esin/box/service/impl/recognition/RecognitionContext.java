@@ -10,16 +10,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RecognitionContext {
 
-    private final Scheme1Strategy scheme1;
-    private final Scheme2Strategy scheme2;
+    private final VerticalStrategy vertical;
+    private final HorizontalStrategy horizontal;
+    private final ColumnBasedStrategy columnBased;
     private final GeneralStructureStrategy general;
 
     public List<AssetScanImageDTO> recognizeByScheme(String text, RecognitionScheme scheme) {
         switch (scheme) {
-            case SCHEME_1:
-                return scheme1.recognize(text);
-            case SCHEME_2:
-                return scheme2.recognize(text);
+            case VERTICAL:
+                return vertical.recognize(text);
+            case HORIZONTAL:
+                return horizontal.recognize(text);
+            case COLUMN_BASED:
+                return columnBased.recognize(text);
             case GENERAL:
                 return general.recognize(text);
             default:
