@@ -700,16 +700,18 @@ const echartConfig = computed(() => {
               result += `<div style="margin-top: 8px; font-weight: 600; color: #4A5568; font-size: 13px">${titles[key as keyof typeof titles]}</div>`
               series.forEach(item => {
                 if (item.value > 0) {
-                  const formattedAmount = formatAmountWithUnit(item.value, unitSymbol)
+                  // 🔧 修改这里：直接显示原始金额，不转换为万单位
+                  const normalizedSymbol = normalizeUnitSymbol(unitSymbol)
+                  const formattedAmount = `${normalizedSymbol}${item.value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
                   result += `<div style="display: flex; align-items: center; gap: 8px; margin-top: 4px">
-                    <span style="display: inline-block; width: 8px; height: 8px; background: ${item.color}; border-radius: 50%"></span>
-                    <span>${item.seriesName.replace(/[💰🏷️📍📈]/g, '').trim()}: <strong>${formattedAmount}</strong></span>
-                  </div>`
+            <span style="display: inline-block; width: 8px; height: 8px; background: ${item.color}; border-radius: 50%"></span>
+            <span>${item.seriesName.replace(/[💰🏷️📍📈]/g, '').trim()}: <strong>${formattedAmount}</strong></span>
+          </div>`
                 }
               })
             }
           })
-
           return result
         }
       },

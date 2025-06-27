@@ -305,7 +305,6 @@ async function handleAddRecord(data: typeof form) {
   try {
     await assetStore.addRecord({ ...data, amount: Number(data.amount) || 0 })
     showAddModal.value = false
-    // 🔥 修改：添加后不需要再次刷新，因为 store 中的 addRecord 已经调用了 loadList(true)
     // 但为了更新统计数据，我们只刷新统计
     await assetStore.loadStats()
     resultCount.value = assetStore.pagination.total

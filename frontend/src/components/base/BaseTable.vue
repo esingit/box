@@ -575,16 +575,23 @@ function formatTooltipContent(row, key) {
   return row[key] ?? '-'
 }
 
-// 格式化显示
+const unitSymbolMap = {
+  '人民币': '¥',
+  '美元': '$',
+  '欧元': '€',
+}
+// 格式化单位
 function formatCell(row, key) {
   if (key === 'amount' || key === 'count') {
-    return formatAmount(row[key]) + (row.unitValue ? ` ${row.unitValue}` : '')
+    const unit = unitSymbolMap[row.unitValue] || row.unitValue
+    return formatAmount(row[key]) + (unit ? ` ${unit}` : '')
   }
   if (key === 'acquireTime' || key === 'finishTime') {
     return formatDate(row[key])
   }
   return row[key] ?? '-'
 }
+
 
 function formatAmount(value) {
   if (value == null || isNaN(value)) return '0.00'
