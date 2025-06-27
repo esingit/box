@@ -25,7 +25,7 @@ export interface RawAssetRecord {
     assetTypeId: string | number
     unitId: string | number
     amount?: number
-    date: string
+    acquireTime: string
     remark?: string
     [key: string]: any
 }

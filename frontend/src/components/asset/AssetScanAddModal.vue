@@ -285,13 +285,8 @@ async function forceLoadAssetNames() {
 // 方法 - 图片处理
 function handleImageUpload(file: File) {
   imageFile.value = file
+  imagePreview.value = ''          // 👉 清空，先不显示
   recognizedData.value = []
-
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    imagePreview.value = e.target?.result as string
-  }
-  reader.readAsDataURL(file)
 }
 
 async function recognizeImage() {
@@ -334,6 +329,10 @@ async function recognizeImage() {
     console.error('识别失败:', err)
   } finally {
     isRecognizing.value = false
+    // 👉 此处才设置预览，避免图片加载与内容刷新叠加造成闪现
+    if (imageFile.value) {
+      imagePreview.value = URL.createObjectURL(imageFile.value)
+    }
   }
 }
 
@@ -475,7 +474,7 @@ async function handleSubmit() {
         assetTypeId: String(commonAttributes.value.assetTypeId!),
         unitId: String(commonAttributes.value.unitId!),
         amount: Number(item.amount!),
-        date: commonAttributes.value.acquireTime,
+        acquireTime: commonAttributes.value.acquireTime,
         remark: item.remark || ''
       }
 
@@ -565,6 +564,9 @@ function handleClose() {
 }
 
 function resetForm() {
+  if (imagePreview.value && imagePreview.value.startsWith('blob:')) {
+    URL.revokeObjectURL(imagePreview.value)
+  }
   imageFile.value = null
   imagePreview.value = ''
   recognizedData.value = []
@@ -632,11 +634,24 @@ function onAssetTypeChange(value: string | number | (string | number)[] | null) 
 
 onMounted(async () => {
   await forceLoadAssetNames()
-})
 
-watch(() => props.visible, async (newVal) => {
-  if (newVal) {
-    await forceLoadAssetNames()
+  // 设置默认资产类型为“理财”
+  const defaultAssetType = metaStore.typeMap?.ASSET_TYPE?.find(
+      (item) => item.value1 === '理财'
+  )
+  if (defaultAssetType) {
+    commonAttributes.value.assetTypeId = String(defaultAssetType.id)
+    await setDefaultUnit(String(defaultAssetType.id), setFieldValue, {
+      unitId: commonAttributes.value.unitId
+    })
+  }
+
+  // 设置默认资产位置为“兴业银行”
+  const defaultAssetLocation = metaStore.typeMap?.ASSET_LOCATION?.find(
+      (item) => item.value1 === '兴业银行'
+  )
+  if (defaultAssetLocation) {
+    commonAttributes.value.assetLocationId = String(defaultAssetLocation.id)
   }
 })
 

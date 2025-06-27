@@ -159,6 +159,10 @@ public class AssetRecordController {
     public ApiResponse<BatchAddResult> batchAddRecords(@Validated @RequestBody BatchAddAssetRequest request) {
         try {
             String currentUser = UserContextHolder.getCurrentUsername();
+            log.info("接收到批量添加请求，记录数: {}", request.getRecords().size());
+            for (AssetRecordDTO dto : request.getRecords()) {
+                log.info("AssetNameId: {}, Amount: {}", dto.getAssetNameId(), dto.getAmount());
+            }
             BatchAddResult result = assetRecordService.smartBatchAddRecords(
                     request.getRecords(),
                     request.isForceOverwrite(),
