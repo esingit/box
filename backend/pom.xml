@@ -162,10 +162,18 @@
             <version>2.5.1</version>
         </dependency>
 
+        <!-- Google 推出的 Java 核心工具库 -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>31.1-jre</version>
+        </dependency>
+
+        <!--Jaro–Winkler 相似度 算法来计算匹配度-->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+            <version>1.10.0</version>
         </dependency>
     </dependencies>
 

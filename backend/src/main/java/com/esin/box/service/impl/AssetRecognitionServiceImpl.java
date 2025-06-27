@@ -3,10 +3,11 @@ package com.esin.box.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.esin.box.dto.AssetScanImageDTO;
 import com.esin.box.entity.AssetName;
-import com.esin.box.service.AssetNameService;
 import com.esin.box.service.AssetRecognitionService;
+import com.esin.box.service.AssetNameService;
 import lombok.extern.slf4j.Slf4j;
 import net.sourceforge.tess4j.ITesseract;
+import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -38,389 +39,499 @@ public class AssetRecognitionServiceImpl implements AssetRecognitionService {
     @Value("${app.upload.temp-dir:/tmp/asset-images}")
     private String tempDir;
 
-    // 金额提取正则
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile("([\\d,]+(?:\\.\\d{1,2})?)");
-    private static final Pattern LINE_END_AMOUNT_PATTERN = Pattern.compile("([\\d,]+(?:\\.\\d{2})?)\\s*$");
-
-    // 关键词定义
     private static final Set<String> PRODUCT_KEYWORDS = Set.of(
             "理财", "基金", "债券", "存款", "产品", "固收", "开放", "净值",
             "添益", "尊利", "持盈", "鑫", "恒", "创利", "精选", "成长",
             "灵活", "稳健", "增利", "宝", "通", "汇", "融", "投"
     );
 
-    // OCR错误纠正映射
-    private static final Map<String, String> OCR_CORRECTIONS = Map.of(
-            "讲添益", "鑫添益",
-            "蠢尊利", "鑫尊利",
-            "春添益", "鑫添益",
-            "寺盈", "持盈",
-            "恒窒", "恒睿",
-            "产马", "产品",
-            "产吕D", "产品"
+    private static final Map<String, String> OCR_CORRECTIONS = Map.ofEntries(
+            Map.entry("讲添益", "鑫添益"), Map.entry("蠢尊利", "鑫尊利"),
+            Map.entry("春添益", "鑫添益"), Map.entry("寺盈", "持盈"),
+            Map.entry("恒窒", "恒睿"), Map.entry("产马", "产品"),
+            Map.entry("产吕D", "产品")
     );
+
+    private static final JaroWinklerSimilarity JW_SIM = new JaroWinklerSimilarity();
+    private static final Pattern AMOUNT_PATTERN = Pattern.compile("[\\d.,]+");
+
+    // 定义文本格式类型
+    private enum TextFormat {
+        VERTICAL,    // 上下结构
+        HORIZONTAL,  // 左右结构
+        UNKNOWN      // 未知格式
+    }
 
     @Override
     public List<AssetScanImageDTO> recognizeAssetImage(MultipartFile image, String createUser) throws Exception {
-        log.info("开始处理图片识别，文件名: {}, 用户: {}", image.getOriginalFilename(), createUser);
-
-        // 1. 执行OCR识别
         String ocrText = performOCR(image);
-        if (!StringUtils.hasText(ocrText)) {
-            log.warn("OCR识别结果为空");
-            return new ArrayList<>();
+        if (!StringUtils.hasText(ocrText)) return Collections.emptyList();
+
+        // 判断文本格式
+        TextFormat format = detectTextFormat(ocrText);
+        log.info("检测到文本格式: {}", format);
+
+        List<AssetScanImageDTO> list;
+
+        switch (format) {
+            case VERTICAL:
+                // 上下结构 - 使用方案二
+                log.info("使用方案二（上下结构）进行解析...");
+                list = parseMultiLineWithTrailingAmount(ocrText);
+                break;
+            case HORIZONTAL:
+                // 左右结构 - 使用方案一
+                log.info("使用方案一（左右结构）进行解析...");
+                list = parseOCRText(ocrText);
+                break;
+            default:
+                // 未知格式 - 使用通用方案
+                log.info("使用通用方案进行解析...");
+                list = parseGeneralFormat(ocrText);
+                break;
         }
 
-        // 2. 解析OCR文本
-        List<AssetScanImageDTO> records = parseOCRText(ocrText);
-        if (records.isEmpty()) {
-            log.warn("未能从OCR文本中解析出任何记录");
-            return records;
+        // 如果识别失败，尝试其他方案
+        if (list.isEmpty()) {
+            log.warn("当前方案未识别出有效数据，尝试通用方案...");
+            list = parseGeneralFormat(ocrText);
         }
 
-        // 3. 匹配资产名称ID
-        matchAssetNames(records, createUser);
+        // 最后匹配资产名
+        if (!list.isEmpty()) {
+            matchAssetNames(list, createUser);
+        }
 
-        log.info("图片识别完成，共识别出 {} 条记录", records.size());
-        return records;
+        return list;
     }
 
-    /**
-     * 执行OCR识别
-     */
-    private String performOCR(MultipartFile image) throws Exception {
-        File tempFile = null;
-        try {
-            // 保存临时文件
-            tempFile = saveToTempFile(image);
-
-            // 读取图片
-            BufferedImage bufferedImage = ImageIO.read(tempFile);
-            if (bufferedImage == null) {
-                throw new RuntimeException("无法读取图片文件");
-            }
-
-            // 执行OCR
-            log.info("开始OCR识别...");
-            CompletableFuture<String> ocrTask = CompletableFuture.supplyAsync(() -> {
-                try {
-                    return tesseract.doOCR(bufferedImage);
-                } catch (Exception e) {
-                    throw new RuntimeException("OCR识别失败: " + e.getMessage(), e);
-                }
-            });
-
-            String result = ocrTask.get(60, TimeUnit.SECONDS);
-            log.info("OCR识别完成，文本长度: {}", result.length());
-            return result;
-
-        } finally {
-            // 清理临时文件
-            if (tempFile != null && tempFile.exists()) {
-                tempFile.delete();
-            }
-        }
-    }
-
-    /**
-     * 保存到临时文件
-     */
-    private File saveToTempFile(MultipartFile image) throws Exception {
-        File dir = new File(tempDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-
-        String fileName = "asset_" + System.currentTimeMillis() + "_" + image.getOriginalFilename();
-        File tempFile = new File(dir, fileName);
-        image.transferTo(tempFile);
-        return tempFile;
-    }
-
-    /**
-     * 解析OCR文本
-     */
-    private List<AssetScanImageDTO> parseOCRText(String text) {
-        List<AssetScanImageDTO> results = new ArrayList<>();
+    // 检测文本格式
+    private TextFormat detectTextFormat(String text) {
         String[] lines = text.split("\\n");
 
-        log.info("开始解析OCR文本，共 {} 行", lines.length);
+        int verticalScore = 0;
+        int horizontalScore = 0;
 
-        // 查找有效数据的起始位置
-        int dataStartIndex = findDataStartIndex(lines);
-
-        // 逐行解析
-        for (int i = dataStartIndex; i < lines.length; i++) {
+        for (int i = 0; i < lines.length - 1; i++) {
             String line = lines[i].trim();
-            if (shouldSkipLine(line)) continue;
+            String nextLine = lines[i + 1].trim();
 
-            // 尝试从当前行提取记录
-            AssetScanImageDTO record = extractRecordFromLine(line, lines, i);
-            if (record != null) {
-                results.add(record);
-                log.info("成功提取记录: {} - {}", record.getAssetName(), record.getAmount());
+            if (line.isEmpty() || nextLine.isEmpty()) continue;
+
+            // 检测上下结构特征：产品名在上，金额在下
+            if (containsProductKeyword(line) && !containsAmount(line)
+                    && isAmountLine(nextLine)) {
+                verticalScore += 3;
+            }
+
+            // 检测左右结构特征：同一行包含产品名和金额
+            if (containsProductKeyword(line) && containsAmount(line)) {
+                horizontalScore += 2;
+            }
+
+            // 检测金额独占一行的情况（上下结构特征）
+            if (!line.matches(".*[\\u4e00-\\u9fa5].*") && isAmountLine(line)) {
+                verticalScore++;
             }
         }
 
-        return results;
+        log.debug("格式检测得分 - 上下结构: {}, 左右结构: {}", verticalScore, horizontalScore);
+
+        if (verticalScore > horizontalScore && verticalScore >= 2) {
+            return TextFormat.VERTICAL;
+        } else if (horizontalScore > verticalScore && horizontalScore >= 2) {
+            return TextFormat.HORIZONTAL;
+        }
+
+        return TextFormat.UNKNOWN;
     }
 
-    /**
-     * 查找数据开始的位置
-     */
-    private int findDataStartIndex(String[] lines) {
-        for (int i = 0; i < lines.length; i++) {
-            String line = lines[i];
-            // 找到表头或特定标识后，数据从下一行开始
-            if (line.contains("名称") && line.contains("金额")) {
-                return i + 1;
-            }
-            // 或者找到第一个包含大额数字的行
-            BigDecimal amount = extractAmountFromLine(line);
-            if (amount != null && amount.compareTo(new BigDecimal("1000")) > 0) {
-                return i;
-            }
-        }
-        return 0;
+    // 检查是否包含产品关键词
+    private boolean containsProductKeyword(String line) {
+        return PRODUCT_KEYWORDS.stream().anyMatch(line::contains);
     }
 
-    /**
-     * 判断是否应该跳过该行
-     */
-    private boolean shouldSkipLine(String line) {
-        if (line.isEmpty()) return true;
-
-        // 跳过无关内容
-        String[] skipPatterns = {
-                "总金额", "收起", "温馨提示", "持仓市值", "持仓收益",
-                "可赎回", "最短持有期", "每日可赎", "^郑", "^\\*+",
-                "^\\d{2}:\\d{2}$", "^\\d{4}/\\d{2}/\\d{2}$"
-        };
-
-        for (String pattern : skipPatterns) {
-            if (line.matches(pattern + ".*")) {
-                return true;
+    // 检查是否包含金额
+    private boolean containsAmount(String line) {
+        Matcher matcher = AMOUNT_PATTERN.matcher(line);
+        while (matcher.find()) {
+            String amount = matcher.group();
+            // 过滤掉年份、时间等
+            if (amount.length() >= 4 && !amount.contains(".") && !amount.contains(",")) {
+                continue;
+            }
+            try {
+                BigDecimal value = new BigDecimal(normalizeAmountStr(amount));
+                if (value.compareTo(BigDecimal.ZERO) > 0) {
+                    return true;
+                }
+            } catch (Exception ignored) {
             }
         }
-
         return false;
     }
 
-    /**
-     * 从行中提取记录
-     */
-    private AssetScanImageDTO extractRecordFromLine(String line, String[] lines, int currentIndex) {
-        // 1. 先检查当前行是否包含金额
-        BigDecimal amount = extractAmountFromLine(line);
+    // 通用解析方案
+    private List<AssetScanImageDTO> parseGeneralFormat(String text) {
+        String[] lines = text.split("\\n");
+        List<AssetScanImageDTO> list = new ArrayList<>();
 
-        if (amount != null && amount.compareTo(new BigDecimal("1000")) > 0) {
-            // 提取产品名称
-            String productName = extractProductName(line, lines, currentIndex);
+        // 策略1：尝试使用正则表达式匹配常见模式
+        Pattern pattern1 = Pattern.compile("(.+?)([\\d,]+\\.?\\d*)$");
+        Pattern pattern2 = Pattern.compile("(.+?)\\s+([\\d,]+\\.?\\d*)");
 
-            if (StringUtils.hasText(productName)) {
-                AssetScanImageDTO record = new AssetScanImageDTO();
-                record.setAssetName(cleanProductName(productName));
-                record.setAmount(amount);
-                record.setAcquireTime(LocalDateTime.now());
-                record.setRemark("图片识别导入");
-                return record;
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty() || shouldSkipLine(line)) continue;
+
+            // 尝试匹配模式1：名称和金额在同一行
+            Matcher matcher = pattern1.matcher(line);
+            if (matcher.find()) {
+                String name = cleanName(matcher.group(1));
+                String amountStr = matcher.group(2);
+
+                if (containsProductKeyword(name)) {
+                    BigDecimal amount = parseAmount(normalizeAmountStr(amountStr));
+                    if (amount != null && amount.compareTo(BigDecimal.ZERO) > 0) {
+                        AssetScanImageDTO dto = createAssetDTO(name, amount);
+                        list.add(dto);
+                        continue;
+                    }
+                }
+            }
+
+            // 尝试匹配模式2：名称和金额用空格分隔
+            matcher = pattern2.matcher(line);
+            if (matcher.find()) {
+                String name = cleanName(matcher.group(1));
+                String amountStr = matcher.group(2);
+
+                if (containsProductKeyword(name)) {
+                    BigDecimal amount = parseAmount(normalizeAmountStr(amountStr));
+                    if (amount != null && amount.compareTo(BigDecimal.ZERO) > 0) {
+                        AssetScanImageDTO dto = createAssetDTO(name, amount);
+                        list.add(dto);
+                    }
+                }
             }
         }
 
-        return null;
+        // 策略2：如果上述方法没有找到结果，尝试智能匹配
+        if (list.isEmpty()) {
+            list = parseWithIntelligentMatching(lines);
+        }
+
+        return list;
     }
 
-    /**
-     * 提取金额
-     */
-    private BigDecimal extractAmountFromLine(String line) {
-        // 优先匹配行尾的金额
-        Matcher matcher = LINE_END_AMOUNT_PATTERN.matcher(line);
-        if (matcher.find()) {
-            return parseAmount(matcher.group(1));
+    // 智能匹配解析
+    private List<AssetScanImageDTO> parseWithIntelligentMatching(String[] lines) {
+        List<AssetScanImageDTO> list = new ArrayList<>();
+        Map<String, BigDecimal> candidates = new HashMap<>();
+
+        // 第一遍：收集所有可能的产品名称
+        List<String> productNames = new ArrayList<>();
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty() || shouldSkipLine(line)) continue;
+
+            if (containsProductKeyword(line) && !containsAmount(line)) {
+                productNames.add(cleanName(line));
+            }
         }
 
-        // 否则匹配任意位置的金额
-        matcher = AMOUNT_PATTERN.matcher(line);
-        if (matcher.find()) {
-            return parseAmount(matcher.group(1));
+        // 第二遍：为每个产品名称查找最近的金额
+        for (String productName : productNames) {
+            BigDecimal amount = findNearestAmount(lines, productName);
+            if (amount != null && amount.compareTo(BigDecimal.ZERO) > 0) {
+                candidates.put(productName, amount);
+            }
         }
 
-        return null;
+        // 创建结果
+        for (Map.Entry<String, BigDecimal> entry : candidates.entrySet()) {
+            AssetScanImageDTO dto = createAssetDTO(entry.getKey(), entry.getValue());
+            list.add(dto);
+        }
+
+        return list;
     }
 
-    /**
-     * 提取产品名称
-     */
-    private String extractProductName(String line, String[] lines, int currentIndex) {
-        // 如果当前行包含金额，提取金额前的部分作为名称
-        String nameFromCurrentLine = extractNameBeforeAmount(line);
+    // 查找最近的金额
+    private BigDecimal findNearestAmount(String[] lines, String productName) {
+        int productIndex = -1;
 
-        StringBuilder fullName = new StringBuilder();
-        if (StringUtils.hasText(nameFromCurrentLine)) {
-            fullName.append(nameFromCurrentLine);
-        }
-
-        // 检查下面几行是否是名称的延续
-        for (int i = currentIndex + 1; i < Math.min(currentIndex + 3, lines.length); i++) {
-            String nextLine = lines[i].trim();
-            if (shouldSkipLine(nextLine)) continue;
-
-            // 如果下一行包含金额或其他产品标识，停止
-            if (extractAmountFromLine(nextLine) != null) break;
-
-            // 如果是产品名称的一部分，添加
-            if (isProductNamePart(nextLine)) {
-                fullName.append(nextLine);
-            } else {
+        // 找到产品名称所在的行
+        for (int i = 0; i < lines.length; i++) {
+            if (lines[i].contains(productName)) {
+                productIndex = i;
                 break;
             }
         }
 
-        return fullName.toString();
-    }
+        if (productIndex == -1) return null;
 
-    /**
-     * 提取金额前的名称部分
-     */
-    private String extractNameBeforeAmount(String line) {
-        Matcher matcher = Pattern.compile("^(.+?)\\s+[\\d,]+(?:\\.\\d{2})?\\s*$").matcher(line);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
-        return "";
-    }
+        // 先检查同一行
+        BigDecimal sameLineAmount = extractAmountFromLine(lines[productIndex]);
+        if (sameLineAmount != null) return sameLineAmount;
 
-    /**
-     * 判断是否是产品名称的一部分
-     */
-    private boolean isProductNamePart(String text) {
-        // 必须包含中文
-        if (!text.matches(".*[\\u4e00-\\u9fa5]+.*")) {
-            return false;
+        // 向下查找（最多3行）
+        for (int i = 1; i <= 3 && productIndex + i < lines.length; i++) {
+            BigDecimal amount = extractAmountFromLine(lines[productIndex + i]);
+            if (amount != null) return amount;
         }
 
-        // 包含产品关键词
-        for (String keyword : PRODUCT_KEYWORDS) {
-            if (text.contains(keyword)) {
-                return true;
+        // 向上查找（最多2行）
+        for (int i = 1; i <= 2 && productIndex - i >= 0; i++) {
+            BigDecimal amount = extractAmountFromLine(lines[productIndex - i]);
+            if (amount != null) return amount;
+        }
+
+        return null;
+    }
+
+    // 创建AssetScanImageDTO对象
+    private AssetScanImageDTO createAssetDTO(String name, BigDecimal amount) {
+        AssetScanImageDTO dto = new AssetScanImageDTO();
+        dto.setOriginalAssetName(name);
+        dto.setCleanedAssetName(name);
+        dto.setAssetName(name);
+        dto.setAmount(amount);
+        dto.setAcquireTime(LocalDateTime.now());
+        dto.setRemark("图片识别导入");
+        return dto;
+    }
+
+    @Override
+    public List<AssetScanImageDTO> recognizeImageAuto(MultipartFile image, String createUser) throws Exception {
+        return recognizeAssetImage(image, createUser);
+    }
+
+    // ========== OCR 阶段 ==========
+    private String performOCR(MultipartFile image) throws Exception {
+        File tmp = saveToTempFile(image);
+        try {
+            BufferedImage buf = ImageIO.read(tmp);
+            CompletableFuture<String> task = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return tesseract.doOCR(buf);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            return task.get(60, TimeUnit.SECONDS);
+        } finally {
+            if (tmp != null && tmp.exists()) tmp.delete();
+        }
+    }
+
+    private File saveToTempFile(MultipartFile image) throws Exception {
+        File dir = new File(tempDir);
+        if (!dir.exists()) dir.mkdirs();
+        File tmp = new File(dir, "asset_" + System.currentTimeMillis() + "_" + image.getOriginalFilename());
+        image.transferTo(tmp);
+        return tmp;
+    }
+
+    // ========== 方案一：左右结构解析 ==========
+    private List<AssetScanImageDTO> parseOCRText(String text) {
+        String[] lines = text.split("\\n");
+        List<AssetScanImageDTO> list = new ArrayList<>();
+        StringBuilder nameBuf = null;
+
+        for (int i = 0; i < lines.length; i++) {
+            String raw = lines[i].trim();
+            if (raw.isEmpty() || shouldSkipLine(raw)) continue;
+
+            if (isNameLine(raw)) {
+                String part = cleanName(raw);
+                if (nameBuf == null) {
+                    nameBuf = new StringBuilder(part);
+                } else if (!raw.matches(".*\\d.*") && raw.length() < nameBuf.length()) {
+                    nameBuf.append(part);
+                } else {
+                    nameBuf = new StringBuilder(part);
+                }
+                continue;
+            }
+
+            if (nameBuf != null) {
+                BigDecimal amount = findBestAmountInWindow(lines, i, 3);
+                if (amount != null && amount.compareTo(BigDecimal.ZERO) > 0) {
+                    String fullName = nameBuf.toString();
+                    AssetScanImageDTO dto = createAssetDTO(fullName, amount);
+                    list.add(dto);
+                    nameBuf = null;
+                }
+            }
+        }
+        return list;
+    }
+
+    // ========== 方案二：上下结构解析 ==========
+    private List<AssetScanImageDTO> parseMultiLineWithTrailingAmount(String text) {
+        String[] lines = text.split("\\n");
+        List<AssetScanImageDTO> list = new ArrayList<>();
+        List<String> buffer = new ArrayList<>();
+
+        for (int i = 0; i < lines.length; i++) {
+            String raw = lines[i].trim();
+            if (raw.isEmpty() || shouldSkipLine(raw)) continue;
+
+            // 尝试判断是否是金额行（仅数字，无中文）
+            if (isAmountLine(raw)) {
+                BigDecimal amount = extractAmountFromLine(raw);
+                if (!buffer.isEmpty() && amount != null) {
+                    // 拼接前面的名称行
+                    String name = cleanName(String.join("", buffer));
+                    AssetScanImageDTO dto = createAssetDTO(name, amount);
+                    list.add(dto);
+                    buffer.clear(); // 清空缓存
+                }
+            } else {
+                // 累加为名称部分
+                buffer.add(raw);
             }
         }
 
-        // 合理长度的中文文本
-        return text.length() >= 2 && text.replaceAll("[^\\u4e00-\\u9fa5]", "").length() >= 2;
+        return list;
     }
 
-    /**
-     * 清理产品名称
-     */
-    private String cleanProductName(String name) {
-        if (!StringUtils.hasText(name)) return "";
+    // ========== 辅助方法 ==========
+    private boolean isNameLine(String line) {
+        if (!line.matches(".*[\\u4e00-\\u9fa5].*")) return false;
+        return PRODUCT_KEYWORDS.stream().anyMatch(line::contains)
+                && !line.contains("撤单")
+                && !line.contains("撤音")
+                && !line.contains("持仓撤单");
+    }
 
-        String cleaned = name.trim()
-                .replaceAll("\\s+", "")
-                .replaceAll("[':-]", "·")
-                .replaceAll("[《》\"\"''（）()\\[\\]{}]", "");
-
-        // 应用OCR纠正
-        for (Map.Entry<String, String> entry : OCR_CORRECTIONS.entrySet()) {
-            cleaned = cleaned.replace(entry.getKey(), entry.getValue());
+    private BigDecimal findBestAmountInWindow(String[] lines, int startIndex, int maxLines) {
+        BigDecimal best = null;
+        for (int j = startIndex; j < Math.min(lines.length, startIndex + maxLines); j++) {
+            Matcher m = AMOUNT_PATTERN.matcher(lines[j]);
+            while (m.find()) {
+                String raw = m.group();
+                String norm = normalizeAmountStr(raw);
+                BigDecimal val = parseAmount(norm);
+                if (val != null && (best == null || val.compareTo(best) > 0)) {
+                    best = val;
+                }
+            }
         }
-
-        return cleaned;
+        return best;
     }
 
-    /**
-     * 解析金额字符串
-     */
-    private BigDecimal parseAmount(String amountStr) {
+    private String normalizeAmountStr(String s) {
+        s = s.replaceAll("\\s+", "").replace(",", "");
+        int lastDot = s.lastIndexOf('.');
+        if (lastDot >= 0) {
+            String intPart = s.substring(0, lastDot).replace(".", "");
+            String fracPart = s.substring(lastDot + 1);
+            return intPart + "." + fracPart;
+        }
+        return s;
+    }
+
+    private BigDecimal parseAmount(String s) {
         try {
-            String cleaned = amountStr.replaceAll(",", "");
-            return new BigDecimal(cleaned);
+            return new BigDecimal(s);
         } catch (Exception e) {
             return null;
         }
     }
 
-    /**
-     * 匹配资产名称
-     */
-    private void matchAssetNames(List<AssetScanImageDTO> records, String createUser) {
-        // 获取用户的所有资产名称
-        List<AssetName> assetNames = getAssetNamesByUser(createUser);
-        if (assetNames.isEmpty()) {
-            log.warn("用户 {} 没有设置任何资产名称", createUser);
-            return;
+    private boolean shouldSkipLine(String line) {
+        String[] skip = {
+                "总金额", "收起", "温馨提示", "持仓市值", "持仓收益", "可赎回",
+                "最短持有期", "每日可赎", "赎回类型"
+        };
+        for (String p : skip) if (line.startsWith(p)) return true;
+
+        if (line.contains("持仓") && line.contains("撤单")) return true;
+        if (line.equals("撤单") || line.equals("撤音")) return true;
+        if (line.matches("^\\d{1,2}:\\d{1,2}$")) return true;
+        if (line.matches("^\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}.*$")) return true;
+
+        return false;
+    }
+
+    private String cleanName(String name) {
+        String s = name.trim().replaceAll("\\s+", "")
+                .replaceAll("[':-]", "·")
+                .replaceAll("[《》\"''()\\[\\]{}]", "");
+        for (var e : OCR_CORRECTIONS.entrySet()) {
+            s = s.replace(e.getKey(), e.getValue());
         }
+        return s;
+    }
 
-        // 为每条记录匹配最佳资产名称
-        for (AssetScanImageDTO record : records) {
-            AssetName bestMatch = findBestMatchingAssetName(record.getAssetName(), assetNames);
+    private boolean isAmountLine(String line) {
+        // 可能金额行是只包含数字、逗号、小数点，并且不能有中文
+        return line.matches("^[\\d,\\.]+$");
+    }
 
-            record.setAssetNameId(bestMatch.getId());
-            record.setMatchedAssetName(bestMatch.getName());
-            record.setOriginalAssetName(record.getAssetName());
-            record.setIsMatched(true);
+    private BigDecimal extractAmountFromLine(String line) {
+        if (line == null || line.isBlank()) return null;
 
-            // 计算相似度分数供参考
-            double score = calculateSimilarity(record.getAssetName(), bestMatch.getName());
-            record.setMatchScore(score);
+        // 提取所有数字串（含逗号、小数点）
+        Matcher matcher = Pattern.compile("[\\d.,]+").matcher(line);
+        BigDecimal lastValid = null;
 
-            log.info("资产名称匹配: {} -> {} (ID: {}, 相似度: {:.2%})",
-                    record.getAssetName(), bestMatch.getName(), bestMatch.getId(), score);
+        while (matcher.find()) {
+            String raw = matcher.group();
+            // 格式标准化
+            String normalized = normalizeAmountStr(raw);
+            try {
+                BigDecimal value = new BigDecimal(normalized);
+                lastValid = value;
+            } catch (Exception ignored) {
+            }
+        }
+        return lastValid;
+    }
+
+    // ========== 匹配阶段 ==========
+    private void matchAssetNames(List<AssetScanImageDTO> list, String user) {
+        List<AssetName> names = assetNameService.list(
+                new QueryWrapper<AssetName>()
+                        .eq("create_user", user)
+                        .eq("deleted", 0)
+                        .orderByDesc("create_time")
+        );
+        if (names.isEmpty()) return;
+
+        for (AssetScanImageDTO dto : list) {
+            String cleaned = dto.getCleanedAssetName();
+            AssetName best = names.stream()
+                    .map(a -> Map.entry(a, calculateSimilarity(cleaned, cleanName(a.getName()))))
+                    .max(Comparator.comparingDouble(Map.Entry::getValue))
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+
+            double score = best == null ? 0.0 : calculateSimilarity(cleaned, cleanName(best.getName()));
+
+            if (best != null) {
+                dto.setAssetNameId(best.getId());
+                dto.setMatchedAssetName(best.getName());
+                dto.setAssetName(best.getName());
+            }
+            dto.setMatchScore(score);
+            dto.setIsMatched(score >= 0.5);
         }
     }
 
-    /**
-     * 获取用户的资产名称列表
-     */
-    private List<AssetName> getAssetNamesByUser(String createUser) {
-        QueryWrapper<AssetName> wrapper = new QueryWrapper<>();
-        wrapper.eq("create_user", createUser)
-                .eq("deleted", 0)
-                .orderByDesc("create_time");
-        return assetNameService.list(wrapper);
+    // ========== 相似度计算 ==========
+    private double calculateSimilarity(String s1, String s2) {
+        if (s1 == null || s2 == null) return 0.0;
+        String n1 = normalizeForCompare(s1);
+        String n2 = normalizeForCompare(s2);
+        return JW_SIM.apply(n1, n2);
     }
 
-    /**
-     * 找到最匹配的资产名称
-     */
-    private AssetName findBestMatchingAssetName(String recognizedName, List<AssetName> candidates) {
-        String cleaned = cleanProductName(recognizedName);
-
-        return candidates.stream()
-                .map(candidate -> new AbstractMap.SimpleEntry<>(
-                        candidate,
-                        calculateSimilarity(cleaned, cleanProductName(candidate.getName()))
-                ))
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey)
-                .orElse(candidates.get(0)); // 如果都不匹配，返回第一个
-    }
-
-    /**
-     * 计算相似度（简化版）
-     */
-    private double calculateSimilarity(String str1, String str2) {
-        if (str1.equals(str2)) return 1.0;
-
-        // 检查包含关系
-        if (str1.contains(str2) || str2.contains(str1)) {
-            int minLen = Math.min(str1.length(), str2.length());
-            int maxLen = Math.max(str1.length(), str2.length());
-            return 0.8 * minLen / maxLen;
-        }
-
-        // 计算共同字符比例
-        Set<Character> chars1 = str1.chars().mapToObj(c -> (char) c).collect(Collectors.toSet());
-        Set<Character> chars2 = str2.chars().mapToObj(c -> (char) c).collect(Collectors.toSet());
-
-        Set<Character> intersection = new HashSet<>(chars1);
-        intersection.retainAll(chars2);
-
-        Set<Character> union = new HashSet<>(chars1);
-        union.addAll(chars2);
-
-        return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
+    private String normalizeForCompare(String s) {
+        return s.replaceAll("\\s+", "")
+                .replaceAll("[\\p{Punct}]+", "")
+                .toLowerCase();
     }
 }
