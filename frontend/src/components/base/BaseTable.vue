@@ -169,15 +169,20 @@
     </div>
 
     <!-- Tooltip -->
-    <Teleport to="body">
-      <div
-          v-if="tooltipVisible"
-          class="z-50 pointer-events-none select-none bg-gray-700 text-white text-xs rounded px-2 py-1 whitespace-nowrap"
-          :style="{ position: 'fixed', top: tooltipPosition.y + 'px', left: tooltipPosition.x + 'px' }"
-      >
-        {{ tooltipContent }}
-      </div>
-    </Teleport>
+    <div
+        v-if="tooltipVisible"
+        class="fixed pointer-events-none select-none bg-gray-700 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg"
+        :style="{
+          top: tooltipPosition.y + 'px',
+          left: tooltipPosition.x + 'px',
+          zIndex: 9999,
+          maxWidth: '320px',
+          wordWrap: 'break-word',
+          whiteSpace: 'pre-wrap'
+        }"
+    >
+      {{ tooltipContent }}
+    </div>
   </div>
 </template>
 
@@ -208,7 +213,6 @@ const isContentScrollable = ref(false)
 
 // 计算是否需要固定表头
 const shouldStickyHeader = computed(() => {
-  // 只有当内容可滚动且有数据时才固定表头
   return isContentScrollable.value && props.data.length > 0 && !props.loading
 })
 
@@ -333,26 +337,39 @@ function resetColumnWidth(key) {
   columnWidths[key] = col?.defaultWidth || DEFAULT_WIDTH
 }
 
-// Tooltip 控制 - 简化逻辑
+// Tooltip 控制
 const tooltipVisible = ref(false)
 const tooltipContent = ref('')
 const tooltipPosition = reactive({x: 0, y: 0})
 
 function handleCellMouseEnter(rowIndex, fieldKey, event, row, col) {
-  // 简化条件判断
-  if (col.actions) return
-  if (col.key === 'actions') return
-  if (hasDropdown(col) && activeRowIndex.value === rowIndex) return
+  // 跳过操作列
+  if (col.actions || col.key === 'actions') {
+    return
+  }
+
+  // 如果是下拉框且处于活动状态，跳过
+  if (hasDropdown(col) && activeRowIndex.value === rowIndex) {
+    return
+  }
 
   // 生成 tooltip 内容
   let content = ''
-  if (fieldKey === 'assetName') {
-    content = row.assetName || '暂无扫描结果'
+
+  // 特殊处理扫描结果列
+  if (fieldKey === 'assetName' || fieldKey === 'assetNameDisplay') {
+    const originalAssetName = row.assetName || row.assetNameDisplay || '暂无扫描结果'
+    content = originalAssetName
+    if (row.matchScore) {
+      content += `\n匹配度: ${(row.matchScore * 100).toFixed(0)}%`
+    }
   } else {
     content = formatTooltipContent(row, fieldKey)
   }
 
-  if (!content || content === '-') return
+  if (!content || content === '-') {
+    return
+  }
 
   tooltipContent.value = content
   tooltipVisible.value = true
@@ -361,6 +378,7 @@ function handleCellMouseEnter(rowIndex, fieldKey, event, row, col) {
 
 function handleCellMouseMove(event) {
   if (!tooltipVisible.value) return
+
   tooltipPosition.x = event.clientX + 12
   tooltipPosition.y = event.clientY + 20
 }
@@ -372,11 +390,18 @@ function handleCellMouseLeave(col) {
 
 function formatTooltipContent(row, key) {
   if (['amount', 'count'].includes(key)) {
-    return formatAmount(row[key]) + (row.unitValue ? ` ${row.unitValue}` : '')
+    const formatted = formatAmount(row[key])
+    return formatted + (row.unitValue ? ` ${row.unitValue}` : '')
   }
   if (['acquireTime', 'finishTime'].includes(key)) {
     return formatDate(row[key])
   }
+
+  // 处理资产名称ID显示
+  if (key === 'assetNameId' && row.assetNameIdDisplay) {
+    return row.assetNameIdDisplay
+  }
+
   return row[key] ?? '-'
 }
 

@@ -96,6 +96,7 @@
                 title="金额"
                 type="number"
                 :min="1"
+                :step="0.01"
                 required
                 clearable
                 :disabled="loading"
@@ -232,7 +233,7 @@ const schema = yup.object({
   unitId: yup.string().required('请选择货币单位'),
   acquireTime: yup
       .string()
-      .required()
+      .required('请选择登记日期')
       .test('is-not-future', '登记日期不能大于今日', val => {
         if (!val) return true // 为空时不进行此验证
         const inputDate = dayjs(val).startOf('day')

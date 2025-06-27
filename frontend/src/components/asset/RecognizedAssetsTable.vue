@@ -60,7 +60,7 @@
         />
       </template>
 
-      <template #actions="{ record, index }">
+      <template #actions="{ index }">
         <BaseButton
             type="button"
             title="删除"
@@ -68,7 +68,7 @@
             :icon="Trash2"
             @click="handleRemoveItem(index)"
         >
-          <Trash2 class="w-4 h-4" />
+          <Trash2 class="w-4 h-4"/>
         </BaseButton>
       </template>
     </BaseTable>
@@ -76,13 +76,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, nextTick } from 'vue'
-import { Trash2 } from 'lucide-vue-next'
-import { useAssetNameStore } from '@/store/assetNameStore'
+import {computed, nextTick, onMounted, ref} from 'vue'
+import {Trash2} from 'lucide-vue-next'
+import {useAssetNameStore} from '@/store/assetNameStore'
 import BaseTable from '@/components/base/BaseTable.vue'
 import BaseButton from "@/components/base/BaseButton.vue"
 import BaseSelect from "@/components/base/BaseSelect.vue"
-import { RecognizedAssetItem } from "@/types/asset"
+import {RecognizedAssetItem} from "@/types/asset"
 
 const props = defineProps<{
   data: RecognizedAssetItem[]
@@ -111,20 +111,18 @@ function safeParseId(id: any): string | null {
 const assetNameOptions = computed(() => {
   // 优先使用store提供的计算属性，但确保value保持为字符串
   if (assetNameStore.assetNameOptions && assetNameStore.assetNameOptions.length > 0) {
-    const options = assetNameStore.assetNameOptions.map(option => ({
+    return assetNameStore.assetNameOptions.map(option => ({
       label: String(option.label || ''),
       value: String(option.value || '') // 保持为字符串
     }))
-    return options
   }
 
   // 备选：从assetName数组构建选项
   if (assetNameStore.assetName && assetNameStore.assetName.length > 0) {
-    const options = assetNameStore.assetName.map(item => ({
+    return assetNameStore.assetName.map(item => ({
       label: String(item.name || item.label || '未命名'),
       value: String(item.id || '') // 保持为字符串
     }))
-    return options
   }
 
   return []

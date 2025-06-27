@@ -20,12 +20,12 @@
         @click.stop="clearAll"
         type="button"
         aria-label="清空输入"
-        class="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+        class="absolute right-12 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
     >
       <LucideX class="w-4 h-4" />
     </button>
     <!-- 日历图标 -->
-    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+    <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
       <LucideCalendar class="w-4 h-4 text-gray-400" />
     </div>
 

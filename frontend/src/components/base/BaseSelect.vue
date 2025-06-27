@@ -12,26 +12,26 @@
             ref="referenceRef"
             :title="showError ? (requiredMessage || '此项为必填') : selectedText"
             :class="[
-              'input-base flex justify-between items-center w-full pr-8 min-w-0 text-left',
+              'input-base flex justify-between items-center w-full pr-16 min-w-0 text-left', // 增加 pr-16
               showError ? 'input-error' : 'input-normal'
             ]"
             @blur="onBlur"
             @click="handleButtonClick(open, close)"
         >
-          <div class="flex-1 min-w-0 mr-2 text-left">
+          <div class="flex-1 min-w-0 mr-8 text-left"> <!-- 增加 mr-8 -->
             <span
-                class="truncate whitespace-nowrap block w-full text-left"
-                :class="{
+                        class="truncate whitespace-nowrap block w-full text-left"
+                        :class="{
                   'text-gray-400': !selectedLabels.length && !showError,
                   'text-[var(--color-error)]': !selectedLabels.length && showError,
                   'text-black': selectedLabels.length
                 }"
-            >
+                    >
               {{ selectedText }}
             </span>
           </div>
 
-          <div class="flex items-center gap-[15px] flex-shrink-0">
+          <div class="flex items-center gap-[18px] flex-shrink-0 absolute right-4">
             <button
                 v-if="clearable && hasValue"
                 @click.stop="clearSelection"

@@ -47,6 +47,7 @@
                 title="数值"
                 type="number"
                 :min="1"
+                :step="0.01"
                 :disabled="loading"
                 required
                 clearable
@@ -75,16 +76,16 @@
           <ErrorMessage name="unitId" class="msg-error" />
         </div>
 
-        <!-- 完成时间 -->
+        <!-- 完成日期 -->
         <div>
           <label class="text-sm font-medium text-gray-700 mb-1">
-            完成时间 <span class="msg-error">*</span>
+            完成日期 <span class="msg-error">*</span>
           </label>
           <Field name="finishTime" v-slot="{ value, setValue }">
             <BaseDateInput
                 :modelValue="value"
                 @update:modelValue="setValue"
-                title="完成时间"
+                title="完成日期"
                 type="date"
                 required
                 clearable
@@ -188,7 +189,7 @@ const schema = yup.object({
   unitId: yup.string().required('请选择单位'),
   finishTime: yup
       .string()
-      .required()
+      .required('请选择完成日期')
       .test('is-not-future', '完成日期不能大于今日', val => {
         if (!val) return true // 为空时不进行此验证
         const inputDate = dayjs(val).startOf('day')
