@@ -40,7 +40,7 @@
         <div v-if="showLoading" class="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
           <div class="flex items-center gap-2 text-gray-600">
             <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-            <span>{{ loadingText }}</span>
+            <span>查询资产数据中...</span>
           </div>
         </div>
       </transition>
@@ -62,7 +62,7 @@
         <BaseEmptyState icon="Wallet" message="暂无资产数据" :description="emptyStateDescription" />
       </div>
 
-      <!-- 图表容器 - 始终渲染以便快速更新 -->
+      <!-- 图表容器 -->
       <div
           v-show="shouldShowChart || hasInitialData"
           ref="chartRef"
@@ -85,7 +85,7 @@ import type {AssetRecord, ChartOptionsType, QueryConditions} from '@/types/asset
 import type { Option } from '@/types/common'
 import {clearCommonMetaCache} from "@/utils/commonMeta";
 
-// 常量定义
+// ==================== 常量定义 ====================
 const CHART_OPTIONS_STORAGE_KEY = 'asset_chart_options'
 const CHART_OPTIONS_CONFIG = [
   { key: 'showTotalTrend', label: '总金额趋势' },
@@ -110,7 +110,7 @@ const ASSET_TYPE_KEYS = {
 const CURRENCY_SYMBOLS = ['￥', 'CNY', '人民币', 'RMB']
 const DEFAULT_CURRENCY = '¥'
 
-// Props
+// ==================== Props ====================
 const props = defineProps<{
   assetNameOptions: Option[]
   assetTypeOptions: Option[]
@@ -118,13 +118,13 @@ const props = defineProps<{
   unitOptions: Option[]
 }>()
 
-// Store & Composables
+// ==================== Store & Composables ====================
 const assetStore = useAssetStore()
 const { query } = storeToRefs(assetStore)
 const { getDefaultRange, parseDateRange } = useDateRange()
 const { chartRef, initChart, destroyChart, resizeChart } = useChart()
 
-// 状态管理
+// ==================== 状态管理 ====================
 const isLoading = ref(false)
 const errorMessage = ref('')
 const isChartReady = ref(false)
@@ -134,8 +134,9 @@ const hasInitialData = ref(false)
 const chartInstance = shallowRef<EChartsType | null>(null)
 const isFilterUpdating = ref(false)
 const allLoadedRecords = ref<AssetRecord[]>([])
+const dateDataCache = new Map<string, Map<string, number>>()
 
-// 图表选项管理
+// ==================== 图表选项管理 ====================
 const getSavedChartOptions = (): Partial<ChartOptionsType> => {
   try {
     const saved = localStorage.getItem(CHART_OPTIONS_STORAGE_KEY)
@@ -161,11 +162,8 @@ const saveChartOptions = () => {
   }
 }
 
-// 工具函数
-function debounce<T extends (...args: any[]) => any>(
-    func: T,
-    wait: number
-): (...args: Parameters<T>) => void {
+// ==================== 工具函数 ====================
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout>
   return (...args: Parameters<T>) => {
     clearTimeout(timeout)
@@ -197,21 +195,27 @@ function normalizeUnitSymbol(unitSymbol: string): string {
   return CURRENCY_SYMBOLS.includes(unitSymbol) ? DEFAULT_CURRENCY : unitSymbol
 }
 
-function formatAmountWithUnit(amount: number, unitSymbol = DEFAULT_CURRENCY): string {
+function formatRawAmountWithUnit(amount: number, unitSymbol = DEFAULT_CURRENCY): string {
   if (amount === 0) return `${normalizeUnitSymbol(unitSymbol)}0.00`
 
   const normalizedSymbol = normalizeUnitSymbol(unitSymbol)
-  let formattedAmount: string
-
-  if (amount >= 10000) {
-    formattedAmount = `${(amount / 10000).toFixed(1)}万`
-  } else if (amount >= 1000) {
-    formattedAmount = amount.toFixed(0)
-  } else {
-    formattedAmount = amount.toFixed(2)
-  }
+  const formattedAmount = amount.toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
 
   return `${normalizedSymbol}${formattedAmount}`
+}
+
+function formatYAxisAmount(value: number): string {
+  if (value === 0) return '¥0'
+  if (value >= 100000000) {
+    return `¥${(value / 100000000).toFixed(1)}亿`
+  } else if (value >= 10000) {
+    return `¥${(value / 10000).toFixed(1)}万`
+  } else {
+    return `¥${value.toLocaleString('zh-CN')}`
+  }
 }
 
 function getDisplayName(id: string, mapping: Record<string, string>, fallback?: string | null, prefix = '未知'): string {
@@ -239,47 +243,46 @@ function getUnitSymbol(record: AssetRecord): string {
   return getDefaultUnitForAssetType(record.assetTypeId)
 }
 
-// 计算属性 - 数据相关
-const assetNameOptions = computed(() => {
-  if (!props.assetNameOptions?.length) return []
-  return props.assetNameOptions.map(option => ({
-    label: option.value1 || option.label || `资产${option.value}`,
-    value: option.value || option.id || ''
-  }))
-})
+function safeParseAmount(amount: string | number | null | undefined): number {
+  const parsed = parseFloat(String(amount || '0'))
+  return isNaN(parsed) ? 0 : parsed
+}
 
-const assetTypeOptions = computed(() => {
-  if (!props.assetTypeOptions?.length) return []
-  return props.assetTypeOptions.map(option => ({
-    label: option.value1 || option.label || `类型${option.value}`,
-    value: option.value || option.id || ''
-  }))
-})
+// ==================== 计算属性 - 数据映射 ====================
+const assetNameOptions = computed(() =>
+    props.assetNameOptions?.map(option => ({
+      label: option.value1 || option.label || `资产${option.value}`,
+      value: option.value || option.id || ''
+    })) || []
+)
 
-const assetLocationOptions = computed(() => {
-  if (!props.assetLocationOptions?.length) return []
-  return props.assetLocationOptions.map(option => ({
-    label: option.value1 || option.label || `位置${option.value}`,
-    value: option.value || option.id || ''
-  }))
-})
+const assetTypeOptions = computed(() =>
+    props.assetTypeOptions?.map(option => ({
+      label: option.value1 || option.label || `类型${option.value}`,
+      value: option.value || option.id || ''
+    })) || []
+)
 
-// 映射缓存
+const assetLocationOptions = computed(() =>
+    props.assetLocationOptions?.map(option => ({
+      label: option.value1 || option.label || `位置${option.value}`,
+      value: option.value || option.id || ''
+    })) || []
+)
+
 const nameMapping = computed(() => createMapping(props.assetNameOptions))
 const typeMapping = computed(() => createMapping(props.assetTypeOptions))
 const locationMapping = computed(() => createMapping(props.assetLocationOptions))
 const unitMapping = computed(() => createMapping(props.unitOptions, 'value1'))
 
-// 基础数据
-const assetRecords = computed<AssetRecord[]>(() => {
-  return Array.isArray(assetStore.allList) ? assetStore.allList : []
-})
+// ==================== 计算属性 - 数据处理 ====================
+const assetRecords = computed<AssetRecord[]>(() =>
+    Array.isArray(assetStore.allList) ? assetStore.allList : []
+)
 
-// 添加过滤后的记录计算属性
 const filteredRecords = computed<AssetRecord[]>(() => {
   let records = [...allLoadedRecords.value]
 
-  // 根据查询条件过滤 - 使用类型安全的比较函数
   if (query.value.assetTypeIdList?.length > 0) {
     records = records.filter(record =>
         isIdInList(record.assetTypeId, query.value.assetTypeIdList)
@@ -311,66 +314,7 @@ const filteredRecords = computed<AssetRecord[]>(() => {
   return records
 })
 
-const hasData = computed(() => {
-  return filteredRecords.value.length > 0
-})
-
-const hasSearchConditions = computed(() => {
-  return query.value.assetTypeIdList.length > 0 ||
-      query.value.assetNameIdList.length > 0 ||
-      query.value.assetLocationIdList.length > 0 ||
-      query.value.remark.trim() !== ''
-})
-
-const dateRangeDisplay = computed(() => {
-  if (!query.value.startDate || !query.value.endDate) return ''
-  return `${query.value.startDate} ~ ${query.value.endDate}`
-})
-
-const emptyStateDescription = computed(() => {
-  if (!query.value.startDate || !query.value.endDate) {
-    return '请选择日期范围查看资产数据'
-  }
-  if (hasSearchConditions.value) {
-    return '当前筛选条件下没有找到资产记录，请尝试调整筛选条件'
-  }
-  return `${dateRangeDisplay.value}期间暂无资产记录`
-})
-
-// 显示控制
-const showLoading = computed(() => {
-  return isLoading.value && isSearching.value
-})
-
-const loadingText = computed(() => {
-  return '查询资产数据中...'
-})
-
-const showEmptyState = computed(() => {
-  return !hasData.value &&
-      !errorMessage.value &&
-      query.value?.startDate &&
-      query.value?.endDate &&
-      !isLoading.value
-})
-
-const shouldShowChart = computed(() => {
-  return hasData.value &&
-      !errorMessage.value &&
-      isChartReady.value
-})
-
-const shouldShowOptions = computed(() => {
-  return hasData.value || hasInitialData.value
-})
-
-const shouldShowStats = computed(() => {
-  return hasData.value || hasInitialData.value
-})
-
-// 日期数据缓存
-const dateDataCache = new Map<string, Map<string, number>>()
-
+// ==================== 计算属性 - 日期数据 ====================
 const allDates = computed(() => {
   const dateSet = new Set<string>()
   filteredRecords.value.forEach(record => {
@@ -389,9 +333,9 @@ const formattedDates = computed(() => {
   })
 })
 
-const lastDateWithRecords = computed(() => {
-  return allDates.value.length ? allDates.value[allDates.value.length - 1] : ''
-})
+const lastDateWithRecords = computed(() =>
+    allDates.value.length ? allDates.value[allDates.value.length - 1] : ''
+)
 
 const lastDateRecords = computed(() => {
   if (!lastDateWithRecords.value) return []
@@ -400,7 +344,7 @@ const lastDateRecords = computed(() => {
   )
 })
 
-// 统计数据计算
+// ==================== 计算属性 - 统计数据 ====================
 const getTypeTotal = (typeKey: string) => {
   const typeIds = props.assetTypeOptions
       ?.filter(type => type.key1 === typeKey)
@@ -408,21 +352,20 @@ const getTypeTotal = (typeKey: string) => {
 
   return lastDateRecords.value
       .filter(record => typeIds.includes(String(record.assetTypeId)))
-      .reduce((sum, record) => sum + (parseFloat(record.amount || '0') || 0), 0)
+      .reduce((sum, record) => sum + safeParseAmount(record.amount), 0)
 }
 
-const totalAmount = computed(() => {
-  return lastDateRecords.value.reduce((sum, record) =>
-      sum + (parseFloat(record.amount || '0') || 0), 0)
-})
-
 const statisticsData = computed(() => {
+  const totalAmount = lastDateRecords.value.reduce((sum, record) =>
+      sum + safeParseAmount(record.amount), 0
+  )
+
   const unitSymbol = lastDateRecords.value.length > 0
       ? getUnitSymbol(lastDateRecords.value[0])
       : DEFAULT_CURRENCY
 
   return {
-    totalAmount: totalAmount.value,
+    totalAmount,
     savingsTotal: getTypeTotal(ASSET_TYPE_KEYS.SAVINGS),
     financeTotal: getTypeTotal(ASSET_TYPE_KEYS.FINANCE),
     fundTotal: getTypeTotal(ASSET_TYPE_KEYS.FUND),
@@ -434,74 +377,113 @@ const statisticsData = computed(() => {
 const statisticsCards = computed(() => [
   {
     title: '总金额',
-    value: formatAmountWithUnit(statisticsData.value.totalAmount, statisticsData.value.unitSymbol),
+    value: formatRawAmountWithUnit(statisticsData.value.totalAmount, statisticsData.value.unitSymbol),
     cardClass: 'bg-red-50 p-3 rounded-lg',
     titleClass: 'text-red-600 font-medium',
     valueClass: 'text-lg font-bold text-red-800'
   },
   {
     title: '储蓄类型总额',
-    value: formatAmountWithUnit(statisticsData.value.savingsTotal, statisticsData.value.unitSymbol),
+    value: formatRawAmountWithUnit(statisticsData.value.savingsTotal, statisticsData.value.unitSymbol),
     cardClass: 'bg-green-50 p-3 rounded-lg',
     titleClass: 'text-green-600 font-medium',
     valueClass: 'text-lg font-bold text-green-800'
   },
   {
     title: '理财类型总额',
-    value: formatAmountWithUnit(statisticsData.value.financeTotal, statisticsData.value.unitSymbol),
+    value: formatRawAmountWithUnit(statisticsData.value.financeTotal, statisticsData.value.unitSymbol),
     cardClass: 'bg-yellow-50 p-3 rounded-lg',
     titleClass: 'text-yellow-600 font-medium',
     valueClass: 'text-lg font-bold text-yellow-800'
   },
   {
     title: '基金类型总额',
-    value: formatAmountWithUnit(statisticsData.value.fundTotal, statisticsData.value.unitSymbol),
+    value: formatRawAmountWithUnit(statisticsData.value.fundTotal, statisticsData.value.unitSymbol),
     cardClass: 'bg-purple-50 p-3 rounded-lg',
     titleClass: 'text-purple-600 font-medium',
     valueClass: 'text-lg font-bold text-purple-800'
   },
   {
     title: '负债总额',
-    value: formatAmountWithUnit(statisticsData.value.debtTotal, statisticsData.value.unitSymbol),
+    value: formatRawAmountWithUnit(statisticsData.value.debtTotal, statisticsData.value.unitSymbol),
     cardClass: 'bg-blue-50 p-3 rounded-lg',
     titleClass: 'text-blue-600 font-medium',
     valueClass: 'text-lg font-bold text-blue-800'
   }
 ])
 
-// 图表数据处理
+// ==================== 计算属性 - 显示控制 ====================
+const hasData = computed(() => filteredRecords.value.length > 0)
+const hasSearchConditions = computed(() =>
+    query.value.assetTypeIdList.length > 0 ||
+    query.value.assetNameIdList.length > 0 ||
+    query.value.assetLocationIdList.length > 0 ||
+    query.value.remark.trim() !== ''
+)
+
+const dateRangeDisplay = computed(() => {
+  if (!query.value.startDate || !query.value.endDate) return ''
+  return `${query.value.startDate} ~ ${query.value.endDate}`
+})
+
+const emptyStateDescription = computed(() => {
+  if (!query.value.startDate || !query.value.endDate) {
+    return '请选择日期范围查看资产数据'
+  }
+  if (hasSearchConditions.value) {
+    return '当前筛选条件下没有找到资产记录，请尝试调整筛选条件'
+  }
+  return `${dateRangeDisplay.value}期间暂无资产记录`
+})
+
+const showLoading = computed(() => isLoading.value && isSearching.value)
+const showEmptyState = computed(() =>
+    !hasData.value &&
+    !errorMessage.value &&
+    query.value?.startDate &&
+    query.value?.endDate &&
+    !isLoading.value
+)
+
+const shouldShowChart = computed(() =>
+    hasData.value &&
+    !errorMessage.value &&
+    isChartReady.value
+)
+
+const shouldShowOptions = computed(() => hasData.value || hasInitialData.value)
+const shouldShowStats = computed(() => hasData.value || hasInitialData.value)
+
+// ==================== 计算属性 - 图表数据 ====================
 const amountByDimension = computed(() => {
   const byName: Record<string, Record<string, number>> = {}
   const byType: Record<string, Record<string, number>> = {}
   const byLocation: Record<string, Record<string, number>> = {}
 
-  // 清除缓存
   dateDataCache.clear()
 
-  // 预处理数据 - 使用过滤后的数据
   for (const record of filteredRecords.value) {
     if (!record?.acquireTime) continue
 
     const date = record.acquireTime.split('T')[0]
-    const amount = parseFloat(record.amount) || 0
+    const amount = safeParseAmount(record.amount)
+    if (amount === 0) continue
 
-    // 缓存日期数据 - 修复类型问题
+    // 缓存日期数据
     if (!dateDataCache.has(date)) {
       dateDataCache.set(date, new Map())
     }
     const dateMap = dateDataCache.get(date)!
-    // 🔧 将 assetNameId 转换为字符串类型
     const assetNameIdKey = String(record.assetNameId)
     dateMap.set(assetNameIdKey, (dateMap.get(assetNameIdKey) || 0) + amount)
 
     // 按维度聚合
-    // 🔧 确保传入 getDisplayName 的 ID 是字符串类型
     const nameKey = getDisplayName(String(record.assetNameId), nameMapping.value, record.assetName, '资产')
     if (!byName[nameKey]) byName[nameKey] = {}
     byName[nameKey][date] = (byName[nameKey][date] || 0) + amount
 
     const typeKey = getDisplayName(
-        String(record.assetTypeId), // 🔧 转换为字符串
+        String(record.assetTypeId),
         typeMapping.value,
         record.assetTypeName || record.assetTypeValue,
         '类型'
@@ -510,7 +492,7 @@ const amountByDimension = computed(() => {
     byType[typeKey][date] = (byType[typeKey][date] || 0) + amount
 
     const locationKey = getDisplayName(
-        String(record.assetLocationId), // 🔧 转换为字符串
+        String(record.assetLocationId),
         locationMapping.value,
         record.assetLocationName || record.assetLocationValue,
         '位置'
@@ -527,13 +509,15 @@ const totalAmountByDate = computed(() => {
   for (const record of filteredRecords.value) {
     if (!record?.acquireTime) continue
     const date = record.acquireTime.split('T')[0]
-    const amount = parseFloat(record.amount) || 0
-    map[date] = (map[date] || 0) + amount
+    const amount = safeParseAmount(record.amount)
+    if (amount > 0) {
+      map[date] = (map[date] || 0) + amount
+    }
   }
   return map
 })
 
-// 图表系列生成
+// ==================== 图表系列生成 ====================
 function createSeriesData(dataMap: Record<string, Record<string, number>>, keys: string[]): Array<{ name: string; data: number[] }> {
   return keys.map(key => ({
     name: key,
@@ -631,14 +615,14 @@ const chartSeries = computed(() => {
   }
 })
 
-// 图表配置
+// ==================== 图表配置 ====================
 const echartConfig = computed(() => {
   if (!hasData.value || !chartSeries.value.length || !allDates.value.length) return null
 
   try {
     const hasMultipleDates = allDates.value.length > 7
-    const allValues = chartSeries.value.flatMap(s => s.data || [])
-    const maxValue = Math.max(...allValues)
+    const allValues = chartSeries.value.flatMap(s => s.data || []).filter(v => !isNaN(v))
+    const maxValue = allValues.length > 0 ? Math.max(...allValues) : 100
     const yAxisMax = maxValue > 0 ? Math.ceil(maxValue * 1.1) : 100
 
     return {
@@ -700,18 +684,16 @@ const echartConfig = computed(() => {
               result += `<div style="margin-top: 8px; font-weight: 600; color: #4A5568; font-size: 13px">${titles[key as keyof typeof titles]}</div>`
               series.forEach(item => {
                 if (item.value > 0) {
-                  // 🔧 修改这里：直接显示原始金额，不转换为万单位
-                  const normalizedSymbol = normalizeUnitSymbol(unitSymbol)
-                  const formattedAmount = `${normalizedSymbol}${item.value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
+                  const formattedAmount = formatRawAmountWithUnit(item.value, unitSymbol)
                   result += `<div style="display: flex; align-items: center; gap: 8px; margin-top: 4px">
-            <span style="display: inline-block; width: 8px; height: 8px; background: ${item.color}; border-radius: 50%"></span>
-            <span>${item.seriesName.replace(/[💰🏷️📍📈]/g, '').trim()}: <strong>${formattedAmount}</strong></span>
-          </div>`
+                    <span style="display: inline-block; width: 8px; height: 8px; background: ${item.color}; border-radius: 50%"></span>
+                    <span>${item.seriesName.replace(/[💰🏷️📍📈]/g, '').trim()}: <strong>${formattedAmount}</strong></span>
+                  </div>`
                 }
               })
             }
           })
+
           return result
         }
       },
@@ -764,7 +746,7 @@ const echartConfig = computed(() => {
         axisLabel: {
           fontSize: 11,
           color: '#718096',
-          formatter: (value: number) => formatAmountWithUnit(value, statisticsData.value.unitSymbol)
+          formatter: formatYAxisAmount
         },
         splitLine: {
           lineStyle: {
@@ -807,7 +789,7 @@ const echartConfig = computed(() => {
   }
 })
 
-// 图表更新函数 - 使用setOption而不是重建
+// ==================== 图表操作函数 ====================
 async function updateChartData(): Promise<void> {
   if (!shouldShowChart.value || !echartConfig.value || isUpdatingChart.value) {
     return
@@ -817,10 +799,9 @@ async function updateChartData(): Promise<void> {
 
   try {
     if (chartInstance.value) {
-      // 🔥 先清空图表，再设置新配置
       chartInstance.value.clear()
       chartInstance.value.setOption(echartConfig.value, {
-        notMerge: true,  // 👈 改为 true，完全替换
+        notMerge: true,
         lazyUpdate: false
       })
       console.log('✅ 图表数据完全替换成功')
@@ -835,7 +816,6 @@ async function updateChartData(): Promise<void> {
   }
 }
 
-// 图表初始化
 async function initializeChart(): Promise<void> {
   if (!shouldShowChart.value || !echartConfig.value) return
 
@@ -851,20 +831,16 @@ async function initializeChart(): Promise<void> {
 
     const rect = chartRef.value.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) {
-      // 延迟重试一次
       setTimeout(() => initializeChart(), 50)
       return
     }
 
-    // 销毁旧图表
     if (chartInstance.value) {
       chartInstance.value.dispose()
       chartInstance.value = null
     }
 
-    // 创建新图表
     chartInstance.value = await initChart(echartConfig.value)
-
     console.log('✅ 图表初始化成功')
   } catch (error) {
     console.error('Failed to initialize chart:', error)
@@ -872,20 +848,17 @@ async function initializeChart(): Promise<void> {
   }
 }
 
-// 创建防抖版本的图表更新函数
+// ==================== 防抖函数 ====================
 const debouncedUpdateChart = debounce(async () => {
   await updateChartData()
 }, 200)
 
-// 创建防抖版本的数据加载函数
 const debouncedLoadData = debounce(async () => {
   isLoading.value = true
   errorMessage.value = ''
 
   try {
     await assetStore.loadAllRecords()
-
-    // 保存所有加载的数据
     allLoadedRecords.value = [...assetRecords.value]
 
     await nextTick()
@@ -901,7 +874,6 @@ const debouncedLoadData = debounce(async () => {
   }
 }, 100)
 
-// 添加一个专门的防抖函数用于过滤更新
 const debouncedFilterUpdate = debounce(async () => {
   isFilterUpdating.value = true
 
@@ -916,7 +888,7 @@ const debouncedFilterUpdate = debounce(async () => {
   }, 300)
 }, 150)
 
-// 数据加载
+// ==================== 数据加载与事件处理 ====================
 async function loadData(): Promise<void> {
   if (!query.value?.startDate || !query.value?.endDate) {
     showNotification('请选择有效的日期范围', 'error')
@@ -928,28 +900,20 @@ async function loadData(): Promise<void> {
     endDate: query.value.endDate
   })
 
-  // 使用防抖加载
   await debouncedLoadData()
 }
 
-// 添加处理查询条件更新的函数
 async function handleQueryUpdate(newQuery: Partial<QueryConditions>) {
   console.log('🔄 查询条件实时更新', newQuery)
 
-  // 更新 store 中的查询条件
   assetStore.updateQuery(newQuery)
 
-  // 如果是日期范围变化，需要重新加载数据
   if (newQuery.startDate !== undefined || newQuery.endDate !== undefined) {
     await loadData()
   } else {
-    // 其他条件变化只需要更新图表
     isFilterUpdating.value = true
-
-    // 使用 nextTick 确保计算属性更新完成
     await nextTick()
 
-    // 更新图表
     if (shouldShowChart.value) {
       await debouncedUpdateChart()
     }
@@ -960,31 +924,23 @@ async function handleQueryUpdate(newQuery: Partial<QueryConditions>) {
   }
 }
 
-// 处理搜索事件
 async function handleSearch(searchQuery?: QueryConditions): Promise<void> {
   try {
     console.log('🟢 处理搜索请求', searchQuery)
-
-    // 设置搜索状态
     isSearching.value = true
 
-    // 如果传入了查询参数
     if (searchQuery) {
       const needReload = searchQuery.startDate !== query.value.startDate ||
           searchQuery.endDate !== query.value.endDate
 
-      // 更新 store
       assetStore.updateQuery(searchQuery)
 
       if (needReload) {
-        // 日期变化需要重新加载数据
         await loadData()
       } else {
-        // 其他条件变化只需要更新图表
         await debouncedFilterUpdate()
       }
     } else {
-      // 没有传入参数，使用当前条件加载数据
       await loadData()
     }
   } catch (error) {
@@ -995,23 +951,17 @@ async function handleSearch(searchQuery?: QueryConditions): Promise<void> {
   }
 }
 
-// 处理重置事件
 async function handleReset(): Promise<void> {
   try {
     console.log('🟢 处理重置请求')
-
-    // 设置搜索状态
     isSearching.value = true
 
-    // 重置store状态
     assetStore.resetQuery()
 
-    // 重置日期范围到默认值
     const defaultRange = getDefaultRange()
     const { startDate, endDate } = parseDateRange(defaultRange)
     assetStore.updateQuery({ startDate, endDate })
 
-    // 重置图表选项
     Object.assign(chartOptions, {
       showTotalTrend: true,
       showNameDimension: true,
@@ -1020,10 +970,7 @@ async function handleReset(): Promise<void> {
     })
     saveChartOptions()
 
-    // 清除错误信息
     errorMessage.value = ''
-
-    // 加载数据
     await loadData()
   } catch (error) {
     console.error('❌ 处理重置请求失败', error)
@@ -1032,24 +979,21 @@ async function handleReset(): Promise<void> {
   }
 }
 
-// 生命周期
+// ==================== 生命周期 ====================
 onMounted(async () => {
   console.log('🟢 组件挂载')
 
   await nextTick()
   isChartReady.value = true
 
-  // 如果 store 中没有设置日期范围，设置默认日期范围
   if (!query.value.startDate || !query.value.endDate) {
     const defaultRange = getDefaultRange()
     const { startDate, endDate } = parseDateRange(defaultRange)
     assetStore.updateQuery({ startDate, endDate })
   }
 
-  // 立即加载数据
   await loadData()
 
-  // 添加窗口大小变化监听
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', resizeChart, {
       passive: true,
@@ -1071,13 +1015,11 @@ onBeforeUnmount(() => {
   }
 
   destroyChart()
-
-  // 清理缓存
   dateDataCache.clear()
   clearCommonMetaCache()
 })
 
-// 监听器
+// ==================== 监听器 ====================
 watch(
     () => chartOptions,
     () => {
@@ -1090,21 +1032,17 @@ watch(
     { deep: true }
 )
 
-// 监听数据加载完成
 watch(
     () => isLoading.value,
     (newLoading, oldLoading) => {
       console.log('🟢 loading状态改变', { newLoading, oldLoading })
 
       if (oldLoading && !newLoading) {
-        // 重置搜索状态
         isSearching.value = false
 
-        // 设置有初始数据标志
         if (hasData.value) {
           hasInitialData.value = true
           console.log('📊 数据加载完成，准备更新图表')
-          // 立即更新图表
           nextTick(() => {
             if (shouldShowChart.value) {
               debouncedUpdateChart()
@@ -1115,7 +1053,6 @@ watch(
     }
 )
 
-// 监听图表配置变化
 watch(
     echartConfig,
     (newConfig) => {
@@ -1126,7 +1063,6 @@ watch(
     { deep: true }
 )
 
-// 监听 store 中的 assetTypeIdList 变化，清空 assetNameIdList
 watch(
     () => query.value.assetTypeIdList,
     () => {
@@ -1134,7 +1070,6 @@ watch(
     }
 )
 
-// 添加监听器，监听非日期查询条件的变化
 watch(
     () => ({
       assetTypeIdList: [...query.value.assetTypeIdList],
@@ -1143,10 +1078,8 @@ watch(
       remark: query.value.remark
     }),
     (newVal, oldVal) => {
-      // 跳过初始化和数据加载中的变化
       if (isLoading.value || !hasInitialData.value) return
 
-      // 检查是否有实际变化
       const hasChange =
           JSON.stringify(newVal.assetTypeIdList) !== JSON.stringify(oldVal.assetTypeIdList) ||
           JSON.stringify(newVal.assetNameIdList) !== JSON.stringify(oldVal.assetNameIdList) ||
