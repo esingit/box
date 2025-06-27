@@ -294,18 +294,22 @@ const sortedData = computed(() => {
 function compareValues(aVal, bVal, order) {
   // 处理空值
   if (aVal == null && bVal == null) return 0
-  if (aVal == null) return order === 'asc' ? -1 : 1
-  if (bVal == null) return order === 'asc' ? 1 : -1
+  if (aVal == null) return order === 'asc' ? 1 : -1
+  if (bVal == null) return order === 'asc' ? -1 : 1
 
-  // 转换为字符串进行类型检测
+  // 先尝试日期比较（因为日期字符串也可能被识别为字符串）
+  const dateResult = compareDates(aVal, bVal, order)
+  if (dateResult !== null) return dateResult
+
+  // 转换为字符串进行其他类型检测
   const aStr = String(aVal).trim()
   const bStr = String(bVal).trim()
 
   // 检测是否为数字
   const aNum = parseFloat(aStr)
   const bNum = parseFloat(bStr)
-  const aIsNum = !isNaN(aNum) && isFinite(aNum)
-  const bIsNum = !isNaN(bNum) && isFinite(bNum)
+  const aIsNum = !isNaN(aNum) && isFinite(aNum) && aStr === String(aNum)
+  const bIsNum = !isNaN(bNum) && isFinite(bNum) && bStr === String(bNum)
 
   // 数字比较
   if (aIsNum && bIsNum) {
@@ -313,37 +317,42 @@ function compareValues(aVal, bVal, order) {
     return order === 'asc' ? result : -result
   }
 
-  // 日期比较（支持多种格式）
-  const dateRegex = /^\d{4}-\d{2}-\d{2}/ // YYYY-MM-DD 格式
-  const timeRegex = /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/ // YYYY-MM-DD HH:mm 格式
-  if ((dateRegex.test(aStr) || timeRegex.test(aStr)) &&
-      (dateRegex.test(bStr) || timeRegex.test(bStr))) {
-    // 提取日期时间部分（去除可能的额外字符）
-    const extractDateTime = (str) => {
-      const match = str.match(/^\d{4}-\d{2}-\d{2}(\s+\d{2}:\d{2}(:\d{2})?)?/)
-      return match ? match[0] : str
-    }
+  // 字符串比较（支持中文）
+  const result = aStr.localeCompare(bStr, 'zh-CN', {
+    numeric: true,
+    sensitivity: 'base'
+  })
 
-    const aDateTime = extractDateTime(aStr)
-    const bDateTime = extractDateTime(bStr)
+  return order === 'asc' ? result : -result
+}
 
-    const aDate = new Date(aDateTime)
-    const bDate = new Date(bDateTime)
+// 专门的日期比较函数
+function compareDates(aVal, bVal, order) {
+  // 将值转为字符串
+  const aStr = String(aVal).trim()
+  const bStr = String(bVal).trim()
 
-    // 确保日期有效
+  // 检查是否符合日期格式
+  const datePatterns = [
+    /^\d{4}-\d{2}-\d{2}$/,                    // YYYY-MM-DD
+    /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/,     // YYYY-MM-DD HH:mm
+    /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/ // YYYY-MM-DD HH:mm:ss
+  ]
+
+  const isDate = (str) => datePatterns.some(pattern => pattern.test(str))
+
+  if (isDate(aStr) && isDate(bStr)) {
+    const aDate = new Date(aStr)
+    const bDate = new Date(bStr)
+
+    // 验证日期有效性
     if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
       const result = aDate.getTime() - bDate.getTime()
       return order === 'asc' ? result : -result
     }
   }
 
-  // 字符串比较（支持中文）
-  const result = aStr.localeCompare(bStr, 'zh-CN', {
-    numeric: true,      // 数字排序
-    sensitivity: 'base' // 忽略大小写和重音
-  })
-
-  return order === 'asc' ? result : -result
+  return null // 不是日期，返回 null
 }
 
 // 计算是否需要固定表头
