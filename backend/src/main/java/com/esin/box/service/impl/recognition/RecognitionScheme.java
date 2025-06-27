@@ -1,5 +1,8 @@
 package com.esin.box.service.impl.recognition;
 
+import lombok.Getter;
+
+@Getter
 public enum RecognitionScheme {
     VERTICAL("竖向结构"),
     HORIZONTAL("横向结构"),
@@ -12,7 +15,4 @@ public enum RecognitionScheme {
         this.description = description;
     }
 
-    public String getDescription() {
-        return description;
-    }
 }

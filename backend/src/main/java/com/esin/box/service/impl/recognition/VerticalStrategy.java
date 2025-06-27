@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 public class VerticalStrategy implements RecognitionStrategy {
 
     // 金额匹配模式
-    private static final Pattern PRECISE_AMOUNT_PATTERN = Pattern.compile("(\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2}))");
+    private static final Pattern PRECISE_AMOUNT_PATTERN = Pattern.compile("(\\d{1,3}(?:,\\d{3})*\\.\\d{2})");
     private static final Pattern LOOSE_AMOUNT_PATTERN = Pattern.compile("(\\d{4,}(?:\\.\\d{2})?)");
 
     // OCR错误纠正映射
@@ -84,7 +84,7 @@ public class VerticalStrategy implements RecognitionStrategy {
                 this.amount = extractAmount(this.text);
                 this.hasAmount = this.amount != null;
                 this.hasProductKeyword = RecognitionHelper.containsProductKeyword(this.text);
-                this.isAmountOnly = this.text.matches("^[\\d,\\.]+$");
+                this.isAmountOnly = this.text.matches("^[\\d,.]+$");
             }
         }
 
@@ -126,12 +126,11 @@ public class VerticalStrategy implements RecognitionStrategy {
         }
 
         private boolean isInvalidLine(String text) {
-            // 跳过明显的无效行
+            // 跳过明显地无效行
             if (text.matches("^\\d{1,2}:\\d{1,2}.*$")) return true; // 时间
-            if (text.matches("^[<>《》\\(\\)=]+$")) return true; // 纯符号
+            if (text.matches("^[<>《》()=]+$")) return true; // 纯符号
             if (text.length() <= 2) return true; // 太短
-            if (text.matches("^[a-zA-Z\\s]+$")) return true; // 纯英文
-            return false;
+            return text.matches("^[a-zA-Z\\s]+$"); // 纯英文
         }
     }
 
@@ -256,9 +255,7 @@ public class VerticalStrategy implements RecognitionStrategy {
         if (line.chineseRatio > 0.5 && line.chineseCount >= 4) return true;
 
         // 长度适中且主要是中文的行
-        if (line.textLength >= 6 && line.textLength <= 50 && line.chineseRatio > 0.3) return true;
-
-        return false;
+        return line.textLength >= 6 && line.textLength <= 50 && line.chineseRatio > 0.3;
     }
 
     /**
@@ -311,7 +308,7 @@ public class VerticalStrategy implements RecognitionStrategy {
         String result = text;
 
         // 移除精确格式的金额
-        result = result.replaceAll("\\s*(\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2}))\\s*", " ");
+        result = result.replaceAll("\\s*(\\d{1,3}(?:,\\d{3})*\\.\\d{2})\\s*", " ");
 
         // 移除宽松格式的金额
         result = result.replaceAll("\\s*(\\d{4,}(?:\\.\\d{2})?)\\s*", " ");
@@ -328,7 +325,7 @@ public class VerticalStrategy implements RecognitionStrategy {
         String cleaned = name.trim()
                 .replaceAll("\\s+", "")
                 .replaceAll("[':-]", "·")
-                .replaceAll("[《》\"\"''（）()\\[\\]{}]", "");
+                .replaceAll("[《》\"'（）()\\[\\]{}]", "");
 
         // 应用OCR纠正
         for (Map.Entry<String, String> entry : OCR_CORRECTIONS.entrySet()) {

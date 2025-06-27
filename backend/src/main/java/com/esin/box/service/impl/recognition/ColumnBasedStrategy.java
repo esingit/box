@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 @Component
 public class ColumnBasedStrategy implements RecognitionStrategy {
 
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2})|\\d{4,}(?:\\.\\d{2})?)");
+    private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d{1,3}(?:,\\d{3})*\\.\\d{2}|\\d{4,}(?:\\.\\d{2})?)");
 
     // OCR错误纠正
     private static final Map<String, String> OCR_CORRECTIONS = Map.of(
@@ -222,7 +222,7 @@ public class ColumnBasedStrategy implements RecognitionStrategy {
         }
 
         return line.length() <= 1 ||
-                line.matches("^[《》<>\\(\\)]+$") ||
+                line.matches("^[《》<>()]+$") ||
                 line.contains("收起") ||
                 line.contains("温馨提示");
     }
@@ -300,7 +300,7 @@ public class ColumnBasedStrategy implements RecognitionStrategy {
         String cleaned = name.trim()
                 .replaceAll("\\s+", "")
                 .replaceAll("[':-]", "·")
-                .replaceAll("[《》\"\"''（）()\\[\\]{}]", "");
+                .replaceAll("[《》\"'（）()\\[\\]{}]", "");
 
         // 应用OCR纠正
         for (Map.Entry<String, String> entry : OCR_CORRECTIONS.entrySet()) {

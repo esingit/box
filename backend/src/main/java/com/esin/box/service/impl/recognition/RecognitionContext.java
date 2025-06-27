@@ -16,17 +16,11 @@ public class RecognitionContext {
     private final GeneralStructureStrategy general;
 
     public List<AssetScanImageDTO> recognizeByScheme(String text, RecognitionScheme scheme) {
-        switch (scheme) {
-            case VERTICAL:
-                return vertical.recognize(text);
-            case HORIZONTAL:
-                return horizontal.recognize(text);
-            case COLUMN_BASED:
-                return columnBased.recognize(text);
-            case GENERAL:
-                return general.recognize(text);
-            default:
-                return general.recognize(text);
-        }
+        return switch (scheme) {
+            case VERTICAL -> vertical.recognize(text);
+            case HORIZONTAL -> horizontal.recognize(text);
+            case COLUMN_BASED -> columnBased.recognize(text);
+            case GENERAL -> general.recognize(text);
+        };
     }
 }

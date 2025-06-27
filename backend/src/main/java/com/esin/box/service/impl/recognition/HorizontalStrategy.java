@@ -124,7 +124,7 @@ public class HorizontalStrategy implements RecognitionStrategy {
     }
 
     /**
-     * 验证是否是有效的理财产品金额
+     * 验证是否是有效地理财产品金额
      */
     private boolean isValidProductAmount(BigDecimal amount) {
         return amount.compareTo(new BigDecimal("100")) >= 0;

@@ -64,6 +64,9 @@ export default {
             animation: {
                 fadeIn: 'fadeIn 0.3s ease-in-out',
             },
+            zIndex: {
+                'toast': '9999',
+            }
         },
     },
     plugins: [],

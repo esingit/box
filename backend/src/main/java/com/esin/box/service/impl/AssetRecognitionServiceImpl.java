@@ -170,7 +170,7 @@ public class AssetRecognitionServiceImpl implements AssetRecognitionService {
         }
 
         // 必须包含金额，且金额应该在行的右侧
-        if (!RecognitionHelper.containsAmount(line)) {
+        if (RecognitionHelper.containsAmount(line)) {
             return false;
         }
 

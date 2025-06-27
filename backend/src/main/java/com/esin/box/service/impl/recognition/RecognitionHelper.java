@@ -24,10 +24,10 @@ public class RecognitionHelper {
             if (amount.length() >= 4 && !amount.contains(".") && !amount.contains(",")) continue;
             try {
                 BigDecimal value = new BigDecimal(normalizeAmountStr(amount));
-                if (value.compareTo(BigDecimal.ZERO) > 0) return true;
+                if (value.compareTo(BigDecimal.ZERO) > 0) return false;
             } catch (Exception ignored) {}
         }
-        return false;
+        return true;
     }
 
     public static boolean shouldSkipLine(String line) {
@@ -39,8 +39,7 @@ public class RecognitionHelper {
         if (line.contains("持仓") && line.contains("撤单")) return true;
         if (line.equals("撤单") || line.equals("撤音")) return true;
         if (line.matches("^\\d{1,2}:\\d{1,2}$")) return true;
-        if (line.matches("^\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}.*$")) return true;
-        return false;
+        return line.matches("^\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}.*$");
     }
 
     public static boolean isNameLine(String line) {
@@ -49,7 +48,7 @@ public class RecognitionHelper {
     }
 
     public static boolean isAmountLine(String line) {
-        return line.matches("^[\\d,\\.]+$");
+        return line.matches("^[\\d,.]+$");
     }
 
     public static String normalizeAmountStr(String s) {
@@ -78,8 +77,7 @@ public class RecognitionHelper {
             String raw = matcher.group();
             String normalized = normalizeAmountStr(raw);
             try {
-                BigDecimal value = new BigDecimal(normalized);
-                lastValid = value;
+                lastValid = new BigDecimal(normalized);
             } catch (Exception ignored) {}
         }
         return lastValid;
@@ -117,7 +115,7 @@ public class RecognitionHelper {
         for (String line : lines) {
             line = line.trim();
             if (line.isEmpty() || shouldSkipLine(line)) continue;
-            if (containsProductKeyword(line) && !containsAmount(line)) {
+            if (containsProductKeyword(line) && containsAmount(line)) {
                 productNames.add(cleanName(line));
             }
         }
@@ -153,6 +151,6 @@ public class RecognitionHelper {
     public static String cleanName(String name) {
         return name.trim().replaceAll("\\s+", "")
                 .replaceAll("[':-]", "·")
-                .replaceAll("[《》\"''()\\[\\]{}]", "");
+                .replaceAll("[《》\"'()\\[\\]{}]", "");
     }
 }

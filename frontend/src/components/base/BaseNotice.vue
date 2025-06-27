@@ -1,7 +1,7 @@
 <!--/components/base/BaseNotice.vue-->
 <template>
   <div
-      class="fixed top-8 left-1/2 transform -translate-x-1/2 flex flex-col space-y-2 z-50 min-w-[250px]"
+    class="fixed top-10 left-1/2 transform -translate-x-1/2 flex flex-col space-y-2 z-toast min-w-[250px]"
   >
     <transition-group name="toast" tag="div">
       <div
