@@ -4,7 +4,7 @@
     <!-- 搜索行 - 使用 grid 布局 -->
     <div class="flex items-center gap-3 w-full">
       <!-- 资产类型 - 固定 200px -->
-      <div class="w-[300px] min-w-[250px] flex-shrink-0">
+      <div class="w-[200px] flex-shrink-0">
         <BaseSelect
             title="资产类型"
             v-model="query.assetTypeIdList"
@@ -17,20 +17,19 @@
         />
       </div>
 
-      <!-- 资产位置 - 固定 200px -->
-      <div class="w-[450px] min-w-[350px] flex-shrink-0">
-        <BaseSelect
-            title="资产位置"
-            v-model="query.assetLocationIdList"
-            :options="assetLocationOptions"
-            placeholder="全部资产位置"
-            multiple
-            clearable
-            searchable
-            class="w-full"
-        />
-      </div>
-      <div class="w-[325px] flex-shrink-0">
+      <!-- 资产位置 -->
+      <BaseSelect
+          title="资产位置"
+          v-model="query.assetLocationIdList"
+          :options="assetLocationOptions"
+          placeholder="全部资产位置"
+          multiple
+          clearable
+          searchable
+          class="w-full"
+      />
+
+      <div class="w-[280px] flex-shrink-0">
         <BaseDateInput
             v-model="rangeValue"
             type="date"
@@ -52,7 +51,7 @@
 
     <!-- 更多条件 -->
     <div v-if="showMore" class="flex flex-col md:flex-row md:items-center md:gap-3 gap-2">
-      <div class="w-[763px] flex-shrink-0">
+      <div class="w-[700px] flex-shrink-0">
         <BaseSelect
             title="资产名称"
             v-model="query.assetNameIdList"

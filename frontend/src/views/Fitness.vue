@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-6 max-w-screen-xl mx-auto flex flex-col space-y-6 rounded-xl">
+  <div class="min-h-screen bg-gray-50 p-6 w-full mx-auto flex flex-col space-y-6 rounded-xl">
     <!-- 统计卡片 -->
     <section class="bg-white rounded-xl hover:shadow-md p-6">
       <header class="flex justify-between items-center mb-3">

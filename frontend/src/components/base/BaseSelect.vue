@@ -488,7 +488,7 @@ function onOptionsBlur(close: () => void) {
 }
 
 // 最多显示5项
-const MAX_DISPLAY_ITEMS = 4
+const MAX_DISPLAY_ITEMS = 3
 
 const resetSearch = () => {
   searchQuery.value = ''

@@ -3,7 +3,6 @@
   <div class="relative w-full bg-white border rounded-xl p-4 space-y-4 transition">
     <!-- 搜索行 - 使用响应式 grid -->
     <div class="flex items-center gap-3 w-full">
-      <div class="flex-1 min-w-[520px]">
         <BaseSelect
             title="健身类型"
             v-model="query.typeIdList"
@@ -14,7 +13,6 @@
             placeholder="全部健身类型"
             class="w-full"
         />
-      </div>
 
       <!-- 日期范围 -->
       <div class="w-[325px] flex-shrink-0">
