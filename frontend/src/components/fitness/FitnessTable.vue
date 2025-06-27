@@ -34,9 +34,9 @@ const columns = [
   },
   {
     key: 'count',
-    label: '数量',
+    label: '数值',
     resizable: true,
-    defaultWidth: 100,
+    defaultWidth: 150,
     type: 'count',
     sortable: true
   },
@@ -52,7 +52,7 @@ const columns = [
     key: 'remark',
     label: '备注',
     resizable: true,
-    defaultWidth: 200,
+    defaultWidth: 250,
     type: 'text',
     sortable: true
   },
