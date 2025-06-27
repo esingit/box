@@ -271,25 +271,27 @@ const commonAttributes = ref({
   unitId: null as string | null
 })
 
-// 计算属性 - 动态弹窗尺寸
+// 计算属性 - 动态弹窗尺寸（再次确认逻辑）
 const modalWidth = computed(() => {
-  if (recognizedData.value.length > 0 || isRecognizing.value) {
+  // 只有在有识别结果时才变大
+  if (recognizedData.value.length > 0) {
+    console.log('弹窗变宽：有识别结果', recognizedData.value.length)
     return '1400px'
   }
+  console.log('弹窗保持默认宽度：无识别结果')
   return '900px'
 })
 
 const modalHeight = computed(() => {
+  // 只有在有识别结果时才变高
   if (recognizedData.value.length > 0) {
-    // 有识别结果时使用更大的固定高度
+    console.log('弹窗变高：有识别结果', recognizedData.value.length)
     return '900px'
-  } else if (isRecognizing.value) {
-    // 识别中时使用中等高度
-    return '700px'
   }
-  // 默认较小的高度
+  console.log('弹窗保持默认高度：无识别结果')
   return '500px'
 })
+
 
 // 表格最大高度（用于表格内部滚动）
 const tableMaxHeight = computed(() => {

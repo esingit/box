@@ -157,14 +157,14 @@ const computedZIndex = computed(() => {
   return props.zIndex ?? 2000
 })
 
-// 获取当前应该使用的宽度
+// 获取当前应该使用的宽度（严格按照props）
 const getCurrentWidth = () => {
   // 如果用户手动调整过尺寸，优先使用手动尺寸
   if (useManualSize.value && size.width > 0) {
     return size.width
   }
 
-  // 否则使用props传入的尺寸
+  // 否则严格使用props传入的尺寸
   if (props.width) {
     if (props.width.includes('px')) {
       return parseInt(props.width.replace('px', ''))
@@ -176,14 +176,14 @@ const getCurrentWidth = () => {
   return 600
 }
 
-// 获取当前应该使用的高度
+// 获取当前应该使用的高度（严格按照props）
 const getCurrentHeight = () => {
   // 如果用户手动调整过尺寸，优先使用手动尺寸
   if (useManualSize.value && size.height > 0) {
     return size.height
   }
 
-  // 否则使用props传入的尺寸
+  // 否则严格使用props传入的尺寸
   if (props.height) {
     if (props.height.includes('px')) {
       return parseInt(props.height.replace('px', ''))
@@ -200,7 +200,7 @@ const modalStyle = computed(() => {
     zIndex: computedZIndex.value + 10
   }
 
-  // 获取当前应该使用的尺寸
+  // 获取当前应该使用的尺寸（严格按照props，不受DOM影响）
   const currentWidth = getCurrentWidth()
   const currentHeight = getCurrentHeight()
 
@@ -216,7 +216,7 @@ const modalStyle = computed(() => {
     style.top = `${Math.max(20, centerTop)}px`
   }
 
-  // 设置宽度 - 关键修改：优先使用props，除非用户手动调整过
+  // 设置宽度 - 严格按照props
   if (useManualSize.value && size.width > 0) {
     style.width = `${size.width}px`
   } else if (props.width) {
@@ -225,7 +225,7 @@ const modalStyle = computed(() => {
     style.width = '600px'
   }
 
-  // 设置高度 - 关键修改：优先使用props，除非用户手动调整过
+  // 设置高度 - 严格按照props
   if (useManualSize.value && size.height > 0) {
     style.height = `${size.height}px`
   } else if (props.height) {
@@ -245,52 +245,44 @@ const modalStyle = computed(() => {
   return style
 })
 
-// 初始化位置
+// 简化的初始化位置（不依赖DOM尺寸）
 const initializePosition = async () => {
-  if (!modalRef.value || isInitialized.value) return
+  if (isInitialized.value) return
 
   await nextTick()
-  await new Promise(resolve => setTimeout(resolve, 10))
 
-  if (!modalRef.value) return
+  // 直接使用props计算的尺寸，不依赖DOM
+  const currentWidth = getCurrentWidth()
+  const currentHeight = getCurrentHeight() || 600
 
-  const rect = modalRef.value.getBoundingClientRect()
+  // 计算居中位置
   const windowWidth = window.innerWidth
   const windowHeight = window.innerHeight
 
-  // 计算居中位置
-  const centerLeft = Math.round((windowWidth - rect.width) / 2)
-  const centerTop = Math.round((windowHeight - rect.height) / 2)
+  const centerLeft = Math.round((windowWidth - currentWidth) / 2)
+  const centerTop = Math.round((windowHeight - currentHeight) / 2)
 
-  position.left = Math.max(20, Math.min(centerLeft, windowWidth - rect.width - 20))
-  position.top = Math.max(20, Math.min(centerTop, windowHeight - rect.height - 20))
-
-  // 只在首次初始化时设置size，之后让props控制
-  if (size.width === 0 && size.height === 0) {
-    size.width = rect.width
-    size.height = rect.height
-  }
+  position.left = Math.max(20, Math.min(centerLeft, windowWidth - currentWidth - 20))
+  position.top = Math.max(20, Math.min(centerTop, windowHeight - currentHeight - 20))
 
   isInitialized.value = true
 }
 
-// 监听props变化，重新计算位置
+// 监听props变化，重新计算位置（不依赖DOM尺寸）
 watch([() => props.width, () => props.height], () => {
   if (isInitialized.value && !useManualSize.value) {
-    // props变化时重新居中
-    nextTick(() => {
-      if (modalRef.value) {
-        const rect = modalRef.value.getBoundingClientRect()
-        const windowWidth = window.innerWidth
-        const windowHeight = window.innerHeight
+    // props变化时重新居中，使用props计算的尺寸
+    const currentWidth = getCurrentWidth()
+    const currentHeight = getCurrentHeight() || 600
 
-        const centerLeft = Math.round((windowWidth - rect.width) / 2)
-        const centerTop = Math.round((windowHeight - rect.height) / 2)
+    const windowWidth = window.innerWidth
+    const windowHeight = window.innerHeight
 
-        position.left = Math.max(20, Math.min(centerLeft, windowWidth - rect.width - 20))
-        position.top = Math.max(20, Math.min(centerTop, windowHeight - rect.height - 20))
-      }
-    })
+    const centerLeft = Math.round((windowWidth - currentWidth) / 2)
+    const centerTop = Math.round((windowHeight - currentHeight) / 2)
+
+    position.left = Math.max(20, Math.min(centerLeft, windowWidth - currentWidth - 20))
+    position.top = Math.max(20, Math.min(centerTop, windowHeight - currentHeight - 20))
   }
 })
 
@@ -303,7 +295,7 @@ const resetState = () => {
   isDragging.value = false
   isResizing.value = false
   isInitialized.value = false
-  useManualSize.value = false // 重置手动尺寸标记
+  useManualSize.value = false
 }
 
 const close = () => {
