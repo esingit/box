@@ -1,9 +1,9 @@
-<!--src/components/asset/AssetScanAddModal.vue-->
 <template>
   <BaseModal
       title="扫图批量添加"
       :visible="visible"
-      width="1350px"
+      :width="modalWidth"
+      :height="modalHeight"
       @update:visible="handleClose"
   >
     <!-- 主内容区域 -->
@@ -34,15 +34,21 @@
         </div>
 
         <!-- 图片预览区 -->
-        <div v-if="imagePreview" class="relative">
+        <div v-if="imagePreview" class="relative inline-block">
           <img
               :src="imagePreview"
               alt="预览"
               class="max-h-48 rounded border cursor-zoom-in hover:opacity-80 transition-opacity"
               @click="showImageViewer = true"
           />
-          <div class="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-            点击查看大图
+          <!-- 修复：与图片左上角对齐，并调整样式 -->
+          <div class="absolute top-0 left-0 bg-gradient-to-r from-black/70 to-transparent text-white text-xs px-3 py-1.5 rounded-tl rounded-br-lg backdrop-blur-sm">
+            <span class="flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+              </svg>
+              点击查看大图
+            </span>
           </div>
         </div>
       </div>
@@ -152,8 +158,8 @@
           </transition>
         </div>
 
-        <!-- 无识别结果时的占位内容 -->
-        <div v-else key="no-data" class="text-center py-12 text-gray-500">
+        <!-- 修复：无识别结果且无图片时的占位内容 -->
+        <div v-else-if="!imagePreview" key="no-data" class="text-center py-12 text-gray-500">
           <LucideScanText class="w-12 h-12 mx-auto mb-4 opacity-50"/>
           <p>请上传图片并开始识别</p>
         </div>
@@ -217,12 +223,12 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'submit', 'update:visible'])
 
-// 自定义防抖函数
+// 修复：自定义防抖函数 - 使用浏览器兼容的类型
 function debounce<T extends (...args: any[]) => any>(
     func: T,
     wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
+  let timeout: number | null = null
 
   return function (...args: Parameters<T>) {
     const later = () => {
@@ -233,7 +239,7 @@ function debounce<T extends (...args: any[]) => any>(
     if (timeout) {
       clearTimeout(timeout)
     }
-    timeout = setTimeout(later, wait)
+    timeout = window.setTimeout(later, wait)
   }
 }
 
@@ -261,6 +267,28 @@ const commonAttributes = ref({
   assetLocationId: null as string | null,
   acquireTime: today,
   unitId: null as string | null
+})
+
+// 计算属性 - 动态弹窗尺寸
+const modalWidth = computed(() => {
+  if (recognizedData.value.length > 0 || isRecognizing.value) {
+    // 有识别结果或正在识别时使用更大的宽度
+    return '1400px'
+  }
+  // 默认较小的宽度
+  return '900px'
+})
+
+const modalHeight = computed(() => {
+  if (recognizedData.value.length > 0) {
+    // 有识别结果时使用更大的高度
+    return '900px'  // 固定较大高度
+  } else if (isRecognizing.value) {
+    // 识别中时使用中等高度
+    return '700px'
+  }
+  // 默认较小的高度
+  return '500px'
 })
 
 // 计算属性 - 选项数据

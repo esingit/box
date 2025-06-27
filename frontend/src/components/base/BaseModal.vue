@@ -37,16 +37,23 @@
               class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0 cursor-move select-none rounded-t-2xl"
               @mousedown="startDrag"
           >
-            <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 pointer-events-none">{{ title }}</h2>
-            <button
-                @click="close"
-                class="text-gray-500 hover:text-gray-800 dark:hover:text-white text-xl transition-colors duration-200 pointer-events-auto cursor-pointer"
-                aria-label="关闭弹窗"
-                type="button"
-                @mousedown.stop
-            >
-              ✕
-            </button>
+            <!-- 如果有自定义头部插槽 -->
+            <template v-if="$slots.header">
+              <slot name="header" :close="close"></slot>
+            </template>
+            <!-- 默认头部 -->
+            <template v-else>
+              <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 pointer-events-none">{{ title }}</h2>
+              <button
+                  @click="close"
+                  class="text-gray-500 hover:text-gray-800 dark:hover:text-white text-xl transition-colors duration-200 pointer-events-auto cursor-pointer"
+                  aria-label="关闭弹窗"
+                  type="button"
+                  @mousedown.stop
+              >
+                ✕
+              </button>
+            </template>
           </div>
 
           <!-- 没有头部时的拖拽区域 -->
@@ -96,6 +103,7 @@ const props = withDefaults(defineProps<{
   minHeight?: number
   maxWidth?: number
   maxHeight?: number
+  height?: string
 }>(), {
   draggable: true,
   resizable: true,
@@ -161,21 +169,34 @@ const getInitialWidth = () => {
   return 600
 }
 
+// 获取初始高度
+const getInitialHeight = () => {
+  if (props.height) {
+    if (props.height.includes('px')) {
+      return parseInt(props.height.replace('px', ''))
+    } else if (props.height.includes('vh')) {
+      const vh = parseInt(props.height.replace('vh', ''))
+      return (window.innerHeight * vh) / 100
+    }
+  }
+  return 0 // 0 表示自动高度
+}
+
 const modalStyle = computed(() => {
   const style: any = {
-    zIndex: computedZIndex.value + 10,
-    maxHeight: '90vh'
+    zIndex: computedZIndex.value + 10
   }
 
-  // 设置位置（居中）
+  // 修复：统一使用绝对定位，避免transform跳动
   if (isInitialized.value) {
     style.left = `${position.left}px`
     style.top = `${position.top}px`
   } else {
-    // 初始居中
-    style.left = '50%'
-    style.top = '50%'
-    style.transform = 'translate(-50%, -50%)'
+    // 初始时预计算居中位置，避免跳动
+    const initialWidth = size.width || getInitialWidth()
+    const initialHeight = size.height || getInitialHeight() || 600
+    style.left = `${(window.innerWidth - initialWidth) / 2}px`
+    style.top = `${(window.innerHeight - initialHeight) / 2}px`
   }
 
   // 设置宽度
@@ -191,17 +212,25 @@ const modalStyle = computed(() => {
   if (size.height > 0) {
     style.height = `${size.height}px`
     style.maxHeight = `${size.height}px`
+  } else if (props.height) {
+    style.height = props.height
+    if (props.height.includes('px') || props.height.includes('vh')) {
+      style.maxHeight = props.height
+    }
+  } else {
+    style.maxHeight = '90vh'
   }
 
   return style
 })
 
-// 初始化位置
+// 初始化位置 - 简化，减少跳动
 const initializePosition = async () => {
   if (!modalRef.value || isInitialized.value) return
 
   await nextTick()
-  await new Promise(resolve => setTimeout(resolve, 50))
+  // 减少延迟，减少跳动感
+  await new Promise(resolve => setTimeout(resolve, 10))
 
   if (!modalRef.value) return
 
@@ -209,28 +238,15 @@ const initializePosition = async () => {
   const windowWidth = window.innerWidth
   const windowHeight = window.innerHeight
 
-  // 计算居中位置
-  position.left = (windowWidth - rect.width) / 2
-  position.top = (windowHeight - rect.height) / 2
+  // 精确计算居中位置
+  position.left = Math.round((windowWidth - rect.width) / 2)
+  position.top = Math.round((windowHeight - rect.height) / 2)
 
-  // 设置初始尺寸
-  if (size.width === 0) {
-    size.width = rect.width
-  }
-  if (size.height === 0) {
-    size.height = rect.height
-  }
+  // 设置实际尺寸
+  size.width = rect.width
+  size.height = rect.height
 
   isInitialized.value = true
-
-  console.log('Position initialized:', {
-    left: position.left,
-    top: position.top,
-    width: size.width,
-    height: size.height,
-    windowSize: { width: windowWidth, height: windowHeight },
-    modalSize: { width: rect.width, height: rect.height }
-  })
 }
 
 // 重置状态
@@ -268,13 +284,6 @@ const startDrag = (event: MouseEvent) => {
   dragState.startLeft = position.left
   dragState.startTop = position.top
 
-  console.log('Start drag:', {
-    startX: dragState.startX,
-    startY: dragState.startY,
-    startLeft: dragState.startLeft,
-    startTop: dragState.startTop
-  })
-
   document.addEventListener('mousemove', handleDrag)
   document.addEventListener('mouseup', stopDrag)
   document.body.style.userSelect = 'none'
@@ -308,11 +317,6 @@ const handleDrag = (event: MouseEvent) => {
 }
 
 const stopDrag = () => {
-  console.log('Stop drag:', {
-    finalLeft: position.left,
-    finalTop: position.top
-  })
-
   isDragging.value = false
   document.removeEventListener('mousemove', handleDrag)
   document.removeEventListener('mouseup', stopDrag)
@@ -428,7 +432,8 @@ const handleKeyDown = (e: KeyboardEvent) => {
 watch(() => props.visible, async (newVal) => {
   if (newVal) {
     await nextTick()
-    setTimeout(initializePosition, 100)
+    // 减少延迟时间
+    setTimeout(initializePosition, 50)
   }
 }, { immediate: true })
 

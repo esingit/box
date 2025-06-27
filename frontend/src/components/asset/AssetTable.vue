@@ -27,12 +27,12 @@ const props = defineProps({
 const emit = defineEmits(['edit', 'delete'])
 
 const columns = [
-  {key: 'assetName', label: '资产名称', resizable: true, defaultWidth: 250, type: 'text'},
-  {key: 'assetTypeValue', label: '类型', resizable: true, defaultWidth: 80, type: 'text'},
-  {key: 'amount', label: '金额', resizable: true, defaultWidth: 120, type: 'count'},
-  {key: 'assetLocationValue', label: '位置', resizable: true, defaultWidth: 80, type: 'text'},
-  {key: 'acquireTime', label: '时间', resizable: true, defaultWidth: 100, type: 'date'},
-  {key: 'remark', label: '备注', resizable: true, defaultWidth: 80, type: 'text'},
+  {key: 'assetName', label: '资产名称', resizable: true, defaultWidth: 250, type: 'text', sotrable: true},
+  {key: 'assetTypeValue', label: '类型', resizable: true, defaultWidth: 80, type: 'text', sotrable: true},
+  {key: 'amount', label: '金额', resizable: true, defaultWidth: 120, type: 'count', sotrable: true},
+  {key: 'assetLocationValue', label: '位置', resizable: true, defaultWidth: 80, type: 'text', sotrable: true},
+  {key: 'acquireTime', label: '时间', resizable: true, defaultWidth: 100, type: 'date', sotrable: true},
+  {key: 'remark', label: '备注', resizable: true, defaultWidth: 80, type: 'text', sotrable: true},
   {key: 'actions', label: '操作', resizable: false, defaultWidth: 100, actions: true}
 ]
 

@@ -18,9 +18,37 @@
               :style="{ width: columnWidths[col.key] + 'px' }"
               :class="getHeaderAlignClass(col)"
           >
-            <div :class="['w-full', getHeaderTextAlignClass(col), 'select-none truncate pr-2']">
-              {{ col.label }}
+            <div
+                :class="[
+                  'w-full flex items-center gap-1',
+                  getHeaderTextAlignClass(col),
+                  'select-none truncate pr-2',
+                  col.sortable ? 'cursor-pointer hover:text-blue-600 transition-colors' : ''
+                ]"
+                @click="col.sortable ? handleSort(col.key) : null"
+            >
+              <span class="truncate">{{ col.label }}</span>
+
+              <!-- 排序图标 -->
+              <div v-if="col.sortable" class="flex-shrink-0 ml-1">
+                <ChevronUp
+                    v-if="sortKey === col.key && sortOrder === 'asc'"
+                    :size="14"
+                    class="text-blue-600"
+                />
+                <ChevronDown
+                    v-else-if="sortKey === col.key && sortOrder === 'desc'"
+                    :size="14"
+                    class="text-blue-600"
+                />
+                <ChevronsUpDown
+                    v-else
+                    :size="14"
+                    class="text-gray-400 group-hover:text-gray-600"
+                />
+              </div>
             </div>
+
             <div
                 v-if="col.resizable && idx < columns.length - 1"
                 class="absolute right-0 top-0 h-full w-1 cursor-col-resize group-hover:bg-gray-300"
@@ -60,7 +88,7 @@
           </td>
         </tr>
 
-        <tr v-else-if="!data.length">
+        <tr v-else-if="!sortedData.length">
           <td :colspan="columns.length" class="py-8 text-center text-gray-400">
             <slot name="empty">
               <BaseEmptyState
@@ -74,7 +102,7 @@
 
         <tr
             v-else
-            v-for="(row, rowIndex) in data"
+            v-for="(row, rowIndex) in sortedData"
             :key="row.id || rowIndex"
             class="hover:bg-gray-50 transition-colors"
             :class="{ 'relative z-[100]': activeRowIndex === rowIndex }"
@@ -188,6 +216,7 @@
 
 <script setup>
 import { reactive, ref, markRaw, computed, nextTick, onMounted, watch } from 'vue'
+import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-vue-next'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import BaseActions from '@/components/base/BaseActions.vue'
 // 编辑器组件
@@ -211,9 +240,68 @@ const activeRowIndex = ref(null)
 const contentRef = ref()
 const isContentScrollable = ref(false)
 
+// 排序状态
+const sortKey = ref(null)
+const sortOrder = ref(null) // 'asc' | 'desc' | null
+
+// 排序后的数据
+const sortedData = computed(() => {
+  if (!sortKey.value || !sortOrder.value || !props.data.length) {
+    return props.data
+  }
+
+  const key = sortKey.value
+  const order = sortOrder.value
+
+  return [...props.data].sort((a, b) => {
+    return compareValues(a[key], b[key], order)
+  })
+})
+
+// 智能比较函数
+function compareValues(aVal, bVal, order) {
+  // 处理空值
+  if (aVal == null && bVal == null) return 0
+  if (aVal == null) return order === 'asc' ? -1 : 1
+  if (bVal == null) return order === 'asc' ? 1 : -1
+
+  // 转换为字符串进行类型检测
+  const aStr = String(aVal).trim()
+  const bStr = String(bVal).trim()
+
+  // 检测是否为数字
+  const aNum = parseFloat(aStr)
+  const bNum = parseFloat(bStr)
+  const aIsNum = !isNaN(aNum) && isFinite(aNum)
+  const bIsNum = !isNaN(bNum) && isFinite(bNum)
+
+  // 数字比较
+  if (aIsNum && bIsNum) {
+    const result = aNum - bNum
+    return order === 'asc' ? result : -result
+  }
+
+  // 日期比较（YYYY-MM-DD 格式）
+  const dateRegex = /^\d{4}-\d{2}-\d{2}/
+  if (dateRegex.test(aStr) && dateRegex.test(bStr)) {
+    const aDate = new Date(aStr)
+    const bDate = new Date(bStr)
+    const result = aDate.getTime() - bDate.getTime()
+    return order === 'asc' ? result : -result
+  }
+
+  // 字符串比较（支持中文）
+  const result = aStr.localeCompare(bStr, 'zh-CN', {
+    numeric: true,      // 数字排序
+    sensitivity: 'base' // 忽略大小写和重音
+  })
+
+  return order === 'asc' ? result : -result
+}
+
 // 计算是否需要固定表头
 const shouldStickyHeader = computed(() => {
-  return isContentScrollable.value && props.data.length > 0 && !props.loading
+  return isContentScrollable.value && sortedData.value.length > 0 && !props.loading
 })
 
 // 检查内容是否可滚动
@@ -222,6 +310,25 @@ function checkScrollable() {
 
   const element = contentRef.value
   isContentScrollable.value = element.scrollHeight > element.clientHeight
+}
+
+// 处理排序
+function handleSort(key) {
+  if (sortKey.value === key) {
+    // 同一列：无排序 -> 升序 -> 降序 -> 无排序
+    if (sortOrder.value === null) {
+      sortOrder.value = 'asc'
+    } else if (sortOrder.value === 'asc') {
+      sortOrder.value = 'desc'
+    } else {
+      sortKey.value = null
+      sortOrder.value = null
+    }
+  } else {
+    // 不同列：直接设置为升序
+    sortKey.value = key
+    sortOrder.value = 'asc'
+  }
 }
 
 // 初始化列宽
@@ -264,12 +371,16 @@ function getEditorComponent(col) {
 
 // 处理单元格变更
 function handleCellChange(rowIndex, key, value) {
-  emit('cell-change', props.data[rowIndex], key, value, rowIndex)
+  // 需要找到原始数据中的索引
+  const originalIndex = props.data.findIndex(item => item === sortedData.value[rowIndex])
+  emit('cell-change', props.data[originalIndex], key, value, originalIndex)
 }
 
 // 处理单元格失焦
 function handleCellBlur(rowIndex, key) {
-  emit('cell-blur', props.data[rowIndex], key, rowIndex)
+  // 需要找到原始数据中的索引
+  const originalIndex = props.data.findIndex(item => item === sortedData.value[rowIndex])
+  emit('cell-blur', props.data[originalIndex], key, originalIndex)
 }
 
 // 获取表头对齐样式
@@ -284,7 +395,10 @@ function getHeaderAlignClass(col) {
 }
 
 function getHeaderTextAlignClass(col) {
-  return getHeaderAlignClass(col)
+  const alignClass = getHeaderAlignClass(col)
+  if (alignClass === 'text-right') return 'justify-end'
+  if (alignClass === 'text-center') return 'justify-center'
+  return 'justify-start'
 }
 
 function getCellAlignClass(col) {
@@ -428,15 +542,19 @@ function formatDate(dateStr) {
 }
 
 function handleEdit(row, index) {
-  emit('edit', row, index)
+  // 需要找到原始数据中的索引
+  const originalIndex = props.data.findIndex(item => item === row)
+  emit('edit', row, originalIndex)
 }
 
 function handleDelete(row, index) {
-  emit('delete', row, index)
+  // 需要找到原始数据中的索引
+  const originalIndex = props.data.findIndex(item => item === row)
+  emit('delete', row, originalIndex)
 }
 
 // 监听数据变化，重新检查是否需要滚动
-watch(() => props.data, async () => {
+watch(() => sortedData.value, async () => {
   await nextTick()
   checkScrollable()
 }, { deep: true })
