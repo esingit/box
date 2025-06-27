@@ -3,7 +3,6 @@ package com.esin.box.controller;
 import com.esin.box.config.UserContextHolder;
 import com.esin.box.dto.AssetScanImageDTO;
 import com.esin.box.service.AssetRecognitionService;
-import com.esin.box.service.impl.recognition.RecognitionScheme;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -32,66 +31,12 @@ public class AssetRecognitionController {
     private AssetRecognitionService service;
 
     /**
-     * 指定方案识别 - 新接口
-     */
-    @PostMapping(value = "/image/{scheme}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Result<List<AssetScanImageDTO>> recognizeImageWithScheme(
-            @RequestParam("file") MultipartFile file,
-            @PathVariable String scheme) {
-
-        if (file != null) {
-            log.info("上传文件: {}, 大小: {}, 类型: {}, 使用方案: {}",
-                    file.getOriginalFilename(), file.getSize(), file.getContentType(), scheme);
-        }
-
-        String err = validateFile(file);
-        if (err != null) return Result.error(err);
-
-        String user = UserContextHolder.getCurrentUsername();
-        if (!StringUtils.hasText(user)) return Result.error("用户未登录");
-
-        // 解析识别方案
-        RecognitionScheme recognitionScheme = parseScheme(scheme);
-        if (recognitionScheme == null) {
-            return Result.error("不支持的识别方案: " + scheme + "，支持的方案: scheme1, scheme2, general");
-        }
-
-        try {
-            long t0 = System.currentTimeMillis();
-            List<AssetScanImageDTO> list = service.recognizeWithScheme(file, user, recognitionScheme);
-            long elapsed = System.currentTimeMillis() - t0;
-
-            log.info("{}识别完成: {} 条, 耗时 {} ms", recognitionScheme.getDescription(), list.size(), elapsed);
-
-            if (list.isEmpty()) {
-                return Result.of(true, "未识别到有效的资产信息", list);
-            }
-            return Result.of(true, String.format("使用%s成功识别 %d 条资产记录",
-                    recognitionScheme.getDescription(), list.size()), list);
-        } catch (Exception e) {
-            log.error("{}识别异常", recognitionScheme.getDescription(), e);
-            return Result.error(getErrorMessage(e));
-        }
-    }
-
-    /**
-     * 参数方式指定方案识别 - 新接口
-     */
-    @PostMapping(value = "/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, params = "scheme")
-    public Result<List<AssetScanImageDTO>> recognizeImageWithSchemeParam(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("scheme") String scheme) {
-
-        return recognizeImageWithScheme(file, scheme);
-    }
-
-    /**
-     * 自动识别 - 保持原有接口兼容
+     * 智能识别图片 - 自动选择最佳方案
      */
     @PostMapping(value = "/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<List<AssetScanImageDTO>> recognizeImage(@RequestParam("file") MultipartFile file) {
         if (file != null) {
-            log.info("上传文件: {}, 大小: {}, 类型: {} (使用自动识别)",
+            log.info("上传文件: {}, 大小: {}, 类型: {}",
                     file.getOriginalFilename(), file.getSize(), file.getContentType());
         }
 
@@ -103,50 +48,18 @@ public class AssetRecognitionController {
 
         try {
             long t0 = System.currentTimeMillis();
-            List<AssetScanImageDTO> list = service.recognizeImageAuto(file, user);
-            log.info("自动识别完成: {} 条, 耗时 {} ms", list.size(), System.currentTimeMillis() - t0);
+            List<AssetScanImageDTO> list = service.recognizeImage(file, user);
+            long elapsed = System.currentTimeMillis() - t0;
+
+            log.info("智能识别完成: {} 条, 耗时 {} ms", list.size(), elapsed);
+
             if (list.isEmpty()) {
                 return Result.of(true, "未识别到有效的资产信息", list);
             }
             return Result.of(true, "成功识别 " + list.size() + " 条资产记录", list);
         } catch (Exception e) {
-            log.error("自动识别异常", e);
+            log.error("智能识别异常", e);
             return Result.error(getErrorMessage(e));
-        }
-    }
-
-    /**
-     * 获取支持的识别方案列表
-     */
-    @GetMapping("/schemes")
-    public Result<List<SchemeInfo>> getSupportedSchemes() {
-        List<SchemeInfo> schemes = List.of(
-                new SchemeInfo("scheme1", RecognitionScheme.SCHEME_1.getDescription(), "适用于横向布局的资产信息"),
-                new SchemeInfo("scheme2", RecognitionScheme.SCHEME_2.getDescription(), "适用于纵向布局的资产信息"),
-                new SchemeInfo("general", RecognitionScheme.GENERAL.getDescription(), "通用识别方案，自动适配多种格式")
-        );
-        return Result.success(schemes);
-    }
-
-    /**
-     * 解析识别方案
-     */
-    private RecognitionScheme parseScheme(String scheme) {
-        if (!StringUtils.hasText(scheme)) return null;
-
-        switch (scheme.toLowerCase()) {
-            case "scheme1":
-            case "1":
-                return RecognitionScheme.SCHEME_1;
-            case "scheme2":
-            case "2":
-                return RecognitionScheme.SCHEME_2;
-            case "general":
-            case "auto":
-            case "default":
-                return RecognitionScheme.GENERAL;
-            default:
-                return null;
         }
     }
 
@@ -171,28 +84,5 @@ public class AssetRecognitionController {
         if (m != null && m.contains("OCR")) return "图片识别失败，请确保图片清晰可读";
         if (m != null && m.contains("timeout")) return "图片识别超时，请稍后重试";
         return "图片识别失败，请检查图片质量后重试";
-    }
-
-    /**
-     * 方案信息DTO
-     */
-    public static class SchemeInfo {
-        private String code;
-        private String name;
-        private String description;
-
-        public SchemeInfo(String code, String name, String description) {
-            this.code = code;
-            this.name = name;
-            this.description = description;
-        }
-
-        // getters and setters
-        public String getCode() { return code; }
-        public void setCode(String code) { this.code = code; }
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
     }
 }

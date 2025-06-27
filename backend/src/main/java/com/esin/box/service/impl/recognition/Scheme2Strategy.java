@@ -6,11 +6,18 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Component
 public class Scheme2Strategy implements RecognitionStrategy {
+
+    // 匹配行开头的金额模式
+    private static final Pattern AMOUNT_START_PATTERN = Pattern.compile("^(\\d{1,3}(?:[,.]\\d{3})*(?:\\.\\d{2})?)");
 
     @Override
     public List<AssetScanImageDTO> recognize(String text) {
@@ -18,28 +25,35 @@ public class Scheme2Strategy implements RecognitionStrategy {
 
         String[] lines = text.split("\\n");
         List<AssetScanImageDTO> list = new ArrayList<>();
-
-        // 只处理上下结构的数据
-        if (!isVerticalStructure(lines)) {
-            log.debug("不符合上下结构特征，方案2不处理");
-            return list;
-        }
-
         List<String> buffer = new ArrayList<>();
+        Set<String> processedProducts = new HashSet<>(); // 防重复
 
         for (String raw : lines) {
             raw = raw.trim();
-            if (raw.isEmpty() || shouldSkipLineScheme2(raw)) continue;
+            if (raw.isEmpty() || RecognitionHelper.shouldSkipLine(raw)) continue;
 
-            if (isAmountLineScheme2(raw)) {
-                BigDecimal amount = extractAmountScheme2(raw);
-                if (!buffer.isEmpty() && amount != null) {
+            // 检查是否是金额行（行开头是金额）
+            if (isAmountLineRelaxed(raw)) {
+                BigDecimal amount = extractAmountFromStart(raw);
+                if (!buffer.isEmpty() && amount != null && isValidProductAmount(amount)) {
                     String name = RecognitionHelper.cleanName(String.join("", buffer));
-                    list.add(RecognitionHelper.createAssetDTO(name, amount));
+
+                    // 防止重复识别同一个产品
+                    String productKey = name + "_" + amount;
+                    if (!processedProducts.contains(productKey)) {
+                        list.add(RecognitionHelper.createAssetDTO(name, amount));
+                        processedProducts.add(productKey);
+                        log.debug("识别到产品: {} -> {}", name, amount);
+                    } else {
+                        log.debug("跳过重复产品: {} -> {}", name, amount);
+                    }
                     buffer.clear();
                 }
             } else {
-                buffer.add(raw);
+                // 只有包含产品关键词的行才加入缓冲区
+                if (RecognitionHelper.containsProductKeyword(raw)) {
+                    buffer.add(raw);
+                }
             }
         }
 
@@ -48,63 +62,42 @@ public class Scheme2Strategy implements RecognitionStrategy {
     }
 
     /**
-     * 判断是否是上下结构
+     * 放宽的金额行判断 - 行开头是金额即可
      */
-    private boolean isVerticalStructure(String[] lines) {
-        int verticalCount = 0;
+    private boolean isAmountLineRelaxed(String line) {
+        return AMOUNT_START_PATTERN.matcher(line).find();
+    }
 
-        for (int i = 0; i < lines.length - 1; i++) {
-            String line = lines[i].trim();
-            String nextLine = lines[i + 1].trim();
+    /**
+     * 从行开头提取金额
+     */
+    private BigDecimal extractAmountFromStart(String line) {
+        Matcher matcher = AMOUNT_START_PATTERN.matcher(line);
+        if (matcher.find()) {
+            try {
+                String amountStr = matcher.group(1);
+                // 处理OCR可能的错误：5.082.53 应该是 5,082.53
+                if (amountStr.contains(".") && amountStr.indexOf('.') != amountStr.lastIndexOf('.')) {
+                    // 有多个小数点，可能是OCR错误，将第一个点替换为逗号
+                    int firstDot = amountStr.indexOf('.');
+                    amountStr = amountStr.substring(0, firstDot) + "," + amountStr.substring(firstDot + 1);
+                }
 
-            if (line.isEmpty() || nextLine.isEmpty()) continue;
-
-            // 产品名称在上，金额在下
-            if (RecognitionHelper.containsProductKeyword(line) &&
-                    !line.matches(".*\\d{3,}.*") && // 名称行不包含大数字
-                    nextLine.matches("^[\\d,\\.]+$")) { // 下一行是纯金额
-                verticalCount++;
+                amountStr = amountStr.replace(",", "");
+                return new BigDecimal(amountStr);
+            } catch (Exception e) {
+                log.debug("金额解析失败: {}", line);
+                return null;
             }
         }
-
-        // 至少有2个上下结构的模式才认为是上下结构
-        return verticalCount >= 2;
+        return null;
     }
 
     /**
-     * 方案2专用的跳过行判断
+     * 验证是否是有效的理财产品金额
      */
-    private boolean shouldSkipLineScheme2(String line) {
-        String[] skip = {
-                "总金额", "收起", "温馨提示", "持仓市值", "持仓收益", "可赎回",
-                "最短持有期", "每日可赎", "赎回类型"
-        };
-
-        for (String pattern : skip) {
-            if (line.contains(pattern)) return true;
-        }
-
-        if (line.contains("撤单") || line.contains("撤音")) return true;
-
-        return false;
-    }
-
-    /**
-     * 方案2专用的金额行判断
-     */
-    private boolean isAmountLineScheme2(String line) {
-        return line.matches("^[\\d,\\.]+$");
-    }
-
-    /**
-     * 方案2专用的金额提取
-     */
-    private BigDecimal extractAmountScheme2(String line) {
-        try {
-            String normalized = RecognitionHelper.normalizeAmountStr(line);
-            return new BigDecimal(normalized);
-        } catch (Exception e) {
-            return null;
-        }
+    private boolean isValidProductAmount(BigDecimal amount) {
+        // 理财产品金额通常不会小于100元
+        return amount.compareTo(new BigDecimal("100")) >= 0;
     }
 }
