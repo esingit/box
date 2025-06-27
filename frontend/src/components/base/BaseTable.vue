@@ -29,23 +29,56 @@
             >
               <span class="truncate">{{ col.label }}</span>
 
-              <!-- 排序图标 -->
+              <!-- 排序图标 - 使用SVG -->
               <div v-if="col.sortable" class="flex-shrink-0 ml-1">
-                <ChevronUp
+                <!-- 升序图标 -->
+                <svg
                     v-if="sortKey === col.key && sortOrder === 'asc'"
-                    :size="14"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                     class="text-blue-600"
-                />
-                <ChevronDown
+                >
+                  <path d="m18 15-6-6-6 6"/>
+                </svg>
+
+                <!-- 降序图标 -->
+                <svg
                     v-else-if="sortKey === col.key && sortOrder === 'desc'"
-                    :size="14"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                     class="text-blue-600"
-                />
-                <ChevronsUpDown
+                >
+                  <path d="m6 9 6 6 6-6"/>
+                </svg>
+
+                <!-- 可排序但未排序图标 -->
+                <svg
                     v-else
-                    :size="14"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                     class="text-gray-400 group-hover:text-gray-600"
-                />
+                >
+                  <path d="m7 15 5 5 5-5"/>
+                  <path d="m7 9 5-5 5 5"/>
+                </svg>
               </div>
             </div>
 
@@ -216,7 +249,6 @@
 
 <script setup>
 import { reactive, ref, markRaw, computed, nextTick, onMounted, watch } from 'vue'
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-vue-next'
 import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import BaseActions from '@/components/base/BaseActions.vue'
 // 编辑器组件

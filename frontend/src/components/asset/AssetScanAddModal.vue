@@ -41,7 +41,6 @@
               class="max-h-48 rounded border cursor-zoom-in hover:opacity-80 transition-opacity"
               @click="showImageViewer = true"
           />
-          <!-- 修复：与图片左上角对齐，并调整样式 -->
           <div class="absolute top-0 left-0 bg-gradient-to-r from-black/70 to-transparent text-white text-xs px-3 py-1.5 rounded-tl rounded-br-lg backdrop-blur-sm">
             <span class="flex items-center gap-1">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,12 +134,15 @@
                 - {{ validItemsCount }} 条有效
               </span>
             </h4>
-            <RecognizedAssetsTable
-                ref="recognizedAssetsTableRef"
-                :data="recognizedData"
-                @remove-item="removeItem"
-                @update-item="updateItem"
-            />
+            <!-- 表格容器：限制高度并支持滚动 -->
+            <div class="overflow-auto" :style="{ maxHeight: tableMaxHeight }">
+              <RecognizedAssetsTable
+                  ref="recognizedAssetsTableRef"
+                  :data="recognizedData"
+                  @remove-item="removeItem"
+                  @update-item="updateItem"
+              />
+            </div>
           </div>
 
           <!-- 校验提示 -->
@@ -158,7 +160,7 @@
           </transition>
         </div>
 
-        <!-- 修复：无识别结果且无图片时的占位内容 -->
+        <!-- 无识别结果且无图片时的占位内容 -->
         <div v-else-if="!imagePreview" key="no-data" class="text-center py-12 text-gray-500">
           <LucideScanText class="w-12 h-12 mx-auto mb-4 opacity-50"/>
           <p>请上传图片并开始识别</p>
@@ -223,7 +225,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'submit', 'update:visible'])
 
-// 修复：自定义防抖函数 - 使用浏览器兼容的类型
+// 自定义防抖函数
 function debounce<T extends (...args: any[]) => any>(
     func: T,
     wait: number
@@ -272,23 +274,29 @@ const commonAttributes = ref({
 // 计算属性 - 动态弹窗尺寸
 const modalWidth = computed(() => {
   if (recognizedData.value.length > 0 || isRecognizing.value) {
-    // 有识别结果或正在识别时使用更大的宽度
     return '1400px'
   }
-  // 默认较小的宽度
   return '900px'
 })
 
 const modalHeight = computed(() => {
   if (recognizedData.value.length > 0) {
-    // 有识别结果时使用更大的高度
-    return '900px'  // 固定较大高度
+    // 有识别结果时使用更大的固定高度
+    return '900px'
   } else if (isRecognizing.value) {
     // 识别中时使用中等高度
     return '700px'
   }
   // 默认较小的高度
   return '500px'
+})
+
+// 表格最大高度（用于表格内部滚动）
+const tableMaxHeight = computed(() => {
+  if (recognizedData.value.length > 8) {
+    return '400px'  // 超过8条记录时，表格内部滚动
+  }
+  return 'none'
 })
 
 // 计算属性 - 选项数据
@@ -397,8 +405,6 @@ async function recognizeImage() {
   if (!imageFile.value) return
 
   isRecognizing.value = true
-
-  // 先清空识别数据，避免闪现旧数据
   recognizedData.value = []
 
   try {
@@ -413,7 +419,6 @@ async function recognizeImage() {
 
     const result = await assetStore.recognizeAssetImage(formData)
 
-    // 等待DOM更新完成
     await nextTick()
 
     const processedData = (result || []).map((item: any) => ({
@@ -426,7 +431,6 @@ async function recognizeImage() {
       originalAssetName: item.originalAssetName || item.assetName || ''
     })) as RecognizedAssetItem[]
 
-    // 使用防抖更新数据
     updateRecognizedData(processedData)
 
     emitter.emit('notify', {
@@ -486,14 +490,6 @@ async function executeBatchAdd(
 ): Promise<boolean> {
   try {
     console.log('=== executeBatchAdd 开始 ===')
-    console.log('参数检查:', {
-      records: records,
-      recordsType: typeof records,
-      isArray: Array.isArray(records),
-      length: records?.length,
-      forceOverwrite,
-      copyLast
-    })
 
     if (!records || !Array.isArray(records)) {
       console.error('records 参数错误:', records)
@@ -553,45 +549,26 @@ async function handleSubmit() {
   isSubmitting.value = true
 
   try {
-    console.log('=== 开始 handleSubmit ===')
-    console.log('recognizedData:', recognizedData.value)
-    console.log('commonAttributes:', commonAttributes.value)
-
-    // 准备有效记录
     const validItems = recognizedData.value.filter(item => {
-      const isValid = item.assetNameId && item.amount && item.amount > 0
-      console.log('校验记录:', item, '有效:', isValid)
-      return isValid
+      return item.assetNameId && item.amount && item.amount > 0
     })
-
-    console.log('有效记录数:', validItems.length)
 
     if (validItems.length === 0) {
       throw new Error('没有有效的记录可提交')
     }
 
-    const records: RawAssetRecord[] = validItems.map((item, index) => {
-      const record = {
-        id: String(Date.now() + index),
-        assetNameId: String(item.assetNameId!),
-        assetLocationId: String(commonAttributes.value.assetLocationId!),
-        assetTypeId: String(commonAttributes.value.assetTypeId!),
-        unitId: String(commonAttributes.value.unitId!),
-        amount: Number(item.amount!),
-        acquireTime: commonAttributes.value.acquireTime,
-        remark: item.remark || ''
-      }
+    const records: RawAssetRecord[] = validItems.map((item, index) => ({
+      id: String(Date.now() + index),
+      assetNameId: String(item.assetNameId!),
+      assetLocationId: String(commonAttributes.value.assetLocationId!),
+      assetTypeId: String(commonAttributes.value.assetTypeId!),
+      unitId: String(commonAttributes.value.unitId!),
+      amount: Number(item.amount!),
+      acquireTime: commonAttributes.value.acquireTime,
+      remark: item.remark || ''
+    }))
 
-      console.log(`构建记录 ${index}:`, record)
-      return record
-    })
-
-    console.log('最终构建的 records 数组:', records)
-    console.log('records 类型检查:', typeof records, Array.isArray(records))
-
-    // 检查今日是否已有记录
     const hasRecordsToday = await assetStore.checkTodayRecords()
-    console.log('今日是否有记录:', hasRecordsToday)
 
     if (hasRecordsToday) {
       emitter.emit('confirm', {
@@ -606,12 +583,10 @@ async function handleSubmit() {
         confirmText: '智能合并',
         cancelText: '完全覆盖',
         onConfirm: async () => {
-          console.log('用户选择：智能合并')
           const success = await executeBatchAdd(records, false, false)
           if (success) handleClose()
         },
         onCancel: async () => {
-          console.log('用户选择：完全覆盖')
           emitter.emit('confirm', {
             title: '确认覆盖',
             message: '⚠️ 此操作将删除今日所有现有记录，是否确认？',
@@ -619,7 +594,6 @@ async function handleSubmit() {
             confirmText: '确认覆盖',
             cancelText: '取消',
             onConfirm: async () => {
-              console.log('用户确认覆盖')
               const success = await executeBatchAdd(records, true, false)
               if (success) handleClose()
             }
@@ -637,12 +611,10 @@ async function handleSubmit() {
         confirmText: '复制并添加',
         cancelText: '仅添加新记录',
         onConfirm: async () => {
-          console.log('用户选择：复制并添加')
           const success = await executeBatchAdd(records, false, true)
           if (success) handleClose()
         },
         onCancel: async () => {
-          console.log('用户选择：仅添加新记录')
           const success = await executeBatchAdd(records, false, false)
           if (success) handleClose()
         }
@@ -822,5 +794,25 @@ function refreshAssetNames() {
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* 表格滚动条样式 */
+.overflow-auto::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.overflow-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 </style>

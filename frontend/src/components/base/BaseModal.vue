@@ -94,6 +94,7 @@ const props = withDefaults(defineProps<{
   visible: boolean
   title?: string
   width?: string
+  height?: string
   widthClass?: string
   zIndex?: number
   hideHeader?: boolean
@@ -103,14 +104,13 @@ const props = withDefaults(defineProps<{
   minHeight?: number
   maxWidth?: number
   maxHeight?: number
-  height?: string
 }>(), {
   draggable: true,
   resizable: true,
   minWidth: 300,
   minHeight: 200,
-  maxWidth: 1400,
-  maxHeight: 900
+  maxWidth: 1600,
+  maxHeight: 1000
 })
 
 const emit = defineEmits(['update:visible'])
@@ -123,6 +123,7 @@ const isDragging = ref(false)
 const isResizing = ref(false)
 const resizeDirection = ref('')
 const isInitialized = ref(false)
+const useManualSize = ref(false) // 标记是否使用手动调整的尺寸
 
 // 位置和尺寸状态
 const position = reactive({
@@ -156,8 +157,14 @@ const computedZIndex = computed(() => {
   return props.zIndex ?? 2000
 })
 
-// 获取初始宽度
-const getInitialWidth = () => {
+// 获取当前应该使用的宽度
+const getCurrentWidth = () => {
+  // 如果用户手动调整过尺寸，优先使用手动尺寸
+  if (useManualSize.value && size.width > 0) {
+    return size.width
+  }
+
+  // 否则使用props传入的尺寸
   if (props.width) {
     if (props.width.includes('px')) {
       return parseInt(props.width.replace('px', ''))
@@ -169,8 +176,14 @@ const getInitialWidth = () => {
   return 600
 }
 
-// 获取初始高度
-const getInitialHeight = () => {
+// 获取当前应该使用的高度
+const getCurrentHeight = () => {
+  // 如果用户手动调整过尺寸，优先使用手动尺寸
+  if (useManualSize.value && size.height > 0) {
+    return size.height
+  }
+
+  // 否则使用props传入的尺寸
   if (props.height) {
     if (props.height.includes('px')) {
       return parseInt(props.height.replace('px', ''))
@@ -187,20 +200,24 @@ const modalStyle = computed(() => {
     zIndex: computedZIndex.value + 10
   }
 
-  // 修复：统一使用绝对定位，避免transform跳动
+  // 获取当前应该使用的尺寸
+  const currentWidth = getCurrentWidth()
+  const currentHeight = getCurrentHeight()
+
+  // 设置位置
   if (isInitialized.value) {
     style.left = `${position.left}px`
     style.top = `${position.top}px`
   } else {
-    // 初始时预计算居中位置，避免跳动
-    const initialWidth = size.width || getInitialWidth()
-    const initialHeight = size.height || getInitialHeight() || 600
-    style.left = `${(window.innerWidth - initialWidth) / 2}px`
-    style.top = `${(window.innerHeight - initialHeight) / 2}px`
+    // 初始时预计算居中位置
+    const centerLeft = Math.round((window.innerWidth - currentWidth) / 2)
+    const centerTop = Math.round((window.innerHeight - (currentHeight || 600)) / 2)
+    style.left = `${Math.max(20, centerLeft)}px`
+    style.top = `${Math.max(20, centerTop)}px`
   }
 
-  // 设置宽度
-  if (size.width > 0) {
+  // 设置宽度 - 关键修改：优先使用props，除非用户手动调整过
+  if (useManualSize.value && size.width > 0) {
     style.width = `${size.width}px`
   } else if (props.width) {
     style.width = props.width
@@ -208,14 +225,18 @@ const modalStyle = computed(() => {
     style.width = '600px'
   }
 
-  // 设置高度
-  if (size.height > 0) {
+  // 设置高度 - 关键修改：优先使用props，除非用户手动调整过
+  if (useManualSize.value && size.height > 0) {
     style.height = `${size.height}px`
-    style.maxHeight = `${size.height}px`
   } else if (props.height) {
     style.height = props.height
-    if (props.height.includes('px') || props.height.includes('vh')) {
-      style.maxHeight = props.height
+    // 确保不会超出屏幕
+    if (props.height.includes('px')) {
+      const heightPx = parseInt(props.height.replace('px', ''))
+      const maxAllowedHeight = window.innerHeight - 40
+      if (heightPx > maxAllowedHeight) {
+        style.height = `${maxAllowedHeight}px`
+      }
     }
   } else {
     style.maxHeight = '90vh'
@@ -224,12 +245,11 @@ const modalStyle = computed(() => {
   return style
 })
 
-// 初始化位置 - 简化，减少跳动
+// 初始化位置
 const initializePosition = async () => {
   if (!modalRef.value || isInitialized.value) return
 
   await nextTick()
-  // 减少延迟，减少跳动感
   await new Promise(resolve => setTimeout(resolve, 10))
 
   if (!modalRef.value) return
@@ -238,16 +258,41 @@ const initializePosition = async () => {
   const windowWidth = window.innerWidth
   const windowHeight = window.innerHeight
 
-  // 精确计算居中位置
-  position.left = Math.round((windowWidth - rect.width) / 2)
-  position.top = Math.round((windowHeight - rect.height) / 2)
+  // 计算居中位置
+  const centerLeft = Math.round((windowWidth - rect.width) / 2)
+  const centerTop = Math.round((windowHeight - rect.height) / 2)
 
-  // 设置实际尺寸
-  size.width = rect.width
-  size.height = rect.height
+  position.left = Math.max(20, Math.min(centerLeft, windowWidth - rect.width - 20))
+  position.top = Math.max(20, Math.min(centerTop, windowHeight - rect.height - 20))
+
+  // 只在首次初始化时设置size，之后让props控制
+  if (size.width === 0 && size.height === 0) {
+    size.width = rect.width
+    size.height = rect.height
+  }
 
   isInitialized.value = true
 }
+
+// 监听props变化，重新计算位置
+watch([() => props.width, () => props.height], () => {
+  if (isInitialized.value && !useManualSize.value) {
+    // props变化时重新居中
+    nextTick(() => {
+      if (modalRef.value) {
+        const rect = modalRef.value.getBoundingClientRect()
+        const windowWidth = window.innerWidth
+        const windowHeight = window.innerHeight
+
+        const centerLeft = Math.round((windowWidth - rect.width) / 2)
+        const centerTop = Math.round((windowHeight - rect.height) / 2)
+
+        position.left = Math.max(20, Math.min(centerLeft, windowWidth - rect.width - 20))
+        position.top = Math.max(20, Math.min(centerTop, windowHeight - rect.height - 20))
+      }
+    })
+  }
+})
 
 // 重置状态
 const resetState = () => {
@@ -258,6 +303,7 @@ const resetState = () => {
   isDragging.value = false
   isResizing.value = false
   isInitialized.value = false
+  useManualSize.value = false // 重置手动尺寸标记
 }
 
 const close = () => {
@@ -272,7 +318,6 @@ const startDrag = (event: MouseEvent) => {
   event.preventDefault()
   event.stopPropagation()
 
-  // 确保已初始化
   if (!isInitialized.value) {
     initializePosition()
   }
@@ -301,13 +346,12 @@ const handleDrag = (event: MouseEvent) => {
   const newLeft = dragState.startLeft + deltaX
   const newTop = dragState.startTop + deltaY
 
-  // 边界限制
   const windowWidth = window.innerWidth
   const windowHeight = window.innerHeight
-  const modalWidth = size.width || getInitialWidth()
-  const modalHeight = size.height || 400
+  const modalWidth = getCurrentWidth()
+  const modalHeight = getCurrentHeight() || 600
 
-  const maxLeft = windowWidth - modalWidth + 50 // 允许拖出屏幕但保留50px
+  const maxLeft = windowWidth - modalWidth + 50
   const minLeft = -50
   const maxTop = windowHeight - modalHeight + 50
   const minTop = -50
@@ -328,10 +372,12 @@ const stopDrag = () => {
 const startResize = (direction: string) => {
   if (!props.resizable) return
 
-  // 确保已初始化
   if (!isInitialized.value) {
     initializePosition()
   }
+
+  // 开始手动调整尺寸时，标记为手动模式
+  useManualSize.value = true
 
   isResizing.value = true
   resizeDirection.value = direction
@@ -340,18 +386,25 @@ const startResize = (direction: string) => {
   event.preventDefault()
   event.stopPropagation()
 
+  // 使用当前实际尺寸作为起始尺寸
+  const currentWidth = getCurrentWidth()
+  const currentHeight = getCurrentHeight() || 600
+
   resizeState.startX = event.clientX
   resizeState.startY = event.clientY
-  resizeState.startWidth = size.width
-  resizeState.startHeight = size.height
+  resizeState.startWidth = currentWidth
+  resizeState.startHeight = currentHeight
   resizeState.startLeft = position.left
   resizeState.startTop = position.top
+
+  // 同步size状态
+  size.width = currentWidth
+  size.height = currentHeight
 
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
   document.body.style.userSelect = 'none'
 
-  // 设置光标
   const cursors: Record<string, string> = {
     'n': 'n-resize',
     's': 's-resize',
@@ -380,7 +433,6 @@ const handleResize = (event: MouseEvent) => {
 
   const direction = resizeDirection.value
 
-  // 处理宽度变化
   if (direction.includes('e')) {
     newWidth = resizeState.startWidth + deltaX
   } else if (direction.includes('w')) {
@@ -388,7 +440,6 @@ const handleResize = (event: MouseEvent) => {
     newLeft = resizeState.startLeft + deltaX
   }
 
-  // 处理高度变化
   if (direction.includes('s')) {
     newHeight = resizeState.startHeight + deltaY
   } else if (direction.includes('n')) {
@@ -396,11 +447,9 @@ const handleResize = (event: MouseEvent) => {
     newTop = resizeState.startTop + deltaY
   }
 
-  // 应用最小/最大尺寸限制
   const constrainedWidth = Math.max(props.minWidth, Math.min(props.maxWidth, newWidth))
   const constrainedHeight = Math.max(props.minHeight, Math.min(props.maxHeight, newHeight))
 
-  // 如果达到最小尺寸，调整位置
   if (constrainedWidth === props.minWidth && direction.includes('w')) {
     newLeft = resizeState.startLeft + (resizeState.startWidth - props.minWidth)
   }
@@ -432,7 +481,6 @@ const handleKeyDown = (e: KeyboardEvent) => {
 watch(() => props.visible, async (newVal) => {
   if (newVal) {
     await nextTick()
-    // 减少延迟时间
     setTimeout(initializePosition, 50)
   }
 }, { immediate: true })
@@ -462,6 +510,12 @@ onBeforeUnmount(() => {
   opacity: 0;
 }
 
+/* 弹窗尺寸过渡动画 */
+:deep(.bg-white) {
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+  height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* 调整大小句柄样式 */
 .resize-handle {
   position: absolute;
@@ -473,7 +527,6 @@ onBeforeUnmount(() => {
   background: rgba(59, 130, 246, 0.3);
 }
 
-/* 角落句柄 */
 .resize-handle.corner {
   width: 12px;
   height: 12px;
@@ -507,7 +560,6 @@ onBeforeUnmount(() => {
   border-radius: 0 0 6px 0;
 }
 
-/* 边缘句柄 */
 .resize-handle.edge {
   background: transparent;
 }
@@ -544,7 +596,6 @@ onBeforeUnmount(() => {
   cursor: e-resize;
 }
 
-/* 防止文本选择 */
 .select-none {
   user-select: none;
 }
