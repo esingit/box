@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -53,13 +54,13 @@ public class UserController {
             String captchaKey = "captcha:" + captchaId;
             String savedCaptcha = redisTemplate.opsForValue().get(captchaKey);
             if (captchaId == null) {
-                return Result.<User>error("请输入验证码", true);
+                return Result.error("请输入验证码", true);
             }
             if (savedCaptcha == null) {
-                return Result.<User>error("验证码已过期", true);
+                return Result.error("验证码已过期", true);
             }
             if (!savedCaptcha.equalsIgnoreCase(request.getCaptcha())) {
-                return Result.<User>error("验证码错误", true);
+                return Result.error("验证码错误", true);
             }
             redisTemplate.delete(captchaKey);
         }
@@ -74,14 +75,14 @@ public class UserController {
                 logger.info("用户注册成功: username={}, ip={}", user.getUsername(), ip);
                 return Result.success(user);
             } else {
-                return Result.<User>error("用户名已存在");
+                return Result.error("用户名已存在");
             }
         } catch (Exception e) {
             if (registerCount != null) {
                 redisTemplate.opsForValue().decrement(registerKey);
             }
             logger.error("用户注册失败: username={}, error={}", request.getUsername(), e.getMessage());
-            return Result.<User>error(e.getMessage());
+            return Result.error(e.getMessage());
         }
     }
 
@@ -96,8 +97,8 @@ public class UserController {
         String captchaId = request.getCaptchaId();
         String captchaKey = "captcha:" + captchaId;
 
-        Integer failCount = redisTemplate.opsForValue().get(loginFailKey) != null ?
-                Integer.parseInt(redisTemplate.opsForValue().get(loginFailKey)) : 0;
+        int failCount = redisTemplate.opsForValue().get(loginFailKey) != null ?
+                Integer.parseInt(Objects.requireNonNull(redisTemplate.opsForValue().get(loginFailKey))) : 0;
 
         boolean captchaRequired = failCount >= 3;
 
@@ -105,25 +106,25 @@ public class UserController {
         if (captchaRequired || captcha != null) {
             String savedCaptcha = redisTemplate.opsForValue().get(captchaKey);
             if (captchaId == null) {
-                return Result.<Map<String, String>>error("请输入验证码", true);
+                return Result.error("请输入验证码", true);
             }
             if (savedCaptcha == null) {
-                return Result.<Map<String, String>>error("验证码已过期", true);
+                return Result.error("验证码已过期", true);
             }
             if (!savedCaptcha.equalsIgnoreCase(captcha)) {
-                incrementLoginFailCount(username, loginFailKey, failCount);
+                incrementLoginFailCount(loginFailKey);
                 redisTemplate.delete(captchaKey);
-                return Result.<Map<String, String>>error("验证码错误", true);
+                return Result.error("验证码错误", true);
             }
             redisTemplate.delete(captchaKey);
         }
 
         // 先查用户
         User user = userService.findByUsername(username);
-        if (user == null || !userService.checkPassword(user, password)) {
-            incrementLoginFailCount(username, loginFailKey, failCount);
+        if (user == null || userService.checkPassword(user, password)) {
+            incrementLoginFailCount(loginFailKey);
             boolean needsCaptchaAfterFail = redisTemplate.opsForValue().get(loginFailKey) != null &&
-                    Integer.parseInt(redisTemplate.opsForValue().get(loginFailKey)) >= 3;
+                    Integer.parseInt(Objects.requireNonNull(redisTemplate.opsForValue().get(loginFailKey))) >= 3;
             logger.warn("用户登录失败: username={}, ip={}", username, ip);
             return Result.error("用户名或密码错误", needsCaptchaAfterFail);
         }
@@ -131,13 +132,8 @@ public class UserController {
         // 登录成功，清除失败计数
         redisTemplate.delete(loginFailKey);
 
-        // 生成token对
-        String accessToken = jwtTokenProvider.generateAccessToken(username);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(username);
-
-        Map<String, String> tokens = new HashMap<>();
-        tokens.put("accessToken", accessToken);
-        tokens.put("refreshToken", refreshToken);
+        // 使用 service 生成 token 并记录登录时间
+        Map<String, String> tokens = userService.generateLoginTokens(user);
 
         logger.info("用户登录成功: username={}, ip={}", username, ip);
         return Result.success(tokens);
@@ -286,7 +282,7 @@ public class UserController {
                 return Result.error("用户不存在");
             }
             // 2. 校验旧密码
-            if (!userService.checkPassword(user, request.getOldPassword())) {
+            if (userService.checkPassword(user, request.getOldPassword())) {
                 return Result.error("旧密码错误");
             }
             // 3. 更新新密码
@@ -336,7 +332,7 @@ public class UserController {
     }
 
     // 辅助方法
-    private void incrementLoginFailCount(String username, String key, Integer currentCount) {
+    private void incrementLoginFailCount(String key) {
         Long newCount = redisTemplate.opsForValue().increment(key);
         if (newCount != null && newCount == 1) {
             redisTemplate.expire(key, 24, TimeUnit.HOURS);

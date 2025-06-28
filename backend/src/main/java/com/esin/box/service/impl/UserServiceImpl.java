@@ -39,25 +39,23 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
-     * 登录方法改为返回Map，包含accessToken和refreshToken
+     * 生成登录令牌
+     * 注意：此方法不进行密码验证，调用前请确保已验证用户身份
      */
     @Override
-    public Map<String, String> login(String username, String password) {
-        User user = findByUsername(username);
-        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
-            // 记录登录时间
-            recordLogin(user.getId(), LocalDateTime.now());
-            // 生成一对token
-            String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername());
-            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername());
+    public Map<String, String> generateLoginTokens(User user) {
+        // 记录登录时间
+        recordLogin(user.getId(), LocalDateTime.now());
 
-            Map<String, String> tokens = new HashMap<>();
-            tokens.put("accessToken", accessToken);
-            tokens.put("refreshToken", refreshToken);
+        // 生成一对token
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername());
 
-            return tokens;
-        }
-        return null;
+        Map<String, String> tokens = new HashMap<>();
+        tokens.put("accessToken", accessToken);
+        tokens.put("refreshToken", refreshToken);
+
+        return tokens;
     }
 
     @Override
@@ -67,7 +65,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean checkPassword(User user, String rawPassword) {
-        return passwordEncoder.matches(rawPassword, user.getPassword());
+        return !passwordEncoder.matches(rawPassword, user.getPassword());
     }
 
     @Override
@@ -75,4 +73,5 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         return userMapper.updateById(user) > 0;
     }
+
 }
