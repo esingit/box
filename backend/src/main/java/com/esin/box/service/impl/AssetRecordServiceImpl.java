@@ -143,17 +143,17 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                     createUser, records.size(), forceOverwrite, copyLast);
 
             // 场景1：强制覆盖模式
+            BatchAddResult result;
             if (forceOverwrite) {
-                BatchAddResult result = handleForceOverwriteMode(records, createUser, now, hasTodayRecords);
+                result = handleForceOverwriteMode(records, createUser, now, hasTodayRecords);
                 overwrote = result.isOverwrote();
-                addCount = result.getAddCount();
             } else {
                 // 场景2：非强制覆盖模式
-                BatchAddResult result = handleNormalMode(records, createUser, now, hasTodayRecords, copyLast);
+                result = handleNormalMode(records, createUser, now, hasTodayRecords, copyLast);
                 copied = result.isCopied();
                 updateCount = result.getUpdateCount();
-                addCount = result.getAddCount();
             }
+            addCount = result.getAddCount();
 
             // 计算最终结果
             successCount = updateCount + addCount;
@@ -570,14 +570,13 @@ public class AssetRecordServiceImpl implements AssetRecordService {
                     username, force, throwIfNoHistory);
 
             // 检查今日是否已有记录
+            boolean hasTodayRecords = hasTodayRecords(username);
             if (force) {
-                boolean hasTodayRecords = hasTodayRecords(username);
                 if (hasTodayRecords) {
                     int deletedCount = deleteTodayRecords(username);
                     log.info("强制模式：已删除今日 {} 条记录", deletedCount);
                 }
             } else {
-                boolean hasTodayRecords = hasTodayRecords(username);
                 if (hasTodayRecords && throwIfNoHistory) {
                     throw new RuntimeException("今日已有记录，如需重复复制请使用强制模式");
                 }
@@ -685,11 +684,7 @@ public class AssetRecordServiceImpl implements AssetRecordService {
             newRecord.setCreateUser(username);
             newRecord.setUpdateUser(username);
             newRecord.setDeleted(0);
-
-            // 如果有版本字段，设置为0
-            if (hasVersionField()) {
-                newRecord.setVersion(0);
-            }
+            newRecord.setVersion(0);
 
             newRecords.add(newRecord);
 
@@ -698,18 +693,6 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         }
 
         return newRecords;
-    }
-
-    /**
-     * 检查实体是否有版本字段
-     */
-    private boolean hasVersionField() {
-        try {
-            AssetRecord.class.getDeclaredField("version");
-            return true;
-        } catch (NoSuchFieldException e) {
-            return false;
-        }
     }
 
     private List<AssetRecord> getTodayRecords(String username) {
@@ -813,54 +796,6 @@ public class AssetRecordServiceImpl implements AssetRecordService {
         return message.toString();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public AssetStatsDTO getLatestStats(String createUser, Integer offset) {
-        log.debug("获取用户 {} 的资产统计, 偏移天数: {}", createUser, offset);
-
-        // 找到指定偏移日期的记录日期
-        String latestDate = findStatisticsDate(createUser, offset);
-        if (latestDate == null) {
-            log.info("未找到任何记录，返回零值统计");
-            return AssetStatsDTO.builder()
-                    .totalAssets(0.0)
-                    .totalLiabilities(0.0)
-                    .latestDate(LocalDateTime.now().toString())
-                    .build();
-        }
-
-        // 获取最新日期的资产记录
-        List<AssetRecord> latestRecords = getRecordsByDate(createUser, latestDate);
-
-        // 获取上一个日期的资产记录
-        String previousDate = findPreviousDate(createUser, latestDate);
-        List<AssetRecord> previousRecords = previousDate != null ?
-                getRecordsByDate(createUser, previousDate) : new ArrayList<>();
-
-        // 计算统计数据
-        AssetStats latestStats = calculateStats(latestRecords);
-        AssetStats previousStats = calculateStats(previousRecords);
-
-        // 计算变化额
-        BigDecimal assetsChange = latestStats.totalAssets.subtract(previousStats.totalAssets);
-        BigDecimal liabilitiesChange = latestStats.totalLiabilities.subtract(previousStats.totalLiabilities);
-
-        // 格式化日期显示
-        String formattedDate = formatDate(latestDate);
-
-        log.info("计算完成 - 总资产: {}, 总负债: {}, 资产变化: {}, 负债变化: {}",
-                latestStats.totalAssets, latestStats.totalLiabilities, assetsChange, liabilitiesChange);
-
-        return AssetStatsDTO.builder()
-                .totalAssets(latestStats.totalAssets.doubleValue())
-                .totalLiabilities(latestStats.totalLiabilities.doubleValue())
-                .latestDate(latestDate)
-                .formattedDate(formattedDate)
-                .assetsChange(assetsChange.doubleValue())
-                .liabilitiesChange(liabilitiesChange.doubleValue())
-                .build();
-    }
-
     /**
      * 查找统计日期
      */
@@ -907,37 +842,119 @@ public class AssetRecordServiceImpl implements AssetRecordService {
     private AssetStats calculateStats(List<AssetRecord> records) {
         BigDecimal totalAssets = BigDecimal.ZERO;
         BigDecimal totalLiabilities = BigDecimal.ZERO;
+        BigDecimal investmentAssets = BigDecimal.ZERO;  // 新增：理财资产
         Map<Long, BigDecimal> typeAmounts = new HashMap<>();
+
+        log.info("🔍 开始计算资产统计，记录数: {}", records.size());
 
         // 按类型累加金额
         for (AssetRecord record : records) {
             typeAmounts.merge(record.getAssetTypeId(), record.getAmount(), BigDecimal::add);
         }
 
+        log.info("🔍 按类型汇总完成，类型数: {}", typeAmounts.size());
+
         // 按类型统计资产和负债
         for (Map.Entry<Long, BigDecimal> entry : typeAmounts.entrySet()) {
             CommonMeta type = commonMetaService.getById(entry.getKey());
-            if (type != null && "ASSET_TYPE".equals(type.getTypeCode()) && "DEBT".equals(type.getKey1())) {
-                totalLiabilities = totalLiabilities.add(entry.getValue());
+
+            if (type != null && "ASSET_TYPE".equals(type.getTypeCode())) {
+                String key1 = type.getKey1();
+                BigDecimal amount = entry.getValue();
+
+                log.debug("🔍 处理类型 ID: {}, key1: '{}', value1: '{}', 金额: {}",
+                        entry.getKey(), key1, type.getValue1(), amount);
+
+                if ("DEBT".equals(key1)) {
+                    // 负债类型
+                    totalLiabilities = totalLiabilities.add(amount);
+                    log.debug("  ✅ 归类为负债");
+                } else {
+                    // 非负债类型都计入总资产
+                    totalAssets = totalAssets.add(amount);
+                    log.debug("  ✅ 归类为资产");
+
+                    // 检查是否为理财资产
+                    if ("FUND".equals(key1) || "FINANCE".equals(key1) || "STOCK".equals(key1)) {
+                        investmentAssets = investmentAssets.add(amount);
+                        log.debug("  💰 同时归类为理财资产");
+                    }
+                }
             } else {
+                log.warn("🔍 未找到类型 ID: {} 或类型不是 ASSET_TYPE，默认归为资产", entry.getKey());
                 totalAssets = totalAssets.add(entry.getValue());
             }
         }
 
-        return new AssetStats(totalAssets, totalLiabilities);
+        log.info("🔍 统计计算完成 - 总资产: {}, 总负债: {}, 理财资产: {}",
+                totalAssets, totalLiabilities, investmentAssets);
+
+        return new AssetStats(totalAssets, totalLiabilities, investmentAssets);
     }
 
     /**
-     * 资产统计内部类
+     * 资产统计内部类 - 新增理财资产字段
+     *
+     * @param investmentAssets 新增
      */
-    private static class AssetStats {
-        final BigDecimal totalAssets;
-        final BigDecimal totalLiabilities;
+        private record AssetStats(BigDecimal totalAssets, BigDecimal totalLiabilities, BigDecimal investmentAssets) {
+    }
 
-        AssetStats(BigDecimal totalAssets, BigDecimal totalLiabilities) {
-            this.totalAssets = totalAssets;
-            this.totalLiabilities = totalLiabilities;
+    @Override
+    @Transactional(readOnly = true)
+    public AssetStatsDTO getLatestStats(String createUser, Integer offset) {
+        log.debug("获取用户 {} 的资产统计, 偏移天数: {}", createUser, offset);
+
+        // 找到指定偏移日期的记录日期
+        String latestDate = findStatisticsDate(createUser, offset);
+        if (latestDate == null) {
+            log.info("未找到任何记录，返回零值统计");
+            return AssetStatsDTO.builder()
+                    .netAssets(0.0)
+                    .totalLiabilities(0.0)
+                    .investmentAssets(0.0)
+                    .latestDate(LocalDateTime.now().toString())
+                    .build();
         }
+
+        // 获取最新日期的资产记录
+        List<AssetRecord> latestRecords = getRecordsByDate(createUser, latestDate);
+
+        // 获取上一个日期的资产记录
+        String previousDate = findPreviousDate(createUser, latestDate);
+        List<AssetRecord> previousRecords = previousDate != null ?
+                getRecordsByDate(createUser, previousDate) : new ArrayList<>();
+
+        // 计算统计数据
+        AssetStats latestStats = calculateStats(latestRecords);
+        AssetStats previousStats = calculateStats(previousRecords);
+
+        // 🔥 修复：净资产 = totalAssets（因为 totalAssets 已经排除了负债）
+        BigDecimal latestNetAssets = latestStats.totalAssets;
+        BigDecimal previousNetAssets = previousStats.totalAssets;
+
+        // 计算变化额
+        BigDecimal netAssetsChange = latestNetAssets.subtract(previousNetAssets);
+        BigDecimal liabilitiesChange = latestStats.totalLiabilities.subtract(previousStats.totalLiabilities);
+        BigDecimal investmentAssetsChange = latestStats.investmentAssets.subtract(previousStats.investmentAssets);
+
+        // 格式化日期显示
+        String formattedDate = formatDate(latestDate);
+
+        log.info("计算完成 - 净资产: {}, 总负债: {}, 理财资产: {}, 净资产变化: {}, 负债变化: {}, 理财资产变化: {}",
+                latestNetAssets, latestStats.totalLiabilities, latestStats.investmentAssets,
+                netAssetsChange, liabilitiesChange, investmentAssetsChange);
+
+        return AssetStatsDTO.builder()
+                .netAssets(latestNetAssets.doubleValue())
+                .totalLiabilities(latestStats.totalLiabilities.doubleValue())
+                .investmentAssets(latestStats.investmentAssets.doubleValue())
+                .latestDate(latestDate)
+                .formattedDate(formattedDate)
+                .netAssetsChange(netAssetsChange.doubleValue())
+                .liabilitiesChange(liabilitiesChange.doubleValue())
+                .investmentAssetsChange(investmentAssetsChange.doubleValue())
+                .build();
     }
 
     /**

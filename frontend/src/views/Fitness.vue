@@ -117,9 +117,14 @@ const editingIdx = ref<null | number>(null)
 const resultCount = ref<number | null>(null)
 
 const fitnessTypeOptions = computed(() =>
-    (metaStore.typeMap?.FITNESS_TYPE || []).map(item => ({
-      label: item.value1 || '',
-      value: item.id
+    (metaStore.typeMap?.FITNESS_TYPE || []).map(i => ({
+      label: i.value1 || '',
+      value: i.id,
+      id: i.id,
+      key1: i.key1,
+      key2: i.key2,
+      key3: i.key3,
+      value1: i.value1
     }))
 )
 

@@ -15,28 +15,28 @@
         </template>
         <template v-else>
           <BaseStatCard
-              title="总资产"
-              :amount="formatAmount(stats.totalAssets)"
-              :change="formatAmount(stats.assetsChange)"
-              :prefix="getChangePrefix(stats.assetsChange)"
-              :changeClass="getChangeClass(stats.assetsChange)"
+              title="净资产"
+              :amount="formatAmount(stats.netAssets || 0)"
+              :change="formatAmount(stats.netAssetsChange || 0)"
+              :prefix="getChangePrefix(stats.netAssetsChange || 0)"
+              :changeClass="getChangeClass(stats.netAssetsChange || 0)"
               highlightClass="msg-success"
           />
           <BaseStatCard
-              title="总负债"
-              :amount="formatAmount(stats.totalLiabilities)"
-              :change="formatAmount(stats.liabilitiesChange)"
-              :prefix="getChangePrefix(stats.liabilitiesChange)"
-              :changeClass="getChangeClass(stats.liabilitiesChange, true)"
-              highlightClass="msg-error"
+              title="理财资产"
+              :amount="formatAmount(stats.investmentAssets || 0)"
+              :change="formatAmount(stats.investmentAssetsChange || 0)"
+              :prefix="getChangePrefix(stats.investmentAssetsChange || 0)"
+              :changeClass="getChangeClass(stats.investmentAssetsChange || 0)"
+              highlightClass="msg-info"
           />
           <BaseStatCard
-              title="净资产"
-              :amount="formatAmount(netWorth)"
-              :change="formatAmount(netWorthChange)"
-              :prefix="getChangePrefix(netWorthChange)"
-              :changeClass="getChangeClass(netWorthChange)"
-              :highlightClass="netWorth > 0 ? 'msg-success' : 'msg-error'"
+              title="总负债"
+              :amount="formatAmount(stats.totalLiabilities || 0)"
+              :change="formatAmount(stats.liabilitiesChange || 0)"
+              :prefix="getChangePrefix(stats.liabilitiesChange || 0)"
+              :changeClass="getChangeClass(stats.liabilitiesChange || 0, true)"
+              highlightClass="msg-error"
           />
         </template>
       </div>
@@ -134,16 +134,23 @@ const showAssetScanAddFlag = ref(false)
 const editingIdx = ref<number | null>(null)
 const resultCount = ref<number | null>(null)
 
-const netWorth = computed(() => stats.value.totalAssets - stats.value.totalLiabilities)
-const netWorthChange = computed(() => stats.value.assetsChange - stats.value.liabilitiesChange)
-
 const assetTypeOptions = computed(() =>
-    (metaStore.typeMap?.ASSET_TYPE || []).map(i => ({ label: i.value1 || '', value: i.id }))
+    (metaStore.typeMap?.ASSET_TYPE || []).map(i => ({
+      label: i.value1 || '',
+      value: i.id,
+      id: i.id,
+      key1: i.key1,
+      key2: i.key2,
+      key3: i.key3,
+      value1: i.value1
+    }))
 )
+
 const assetLocationOptions = computed(() =>
     (metaStore.typeMap?.ASSET_LOCATION || []).map(i => ({ label: i.value1 || '', value: i.id }))
 )
 const { assetNameOptions } = storeToRefs(assetNameStore)
+
 
 function getDefaultTypeId() {
   const list = metaStore.typeMap?.ASSET_TYPE || []

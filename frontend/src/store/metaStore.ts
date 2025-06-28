@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { reactive, ref, computed } from 'vue'
 import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
+import {Option} from "@/types/common";
 
 // 🔥 类型定义
 export interface CommonMetaQueryDTO {
@@ -70,6 +71,30 @@ class RequestManager {
 }
 
 export const useMetaStore = defineStore('meta', () => {
+    // 缓存每类 typeCode 的元数据列表
+    const typeMap = reactive<Record<string, CommonMetaVO[]>>({})
+
+    /**
+     * 将元数据映射为选项格式（包含所有字段）
+     * @param typeCode 类型编码
+     */
+    function mapMetaToOptions(typeCode: string): Option[] {
+        const metaList = typeMap[typeCode] || []
+        return metaList.map(meta => ({
+            label: meta.value1 || meta.label || String(meta.value),
+            value: meta.id,
+            id: meta.id,
+            key1: meta.key1,
+            key2: meta.key2,
+            key3: meta.key3,
+            key4: meta.key4,
+            value1: meta.value1,
+            value2: meta.value2,
+            value3: meta.value3,
+            value4: meta.value4
+        }))
+    }
+
     // 🔥 加载状态管理 - 改进版本
     const loadingState = reactive({
         query: false,
@@ -100,9 +125,6 @@ export const useMetaStore = defineStore('meta', () => {
                 break
         }
     }
-
-    // 缓存每类 typeCode 的元数据列表
-    const typeMap = reactive<Record<string, CommonMetaVO[]>>({})
 
     // 默认预加载元数据类型
     const defaultTypeCodes = ref<string[]>([
@@ -482,7 +504,6 @@ export const useMetaStore = defineStore('meta', () => {
         loadingState,
         defaultTypeCodes,
 
-        // 👈 新增：独立的加载状态，便于模板使用
         loadingQuery,
         loadingInit,
 
@@ -495,6 +516,7 @@ export const useMetaStore = defineStore('meta', () => {
         queryMeta,
         queryMetaDebounced,
         initAll,
+        mapMetaToOptions,
 
         // 工具方法
         getOptions,
