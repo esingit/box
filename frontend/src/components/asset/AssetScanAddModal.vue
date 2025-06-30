@@ -114,7 +114,7 @@
                   @click="assetNameRef?.open()"
                   :icon="LucideSettings"
                   variant="search"
-                  class="w-60"
+                  class="w-52"
               />
             </div>
           </div>
@@ -230,7 +230,7 @@ const modalSize = computed(() => {
   // 使用图片上传作为触发点，避免频繁变化
   const isExpanded = !!imagePreview.value
   return {
-    width: isExpanded ? '1400px' : '900px',
+    width: isExpanded ? '1250px' : '900px',
     height: isExpanded ? '900px' : '600px'
   }
 })
@@ -285,6 +285,12 @@ const canSubmit = computed(() =>
     hasData.value && validationErrors.value.length === 0 && validItemsCount.value > 0
 )
 
+// 工具函数
+function toStringId(id: any): string | null {
+  if (id === null || id === undefined || id === '') return null
+  return String(id)
+}
+
 // 方法
 function handleImageUpload(file: File) {
   imageFile.value = file
@@ -331,8 +337,10 @@ async function recognizeImage() {
   }
 }
 
-function processRecognitionResult(result: any[]): RecognizedAssetItem[] {
-  return (result || []).map(item => ({
+// 修复：接受可能为 null 的参数
+function processRecognitionResult(result: any[] | null): RecognizedAssetItem[] {
+  const safeResult = result || []
+  return safeResult.map(item => ({
     ...item,
     assetNameId: safeParseId(item.assetNameId),
     amount: item.amount || null,
@@ -370,6 +378,7 @@ async function handleAssetTypeChange(value: string | number | (string | number)[
   await setDefaultUnit(String(assetTypeId))
 }
 
+// 修复：确保类型转换正确
 async function setDefaultUnit(typeId: string) {
   const assetTypes = metaStore.typeMap?.ASSET_TYPE || []
   const unitList = metaStore.typeMap?.UNIT || []
@@ -380,8 +389,9 @@ async function setDefaultUnit(typeId: string) {
   const defaultUnit = unitList.find(unit => unit.key1 === selectedType.key3)
   if (!defaultUnit) return
 
-  if (!formData.unitId || String(formData.unitId) !== String(defaultUnit.id)) {
-    formData.unitId = defaultUnit.id
+  const defaultUnitId = toStringId(defaultUnit.id)
+  if (!formData.unitId || formData.unitId !== defaultUnitId) {
+    formData.unitId = defaultUnitId
     emitter.emit('notify', {
       type: 'info',
       message: `已自动设置默认单位为：${defaultUnit.value1}`
@@ -542,13 +552,14 @@ async function loadAssetNames() {
   }
 }
 
+// 修复：确保类型转换正确
 async function initializeDefaults() {
   // 设置默认资产类型
   const defaultAssetType = metaStore.typeMap?.ASSET_TYPE?.find(
       item => item.value1 === '理财'
   )
   if (defaultAssetType) {
-    formData.assetTypeId = String(defaultAssetType.id)
+    formData.assetTypeId = toStringId(defaultAssetType.id)
     await setDefaultUnit(String(defaultAssetType.id))
   }
 
@@ -557,7 +568,7 @@ async function initializeDefaults() {
       item => item.value1 === '兴业银行'
   )
   if (defaultAssetLocation) {
-    formData.assetLocationId = String(defaultAssetLocation.id)
+    formData.assetLocationId = toStringId(defaultAssetLocation.id)
   }
 }
 

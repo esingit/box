@@ -34,7 +34,7 @@
           </div>
 
           <!-- 右侧图标区域 -->
-          <div class="flex items-center gap-1 flex-shrink-0 absolute right-2 top-1/2 transform -translate-y-1/2">
+          <div class="flex items-center gap-3 flex-shrink-0 absolute right-4 top-1/2 transform -translate-y-1/2">
             <button
                 v-if="props.clearable && hasValue"
                 @click.stop="clearSelection"
