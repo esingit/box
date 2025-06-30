@@ -35,10 +35,10 @@
           <ErrorMessage name="typeId" class="msg-error" />
         </div>
 
-        <!-- 次数 -->
+        <!-- 数值 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
-            次数 <span class="msg-error">*</span>
+            数值 <span class="msg-error">*</span>
           </label>
           <Field name="count" v-slot="{ value, setValue }">
             <BaseInput
@@ -183,9 +183,9 @@ const schema = yup.object({
   typeId: yup.string().required('请选择类型'),
   count: yup
       .number()
-      .typeError('请输入次数')
-      .required('请输入次数')
-      .min(1, '次数不能小于1'),
+      .typeError('请输入数值')
+      .required('请输入数值')
+      .min(1, '数值不能小于1'),
   unitId: yup.string().required('请选择单位'),
   finishTime: yup
       .string()

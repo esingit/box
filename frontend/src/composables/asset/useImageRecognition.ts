@@ -27,7 +27,6 @@ export function useImageRecognition(loadAssetNames: () => Promise<void>) {
         if (!imageFile.value) return
 
         isProcessing.value = true
-        recognizedItems.value = []
 
         try {
             await loadAssetNames()
@@ -38,6 +37,7 @@ export function useImageRecognition(loadAssetNames: () => Promise<void>) {
             const result = await assetStore.recognizeAssetImage(formData)
             await nextTick()
 
+            // 在获取到新数据后，再进行赋值，这会原子性地替换旧数据
             recognizedItems.value = processRecognitionResult(result)
 
             emitter.emit('notify', {
@@ -47,6 +47,7 @@ export function useImageRecognition(loadAssetNames: () => Promise<void>) {
                     : '未识别到有效数据'
             })
         } catch (err) {
+            // 发生错误时，旧的数据仍然保留在界面上，用户体验更好
             emitter.emit('notify', {
                 message: '图片识别失败，请重试',
                 type: 'error'
