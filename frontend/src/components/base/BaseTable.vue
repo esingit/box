@@ -110,14 +110,42 @@ import { useAssetNameStore } from '@/store/assetNameStore'
 type FormatterType = 'text' | 'number' | 'unit-number' | 'select' | 'date' | 'time' | 'datetime' | 'custom' | 'scan-result';
 interface Option { label: string; value: string | number; [key: string]: any; }
 interface Column {
-  key: string; label: string; type?: FormatterType; defaultWidth?: number; resizable?: boolean; sortable?: boolean; editable?: boolean; actions?: boolean; align?: 'left' | 'center' | 'right'; headerAlign?: 'left' | 'center' | 'right'; options?: Option[]; displayField?: string; formatter?: (row: any, key: string) => string; tooltipFormatter?: (row: any, key: string) => string;
+  key: string;
+  label: string;
+  type?: FormatterType;
+  defaultWidth?: number;
+  resizable?: boolean;
+  sortable?: boolean;
+  editable?: boolean;
+  actions?: boolean;
+  align?: 'left' | 'center' | 'right';
+  headerAlign?: 'left' | 'center' | 'right';
+  options?: Option[];
+  displayField?: string;
+  formatter?: (row: any, key: string) => string;
+  tooltipFormatter?: (row: any, key: string) => string;
+  [key: string]: any;
 }
-interface Props { columns: Column[]; data: any[]; loading?: boolean; editable?: boolean; }
 
 // --- Props & Emits ---
-const props = withDefaults(defineProps<Props>(), { data: () => [], loading: false, editable: false })
+interface Props {
+  columns: Column[];
+  data: any[];
+  loading?: boolean;
+  editable?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  data: () => [],
+  loading: false,
+  editable: false
+})
+
 const emit = defineEmits<{
-  edit: [row: any, index: number]; delete: [row: any, index: number]; 'cell-change': [row: any, key: string, value: any, index: number]; 'cell-blur': [row: any, key: string, index: number];
+  edit: [row: any, index: number];
+  delete: [row: any, index: number];
+  'cell-change': [row: any, key: string, value: any, index: number];
+  'cell-blur': [row: any, key: string, index: number];
 }>()
 
 // --- 常量与Store ---
@@ -150,14 +178,10 @@ let startX = 0
 let startWidth = 0
 let resizeTimer: number | null = null
 
-// --- 计算属性 (核心修改) ---
-
-/**
- * 预处理列定义，为 key='count' 的列自动设置 type='unit-number'
- */
+// --- 计算属性 ---
 const processedColumns = computed(() => {
   return props.columns.map(col => {
-    // 如果列的 key 是 'count' 且没有显式定义 type，则自动设置为 'unit-number' 用于带单位的格式化
+    // 如果列的 key 是 'count' 且没有显式定义 type，则自动设置为 'unit-number'
     if (col.key === 'count' && col.type === undefined) {
       return { ...col, type: 'unit-number' as FormatterType };
     }
@@ -183,7 +207,6 @@ watch(() => processedColumns.value, (newColumns) => {
   });
 }, { immediate: true, deep: true });
 
-
 // --- 核心格式化逻辑 ---
 function formatCell(row: any, key: string, col: Column): string {
   if (col.formatter) return col.formatter(row, key);
@@ -191,12 +214,24 @@ function formatCell(row: any, key: string, col: Column): string {
   if (value === null || value === undefined || value === '') return '-';
 
   switch (col.type) {
-    case 'unit-number': { // 【关键】处理所有带单位的数字，由 key='count' 自动触发
+    case 'custom': {
+      // 对于以Id结尾的字段，尝试从store中查找对应的显示值
+      if (key.endsWith('Id') || key.endsWith('id')) {
+        const storeGetter = storeMapping[key];
+        if (storeGetter) {
+          const options = storeGetter();
+          const option = options.find((opt: Option) => String(opt.value) === String(value));
+          if (option) return option.label;
+        }
+      }
+      return String(value);
+    }
+    case 'unit-number': {
       const unitText = row.unitValue || '';
       const unit = unitSymbolMap[unitText] || unitText;
       return formatAmount(value) + (unit ? ` ${unit}` : '');
     }
-    case 'number': { // 处理不带单位的纯数字
+    case 'number': {
       return formatAmount(value);
     }
     case 'date':
@@ -241,7 +276,6 @@ function getTooltipContent(row: any, key: string, col: Column): string {
   return formatCell(row, key, col);
 }
 
-
 // --- 其他辅助函数与方法 ---
 function compareValues(aVal: any, bVal: any, order: 'asc' | 'desc'): number {
   if (aVal == null && bVal == null) return 0;
@@ -276,7 +310,7 @@ function handleSort(key: string): void {
 function getHeaderAlignClass(col: Column): string {
   if (col.headerAlign) return `text-${col.headerAlign}`;
   if (col.actions) return 'text-center';
-  if (['number', 'unit-number'].includes(col.type || '')) return 'text-right'; // 更新对齐规则
+  if (['number', 'unit-number'].includes(col.type || '')) return 'text-right';
   if (['date', 'time', 'datetime'].includes(col.type || '')) return 'text-center';
   return 'text-left';
 }
@@ -298,7 +332,6 @@ function setActiveRow(rowIndex: number): void { activeRowIndex.value = rowIndex;
 function clearActiveRow(): void { activeRowIndex.value = null; }
 function isEditable(col: Column): boolean { return props.editable === true && col.editable !== false && !!col.type && col.type !== 'custom'; }
 function getEditorComponent(col: Column): Component {
-  // 对于 'unit-number' 类型，也使用 NumberEditor
   if (col.type === 'unit-number') return editorComponents['number'];
   return editorComponents[col.type || 'text'] || editorComponents.text;
 }
@@ -345,7 +378,15 @@ function resetColumnWidth(key: string): void {
 function handleCellMouseEnter(rowIndex: number, fieldKey: string, event: MouseEvent, row: any, col: Column): void {
   if (tooltipDebounceTimer.value) clearTimeout(tooltipDebounceTimer.value);
   if (tooltipHideTimer.value) clearTimeout(tooltipHideTimer.value);
+
+  // 跳过操作列
   if (col.actions) return;
+
+  // 对于custom类型的列，如果有自定义tooltipFormatter，则不显示BaseTable的tooltip
+  if (col.type === 'custom' && col.tooltipFormatter) {
+    return;
+  }
+
   tooltipDebounceTimer.value = window.setTimeout(() => {
     const content = getTooltipContent(row, fieldKey, col);
     if (!content || content === '-') return;

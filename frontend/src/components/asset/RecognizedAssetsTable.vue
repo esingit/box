@@ -133,7 +133,7 @@ const columns = [
     key: 'assetName',
     label: '扫描结果',
     resizable: true,
-    defaultWidth: 300,
+    defaultWidth: 320,
     type: 'test',
     headerAlign: 'left',
     align: 'left',
@@ -143,17 +143,26 @@ const columns = [
     key: 'assetNameId',
     label: '资产名称',
     resizable: true,
-    defaultWidth: 400,
+    defaultWidth: 250,
     type: 'custom',
     headerAlign: 'left',
     align: 'left',
-    sortable: true
+    sortable: true,
+    // 添加自定义tooltip格式化函数，这样BaseTable就不会显示默认tooltip
+    tooltipFormatter: (row: any, key: string) => {
+      const value = row[key]
+      if (!value) return '请选择资产名称'
+      const option = assetNameOptions.value.find(opt =>
+          String(opt.value) === String(value)
+      )
+      return option?.label || '未知资产'
+    }
   },
   {
     key: 'amount',
     label: '金额',
     resizable: true,
-    defaultWidth: 150,
+    defaultWidth: 130,
     type: 'custom',
     headerAlign: 'right',
     align: 'right',
@@ -163,7 +172,7 @@ const columns = [
     key: 'remark',
     label: '备注',
     resizable: true,
-    defaultWidth: 150,
+    defaultWidth: 120,
     type: 'custom',
     headerAlign: 'left',
     align: 'left',
