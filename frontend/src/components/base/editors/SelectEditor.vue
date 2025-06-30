@@ -1,7 +1,7 @@
-<!-- src/components/base/editors/SelectEditor.vue -->
 <template>
   <div class="relative w-full">
     <BaseSelect
+        ref="selectRef"
         :model-value="normalizedValue"
         :title="column.label || column.title || ''"
         :options="column.options || []"
@@ -66,7 +66,9 @@ const handleDropdownOpen = () => {
       detail: { rowIndex: props.index },
       bubbles: true
     })
-    selectRef.value?.dispatchEvent(event)
+    // 使用containerRef而不是selectRef，因为BaseSelect暴露的是containerRef
+    const container = selectRef.value?.$el || selectRef.value?.containerRef
+    container?.dispatchEvent(event)
   }
 }
 
@@ -78,7 +80,9 @@ const handleDropdownClose = () => {
       detail: { rowIndex: props.index },
       bubbles: true
     })
-    selectRef.value?.dispatchEvent(event)
+    // 使用containerRef而不是selectRef
+    const container = selectRef.value?.$el || selectRef.value?.containerRef
+    container?.dispatchEvent(event)
   }
 }
 
@@ -86,7 +90,11 @@ const handleDropdownClose = () => {
 const calculateDropdownDirection = () => {
   if (!selectRef.value) return
 
-  const rect = selectRef.value.getBoundingClientRect()
+  // 获取BaseSelect组件的容器元素
+  const container = selectRef.value.$el || selectRef.value.containerRef
+  if (!container) return
+
+  const rect = container.getBoundingClientRect()
   const viewportHeight = window.innerHeight
   const spaceBelow = viewportHeight - rect.bottom
   const spaceAbove = rect.top

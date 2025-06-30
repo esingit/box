@@ -142,6 +142,7 @@
                         @click="() => closeDropdown(close)"
                     >
                       <div
+                          :title="getTitleForItem(item, 'selected')"
                           class="flex items-center justify-between px-3 py-2.5 mx-1 rounded-lg cursor-pointer select-none transition-all duration-150 text-left"
                           :class="{
                             'bg-gray-50 text-gray-900': active && selected,
@@ -149,6 +150,7 @@
                             'bg-gray-50': active && !selected,
                             'text-gray-800': !selected
                           }"
+                          @mouseenter="() => logItemHover(item, 'selected')"
                       >
                         <div class="flex items-center min-w-0 flex-1">
                           <span class="mr-3 flex items-center justify-center w-5 h-5 flex-shrink-0">
@@ -180,6 +182,7 @@
                       @click="() => closeDropdown(close)"
                   >
                     <div
+                        :title="getTitleForItem(item, 'display')"
                         class="flex items-center justify-between px-3 py-2.5 mx-1 rounded-lg cursor-pointer select-none transition-all duration-150 text-left group"
                         :class="{
                           'bg-gray-50 text-gray-900': active && selected,
@@ -188,6 +191,7 @@
                           'text-gray-800': !selected,
                           'hover:bg-gray-50': !active && !selected
                         }"
+                        @mouseenter="() => logItemHover(item, 'display')"
                     >
                       <div class="flex items-center min-w-0 flex-1">
                         <template v-if="props.multiple">
@@ -301,6 +305,38 @@ const searchQuery = ref('')
 const isDropdownOpen = ref(false)
 const closeFunction = ref<(() => void) | null>(null)
 
+// 添加日志函数
+const logItemHover = (item: Option, type: string) => {
+  console.log(`🐛 [BaseSelect] 鼠标悬浮 ${type} 选项:`, {
+    label: item.label,
+    value: item.value,
+    description: item.description,
+    labelType: typeof item.label,
+    valueType: typeof item.value,
+    rawItem: item
+  })
+}
+
+const getTitleForItem = (item: Option, type: string) => {
+  const title = item.label
+  console.log(`🐛 [BaseSelect] 生成 ${type} title:`, {
+    title,
+    item,
+    label: item.label,
+    value: item.value
+  })
+  return title
+}
+
+// 监听options变化并打印日志
+watch(() => props.options, (newOptions) => {
+  console.log('🐛 [BaseSelect] options 变化:', {
+    optionsLength: newOptions?.length || 0,
+    firstFewOptions: newOptions?.slice(0, 3),
+    allOptions: newOptions
+  })
+}, { immediate: true, deep: true })
+
 // 动态计算最大高度
 const dynamicMaxHeight = computed(() => {
   const searchHeight = props.searchable ? 60 : 0
@@ -354,6 +390,7 @@ const handleButtonClick = (open: boolean, close: () => void) => {
   closeFunction.value = close
 
   if (open) {
+    console.log('🐛 [BaseSelect] 下拉框打开，当前options:', props.options)
     emit('dropdown-open')
     if (props.searchable) {
       nextTick(() => {
@@ -383,18 +420,29 @@ const closeDropdown = (close?: () => void) => {
   closeFunction.value = null
 }
 
-const safeOptions = computed(() => props.options ?? [])
+const safeOptions = computed(() => {
+  const options = props.options ?? []
+  console.log('🐛 [BaseSelect] safeOptions computed:', {
+    length: options.length,
+    options: options
+  })
+  return options
+})
 
 const filteredOptions = computed(() => {
   if (!props.searchable || !searchQuery.value.trim()) {
-    return safeOptions.value
+    const result = safeOptions.value
+    console.log('🐛 [BaseSelect] filteredOptions (无搜索):', result)
+    return result
   }
 
   const query = searchQuery.value.toLowerCase().trim()
-  return safeOptions.value.filter(option =>
+  const result = safeOptions.value.filter(option =>
       option.label.toLowerCase().includes(query) ||
       (option.description && option.description.toLowerCase().includes(query))
   )
+  console.log('🐛 [BaseSelect] filteredOptions (搜索):', { query, result })
+  return result
 })
 
 const selectedOptions = computed(() => {
@@ -403,20 +451,26 @@ const selectedOptions = computed(() => {
   // 确保是数组且有includes方法
   const modelValueArray = Array.isArray(props.modelValue) ? props.modelValue : []
 
-  return safeOptions.value.filter(option =>
+  const result = safeOptions.value.filter(option =>
       modelValueArray.includes(option.value)
   )
+  console.log('🐛 [BaseSelect] selectedOptions:', result)
+  return result
 })
 
 const displayOptions = computed(() => {
   if (!props.multiple || searchQuery.value) {
-    return filteredOptions.value
+    const result = filteredOptions.value
+    console.log('🐛 [BaseSelect] displayOptions (单选或搜索):', result)
+    return result
   }
 
   const selectedValues = Array.isArray(props.modelValue) ? props.modelValue : []
-  return filteredOptions.value.filter(option =>
+  const result = filteredOptions.value.filter(option =>
       !selectedValues.includes(option.value)
   )
+  console.log('🐛 [BaseSelect] displayOptions (多选未选中):', result)
+  return result
 })
 
 const highlightMatch = (text: string, query: string) => {
@@ -513,6 +567,11 @@ const handleResize = () => {
 }
 
 onMounted(() => {
+  console.log('🐛 [BaseSelect] 组件挂载, props:', {
+    title: props.title,
+    options: props.options,
+    modelValue: props.modelValue
+  })
   document.addEventListener('scroll', handleScroll, true)
   window.addEventListener('resize', handleResize)
 })
