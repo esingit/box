@@ -51,7 +51,7 @@
         <tbody>
         <tr v-if="loading">
           <td :colspan="processedColumns.length" class="py-8">
-            <slot name="loading"><div class="space-y-2"><div v-for="i in 5" :key="i" class="h-6 bg-gray-200 rounded animate-pulse"></div></div></slot>
+            <slot name="loading"><div class="space-y-2"><div v-for="i in 5" :key="i" class="h-6 bg-gray-200 rounded-xl animate-pulse"></div></div></slot>
           </td>
         </tr>
         <tr v-else-if="!sortedData.length">
@@ -88,7 +88,7 @@
 
     <!-- 单一全局Tooltip -->
     <Teleport to="body">
-      <div v-if="tooltipVisible" class="fixed pointer-events-none select-none bg-gray-800 text-white text-xs rounded px-2 py-1 shadow-lg" :style="{ top: tooltipPosition.y + 'px', left: tooltipPosition.x + 'px', zIndex: 9999, maxWidth: '400px', wordWrap: 'break-word', whiteSpace: 'pre-wrap' }">
+      <div v-if="tooltipVisible" class="fixed pointer-events-none select-none bg-gray-800 text-white text-xs rounded-xl px-2 py-1" :style="{ top: tooltipPosition.y + 'px', left: tooltipPosition.x + 'px', zIndex: 9999, maxWidth: '400px', wordWrap: 'break-word', whiteSpace: 'pre-wrap' }">
         {{ tooltipContent }}
       </div>
     </Teleport>

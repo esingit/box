@@ -350,11 +350,11 @@ onMounted(async () => {
 }
 
 .skeleton-section {
-  @apply bg-white rounded-lg border border-gray-200 p-4 shadow-sm;
+  @apply bg-white rounded-xl border border-gray-200 p-4;
 }
 
 .skeleton-title {
-  @apply h-4 bg-gray-200 rounded w-1/4 mb-3;
+  @apply h-4 bg-gray-200 rounded-xl w-1/4 mb-3;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -363,7 +363,7 @@ onMounted(async () => {
 }
 
 .skeleton-item {
-  @apply h-10 bg-gray-200 rounded;
+  @apply h-10 bg-gray-200 rounded-xl;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -372,7 +372,7 @@ onMounted(async () => {
 }
 
 .skeleton-row {
-  @apply h-12 bg-gray-200 rounded;
+  @apply h-12 bg-gray-200 rounded-xl;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -385,7 +385,7 @@ onMounted(async () => {
 }
 
 .section-card {
-  @apply bg-white rounded-lg border border-gray-200 p-4 shadow-sm;
+  @apply bg-white rounded-xl border border-gray-200 p-4;
 }
 
 .section-title {
@@ -414,7 +414,7 @@ onMounted(async () => {
 
 /* 验证提示 */
 .validation-alert {
-  @apply bg-amber-50 border border-amber-200 rounded-lg p-4;
+  @apply bg-amber-50 border border-amber-200 rounded-xl p-4;
   animation: slideDown 0.3s ease-out;
 }
 
