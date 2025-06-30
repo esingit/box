@@ -75,6 +75,10 @@ export const useAssetStore = defineStore('asset', () => {
         assetsChange: 0,
         totalLiabilities: 0,
         liabilitiesChange: 0,
+        netAssets: 0,
+        netAssetsChange: 0,
+        investmentAssets: 0,
+        investmentAssetsChange: 0,
     })
 
     // 🔥 加载状态管理 - 改进版本

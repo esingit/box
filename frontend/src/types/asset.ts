@@ -5,6 +5,10 @@ export interface StatsData {
     assetsChange: number
     totalLiabilities: number
     liabilitiesChange: number
+    netAssets: number
+    netAssetsChange: number
+    investmentAssets: number
+    investmentAssetsChange: number
 }
 
 // 查询条件
