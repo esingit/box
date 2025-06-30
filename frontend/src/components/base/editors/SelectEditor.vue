@@ -1,120 +1,70 @@
 <template>
   <div class="relative w-full">
-    <BaseSelect
-        ref="selectRef"
-        :model-value="normalizedValue"
-        :title="column.label || column.title || ''"
-        :options="column.options || []"
-        :multiple="column.multiple"
-        :clearable="column.clearable !== false"
-        :placeholder="column.placeholder"
-        :searchable="column.searchable !== false"
-        :direction="dropdownDirection"
-        class="w-full"
-        @update:model-value="handleChange"
-        @blur="handleBlur"
-        @dropdown-open="handleDropdownOpen"
-        @dropdown-close="handleDropdownClose"
+    <input
+        type="text"
+        :value="displayValue"
+        readonly
+        class="w-full px-2 py-1 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 text-sm focus:ring-1 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+        :placeholder="column?.placeholder || '请选择'"
+        @click="openDropdown"
     />
   </div>
 </template>
 
-<script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import BaseSelect from '@/components/base/BaseSelect.vue'
+<script>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
-const props = defineProps({
-  modelValue: [String, Number, Array],
-  column: Object,
-  record: Object,
-  index: Number
-})
-
-const emit = defineEmits(['update:modelValue', 'blur'])
-
-// 下拉方向
-const dropdownDirection = ref('down')
-const selectRef = ref(null)
-
-const normalizedValue = computed(() => {
-  if (props.column.multiple) {
-    if (props.modelValue === null || props.modelValue === undefined) {
-      return []
+export default {
+  name: 'SelectEditor',
+  props: {
+    modelValue: {
+      type: [String, Number, Array],
+      default: null
+    },
+    column: {
+      type: Object,
+      default: () => ({})
+    },
+    record: {
+      type: Object,
+      default: () => ({})
+    },
+    index: {
+      type: Number,
+      default: null
     }
-    return Array.isArray(props.modelValue) ? props.modelValue : [props.modelValue]
-  } else {
-    return props.modelValue || null
-  }
-})
+  },
+  emits: ['update:model-value', 'blur'],
+  setup(props, { emit }) {
+    // 计算显示值
+    const displayValue = computed(() => {
+      const options = props.column?.options || []
+      const value = props.modelValue
 
-const handleChange = (value) => {
-  emit('update:modelValue', value)
-}
+      if (!value) return ''
 
-const handleBlur = () => {
-  emit('blur')
-}
-
-// 处理下拉框打开
-const handleDropdownOpen = () => {
-  // 计算下拉方向
-  calculateDropdownDirection()
-
-  // 通知父组件（表格）当前有下拉框打开
-  if (props.index !== undefined) {
-    const event = new CustomEvent('table-dropdown-open', {
-      detail: { rowIndex: props.index },
-      bubbles: true
+      if (Array.isArray(value)) {
+        const labels = options
+            .filter(opt => value.includes(String(opt.value)))
+            .map(opt => opt.label)
+        return labels.join(', ')
+      } else {
+        const option = options.find(opt => String(opt.value) === String(value))
+        return option ? option.label : value
+      }
     })
-    // 使用containerRef而不是selectRef，因为BaseSelect暴露的是containerRef
-    const container = selectRef.value?.$el || selectRef.value?.containerRef
-    container?.dispatchEvent(event)
+
+    // 打开下拉框
+    function openDropdown() {
+      // 这里只是一个占位符，实际上我们不会实现下拉功能
+      // 因为我们正在调试问题
+      console.log('打开下拉框')
+    }
+
+    return {
+      displayValue,
+      openDropdown
+    }
   }
 }
-
-// 处理下拉框关闭
-const handleDropdownClose = () => {
-  // 通知父组件（表格）下拉框已关闭
-  if (props.index !== undefined) {
-    const event = new CustomEvent('table-dropdown-close', {
-      detail: { rowIndex: props.index },
-      bubbles: true
-    })
-    // 使用containerRef而不是selectRef
-    const container = selectRef.value?.$el || selectRef.value?.containerRef
-    container?.dispatchEvent(event)
-  }
-}
-
-// 计算下拉方向
-const calculateDropdownDirection = () => {
-  if (!selectRef.value) return
-
-  // 获取BaseSelect组件的容器元素
-  const container = selectRef.value.$el || selectRef.value.containerRef
-  if (!container) return
-
-  const rect = container.getBoundingClientRect()
-  const viewportHeight = window.innerHeight
-  const spaceBelow = viewportHeight - rect.bottom
-  const spaceAbove = rect.top
-
-  // 如果下方空间不足且上方空间更大，则向上展开
-  dropdownDirection.value = spaceBelow < 300 && spaceAbove > spaceBelow ? 'up' : 'down'
-}
-
-// 监听窗口大小变化
-const handleResize = () => {
-  if (selectRef.value) {
-    calculateDropdownDirection()
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('resize', handleResize)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-})
 </script>

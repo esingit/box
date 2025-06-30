@@ -19,6 +19,9 @@ public class HorizontalStrategy implements RecognitionStrategy {
     // 匹配行开头的金额模式
     private static final Pattern AMOUNT_START_PATTERN = Pattern.compile("^(\\d{1,3}(?:[,.]\\d{3})*(?:\\.\\d{2})?)");
 
+    // 银行理财产品开头的通用模式
+    private static final Pattern BANK_PRODUCT_START_PATTERN = Pattern.compile("^.*(银行|理财|基金|证券|信托|保险).*理财.*");
+
     @Override
     public List<AssetScanImageDTO> recognize(String text) {
         log.debug("方案2开始识别 - 上下结构专用");
@@ -68,11 +71,23 @@ public class HorizontalStrategy implements RecognitionStrategy {
     }
 
     /**
-     * 判断是否是新产品的开始
+     * 判断是否是新产品的开始（通用版本）
      */
     private boolean isNewProductStart(String line) {
-        // 以银行理财开头且长度适中的行
-        return line.matches("^工银理财.*") && line.length() > 8;
+        // 方法1：使用通用的银行理财产品模式
+        if (BANK_PRODUCT_START_PATTERN.matcher(line).matches() && line.length() > 8) {
+            return true;
+        }
+
+        // 方法2：检查是否包含产品关键词且行长度适中
+        if (RecognitionHelper.containsProductKeyword(line) && line.length() > 8) {
+            // 进一步检查是否像产品名称的开头（可以根据实际情况调整）
+            return line.matches("^[\\u4e00-\\u9fa5]+.*理财.*") ||
+                    line.matches("^[\\u4e00-\\u9fa5]+银行.*") ||
+                    line.matches("^[\\u4e00-\\u9fa5]+基金.*");
+        }
+
+        return false;
     }
 
     /**
