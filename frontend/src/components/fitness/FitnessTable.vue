@@ -37,7 +37,7 @@ const columns = [
     label: '数值',
     resizable: true,
     defaultWidth: 150,
-    type: 'count',
+    type: 'unit-number',
     sortable: true
   },
   {

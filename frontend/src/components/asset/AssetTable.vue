@@ -29,7 +29,7 @@ const emit = defineEmits(['edit', 'delete'])
 const columns = [
   {key: 'assetName', label: '资产名称', resizable: true, defaultWidth: 325, type: 'text', sortable: true},
   {key: 'assetTypeValue', label: '类型', resizable: true, defaultWidth: 75, type: 'text', sortable: true},
-  {key: 'amount', label: '金额', resizable: true, defaultWidth: 100, type: 'count', sortable: true},
+  {key: 'amount', label: '金额', resizable: true, defaultWidth: 100, type: 'unit-number', sortable: true},
   {key: 'assetLocationValue', label: '位置', resizable: true, defaultWidth: 75, type: 'text', sortable: true},
   {key: 'acquireTime', label: '时间', resizable: true, defaultWidth: 100, type: 'date', sortable: true},
   {key: 'remark', label: '备注', resizable: true, defaultWidth: 110, type: 'text', sortable: true},
