@@ -3,6 +3,7 @@ package com.esin.box.controller;
 import com.esin.box.dto.LoginRequest;
 import com.esin.box.dto.RegisterRequest;
 import com.esin.box.dto.ResetPasswordRequest;
+import com.esin.box.dto.Result;
 import com.esin.box.entity.User;
 import com.esin.box.filter.JwtTokenProvider;
 import com.esin.box.service.UserService;

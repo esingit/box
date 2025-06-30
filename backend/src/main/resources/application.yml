@@ -1,5 +1,6 @@
 server:
   port: 8091
+
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/box?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
@@ -27,13 +28,24 @@ spring:
     time-zone: GMT+8
     generator:
       write-numbers-as-strings: true
+    # 添加JSON配置以支持OCR结果序列化
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
   # 文件上传配置
   servlet:
     multipart:
       enabled: true
       max-file-size: 10MB
-      max-request-size: 10MB
+      max-request-size: 50MB  # 增大请求大小以支持批量上传
       file-size-threshold: 0
+
+  # 缓存配置 - 支持OCR结果缓存
+  cache:
+    type: redis
+    redis:
+      time-to-live: 1800000  # 30分钟缓存
 
 jwt:
   secret: RjFk8V2p9X7mN3qL5tYzA4wQ1cB6vE0sH8uD2xG4nJ7bK9mP3rT5
@@ -55,7 +67,8 @@ logging:
     org.springframework.data.redis: INFO
     org.springframework.security: DEBUG
     # OCR相关日志
-    net.sourceforge.tess4j: INFO
+    com.esin.box.service.PaddleOcrService: DEBUG
+    com.esin.box.controller.com.esin.box.dto.OcrController: DEBUG
 
 # 跨域配置
 cors:
@@ -65,14 +78,44 @@ cors:
   allow-credentials: true
   max-age: 3600
 
+# PaddleOCR配置
+paddle:
+  ocr:
+    # Python环境和脚本路径
+    python-path: /Users/ESin/Scripts/paddle_env/bin/python3
+    script-path: /Users/ESin/Scripts/paddle_ocr_processor.py
+    run-script-path: /Users/ESin/Scripts/run_ocr.sh
+
+    # 执行配置
+    timeout: 60  # 超时时间（秒）
+    use-run-script: true  # 是否使用启动脚本（推荐）
+
+    # 文件配置
+    temp-dir: ${java.io.tmpdir}/box/ocr-temp  # OCR临时文件目录
+    supported-formats:
+      - jpg
+      - jpeg
+      - png
+      - bmp
+      - tiff
+      - tif
+      - webp
+    max-file-size: 10  # 最大文件大小（MB）
+
+    # 缓存配置
+    enable-cache: true  # 是否启用缓存
+    cache-expire-minutes: 30  # 缓存过期时间（分钟）
+
+    # 处理配置
+    default-language: ch  # 默认语言
+    default-min-confidence: 0.0  # 默认最小置信度
+    batch-max-files: 10  # 批量处理最大文件数
+
 # 应用配置
 app:
   upload:
-    # 临时文件目录（用于OCR识别）
     temp-dir: ${java.io.tmpdir}/box/asset-images
-    # 文件上传保存路径
     path: ${user.home}/box-uploads
-    # 允许的文件类型
     allowed-types:
       - image/jpeg
       - image/jpg
@@ -80,35 +123,51 @@ app:
       - image/gif
       - image/bmp
       - image/webp
-    # 文件大小限制（字节）
+      - application/pdf  # 如果后续支持PDF OCR
     max-size: 10485760  # 10MB
+
+  # 保留原有OCR配置作为备用（可选）
   ocr:
+    # PaddleOCR配置（新）
+    paddle:
+      enabled: true
+      python-script: /Users/ESin/Scripts/paddle_ocr_processor.py
+      python-env: /Users/ESin/Scripts/paddle_env/bin/python3
+      timeout: 60
+      temp-directory: ${java.io.tmpdir}/box/paddle-ocr
+
+    # Tesseract配置（备用，已弃用）
     tesseract:
-      # Mac mini 上的路径（根据安装方式选择）：
-      # - Homebrew Intel: /usr/local/share/tessdata
-      # - Homebrew Apple Silicon: /opt/homebrew/share/tessdata
-      # - MacPorts: /opt/local/share/tessdata
-      # 自动检测路径（在启动类中实现）
-      data-path: /opt/homebrew/share/tessdata
-      # 备用路径（Apple Silicon）
-      data-path-alt: /usr/local/share/tessdata
-      # 语言包：中文简体+英文
-      language: chi_sim+eng
-      # OCR 引擎模式
-      # 0 = 仅传统Tesseract
-      # 1 = 仅神经网络LSTM
-      # 2 = 传统+LSTM（默认）
-      # 3 = 基于可用性自动选择
-      ocr-engine-mode: 1
-      # 页面分割模式
-      # 1 = 带方向和脚本检测的自动页面分割
-      # 3 = 全自动页面分割，但没有方向和脚本检测（默认）
-      # 6 = 统一的文本块
-      # 11 = 稀疏文本，按任意顺序查找尽可能多的文本
-      page-seg-mode: 3
-      # DPI设置（提高识别精度）
-      dpi: 300
-      # 是否保留识别后的临时文件（调试用）
-      keep-temp-files: false
-      # 识别超时时间（秒）
-      timeout: 30
+      enabled: false
+      python-script: /Users/ESin/Scripts/ocr.py  # 原有脚本
+      timeout: 60
+
+  # 其他业务配置
+  business:
+    # OCR相关业务配置
+    ocr:
+      # 是否允许匿名访问OCR接口
+      allow-anonymous: false
+      # OCR结果是否记录到数据库
+      save-results: true
+      # 是否启用OCR使用统计
+      enable-statistics: true
+      # OCR任务历史保留天数
+      history-retention-days: 30
+
+    # 文件处理配置
+    file:
+      # 自动清理临时文件间隔（分钟）
+      cleanup-interval: 30
+      # 临时文件最大保留时间（小时）
+      temp-file-max-age: 2
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,ocr-stats  # 添加OCR统计端点
+  endpoint:
+    health:
+      show-details: when-authorized

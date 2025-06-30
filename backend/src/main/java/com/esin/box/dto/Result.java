@@ -1,4 +1,4 @@
-package com.esin.box.controller;
+package com.esin.box.dto;
 
 import lombok.Data;
 import lombok.experimental.Accessors;

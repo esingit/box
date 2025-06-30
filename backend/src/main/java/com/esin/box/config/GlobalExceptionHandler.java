@@ -1,6 +1,6 @@
 package com.esin.box.config;
 
-import com.esin.box.controller.Result;
+import com.esin.box.dto.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindingResult;
