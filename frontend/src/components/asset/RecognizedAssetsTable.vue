@@ -3,7 +3,7 @@
   <div class="w-full">
     <BaseTable
         ref="tableRef"
-        :columns="columns"
+        :columns="columns as any"
         :data="data"
         :loading="loading"
         @delete="handleDelete"
@@ -187,7 +187,7 @@ const columns = [
     headerAlign: 'center',
     align: 'center'
   }
-]
+] as const
 
 // 强制加载资产名称数据
 async function forceLoadAssetNames() {
@@ -244,6 +244,5 @@ const handleRemoveItem = (index: number) => {
 
 // 暴露方法供父组件调用
 defineExpose({
-  forceLoadAssetNames
 })
 </script>

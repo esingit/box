@@ -1,7 +1,7 @@
 <!--src/components/asset/AssetTable.vue-->
 <template>
   <BaseTable
-      :columns="columns"
+      :columns="columns as any"
       :data="records"
       :loading="loading"
       @edit="handleEdit"
@@ -34,7 +34,7 @@ const columns = [
   {key: 'acquireTime', label: '时间', resizable: true, defaultWidth: 100, type: 'date', sortable: true},
   {key: 'remark', label: '备注', resizable: true, defaultWidth: 110, type: 'text', sortable: true},
   {key: 'actions', label: '操作', resizable: false, defaultWidth: 100, actions: true}
-]
+] as const
 
 function handleEdit(record: any) {
   emit('edit', record.id)

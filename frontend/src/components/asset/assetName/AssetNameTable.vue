@@ -1,6 +1,6 @@
 <template>
   <BaseTable
-      :columns="columns"
+      :columns="columns as any"
       :data="list"
       :loading="loadingList"
       storage-key="assetNameTableColumnWidths"
@@ -31,7 +31,7 @@ const columns = [
   {key: 'name', label: '名称', resizable: true, defaultWidth: 400, type: 'text', sortable: true},
   {key: 'description', label: '描述', resizable: true, defaultWidth: 200, type: 'text', sortable: true},
   {key: 'actions', label: '操作', resizable: false, defaultWidth: 100, actions: true}
-]
+] as const
 
 // 事件处理
 function handleEdit(item: any) {

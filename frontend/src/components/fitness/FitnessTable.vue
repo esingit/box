@@ -1,6 +1,6 @@
 <template>
   <BaseTable
-      :columns="columns"
+      :columns="columns as any"
       :data="records"
       :loading="loading"
       storage-key="fitnessTableColumnWidths"
@@ -63,5 +63,5 @@ const columns = [
     defaultWidth: 100,
     actions: true
   }
-]
+] as const
 </script>
