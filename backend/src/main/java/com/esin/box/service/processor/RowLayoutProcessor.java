@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 /**
  * 上下行布局处理器 - 修复版
+ * 解决NullPointerException问题
  */
 @Slf4j
 @Component
@@ -23,8 +24,10 @@ public class RowLayoutProcessor implements LayoutProcessor {
 
     private final TextAnalysisUtil textAnalysisUtil;
 
+    /**
+     * 修复后的布局配置常量
+     */
     public static class LayoutConfig {
-        public static final double PRODUCT_SEARCH_RANGE = 200.0;
         public static final double AMOUNT_SEARCH_RANGE = 150.0;
         public static final double VERTICAL_TOLERANCE = 80.0;
         public static final double MIN_VALID_AMOUNT = 0.01;
@@ -32,21 +35,16 @@ public class RowLayoutProcessor implements LayoutProcessor {
         public static final int MIN_PRODUCT_NAME_LENGTH = 6;
         public static final int MAX_PRODUCT_NAME_LENGTH = 100;
         public static final double PRODUCT_NAME_MERGE_DISTANCE = 50.0;
-        public static final double SAME_PRODUCT_Y_TOLERANCE = 300.0; // 同一产品的Y坐标容差
     }
 
+    /**
+     * 安全获取centerY，如果为null则计算
+     */
     private double getCenterY(OcrTextResult.BoundingBox bbox) {
         if (bbox.getCenterY() != null) {
             return bbox.getCenterY();
         }
         return (bbox.getTop() + bbox.getBottom()) / 2.0;
-    }
-
-    private double getCenterX(OcrTextResult.BoundingBox bbox) {
-        if (bbox.getCenterX() != null) {
-            return bbox.getCenterX();
-        }
-        return (bbox.getLeft() + bbox.getRight()) / 2.0;
     }
 
     @Override
@@ -92,149 +90,6 @@ public class RowLayoutProcessor implements LayoutProcessor {
             log.error("上下行布局处理异常", e);
             return Collections.emptyList();
         }
-    }
-
-    /**
-     * 基于产品名称策略处理 - 增加去重逻辑
-     */
-    private List<ProductItem> processWithProductNameStrategyDedup(List<OcrTextResult> allTexts,
-                                                                  List<OcrTextResult> productNameTexts) {
-        List<ProductItem> products = new ArrayList<>();
-        Set<OcrTextResult> usedAmounts = new HashSet<>();
-
-        // 按产品名称分组，处理重复的产品
-        Map<String, List<OcrTextResult>> productGroups = new LinkedHashMap<>();
-        for (OcrTextResult productNameText : productNameTexts) {
-            String cleanName = textAnalysisUtil.cleanProductName(productNameText.getText());
-            productGroups.computeIfAbsent(cleanName, k -> new ArrayList<>()).add(productNameText);
-        }
-
-        int index = 0;
-        for (Map.Entry<String, List<OcrTextResult>> entry : productGroups.entrySet()) {
-            List<OcrTextResult> sameProducts = entry.getValue();
-
-            for (OcrTextResult productName : sameProducts) {
-                // 寻找对应的金额
-                List<OcrTextResult> relatedAmounts = findRelatedAmountsFixed(allTexts, productName, usedAmounts);
-
-                if (!relatedAmounts.isEmpty()) {
-                    OcrTextResult amountText = relatedAmounts.get(0);
-                    BigDecimal amount = parseAmountFlexible(amountText.getText());
-
-                    if (amount != null && isValidAmountRange(amount)) {
-                        ProductItem product = buildProductFromNameAndAmount(productName, amountText, amount, index++);
-                        if (product != null) {
-                            products.add(product);
-                            usedAmounts.add(amountText);
-                            log.info("构建产品成功: '{}' - {}",
-                                    product.getCleanName(), textAnalysisUtil.formatAmountDisplay(amount));
-                        }
-                    }
-                }
-            }
-        }
-
-        return products;
-    }
-
-    /**
-     * 灵活的金额解析 - 处理错误的小数点格式
-     */
-    private BigDecimal parseAmountFlexible(String content) {
-        try {
-            String cleaned = content.trim();
-
-            // 处理错误的小数点格式，如 12.041.40 -> 12,041.40
-            if (cleaned.matches("\\d+\\.\\d{3}\\.\\d{2}")) {
-                // 替换第一个小数点为逗号
-                int firstDot = cleaned.indexOf('.');
-                if (firstDot > 0) {
-                    cleaned = cleaned.substring(0, firstDot) + "," + cleaned.substring(firstDot + 1);
-                }
-            }
-
-            // 移除逗号
-            cleaned = cleaned.replace(",", "");
-
-            BigDecimal amount = new BigDecimal(cleaned);
-            return isValidAmountRange(amount) ? amount : null;
-        } catch (NumberFormatException e) {
-            log.debug("金额解析失败: {}", content);
-            return null;
-        }
-    }
-
-    /**
-     * 严格的金额文本判断 - 改进版
-     */
-    private boolean isValidAmountTextStrict(String content) {
-        if (StringUtils.isBlank(content)) {
-            return false;
-        }
-
-        String trimmed = content.trim();
-
-        // 排除日期格式
-        if (trimmed.matches("^\\d{4}[/-]\\d{2}[/-]\\d{2}$")) {
-            return false;
-        }
-
-        // 排除包含中文的
-        if (trimmed.matches(".*[\\u4e00-\\u9fa5].*")) {
-            return false;
-        }
-
-        // 标准金额格式（包括错误的小数点格式）
-        if (trimmed.matches("^\\d{1,3}(,\\d{3})*(\\.\\d{2})?$") ||
-                trimmed.matches("^\\d+\\.\\d{1,4}$") ||
-                trimmed.matches("^\\d{1,8}$") ||
-                trimmed.matches("^\\d+\\.\\d{3}\\.\\d{2}$")) { // 处理 12.041.40 这种格式
-
-            BigDecimal amount = parseAmountFlexible(trimmed);
-            return amount != null && isValidAmountRange(amount);
-        }
-
-        return false;
-    }
-
-    /**
-     * 修复的产品名称识别 - 排除更多元数据
-     */
-    private List<OcrTextResult> identifyProductNamesFixed(List<OcrTextResult> texts) {
-        List<OcrTextResult> productNames = new ArrayList<>();
-
-        for (OcrTextResult text : texts) {
-            if (isValidProductNameFixed(text.getText())) {
-                productNames.add(text);
-                log.debug("识别到产品名称: '{}'", text.getText());
-            }
-        }
-
-        // 如果没有识别到，使用更宽松的条件
-        if (productNames.isEmpty()) {
-            for (OcrTextResult text : texts) {
-                if (isProductNameCandidateLoose(text.getText())) {
-                    productNames.add(text);
-                    log.debug("宽松条件识别产品名称: '{}'", text.getText());
-                }
-            }
-        }
-
-        return productNames;
-    }
-
-    /**
-     * 严格的元数据判断 - 增加更多排除项
-     */
-    private boolean isStrictMetadata(String content) {
-        Set<String> strictMetadata = Set.of(
-                "产品持仓", "撤单", "持仓市值", "持仓币值", "可赎回日", "赎回类型", "赎回尖型",
-                "今日可赎", "每日可赎", "预约赎回", "周期结束日", "可赎回开始日",
-                "总金额", "总金额（元）", "名称", "金额", "理财", "收起", "展开",
-                "温馨提示", "（元）", "日期", "时间", "余额", "总计", "合计",
-                "最短持有期内不可赎回，可赎回开始日起每日可赎"
-        );
-        return strictMetadata.contains(content.trim());
     }
 
     /**
@@ -387,6 +242,32 @@ public class RowLayoutProcessor implements LayoutProcessor {
     }
 
     /**
+     * 修复的产品名称识别
+     */
+    private List<OcrTextResult> identifyProductNamesFixed(List<OcrTextResult> texts) {
+        List<OcrTextResult> productNames = new ArrayList<>();
+
+        for (OcrTextResult text : texts) {
+            if (isValidProductNameFixed(text.getText())) {
+                productNames.add(text);
+                log.debug("识别到产品名称: '{}'", text.getText());
+            }
+        }
+
+        // 如果没有识别到，使用更宽松的条件
+        if (productNames.isEmpty()) {
+            for (OcrTextResult text : texts) {
+                if (isProductNameCandidateLoose(text.getText())) {
+                    productNames.add(text);
+                    log.debug("宽松条件识别产品名称: '{}'", text.getText());
+                }
+            }
+        }
+
+        return productNames;
+    }
+
+    /**
      * 修复的产品名称有效性判断
      */
     private boolean isValidProductNameFixed(String content) {
@@ -458,26 +339,108 @@ public class RowLayoutProcessor implements LayoutProcessor {
     }
 
     /**
-     * 基于产品名称策略处理
+     * 严格的金额文本判断 - 改进版
      */
-    private List<ProductItem> processWithProductNameStrategy(List<OcrTextResult> allTexts,
-                                                             List<OcrTextResult> productNameTexts) {
+    private boolean isValidAmountTextStrict(String content) {
+        if (StringUtils.isBlank(content)) {
+            return false;
+        }
+
+        String trimmed = content.trim();
+
+        // 排除日期格式
+        if (trimmed.matches("^\\d{4}[/-]\\d{2}[/-]\\d{2}$")) {
+            return false;
+        }
+
+        // 排除包含中文的
+        if (trimmed.matches(".*[\\u4e00-\\u9fa5].*")) {
+            return false;
+        }
+
+        // 标准金额格式（包括错误的小数点格式）
+        if (trimmed.matches("^\\d{1,3}(,\\d{3})*(\\.\\d{2})?$") ||
+                trimmed.matches("^\\d+\\.\\d{1,4}$") ||
+                trimmed.matches("^\\d{1,8}$") ||
+                trimmed.matches("^\\d+\\.\\d{3}\\.\\d{2}$")) { // 处理 12.041.40 这种格式
+
+            BigDecimal amount = parseAmountFlexible(trimmed);
+            return isValidAmountRange(amount);
+        }
+
+        return false;
+    }
+
+    /**
+     * 灵活的金额解析 - 处理错误的小数点格式
+     */
+    private BigDecimal parseAmountFlexible(String content) {
+        try {
+            String cleaned = content.trim();
+
+            // 处理错误的小数点格式，如 12.041.40 -> 12,041.40
+            if (cleaned.matches("\\d+\\.\\d{3}\\.\\d{2}")) {
+                // 替换第一个小数点为逗号
+                int firstDot = cleaned.indexOf('.');
+                if (firstDot > 0) {
+                    cleaned = cleaned.substring(0, firstDot) + "," + cleaned.substring(firstDot + 1);
+                }
+            }
+
+            // 移除逗号
+            cleaned = cleaned.replace(",", "");
+
+            BigDecimal amount = new BigDecimal(cleaned);
+            return isValidAmountRange(amount) ? amount : null;
+        } catch (NumberFormatException e) {
+            log.debug("金额解析失败: {}", content);
+            return null;
+        }
+    }
+
+    /**
+     * 严格的元数据判断 - 增加更多排除项
+     */
+    private boolean isStrictMetadata(String content) {
+        Set<String> strictMetadata = Set.of(
+                "产品持仓", "撤单", "持仓市值", "持仓币值", "可赎回日", "赎回类型", "赎回尖型",
+                "今日可赎", "每日可赎", "预约赎回", "周期结束日", "可赎回开始日",
+                "总金额", "总金额（元）", "名称", "金额", "理财", "收起", "展开",
+                "温馨提示", "（元）", "日期", "时间", "余额", "总计", "合计",
+                "最短持有期内不可赎回，可赎回开始日起每日可赎"
+        );
+        return strictMetadata.contains(content.trim());
+    }
+
+    /**
+     * 基于产品名称策略处理 - 增加去重逻辑
+     */
+    private List<ProductItem> processWithProductNameStrategyDedup(List<OcrTextResult> allTexts,
+                                                                  List<OcrTextResult> productNameTexts) {
         List<ProductItem> products = new ArrayList<>();
         Set<OcrTextResult> usedAmounts = new HashSet<>();
 
-        for (int i = 0; i < productNameTexts.size(); i++) {
-            OcrTextResult productName = productNameTexts.get(i);
+        // 按产品名称分组，处理重复的产品
+        Map<String, List<OcrTextResult>> productGroups = new LinkedHashMap<>();
+        for (OcrTextResult productNameText : productNameTexts) {
+            String cleanName = textAnalysisUtil.cleanProductName(productNameText.getText());
+            productGroups.computeIfAbsent(cleanName, k -> new ArrayList<>()).add(productNameText);
+        }
 
-            // 寻找对应的金额
-            List<OcrTextResult> relatedAmounts = findRelatedAmountsFixed(allTexts, productName, usedAmounts);
+        int index = 0;
+        for (Map.Entry<String, List<OcrTextResult>> entry : productGroups.entrySet()) {
+            List<OcrTextResult> sameProducts = entry.getValue();
 
-            if (!relatedAmounts.isEmpty()) {
-                OcrTextResult amountText = relatedAmounts.get(0);
-                BigDecimal amount = parseAmountStrict(amountText.getText());
+            for (OcrTextResult productName : sameProducts) {
+                // 寻找对应的金额
+                List<OcrTextResult> relatedAmounts = findRelatedAmountsFixed(allTexts, productName, usedAmounts);
 
-                if (amount != null && isValidAmountRange(amount)) {
-                    ProductItem product = buildProductFromNameAndAmount(productName, amountText, amount, i);
-                    if (product != null) {
+                if (!relatedAmounts.isEmpty()) {
+                    OcrTextResult amountText = relatedAmounts.get(0);
+                    BigDecimal amount = parseAmountFlexible(amountText.getText());
+
+                    if (isValidAmountRange(amount)) {
+                        ProductItem product = buildProductFromNameAndAmount(productName, amountText, amount, index++);
                         products.add(product);
                         usedAmounts.add(amountText);
                         log.info("构建产品成功: '{}' - {}",
@@ -491,6 +454,15 @@ public class RowLayoutProcessor implements LayoutProcessor {
     }
 
     /**
+     * 验证金额范围
+     */
+    private boolean isValidAmountRange(BigDecimal amount) {
+        return amount != null &&
+                amount.compareTo(BigDecimal.valueOf(LayoutConfig.MIN_VALID_AMOUNT)) >= 0 &&
+                amount.compareTo(BigDecimal.valueOf(LayoutConfig.MAX_VALID_AMOUNT)) <= 0;
+    }
+
+    /**
      * 金额驱动策略处理
      */
     private List<ProductItem> processWithAmountDrivenStrategy(List<OcrTextResult> allTexts) {
@@ -501,7 +473,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
         List<OcrTextResult> amountTexts = allTexts.stream()
                 .filter(text -> isValidAmountTextStrict(text.getText()))
                 .sorted(Comparator.comparingDouble(t -> getCenterY(t.getBbox())))
-                .collect(Collectors.toList());
+                .toList();
 
         log.info("识别到有效金额数量: {}", amountTexts.size());
 
@@ -512,8 +484,8 @@ public class RowLayoutProcessor implements LayoutProcessor {
                 continue;
             }
 
-            BigDecimal amount = parseAmountStrict(amountText.getText());
-            if (amount == null || !isValidAmountRange(amount)) {
+            BigDecimal amount = parseAmountFlexible(amountText.getText());
+            if (!isValidAmountRange(amount)) {
                 continue;
             }
 
@@ -521,11 +493,9 @@ public class RowLayoutProcessor implements LayoutProcessor {
             List<OcrTextResult> relatedTexts = findRelatedProductTexts(allTexts, amountText, usedTexts);
 
             ProductItem product = buildProductFromAmountAndTexts(amountText, amount, relatedTexts, i);
-            if (product != null) {
-                products.add(product);
-                usedTexts.add(amountText);
-                usedTexts.addAll(relatedTexts);
-            }
+            products.add(product);
+            usedTexts.add(amountText);
+            usedTexts.addAll(relatedTexts);
         }
 
         return products;
@@ -574,28 +544,6 @@ public class RowLayoutProcessor implements LayoutProcessor {
     }
 
     /**
-     * 严格的金额解析
-     */
-    private BigDecimal parseAmountStrict(String content) {
-        try {
-            String cleaned = content.trim().replace(",", "");
-            BigDecimal amount = new BigDecimal(cleaned);
-            return isValidAmountRange(amount) ? amount : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    /**
-     * 验证金额范围
-     */
-    private boolean isValidAmountRange(BigDecimal amount) {
-        return amount != null &&
-                amount.compareTo(BigDecimal.valueOf(LayoutConfig.MIN_VALID_AMOUNT)) >= 0 &&
-                amount.compareTo(BigDecimal.valueOf(LayoutConfig.MAX_VALID_AMOUNT)) <= 0;
-    }
-
-    /**
      * 从产品名称和金额构建产品
      */
     private ProductItem buildProductFromNameAndAmount(OcrTextResult productNameText,
@@ -611,7 +559,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
         product.setOriginalName(originalName);
         product.setCleanName(textAnalysisUtil.cleanProductName(originalName));
 
-        List<OcrTextResult> relatedTexts = Arrays.asList(productNameText);
+        List<OcrTextResult> relatedTexts = List.of(productNameText);
         product.setRelatedTexts(relatedTexts);
 
         List<OcrTextResult> allTexts = Arrays.asList(productNameText, amountText);
@@ -715,12 +663,8 @@ public class RowLayoutProcessor implements LayoutProcessor {
                     }
 
                     // 验证金额
-                    if (product.getAmount() == null ||
-                            !isValidAmountRange(product.getAmount())) {
-                        return false;
-                    }
-
-                    return true;
+                    return product.getAmount() != null &&
+                            isValidAmountRange(product.getAmount());
                 })
                 .collect(Collectors.toList());
     }
@@ -740,65 +684,6 @@ public class RowLayoutProcessor implements LayoutProcessor {
             String formattedAmount = textAnalysisUtil.formatAmountDisplay(p.getAmount());
             log.info("  {}. '{}' - {} (Y位置: {}, 置信度: {})",
                     i + 1, p.getCleanName(), formattedAmount, p.getPagePosition(), p.getConfidence());
-        }
-    }
-
-    // 内部类保持不变...
-    private static class ProductTextAnalysis {
-        private final List<OcrTextResult> productNameTexts = new ArrayList<>();
-        private final List<OcrTextResult> amountTexts = new ArrayList<>();
-        private final List<OcrTextResult> metadataTexts = new ArrayList<>();
-        private final List<OcrTextResult> otherTexts = new ArrayList<>();
-
-        public List<OcrTextResult> getProductNameTexts() {
-            return productNameTexts;
-        }
-
-        public List<OcrTextResult> getAmountTexts() {
-            return amountTexts;
-        }
-
-        public List<OcrTextResult> getMetadataTexts() {
-            return metadataTexts;
-        }
-
-        public List<OcrTextResult> getOtherTexts() {
-            return otherTexts;
-        }
-    }
-
-    public static class VerticalGroup {
-        private double centerX;
-        private double topY;
-        private double bottomY;
-        private final List<OcrTextResult> texts = new ArrayList<>();
-
-        public double getCenterX() {
-            return centerX;
-        }
-
-        public void setCenterX(double centerX) {
-            this.centerX = centerX;
-        }
-
-        public double getTopY() {
-            return topY;
-        }
-
-        public void setTopY(double topY) {
-            this.topY = topY;
-        }
-
-        public double getBottomY() {
-            return bottomY;
-        }
-
-        public void setBottomY(double bottomY) {
-            this.bottomY = bottomY;
-        }
-
-        public List<OcrTextResult> getTexts() {
-            return texts;
         }
     }
 }

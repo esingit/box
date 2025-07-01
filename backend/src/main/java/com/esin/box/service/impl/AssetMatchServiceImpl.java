@@ -3,7 +3,10 @@ package com.esin.box.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.esin.box.dto.AssetScanImageDTO;
-import com.esin.box.dto.ocr.*;
+import com.esin.box.dto.ocr.LayoutType;
+import com.esin.box.dto.ocr.OcrTextResult;
+import com.esin.box.dto.ocr.PageLayout;
+import com.esin.box.dto.ocr.ProductItem;
 import com.esin.box.entity.AssetName;
 import com.esin.box.service.AssetMatchService;
 import com.esin.box.service.AssetNameService;
@@ -11,7 +14,9 @@ import com.esin.box.service.processor.ColumnLayoutProcessor;
 import com.esin.box.service.processor.LayoutProcessor;
 import com.esin.box.service.processor.RowLayoutProcessor;
 import com.esin.box.utils.TextAnalysisUtil;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
@@ -43,6 +48,9 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     @Value("${app.business.ocr.asset-match.min-threshold:0.25}")
     private double minThreshold;
 
+    @Value("${app.business.ocr.asset-match.min-display-threshold:0.60}")
+    private double minDisplayThreshold; // 最低显示阈值，默认60%
+
     @Value("${app.business.ocr.asset-match.max-results:30}")
     private int maxResults;
 
@@ -54,6 +62,8 @@ public class AssetMatchServiceImpl implements AssetMatchService {
 
         log.info("=== 开始多布局资产匹配（修复版） ===");
         log.info("用户: {}, OCR文本数量: {}", username, ocrTexts.size());
+        log.info("匹配度阈值: 确认={}%, 最低显示={}%",
+                Math.round(confirmThreshold * 100), Math.round(minDisplayThreshold * 100));
 
         try {
             // 1. 获取用户资产
@@ -78,9 +88,10 @@ public class AssetMatchServiceImpl implements AssetMatchService {
             products = validateAndFixProductsAdvanced(products, pageLayout);
             log.info("验证修复后产品项: {}", products.size());
 
-            // 6. 匹配资产
+            // 6. 匹配资产（包含匹配度过滤）
             List<AssetScanImageDTO> results = matchProductsAdvanced(products, userAssets);
-            log.info("匹配结果: {}", results.size());
+            log.info("匹配结果: {} (已过滤低于{}%匹配度的数据)",
+                    results.size(), Math.round(minDisplayThreshold * 100));
 
             return results;
 
@@ -137,16 +148,12 @@ public class AssetMatchServiceImpl implements AssetMatchService {
         String content = text.getText().trim();
 
         // 基本长度检查
-        if (content.length() < 1) {
+        if (content.isEmpty()) {
             return false;
         }
 
         // 排除明显无意义的字符
-        if (content.matches("^[\\s\\-_=.]{2,}$")) {
-            return false;
-        }
-
-        return true;
+        return !content.matches("^[\\s\\-_=.]{2,}$");
     }
 
     /**
@@ -177,7 +184,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     private LayoutDetectionResult detectLayoutByAmountDistribution(PageLayout layout) {
         List<OcrTextResult> amountTexts = layout.getValidTexts().stream()
                 .filter(text -> isStrictAmountFormat(text.getText()))
-                .collect(Collectors.toList());
+                .toList();
 
         if (amountTexts.size() < 2) {
             return new LayoutDetectionResult(LayoutType.TOP_BOTTOM_ROWS, 0.3);
@@ -202,33 +209,6 @@ public class AssetMatchServiceImpl implements AssetMatchService {
         } else {
             return new LayoutDetectionResult(LayoutType.TOP_BOTTOM_ROWS, 0.6 + (1 - rightSideRatio) * 0.3);
         }
-    }
-
-    /**
-     * 严格的金额格式判断 - 改进版
-     */
-    private boolean isStrictAmountFormat(String content) {
-        if (StringUtils.isBlank(content)) {
-            return false;
-        }
-
-        String trimmed = content.trim();
-
-        // 排除日期格式
-        if (trimmed.matches("^\\d{4}[/-]\\d{2}[/-]\\d{2}$")) {
-            return false;
-        }
-
-        // 排除包含中文的（除了元）
-        if (trimmed.matches(".*[\\u4e00-\\u9fa5&&[^元]].*")) {
-            return false;
-        }
-
-        // 严格的金额格式（包括错误格式的处理）
-        return trimmed.matches("^\\d{1,3}(,\\d{3})*(\\.\\d{2})?$") ||
-                trimmed.matches("^\\d+\\.\\d{1,4}$") ||
-                trimmed.matches("^\\d+\\.\\d{3}\\.\\d{2}$") || // 12.041.40
-                (trimmed.matches("^\\d{1,8}$") && tryParseAsValidAmount(trimmed));
     }
 
     /**
@@ -274,12 +254,39 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
+     * 严格的金额格式判断 - 改进版
+     */
+    private boolean isStrictAmountFormat(String content) {
+        if (StringUtils.isBlank(content)) {
+            return false;
+        }
+
+        String trimmed = content.trim();
+
+        // 排除日期格式
+        if (trimmed.matches("^\\d{4}[/-]\\d{2}[/-]\\d{2}$")) {
+            return false;
+        }
+
+        // 排除包含中文的（除了元）
+        if (trimmed.matches(".*\\u4e00-\\u9fa5&&[^元].*")) {
+            return false;
+        }
+
+        // 严格的金额格式（包括错误格式的处理）
+        return trimmed.matches("^\\d{1,3}(,\\d{3})*(\\.\\d{2})?$") ||
+                trimmed.matches("^\\d+\\.\\d{1,4}$") ||
+                trimmed.matches("^\\d+\\.\\d{3}\\.\\d{2}$") || // 12.041.40
+                (trimmed.matches("^\\d{1,8}$") && tryParseAsValidAmount(trimmed));
+    }
+
+    /**
      * 尝试解析为有效金额
      */
     private boolean tryParseAsValidAmount(String content) {
         try {
             double value = Double.parseDouble(content);
-            return value >= 0.01 && value <= 10000000.0;
+            return value >= 0.01 && value <= 100000000.0;
         } catch (NumberFormatException e) {
             return false;
         }
@@ -364,7 +371,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
 
         // 修复金额
         if (product.getAmount() == null || product.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            BigDecimal fixedAmount = tryToFixAmountAdvanced(product, layout);
+            BigDecimal fixedAmount = tryToFixAmountAdvanced(product);
             if (fixedAmount != null && fixedAmount.compareTo(BigDecimal.ZERO) > 0) {
                 product.setAmount(fixedAmount);
             }
@@ -417,7 +424,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
                 .filter(text -> !isStrictMetadata(text))
                 .filter(text -> text.length() >= 4)
                 .filter(this::isProductNameCandidate)
-                .collect(Collectors.toList());
+                .toList();
 
         if (candidates.isEmpty()) {
             return null;
@@ -444,7 +451,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
                 .filter(text -> isProductNameCandidate(text.getText()))
                 .sorted(Comparator.comparingDouble(t -> Math.abs(t.getBbox().getCenterY() - amountY)))
                 .limit(3)
-                .collect(Collectors.toList());
+                .toList();
 
         if (!textsAbove.isEmpty()) {
             return textsAbove.stream()
@@ -465,7 +472,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
 
         return text.matches(".*[理财|基金|债券|产品|收益|固定|开放|净值|天天|添益|核心|优选|持盈].*") ||
                 text.matches(".*[工银|交银|兴银|平安|招商|中信|建信|华夏].*") ||
-                text.matches(".*[·|\\|].*");
+                text.matches(".*[·||].*");
     }
 
     /**
@@ -473,8 +480,9 @@ public class AssetMatchServiceImpl implements AssetMatchService {
      */
     private boolean isStrictMetadata(String content) {
         Set<String> strictMetadata = Set.of(
-                "总金额", "名称", "金额", "理财", "收起", "展开", "温馨提示", "（元）",
-                "产品持仓", "撤单", "持仓市值", "可赎回日", "赎回类型", "今日可赎", "每日可赎"
+                "总金额", "总金额（元）", "名称", "金额", "理财", "收起", "展开", "温馨提示", "（元）",
+                "产品持仓", "撤单", "持仓市值", "持仓币值", "可赎回日", "赎回类型", "赎回尖型",
+                "今日可赎", "每日可赎", "预约赎回", "周期结束日", "可赎回开始日"
         );
         return strictMetadata.contains(content.trim());
     }
@@ -482,7 +490,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     /**
      * 高级的金额修复
      */
-    private BigDecimal tryToFixAmountAdvanced(ProductItem product, PageLayout layout) {
+    private BigDecimal tryToFixAmountAdvanced(ProductItem product) {
         // 策略1：从金额文本重新解析
         if (product.getAmountText() != null) {
             BigDecimal amount = parseAmountAdvanced(product.getAmountText().getText());
@@ -511,12 +519,25 @@ public class AssetMatchServiceImpl implements AssetMatchService {
      */
     private BigDecimal parseAmountAdvanced(String content) {
         try {
-            String cleaned = content.trim().replace(",", "");
+            String cleaned = content.trim();
+
+            // 处理错误的小数点格式，如 12.041.40 -> 12,041.40
+            if (cleaned.matches("\\d+\\.\\d{3}\\.\\d{2}")) {
+                // 替换第一个小数点为逗号
+                int firstDot = cleaned.indexOf('.');
+                if (firstDot > 0) {
+                    cleaned = cleaned.substring(0, firstDot) + "," + cleaned.substring(firstDot + 1);
+                }
+            }
+
+            // 移除逗号
+            cleaned = cleaned.replace(",", "");
+
             BigDecimal amount = new BigDecimal(cleaned);
 
             // 验证金额合理性
             if (amount.compareTo(BigDecimal.valueOf(0.01)) >= 0 &&
-                    amount.compareTo(BigDecimal.valueOf(10000000.0)) <= 0) {
+                    amount.compareTo(BigDecimal.valueOf(100000000.0)) <= 0) {
                 return amount;
             }
         } catch (NumberFormatException e) {
@@ -527,7 +548,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 高级的产品匹配
+     * 高级的产品匹配 - 包含匹配度过滤
      */
     private List<AssetScanImageDTO> matchProductsAdvanced(List<ProductItem> products, List<AssetName> userAssets) {
         List<AssetScanImageDTO> results = new ArrayList<>();
@@ -537,21 +558,31 @@ public class AssetMatchServiceImpl implements AssetMatchService {
 
             AssetMatchResult bestMatch = findBestMatchAdvanced(product, userAssets);
 
-            AssetScanImageDTO dto = buildResultDTO(product, bestMatch);
-            results.add(dto);
-
             String displayAmount = product.getAmount() != null ?
                     textAnalysisUtil.formatAmountDisplay(product.getAmount()) : "0.00";
 
             if (bestMatch != null) {
-                log.info("产品 {} 匹配: '{}' -> '{}' (分数: {}%, 金额: {})",
-                        i + 1, product.getCleanName(), bestMatch.getAssetName().getName(),
-                        Math.round(bestMatch.getScore() * 100), displayAmount);
+                // 只记录匹配度达到阈值的产品
+                if (bestMatch.getScore() >= minDisplayThreshold) {
+                    AssetScanImageDTO dto = buildResultDTO(product, bestMatch);
+                    results.add(dto);
+                    log.info("产品 {} 匹配: '{}' -> '{}' (分数: {}%, 金额: {})",
+                            i + 1, product.getCleanName(), bestMatch.getAssetName().getName(),
+                            Math.round(bestMatch.getScore() * 100), displayAmount);
+                } else {
+                    log.info("产品 {} 匹配度过低，已过滤: '{}' -> '{}' (分数: {}%, 金额: {})",
+                            i + 1, product.getCleanName(), bestMatch.getAssetName().getName(),
+                            Math.round(bestMatch.getScore() * 100), displayAmount);
+                }
             } else {
                 log.warn("产品 {} 无匹配: '{}' (金额: {})",
                         i + 1, product.getCleanName(), displayAmount);
+                // 无匹配的产品也不添加到结果中
             }
         }
+
+        // 按匹配度降序排序
+        results.sort((a, b) -> Double.compare(b.getMatchScore(), a.getMatchScore()));
 
         return results.stream()
                 .limit(maxResults)
@@ -695,7 +726,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 构建结果DTO
+     * 构建结果DTO - 增强版，包含匹配度过滤
      */
     private AssetScanImageDTO buildResultDTO(ProductItem product, AssetMatchResult matchResult) {
         String originalName = product.getRelatedTexts() != null && !product.getRelatedTexts().isEmpty() ?
@@ -714,17 +745,19 @@ public class AssetMatchServiceImpl implements AssetMatchService {
                 .acquireTime(LocalDateTime.now())
                 .recognitionTime(LocalDateTime.now());
 
-        if (matchResult != null) {
+        if (matchResult != null && matchResult.getScore() >= minDisplayThreshold) {
+            // 只有匹配度达到阈值的才设置匹配信息
             builder.assetNameId(matchResult.getAssetName().getId())
                     .assetName(matchResult.getAssetName().getName())
                     .matchedAssetName(matchResult.getAssetName().getName())
                     .matchScore(matchResult.getScore())
                     .isMatched(matchResult.getScore() >= confirmThreshold);
         } else {
+            // 匹配度过低或无匹配，设置为未匹配状态
             builder.assetNameId(null)
-                    .assetName("未匹配: " + product.getCleanName())
+                    .assetName(null)
                     .matchedAssetName(null)
-                    .matchScore(0.0)
+                    .matchScore(matchResult != null ? matchResult.getScore() : 0.0)
                     .isMatched(false);
         }
 
@@ -775,6 +808,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     /**
      * 布局检测结果内部类
      */
+    @Getter
     private static class LayoutDetectionResult {
         private final LayoutType layoutType;
         private final double confidence;
@@ -784,12 +818,16 @@ public class AssetMatchServiceImpl implements AssetMatchService {
             this.confidence = confidence;
         }
 
-        public LayoutType getLayoutType() {
-            return layoutType;
-        }
+    }
 
-        public double getConfidence() {
-            return confidence;
-        }
+    /**
+     * 资产匹配结果内部类
+     */
+    @Setter
+    @Getter
+    private static class AssetMatchResult {
+        private AssetName assetName;
+        private double score;
+
     }
 }

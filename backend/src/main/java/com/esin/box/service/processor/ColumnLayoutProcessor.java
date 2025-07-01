@@ -6,7 +6,6 @@ import com.esin.box.dto.ocr.ProductItem;
 import com.esin.box.utils.TextAnalysisUtil;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
@@ -18,6 +17,7 @@ import java.util.stream.Collectors;
 
 /**
  * 左右列布局处理器（修复版）
+ * 解决金额识别和产品名称组合问题
  */
 @Slf4j
 @Component
@@ -33,113 +33,6 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
     private static final int MIN_CONTENT_LENGTH = 2;
     private static final double MIN_VALID_AMOUNT = 0.01;
     private static final double MAX_VALID_AMOUNT = 100000000.0;
-
-    /**
-     * 严格的无关文本判断 - 增强版
-     */
-    private boolean isIrrelevantTextStrict(String text) {
-        Set<String> irrelevantTexts = Set.of(
-                "总金额", "总金额（元）", "合计", "小计", "收起", "展开",
-                "温馨提示", "（元）", "¥", "$", "名称", "金额", "理财",
-                "产品持仓", "撤单", "持仓市值", "持仓币值", "可赎回日",
-                "赎回类型", "赎回尖型", "今日可赎", "每日可赎", "预约赎回",
-                "周期结束日", "可赎回开始日", "最短持有期内不可赎回，可赎回开始日起每日可赎"
-        );
-
-        String trimmed = text.trim();
-
-        // 完全匹配检查
-        if (irrelevantTexts.contains(trimmed)) {
-            return true;
-        }
-
-        // 检查是否包含总金额相关文本
-        if (trimmed.contains("总金额") || trimmed.contains("合计") || trimmed.contains("小计")) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * 修复的产品构建 - 避免将元数据作为产品名称
-     */
-    private ProductItem buildProductFixed(OcrTextResult amountText, BigDecimal amount,
-                                          List<OcrTextResult> relatedTexts, int index) {
-        ProductItem product = new ProductItem();
-
-        if (amount.scale() < 2) {
-            amount = amount.setScale(2, RoundingMode.UNNECESSARY);
-        }
-        product.setAmountText(amountText);
-        product.setAmount(amount);
-
-        // 构建产品名称 - 过滤掉元数据
-        String originalName = buildProductNameFixed(relatedTexts);
-
-        // 如果构建的名称是无效的，使用默认名称
-        if (StringUtils.isBlank(originalName) ||
-                isIrrelevantTextStrict(originalName) ||
-                originalName.length() < 4) {
-            originalName = "理财产品 " + (index + 1);
-        }
-
-        product.setOriginalName(originalName);
-        product.setCleanName(textAnalysisUtil.cleanProductName(originalName));
-        product.setRelatedTexts(relatedTexts);
-
-        // 设置位置信息
-        List<OcrTextResult> allTexts = new ArrayList<>(relatedTexts);
-        allTexts.add(amountText);
-
-        double avgY = allTexts.stream()
-                .mapToDouble(t -> getCenterY(t.getBbox()))
-                .average()
-                .orElse(getCenterY(amountText.getBbox()));
-
-        product.setPagePosition(avgY);
-        product.setRowIndex(index);
-        product.setConfidence(textAnalysisUtil.calculateAverageConfidence(allTexts));
-
-        return product;
-    }
-
-    /**
-     * 修复的产品名称构建 - 增强过滤逻辑
-     */
-    private String buildProductNameFixed(List<OcrTextResult> texts) {
-        if (texts.isEmpty()) {
-            return "";
-        }
-
-        // 过滤和排序文本
-        List<String> validTexts = texts.stream()
-                .map(OcrTextResult::getText)
-                .filter(StringUtils::isNotBlank)
-                .filter(text -> !isIrrelevantTextStrict(text))
-                .filter(text -> text.length() > 1)
-                .filter(text -> isProductNameCandidate(text))
-                .collect(Collectors.toList());
-
-        if (validTexts.isEmpty()) {
-            // 尝试获取第一个非元数据文本
-            for (OcrTextResult text : texts) {
-                if (!isIrrelevantTextStrict(text.getText()) && text.getText().length() > 3) {
-                    return text.getText();
-                }
-            }
-            return "";
-        }
-
-        // 如果只有一个有效文本且长度足够，直接使用
-        if (validTexts.size() == 1 && validTexts.get(0).length() >= 6) {
-            return validTexts.get(0);
-        }
-
-        // 智能组合多个文本
-        return validTexts.stream()
-                .collect(Collectors.joining(""));
-    }
 
     @Override
     public List<ProductItem> processLayout(PageLayout layout) {
@@ -169,10 +62,9 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
             }
 
             // 3. 分析列结构
-            ColumnBoundary columnBoundary = analyzeColumnBoundary(processedTexts, layout.getWidth());
 
             // 4. 基于金额构建产品（修复版）
-            List<ProductItem> products = buildProductsFromAmountsFixed(processedTexts, columnBoundary);
+            List<ProductItem> products = buildProductsFromAmountsFixed(processedTexts);
 
             // 5. 排序和验证
             products = validateAndSortProducts(products);
@@ -255,7 +147,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
         // 产品名称常见片段特征
         return text.matches(".*[理财|基金|债券|产品|收益|固定|开放|净值|天天|添益|核心|优选|持盈|银理财].*") ||
                 text.matches(".*[工银|交银|兴银|平安|招商|中信|建信|华夏].*") ||
-                text.matches(".*[·|\\|].*");
+                text.matches(".*[·||].*");
     }
 
     /**
@@ -279,16 +171,6 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
             return bbox.getCenterY();
         }
         return (bbox.getTop() + bbox.getBottom()) / 2.0;
-    }
-
-    /**
-     * 安全获取centerX，如果为null则计算
-     */
-    private double getCenterX(OcrTextResult.BoundingBox bbox) {
-        if (bbox.getCenterX() != null) {
-            return bbox.getCenterX();
-        }
-        return (bbox.getLeft() + bbox.getRight()) / 2.0;
     }
 
     /**
@@ -370,8 +252,8 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
 
             // 严格的金额识别
             if (isValidAmountTextStrict(content)) {
-                BigDecimal amount = parseAmountStrict(content);
-                if (amount != null && isValidAmountRange(amount)) {
+                BigDecimal amount = parseAmountFlexible(content);
+                if (isValidAmountRange(amount)) {
                     result.getAmountTexts().add(text);
                     log.debug("识别有效金额: '{}' -> {}", content, amount);
                     continue;
@@ -396,7 +278,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
     }
 
     /**
-     * 严格的金额文本判断
+     * 严格的金额文本判断 - 改进版
      */
     private boolean isValidAmountTextStrict(String content) {
         if (StringUtils.isBlank(content)) {
@@ -427,7 +309,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
             return false;
         }
 
-        // 严格的金额格式
+        // 严格的金额格式（包括错误格式的处理）
         // 1. 标准金额格式：123,456.78
         if (trimmed.matches("^\\d{1,3}(,\\d{3})*(\\.\\d{2})?$")) {
             return true;
@@ -438,7 +320,12 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
             return true;
         }
 
-        // 3. 整数金额（但不能太长，避免误识别日期）
+        // 3. 处理错误的小数点格式：12.041.40
+        if (trimmed.matches("^\\d+\\.\\d{3}\\.\\d{2}$")) {
+            return true;
+        }
+
+        // 4. 整数金额（但不能太长，避免误识别日期）
         if (trimmed.matches("^\\d{1,8}$")) {
             try {
                 long value = Long.parseLong(trimmed);
@@ -452,11 +339,24 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
     }
 
     /**
-     * 严格的金额解析
+     * 灵活的金额解析 - 处理错误的小数点格式
      */
-    private BigDecimal parseAmountStrict(String content) {
+    private BigDecimal parseAmountFlexible(String content) {
         try {
-            String cleaned = content.trim().replace(",", "");
+            String cleaned = content.trim();
+
+            // 处理错误的小数点格式，如 12.041.40 -> 12,041.40
+            if (cleaned.matches("\\d+\\.\\d{3}\\.\\d{2}")) {
+                // 替换第一个小数点为逗号
+                int firstDot = cleaned.indexOf('.');
+                if (firstDot > 0) {
+                    cleaned = cleaned.substring(0, firstDot) + "," + cleaned.substring(firstDot + 1);
+                }
+            }
+
+            // 移除逗号
+            cleaned = cleaned.replace(",", "");
+
             BigDecimal amount = new BigDecimal(cleaned);
 
             // 验证金额合理性
@@ -481,6 +381,29 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
     }
 
     /**
+     * 严格的无关文本判断 - 增强版
+     */
+    private boolean isIrrelevantTextStrict(String text) {
+        Set<String> irrelevantTexts = Set.of(
+                "总金额", "总金额（元）", "合计", "小计", "收起", "展开",
+                "温馨提示", "（元）", "¥", "$", "名称", "金额", "理财",
+                "产品持仓", "撤单", "持仓市值", "持仓币值", "可赎回日",
+                "赎回类型", "赎回尖型", "今日可赎", "每日可赎", "预约赎回",
+                "周期结束日", "可赎回开始日", "最短持有期内不可赎回，可赎回开始日起每日可赎"
+        );
+
+        String trimmed = text.trim();
+
+        // 完全匹配检查
+        if (irrelevantTexts.contains(trimmed)) {
+            return true;
+        }
+
+        // 检查是否包含总金额相关文本
+        return trimmed.contains("总金额") || trimmed.contains("合计") || trimmed.contains("小计");
+    }
+
+    /**
      * 判断是否为有意义的内容
      */
     private boolean isMeaningfulContent(String content) {
@@ -494,55 +417,21 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
             return false;
         }
 
-        // 排除明显的无意义文本
-        if (content.matches("^[\\s\\-_=.]{2,}$")) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * 分析列边界
-     */
-    private ColumnBoundary analyzeColumnBoundary(ProcessedTexts texts, double pageWidth) {
-        ColumnBoundary boundary = new ColumnBoundary();
-
-        if (!texts.getAmountTexts().isEmpty() && !texts.getContentTexts().isEmpty()) {
-            double avgAmountX = texts.getAmountTexts().stream()
-                    .mapToDouble(t -> t.getBbox().getLeft())
-                    .average()
-                    .orElse(pageWidth * 0.7);
-
-            double avgContentX = texts.getContentTexts().stream()
-                    .mapToDouble(t -> t.getBbox().getLeft())
-                    .average()
-                    .orElse(pageWidth * 0.1);
-
-            boundary.setBoundary((avgAmountX + avgContentX) / 2);
-        } else {
-            boundary.setBoundary(pageWidth / 2);
-        }
-
-        log.debug("列边界分析: 金额平均X={}, 内容平均X={}, 边界={}",
-                texts.getAmountTexts().stream().mapToDouble(t -> t.getBbox().getLeft()).average().orElse(0),
-                texts.getContentTexts().stream().mapToDouble(t -> t.getBbox().getLeft()).average().orElse(0),
-                boundary.getBoundary());
-
-        return boundary;
+        // 排除明显地无意义文本
+        return !content.matches("^[\\s\\-_=.]{2,}$");
     }
 
     /**
      * 修复的产品构建
      */
-    private List<ProductItem> buildProductsFromAmountsFixed(ProcessedTexts texts, ColumnBoundary columnBoundary) {
+    private List<ProductItem> buildProductsFromAmountsFixed(ProcessedTexts texts) {
         List<ProductItem> products = new ArrayList<>();
         Set<OcrTextResult> usedTexts = new HashSet<>();
 
         // 按Y坐标排序金额
         List<OcrTextResult> sortedAmounts = texts.getAmountTexts().stream()
                 .sorted(Comparator.comparingDouble(t -> getCenterY(t.getBbox())))
-                .collect(Collectors.toList());
+                .toList();
 
         for (int i = 0; i < sortedAmounts.size(); i++) {
             OcrTextResult amountText = sortedAmounts.get(i);
@@ -551,8 +440,8 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
                 continue;
             }
 
-            BigDecimal amount = parseAmountStrict(amountText.getText().trim());
-            if (amount == null || !isValidAmountRange(amount)) {
+            BigDecimal amount = parseAmountFlexible(amountText.getText().trim());
+            if (!isValidAmountRange(amount)) {
                 continue;
             }
 
@@ -566,22 +455,18 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
                 log.debug("金额 '{}' 没有找到相关内容文本", amountText.getText());
                 // 创建一个最小产品项
                 ProductItem minimalProduct = createMinimalProduct(amountText, amount, i);
-                if (minimalProduct != null) {
-                    products.add(minimalProduct);
-                    usedTexts.add(amountText);
-                }
+                products.add(minimalProduct);
+                usedTexts.add(amountText);
                 continue;
             }
 
             // 构建产品项
             ProductItem product = buildProductFixed(amountText, amount, relatedTexts, i);
-            if (product != null) {
-                products.add(product);
-                usedTexts.add(amountText);
-                usedTexts.addAll(relatedTexts);
-                log.info("构建产品成功: '{}' - {}",
-                        product.getCleanName(), textAnalysisUtil.formatAmountDisplay(amount));
-            }
+            products.add(product);
+            usedTexts.add(amountText);
+            usedTexts.addAll(relatedTexts);
+            log.info("构建产品成功: '{}' - {}",
+                    product.getCleanName(), textAnalysisUtil.formatAmountDisplay(amount));
         }
 
         return products;
@@ -660,6 +545,85 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
     }
 
     /**
+     * 修复的产品构建 - 避免将元数据作为产品名称
+     */
+    private ProductItem buildProductFixed(OcrTextResult amountText, BigDecimal amount,
+                                          List<OcrTextResult> relatedTexts, int index) {
+        ProductItem product = new ProductItem();
+
+        if (amount.scale() < 2) {
+            amount = amount.setScale(2, RoundingMode.UNNECESSARY);
+        }
+        product.setAmountText(amountText);
+        product.setAmount(amount);
+
+        // 构建产品名称 - 过滤掉元数据
+        String originalName = buildProductNameFixed(relatedTexts);
+
+        // 如果构建的名称是无效的，使用默认名称
+        if (StringUtils.isBlank(originalName) ||
+                isIrrelevantTextStrict(originalName) ||
+                originalName.length() < 4) {
+            originalName = "理财产品 " + (index + 1);
+        }
+
+        product.setOriginalName(originalName);
+        product.setCleanName(textAnalysisUtil.cleanProductName(originalName));
+        product.setRelatedTexts(relatedTexts);
+
+        // 设置位置信息
+        List<OcrTextResult> allTexts = new ArrayList<>(relatedTexts);
+        allTexts.add(amountText);
+
+        double avgY = allTexts.stream()
+                .mapToDouble(t -> getCenterY(t.getBbox()))
+                .average()
+                .orElse(getCenterY(amountText.getBbox()));
+
+        product.setPagePosition(avgY);
+        product.setRowIndex(index);
+        product.setConfidence(textAnalysisUtil.calculateAverageConfidence(allTexts));
+
+        return product;
+    }
+
+    /**
+     * 修复的产品名称构建 - 增强过滤逻辑
+     */
+    private String buildProductNameFixed(List<OcrTextResult> texts) {
+        if (texts.isEmpty()) {
+            return "";
+        }
+
+        // 过滤和排序文本
+        List<String> validTexts = texts.stream()
+                .map(OcrTextResult::getText)
+                .filter(StringUtils::isNotBlank)
+                .filter(text -> !isIrrelevantTextStrict(text))
+                .filter(text -> text.length() > 1)
+                .filter(this::isProductNameCandidate)
+                .toList();
+
+        if (validTexts.isEmpty()) {
+            // 尝试获取第一个非元数据文本
+            for (OcrTextResult text : texts) {
+                if (!isIrrelevantTextStrict(text.getText()) && text.getText().length() > 3) {
+                    return text.getText();
+                }
+            }
+            return "";
+        }
+
+        // 如果只有一个有效文本且长度足够，直接使用
+        if (validTexts.size() == 1 && validTexts.get(0).length() >= 6) {
+            return validTexts.get(0);
+        }
+
+        // 智能组合多个文本
+        return String.join("", validTexts);
+    }
+
+    /**
      * 判断是否为产品名称候选
      */
     private boolean isProductNameCandidate(String text) {
@@ -689,11 +653,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
         }
 
         // 验证金额
-        if (product.getAmount() == null || !isValidAmountRange(product.getAmount())) {
-            return false;
-        }
-
-        return true;
+        return product.getAmount() != null && isValidAmountRange(product.getAmount());
     }
 
     /**
@@ -721,9 +681,4 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
         private final List<OcrTextResult> irrelevantTexts = new ArrayList<>();
     }
 
-    @Setter
-    @Getter
-    private static class ColumnBoundary {
-        private double boundary;
-    }
 }

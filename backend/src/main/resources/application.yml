@@ -98,3 +98,10 @@ app:
       max-concurrent: 3
       # 输出文件临时目录
       output-temp-dir: ${java.io.tmpdir}/box/paddle-ocr-output
+  business:
+    ocr:
+      asset-match:
+        confirm-threshold: 0.65  # 确认匹配的阈值（65%）
+        min-threshold: 0.25      # 最低匹配阈值（25%）
+        min-display-threshold: 0.60  # 最低显示阈值（60%）
+        max-results: 30          # 最大返回结果数
