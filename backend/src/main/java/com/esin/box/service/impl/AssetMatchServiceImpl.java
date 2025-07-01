@@ -24,7 +24,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 支持多布局的资产匹配服务主实现类（完全优化版）
+ * 支持多布局的资产匹配服务主实现类（修复版）
  */
 @Slf4j
 @Service
@@ -37,13 +37,13 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     private final TextAnalysisUtil textAnalysisUtil;
     private final JaroWinklerSimilarity jaroWinklerSimilarity = new JaroWinklerSimilarity();
 
-    @Value("${app.business.ocr.asset-match.confirm-threshold:0.7}")
+    @Value("${app.business.ocr.asset-match.confirm-threshold:0.65}")
     private double confirmThreshold;
 
-    @Value("${app.business.ocr.asset-match.min-threshold:0.3}")
+    @Value("${app.business.ocr.asset-match.min-threshold:0.25}")
     private double minThreshold;
 
-    @Value("${app.business.ocr.asset-match.max-results:20}")
+    @Value("${app.business.ocr.asset-match.max-results:30}")
     private int maxResults;
 
     @Override
@@ -52,7 +52,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
             return Collections.emptyList();
         }
 
-        log.info("=== 开始多布局资产匹配 ===");
+        log.info("=== 开始多布局资产匹配（修复版） ===");
         log.info("用户: {}, OCR文本数量: {}", username, ocrTexts.size());
 
         try {
@@ -64,21 +64,22 @@ public class AssetMatchServiceImpl implements AssetMatchService {
             }
 
             // 2. 分析页面基础信息
-            PageLayout pageLayout = analyzePageLayout(ocrTexts);
+            PageLayout pageLayout = analyzePageLayoutFixed(ocrTexts);
 
-            // 3. 智能布局检测（完全重写）
-            LayoutType layoutType = detectLayoutTypeIntelligent(pageLayout);
-            log.info("检测到布局类型: {}", layoutType);
+            // 3. 智能布局检测（修复版）
+            LayoutDetectionResult detectionResult = detectLayoutFixed(pageLayout);
+            log.info("检测到布局类型: {}, 置信度: {}", detectionResult.getLayoutType(), detectionResult.getConfidence());
 
-            // 4. 根据布局类型选择处理器
-            LayoutProcessor processor = selectProcessor(layoutType);
-
-            // 5. 处理文本并构建产品项
-            List<ProductItem> products = processor.processLayout(pageLayout);
+            // 4. 选择处理器并处理
+            List<ProductItem> products = processWithSelectedProcessor(pageLayout, detectionResult);
             log.info("处理得到产品项: {}", products.size());
 
+            // 5. 产品验证和修复
+            products = validateAndFixProductsAdvanced(products, pageLayout);
+            log.info("验证修复后产品项: {}", products.size());
+
             // 6. 匹配资产
-            List<AssetScanImageDTO> results = matchProducts(products, userAssets);
+            List<AssetScanImageDTO> results = matchProductsAdvanced(products, userAssets);
             log.info("匹配结果: {}", results.size());
 
             return results;
@@ -90,14 +91,14 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 分析页面布局
+     * 修复的页面布局分析
      */
-    private PageLayout analyzePageLayout(List<OcrTextResult> ocrTexts) {
+    private PageLayout analyzePageLayoutFixed(List<OcrTextResult> ocrTexts) {
         PageLayout layout = new PageLayout();
 
         // 过滤有效文本
         layout.setValidTexts(ocrTexts.stream()
-                .filter(textAnalysisUtil::isValidText)
+                .filter(this::isValidTextFixed)
                 .sorted(Comparator.comparingDouble(text -> text.getBbox().getCenterY()))
                 .collect(Collectors.toList()));
 
@@ -126,242 +127,85 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 智能布局检测 - 完全重写
+     * 修复的有效文本判断
      */
-    private LayoutType detectLayoutTypeIntelligent(PageLayout layout) {
-        if (layout.getValidTexts().size() < 4) {
-            return LayoutType.UNKNOWN;
-        }
-
-        log.debug("=== 开始智能布局检测 ===");
-
-        // 1. 优先检测产品名称驱动的上下行布局
-        boolean isProductNameRowLayout = detectProductNameRowLayout(layout);
-        if (isProductNameRowLayout) {
-            log.info("检测为产品名称驱动的上下行布局");
-            return LayoutType.TOP_BOTTOM_ROWS;
-        }
-
-        // 2. 检测传统的左右列布局
-        boolean isColumnLayout = detectTraditionalColumnLayout(layout);
-        if (isColumnLayout) {
-            log.info("检测为传统左右列布局");
-            return LayoutType.LEFT_RIGHT_COLUMNS;
-        }
-
-        // 3. 检测基于行的上下布局
-        boolean isRowLayout = detectRowBasedLayout(layout);
-        if (isRowLayout) {
-            log.info("检测为基于行的上下布局");
-            return LayoutType.TOP_BOTTOM_ROWS;
-        }
-
-        // 4. 默认使用上下行布局（因为这种布局更常见）
-        log.info("无法明确识别布局类型，默认使用上下行布局");
-        return LayoutType.TOP_BOTTOM_ROWS;
-    }
-
-    /**
-     * 检测产品名称驱动的上下行布局
-     */
-    private boolean detectProductNameRowLayout(PageLayout layout) {
-        log.debug("检测产品名称驱动的上下行布局");
-
-        // 1. 识别产品名称文本 - 使用智能双重策略
-        List<OcrTextResult> productNames = identifyProductNamesIntelligent(layout.getValidTexts());
-        log.debug("识别到产品名称数量: {}", productNames.size());
-
-        // 输出识别到的产品名称
-        for (OcrTextResult productName : productNames) {
-            log.debug("识别到产品名称: '{}'", productName.getText());
-        }
-
-        if (productNames.size() < 2) {
-            log.debug("产品名称数量不足，不是产品名称驱动布局");
+    private boolean isValidTextFixed(OcrTextResult text) {
+        if (text == null || StringUtils.isBlank(text.getText())) {
             return false;
         }
 
-        // 2. 检查每个产品名称下方是否有对应的金额
-        int validProductPairs = 0;
-        for (OcrTextResult productName : productNames) {
-            List<OcrTextResult> amountsBelow = findAmountsBelow(layout.getValidTexts(), productName, 200.0);
-            if (!amountsBelow.isEmpty()) {
-                validProductPairs++;
-                log.debug("产品 '{}' 下方找到 {} 个金额",
-                        productName.getText(), amountsBelow.size());
-            }
+        String content = text.getText().trim();
+
+        // 基本长度检查
+        if (content.length() < 1) {
+            return false;
         }
 
-        double validRatio = (double) validProductPairs / productNames.size();
-        log.debug("有效产品-金额对比例: {}/{} = {}", validProductPairs, productNames.size(), validRatio);
+        // 排除明显无意义的字符
+        if (content.matches("^[\\s\\-_=.]{2,}$")) {
+            return false;
+        }
 
-        boolean isProductRowLayout = validRatio >= 0.6; // 60%以上的产品名称有对应金额
-        log.debug("产品名称驱动布局检测结果: {}", isProductRowLayout);
-
-        return isProductRowLayout;
+        return true;
     }
 
     /**
-     * 智能识别产品名称文本 - 使用双重策略
+     * 修复的布局检测
      */
-    private List<OcrTextResult> identifyProductNamesIntelligent(List<OcrTextResult> texts) {
-        // 首先尝试严格条件
-        List<OcrTextResult> productNames = texts.stream()
-                .filter(this::isProductNameTextStrict)
+    private LayoutDetectionResult detectLayoutFixed(PageLayout layout) {
+        if (layout.getValidTexts().size() < 4) {
+            return new LayoutDetectionResult(LayoutType.TOP_BOTTOM_ROWS, 0.5);
+        }
+
+        // 检测策略1：基于金额位置分布
+        LayoutDetectionResult amountBasedResult = detectLayoutByAmountDistribution(layout);
+
+        // 检测策略2：基于文本密度
+        LayoutDetectionResult densityBasedResult = detectLayoutByTextDensity(layout);
+
+        // 选择置信度更高的结果
+        if (amountBasedResult.getConfidence() > densityBasedResult.getConfidence()) {
+            return amountBasedResult;
+        } else {
+            return densityBasedResult;
+        }
+    }
+
+    /**
+     * 基于金额分布检测布局
+     */
+    private LayoutDetectionResult detectLayoutByAmountDistribution(PageLayout layout) {
+        List<OcrTextResult> amountTexts = layout.getValidTexts().stream()
+                .filter(text -> isStrictAmountFormat(text.getText()))
                 .collect(Collectors.toList());
 
-        log.debug("严格条件识别到产品名称数量: {}", productNames.size());
-        for (OcrTextResult text : productNames) {
-            log.debug("  - 严格条件产品名称: '{}'", text.getText());
+        if (amountTexts.size() < 2) {
+            return new LayoutDetectionResult(LayoutType.TOP_BOTTOM_ROWS, 0.3);
         }
 
-        // 如果严格条件没找到，尝试宽松条件
-        if (productNames.isEmpty()) {
-            log.debug("严格条件未找到产品名称，尝试宽松条件");
-            productNames = texts.stream()
-                    .filter(this::isProductNameTextLoose)
-                    .collect(Collectors.toList());
-            log.debug("宽松条件识别到产品名称数量: {}", productNames.size());
-            for (OcrTextResult text : productNames) {
-                log.debug("  - 宽松条件产品名称: '{}'", text.getText());
-            }
-        }
+        // 分析金额的X坐标分布
+        double pageWidth = layout.getWidth();
+        double rightBoundary = pageWidth * 0.6;
 
-        return productNames;
+        long rightSideAmounts = amountTexts.stream()
+                .filter(text -> text.getBbox().getLeft() > rightBoundary)
+                .count();
+
+        double rightSideRatio = (double) rightSideAmounts / amountTexts.size();
+
+        // 增加对总金额的检测，如果检测到总金额，倾向于左右列布局
+        boolean hasTotal = layout.getValidTexts().stream()
+                .anyMatch(text -> text.getText().contains("总金额") || text.getText().contains("合计"));
+
+        if (rightSideRatio >= 0.7 || (rightSideRatio >= 0.5 && hasTotal)) {
+            return new LayoutDetectionResult(LayoutType.LEFT_RIGHT_COLUMNS, 0.6 + rightSideRatio * 0.3);
+        } else {
+            return new LayoutDetectionResult(LayoutType.TOP_BOTTOM_ROWS, 0.6 + (1 - rightSideRatio) * 0.3);
+        }
     }
 
     /**
-     * 判断是否为产品名称文本 - 严格条件 - 修复版本
-     */
-    private boolean isProductNameTextStrict(OcrTextResult text) {
-        String content = text.getText().trim();
-
-        log.debug("检查产品名称 (严格): '{}'", content);
-
-        // 长度检查
-        if (content.length() < 8 || content.length() > 100) {
-            log.debug("  - 长度不符合: {} (要求: 8-100)", content.length());
-            return false;
-        }
-
-        // 使用更精确的金额格式判断
-        if (isStrictAmountFormat(content)) {
-            log.debug("  - 是金额格式");
-            return false;
-        }
-
-        if (content.matches("^[0-9,./\\s]+$")) {
-            log.debug("  - 是纯数字");
-            return false;
-        }
-
-        // 排除日期格式
-        if (content.matches("^\\d{4}/\\d{2}/\\d{2}$")) {
-            log.debug("  - 是日期格式");
-            return false;
-        }
-
-        // 排除常见的元数据文本
-        if (isMetadataTextInAssetMatch(content)) {
-            log.debug("  - 是元数据文本");
-            return false;
-        }
-
-        // 产品名称特征检查
-        boolean hasProductKeywords = content.contains("理财") || content.contains("基金") ||
-                content.contains("债券") || content.contains("精选") ||
-                content.contains("恒盈") || content.contains("代销") ||
-                content.contains("工银") || content.contains("交银") ||
-                content.contains("兴银") || content.contains("平安") ||
-                content.contains("优选") || content.contains("稳利") ||
-                content.contains("创利") || content.contains("灵活");
-
-        boolean hasStructuralChars = content.contains("|") || content.contains("·") ||
-                content.contains("（") || content.contains("）");
-
-        boolean hasReasonableLength = content.length() >= 12;
-
-        boolean result = hasProductKeywords || (hasStructuralChars && hasReasonableLength);
-
-        log.debug("  - 产品关键词: {}, 结构字符: {}, 合理长度: {}, 结果: {}",
-                hasProductKeywords, hasStructuralChars, hasReasonableLength, result);
-
-        if (result) {
-            log.debug("  - ✓ 严格条件识别为产品名称: '{}'", content);
-        }
-
-        return result;
-    }
-
-    /**
-     * 判断是否为产品名称文本 - 宽松条件 - 修复版本
-     */
-    private boolean isProductNameTextLoose(OcrTextResult text) {
-        String content = text.getText().trim();
-
-        log.debug("检查产品名称 (宽松): '{}'", content);
-
-        // 最基本的检查
-        if (content.length() < 8 || content.length() > 100) {
-            log.debug("  - 长度不符合: {} (要求: 8-100)", content.length());
-            return false;
-        }
-
-        // 使用更精确的金额格式判断
-        if (isStrictAmountFormat(content)) {
-            log.debug("  - 是金额格式");
-            return false;
-        }
-
-        if (content.matches("^[0-9,./\\s]+$")) {
-            log.debug("  - 是纯数字");
-            return false;
-        }
-
-        if (content.matches("^\\d{4}/\\d{2}/\\d{2}$")) {
-            log.debug("  - 是日期格式");
-            return false;
-        }
-
-        // 排除明显的元数据
-        if (isMetadataTextInAssetMatch(content)) {
-            log.debug("  - 是元数据文本");
-            return false;
-        }
-
-        // 宽松的产品名称特征
-        boolean hasProductIndicators = content.contains("理财") || content.contains("基金") ||
-                content.contains("债券") || content.contains("精选") ||
-                content.contains("恒盈") || content.contains("代销") ||
-                content.contains("稳利") || content.contains("灵活") ||
-                content.contains("优选") || content.contains("创利");
-
-        boolean hasInstitutionNames = content.contains("工银") || content.contains("交银") ||
-                content.contains("兴银") || content.contains("平安") ||
-                content.contains("招商") || content.contains("中信");
-
-        boolean hasStructure = content.contains("|") || content.contains("·") ||
-                content.contains("号") || content.contains("款");
-
-        // 长文本且包含中文的，很可能是产品名称
-        boolean isLongChineseText = content.length() >= 10 &&
-                content.matches(".*[\\u4e00-\\u9fa5].*") &&
-                !content.matches(".*(今日|每日|可赎|持仓|市值).*");
-
-        boolean result = hasProductIndicators || hasInstitutionNames || hasStructure || isLongChineseText;
-
-        log.debug("  - 产品指标: {}, 机构名称: {}, 结构: {}, 长中文: {}, 结果: {}",
-                hasProductIndicators, hasInstitutionNames, hasStructure, isLongChineseText, result);
-
-        if (result) {
-            log.debug("  - ✓ 宽松条件识别为产品名称: '{}'", content);
-        }
-
-        return result;
-    }
-
-    /**
-     * 更精确的金额格式判断
+     * 严格的金额格式判断 - 改进版
      */
     private boolean isStrictAmountFormat(String content) {
         if (StringUtils.isBlank(content)) {
@@ -370,156 +214,100 @@ public class AssetMatchServiceImpl implements AssetMatchService {
 
         String trimmed = content.trim();
 
-        // 严格的金额格式模式
-        // 1. 纯数字金额：123.45, 1,234.56, 123,456.78
-        if (trimmed.matches("^\\d{1,3}(,\\d{3})*(\\.\\d{2})?$")) {
-            return true;
-        }
-
-        // 2. 简单小数：12.34, 123.4, 1234.56
-        if (trimmed.matches("^\\d+\\.\\d{1,4}$")) {
-            return true;
-        }
-
-        // 3. 整数金额：123, 1234, 12345
-        if (trimmed.matches("^\\d{1,10}$")) {
-            return true;
-        }
-
-        // 4. 日期格式（明确排除）
-        if (trimmed.matches("^\\d{4}/\\d{2}/\\d{2}$")) {
+        // 排除日期格式
+        if (trimmed.matches("^\\d{4}[/-]\\d{2}[/-]\\d{2}$")) {
             return false;
         }
 
-        // 5. 包含中文的不是金额
-        if (trimmed.matches(".*[\\u4e00-\\u9fa5].*")) {
+        // 排除包含中文的（除了元）
+        if (trimmed.matches(".*[\\u4e00-\\u9fa5&&[^元]].*")) {
             return false;
         }
 
-        // 6. 包含字母的不是金额
-        if (trimmed.matches(".*[a-zA-Z].*")) {
-            return false;
-        }
-
-        // 7. 包含特殊符号的（除了逗号和点）不是金额
-        if (trimmed.matches(".*[^0-9,.].*")) {
-            return false;
-        }
-
-        return false;
+        // 严格的金额格式（包括错误格式的处理）
+        return trimmed.matches("^\\d{1,3}(,\\d{3})*(\\.\\d{2})?$") ||
+                trimmed.matches("^\\d+\\.\\d{1,4}$") ||
+                trimmed.matches("^\\d+\\.\\d{3}\\.\\d{2}$") || // 12.041.40
+                (trimmed.matches("^\\d{1,8}$") && tryParseAsValidAmount(trimmed));
     }
 
     /**
-     * 寻找指定文本下方的金额 - 使用严格金额判断
+     * 基于文本密度检测布局
      */
-    private List<OcrTextResult> findAmountsBelow(List<OcrTextResult> allTexts, OcrTextResult referenceText, double searchRange) {
-        double refY = referenceText.getBbox().getCenterY();
+    private LayoutDetectionResult detectLayoutByTextDensity(PageLayout layout) {
+        // 分析文本的垂直分布密度
+        Map<Integer, Integer> rowDensity = new HashMap<>();
+        Map<Integer, Integer> columnDensity = new HashMap<>();
 
-        return allTexts.stream()
-                .filter(text -> !text.equals(referenceText))
-                .filter(text -> {
-                    double textY = text.getBbox().getCenterY();
-                    return textY > refY && textY <= refY + searchRange;
-                })
-                .filter(text -> isStrictAmountFormat(text.getText().trim()))
-                .collect(Collectors.toList());
-    }
+        for (OcrTextResult text : layout.getValidTexts()) {
+            int rowKey = (int) (text.getBbox().getCenterY() / 50.0);
+            int colKey = (int) (text.getBbox().getCenterX() / (layout.getWidth() / 4.0));
 
-    /**
-     * 检测传统的左右列布局 - 使用严格金额判断
-     */
-    private boolean detectTraditionalColumnLayout(PageLayout layout) {
-        log.debug("检测传统左右列布局");
-
-        // 只有在明确满足左右列特征时才判断为列布局
-        // 1. 金额文本高度集中在页面右侧
-        List<OcrTextResult> amountTexts = layout.getValidTexts().stream()
-                .filter(text -> isStrictAmountFormat(text.getText().trim()))
-                .collect(Collectors.toList());
-
-        if (amountTexts.size() < 3) {
-            log.debug("金额文本数量不足: {}", amountTexts.size());
-            return false;
+            rowDensity.merge(rowKey, 1, Integer::sum);
+            columnDensity.merge(colKey, 1, Integer::sum);
         }
 
-        // 2. 检查金额是否主要分布在页面右侧
-        double pageWidth = layout.getWidth();
-        double rightBoundary = pageWidth * 0.6; // 右侧60%区域
+        // 计算密度方差
+        double rowVariance = calculateVariance(rowDensity.values());
+        double colVariance = calculateVariance(columnDensity.values());
 
-        long rightSideAmounts = amountTexts.stream()
-                .filter(text -> text.getBbox().getLeft() > rightBoundary)
-                .count();
-
-        double rightSideRatio = (double) rightSideAmounts / amountTexts.size();
-        log.debug("金额右侧分布比例: {}/{} = {}", rightSideAmounts, amountTexts.size(), rightSideRatio);
-
-        // 3. 检查是否有明显的左右列分布
-        boolean hasColumnStructure = hasObviousColumnStructure(layout);
-
-        boolean isColumnLayout = rightSideRatio >= 0.7 && hasColumnStructure;
-        log.debug("传统左右列布局检测结果: {}", isColumnLayout);
-
-        return isColumnLayout;
+        if (colVariance > rowVariance * 1.5) {
+            return new LayoutDetectionResult(LayoutType.LEFT_RIGHT_COLUMNS, 0.6);
+        } else {
+            return new LayoutDetectionResult(LayoutType.TOP_BOTTOM_ROWS, 0.6);
+        }
     }
 
     /**
-     * 判断是否为元数据文本 - AssetMatchServiceImpl版本
+     * 计算方差
      */
-    private boolean isMetadataTextInAssetMatch(String content) {
-        Set<String> metadataKeywords = Set.of(
-                "持仓市值", "可赎回日", "赎回类型", "今日可赎", "每日可赎",
-                "预约赎回", "周期结束日", "可赎回开始日", "产品持仓", "撤单",
-                "最短持有期内不可赎回，可赎回开始日起每日可赎"
-        );
-
-        return metadataKeywords.contains(content.trim());
-    }
-
-    /**
-     * 检查是否有明显的列结构
-     */
-    private boolean hasObviousColumnStructure(PageLayout layout) {
-        // X坐标聚类分析
-        List<Double> xPositions = layout.getValidTexts().stream()
-                .mapToDouble(text -> text.getBbox().getLeft())
-                .sorted()
-                .boxed()
-                .collect(Collectors.toList());
-
-        List<ColumnCluster> clusters = clusterXPositions(xPositions, layout.getWidth());
-
-        if (clusters.size() < 2) {
-            return false;
+    private double calculateVariance(Collection<Integer> values) {
+        if (values.isEmpty()) {
+            return 0.0;
         }
 
-        // 检查是否有明显的间距
-        ColumnCluster leftCluster = clusters.get(0);
-        ColumnCluster rightCluster = clusters.get(clusters.size() - 1);
-
-        double gap = rightCluster.getCenter() - leftCluster.getCenter();
-        double gapRatio = gap / layout.getWidth();
-
-        return gapRatio > 0.3 && leftCluster.getCount() >= 3 && rightCluster.getCount() >= 3;
+        double mean = values.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+        return values.stream()
+                .mapToDouble(v -> Math.pow(v - mean, 2))
+                .average()
+                .orElse(0.0);
     }
 
     /**
-     * 检测基于行的上下布局
+     * 尝试解析为有效金额
      */
-    private boolean detectRowBasedLayout(PageLayout layout) {
-        log.debug("检测基于行的上下布局");
+    private boolean tryParseAsValidAmount(String content) {
+        try {
+            double value = Double.parseDouble(content);
+            return value >= 0.01 && value <= 10000000.0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
 
-        // 按Y坐标分组，寻找水平排列的文本行
-        Map<Integer, List<OcrTextResult>> rowGroups = groupTextsByRow(layout.getValidTexts());
+    /**
+     * 使用选定的处理器处理
+     */
+    private List<ProductItem> processWithSelectedProcessor(PageLayout layout, LayoutDetectionResult detectionResult) {
+        LayoutProcessor processor = selectProcessor(detectionResult.getLayoutType());
+        List<ProductItem> products = processor.processLayout(layout);
 
-        // 检查是否有多个包含多个元素的行
-        long multiElementRows = rowGroups.values().stream()
-                .filter(row -> row.size() >= 2)
-                .count();
+        // 如果结果不理想，尝试备用处理器
+        if (products.size() < 2 && detectionResult.getConfidence() < 0.8) {
+            LayoutType alternativeType = detectionResult.getLayoutType() == LayoutType.TOP_BOTTOM_ROWS
+                    ? LayoutType.LEFT_RIGHT_COLUMNS
+                    : LayoutType.TOP_BOTTOM_ROWS;
 
-        boolean isRowLayout = multiElementRows >= 3; // 至少3行有多个元素
-        log.debug("基于行的上下布局检测结果: {} (多元素行数: {})", isRowLayout, multiElementRows);
+            LayoutProcessor alternativeProcessor = selectProcessor(alternativeType);
+            List<ProductItem> alternativeProducts = alternativeProcessor.processLayout(layout);
 
-        return isRowLayout;
+            if (alternativeProducts.size() > products.size()) {
+                log.info("备用处理器产生了更好的结果: {} -> {}", products.size(), alternativeProducts.size());
+                products = alternativeProducts;
+            }
+        }
+
+        return products;
     }
 
     /**
@@ -535,77 +323,230 @@ public class AssetMatchServiceImpl implements AssetMatchService {
                 log.info("选择左右列处理器");
                 yield columnLayoutProcessor;
             }
-            case MIXED_LAYOUT -> {
-                log.info("选择上下行处理器（混合布局）");
-                yield rowLayoutProcessor; // 混合布局优先使用行处理器
-            }
             default -> {
                 log.info("使用默认上下行处理器");
-                yield rowLayoutProcessor; // 默认使用行处理器
+                yield rowLayoutProcessor;
             }
         };
     }
 
     /**
-     * X坐标聚类
+     * 高级的产品验证和修复
      */
-    private List<ColumnCluster> clusterXPositions(List<Double> positions, double pageWidth) {
-        List<ColumnCluster> clusters = new ArrayList<>();
-        if (positions.isEmpty()) return clusters;
+    private List<ProductItem> validateAndFixProductsAdvanced(List<ProductItem> products, PageLayout layout) {
+        List<ProductItem> validatedProducts = new ArrayList<>();
 
-        double tolerance = Math.max(pageWidth * 0.08, 30.0);
-        ColumnCluster currentCluster = new ColumnCluster(positions.get(0));
-
-        for (int i = 1; i < positions.size(); i++) {
-            double pos = positions.get(i);
-
-            if (Math.abs(pos - currentCluster.getCenter()) <= tolerance) {
-                currentCluster.add(pos);
-            } else {
-                if (currentCluster.getCount() >= 2) {
-                    clusters.add(currentCluster);
-                }
-                currentCluster = new ColumnCluster(pos);
+        for (ProductItem product : products) {
+            ProductItem fixedProduct = validateAndFixProductAdvanced(product, layout);
+            if (fixedProduct != null) {
+                validatedProducts.add(fixedProduct);
             }
         }
 
-        if (currentCluster.getCount() >= 2) {
-            clusters.add(currentCluster);
-        }
-
-        return clusters;
-    }
-
-    private Map<Integer, List<OcrTextResult>> groupTextsByRow(List<OcrTextResult> texts) {
-        Map<Integer, List<OcrTextResult>> groups = new TreeMap<>();
-
-        for (OcrTextResult text : texts) {
-            int rowKey = (int) (text.getBbox().getCenterY() / 30.0);
-            groups.computeIfAbsent(rowKey, k -> new ArrayList<>()).add(text);
-        }
-
-        return groups;
+        return validatedProducts;
     }
 
     /**
-     * 匹配产品到资产 - 保持页面顺序
+     * 高级的单个产品验证和修复
      */
-    private List<AssetScanImageDTO> matchProducts(List<ProductItem> products, List<AssetName> userAssets) {
+    private ProductItem validateAndFixProductAdvanced(ProductItem product, PageLayout layout) {
+        // 修复产品名称
+        if (StringUtils.isBlank(product.getCleanName()) ||
+                product.getCleanName().startsWith("未知产品") ||
+                product.getCleanName().startsWith("产品")) {
+
+            String fixedName = tryToFixProductNameAdvanced(product, layout);
+            if (StringUtils.isNotBlank(fixedName)) {
+                product.setCleanName(fixedName);
+                product.setOriginalName(fixedName);
+            }
+        }
+
+        // 修复金额
+        if (product.getAmount() == null || product.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            BigDecimal fixedAmount = tryToFixAmountAdvanced(product, layout);
+            if (fixedAmount != null && fixedAmount.compareTo(BigDecimal.ZERO) > 0) {
+                product.setAmount(fixedAmount);
+            }
+        }
+
+        // 基本验证
+        if (StringUtils.isBlank(product.getCleanName()) || product.getCleanName().length() < 3) {
+            log.debug("产品名称无效，丢弃产品: '{}'", product.getCleanName());
+            return null;
+        }
+
+        if (product.getAmount() == null || product.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            log.debug("金额无效，丢弃产品: '{}'", product.getCleanName());
+            return null;
+        }
+
+        return product;
+    }
+
+    /**
+     * 高级的产品名称修复
+     */
+    private String tryToFixProductNameAdvanced(ProductItem product, PageLayout layout) {
+        // 策略1：从相关文本中提取
+        if (product.getRelatedTexts() != null && !product.getRelatedTexts().isEmpty()) {
+            String extractedName = extractProductNameFromRelatedTexts(product.getRelatedTexts());
+            if (StringUtils.isNotBlank(extractedName) && extractedName.length() >= 6) {
+                return textAnalysisUtil.cleanProductName(extractedName);
+            }
+        }
+
+        // 策略2：从布局中寻找相关的产品名称文本
+        if (product.getAmountText() != null) {
+            String contextName = findProductNameFromContext(product.getAmountText(), layout.getValidTexts());
+            if (StringUtils.isNotBlank(contextName)) {
+                return textAnalysisUtil.cleanProductName(contextName);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 从相关文本中提取产品名称
+     */
+    private String extractProductNameFromRelatedTexts(List<OcrTextResult> relatedTexts) {
+        List<String> candidates = relatedTexts.stream()
+                .map(OcrTextResult::getText)
+                .filter(StringUtils::isNotBlank)
+                .filter(text -> !isStrictMetadata(text))
+                .filter(text -> text.length() >= 4)
+                .filter(this::isProductNameCandidate)
+                .collect(Collectors.toList());
+
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        // 选择最长的候选
+        return candidates.stream()
+                .max(Comparator.comparing(String::length))
+                .orElse(null);
+    }
+
+    /**
+     * 从上下文中寻找产品名称
+     */
+    private String findProductNameFromContext(OcrTextResult amountText, List<OcrTextResult> allTexts) {
+        double amountY = amountText.getBbox().getCenterY();
+
+        // 在金额上方寻找产品名称
+        List<OcrTextResult> textsAbove = allTexts.stream()
+                .filter(text -> text.getBbox().getCenterY() < amountY)
+                .filter(text -> Math.abs(text.getBbox().getCenterY() - amountY) <= 150.0)
+                .filter(text -> !isStrictAmountFormat(text.getText()))
+                .filter(text -> !isStrictMetadata(text.getText()))
+                .filter(text -> isProductNameCandidate(text.getText()))
+                .sorted(Comparator.comparingDouble(t -> Math.abs(t.getBbox().getCenterY() - amountY)))
+                .limit(3)
+                .collect(Collectors.toList());
+
+        if (!textsAbove.isEmpty()) {
+            return textsAbove.stream()
+                    .map(OcrTextResult::getText)
+                    .collect(Collectors.joining(""));
+        }
+
+        return null;
+    }
+
+    /**
+     * 判断是否为产品名称候选
+     */
+    private boolean isProductNameCandidate(String text) {
+        if (StringUtils.isBlank(text) || text.length() < 4) {
+            return false;
+        }
+
+        return text.matches(".*[理财|基金|债券|产品|收益|固定|开放|净值|天天|添益|核心|优选|持盈].*") ||
+                text.matches(".*[工银|交银|兴银|平安|招商|中信|建信|华夏].*") ||
+                text.matches(".*[·|\\|].*");
+    }
+
+    /**
+     * 严格的元数据判断
+     */
+    private boolean isStrictMetadata(String content) {
+        Set<String> strictMetadata = Set.of(
+                "总金额", "名称", "金额", "理财", "收起", "展开", "温馨提示", "（元）",
+                "产品持仓", "撤单", "持仓市值", "可赎回日", "赎回类型", "今日可赎", "每日可赎"
+        );
+        return strictMetadata.contains(content.trim());
+    }
+
+    /**
+     * 高级的金额修复
+     */
+    private BigDecimal tryToFixAmountAdvanced(ProductItem product, PageLayout layout) {
+        // 策略1：从金额文本重新解析
+        if (product.getAmountText() != null) {
+            BigDecimal amount = parseAmountAdvanced(product.getAmountText().getText());
+            if (amount != null && amount.compareTo(BigDecimal.ZERO) > 0) {
+                return amount;
+            }
+        }
+
+        // 策略2：从相关文本中寻找金额
+        if (product.getRelatedTexts() != null) {
+            for (OcrTextResult text : product.getRelatedTexts()) {
+                if (isStrictAmountFormat(text.getText())) {
+                    BigDecimal amount = parseAmountAdvanced(text.getText());
+                    if (amount != null && amount.compareTo(BigDecimal.ZERO) > 0) {
+                        return amount;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 高级的金额解析
+     */
+    private BigDecimal parseAmountAdvanced(String content) {
+        try {
+            String cleaned = content.trim().replace(",", "");
+            BigDecimal amount = new BigDecimal(cleaned);
+
+            // 验证金额合理性
+            if (amount.compareTo(BigDecimal.valueOf(0.01)) >= 0 &&
+                    amount.compareTo(BigDecimal.valueOf(10000000.0)) <= 0) {
+                return amount;
+            }
+        } catch (NumberFormatException e) {
+            // 忽略解析错误
+        }
+
+        return null;
+    }
+
+    /**
+     * 高级的产品匹配
+     */
+    private List<AssetScanImageDTO> matchProductsAdvanced(List<ProductItem> products, List<AssetName> userAssets) {
         List<AssetScanImageDTO> results = new ArrayList<>();
 
         for (int i = 0; i < products.size(); i++) {
             ProductItem product = products.get(i);
-            AssetMatchResult matchResult = findBestMatch(product, userAssets);
 
-            AssetScanImageDTO dto = buildResultDTO(product, matchResult);
+            AssetMatchResult bestMatch = findBestMatchAdvanced(product, userAssets);
+
+            AssetScanImageDTO dto = buildResultDTO(product, bestMatch);
             results.add(dto);
 
-            String displayAmount = textAnalysisUtil.formatAmountDisplay(product.getAmount());
+            String displayAmount = product.getAmount() != null ?
+                    textAnalysisUtil.formatAmountDisplay(product.getAmount()) : "0.00";
 
-            if (matchResult != null) {
+            if (bestMatch != null) {
                 log.info("产品 {} 匹配: '{}' -> '{}' (分数: {}%, 金额: {})",
-                        i + 1, product.getCleanName(), matchResult.getAssetName().getName(),
-                        Math.round(matchResult.getScore() * 100), displayAmount);
+                        i + 1, product.getCleanName(), bestMatch.getAssetName().getName(),
+                        Math.round(bestMatch.getScore() * 100), displayAmount);
             } else {
                 log.warn("产品 {} 无匹配: '{}' (金额: {})",
                         i + 1, product.getCleanName(), displayAmount);
@@ -618,14 +559,16 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 查找最佳匹配
+     * 高级的最佳匹配查找
      */
-    private AssetMatchResult findBestMatch(ProductItem product, List<AssetName> userAssets) {
+    private AssetMatchResult findBestMatchAdvanced(ProductItem product, List<AssetName> userAssets) {
         double bestScore = 0.0;
         AssetName bestAsset = null;
 
+        String productName = product.getCleanName();
+
         for (AssetName asset : userAssets) {
-            double score = calculateSimilarity(product.getCleanName(), asset.getName());
+            double score = calculateAdvancedSimilarity(productName, asset.getName());
 
             if (score >= minThreshold && score > bestScore) {
                 bestScore = score;
@@ -644,9 +587,9 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 计算相似度
+     * 高级相似度计算
      */
-    private double calculateSimilarity(String text1, String text2) {
+    private double calculateAdvancedSimilarity(String text1, String text2) {
         if (StringUtils.isBlank(text1) || StringUtils.isBlank(text2)) {
             return 0.0;
         }
@@ -663,20 +606,19 @@ public class AssetMatchServiceImpl implements AssetMatchService {
         if (clean1.contains(clean2) || clean2.contains(clean1)) {
             double ratio = (double) Math.min(clean1.length(), clean2.length()) /
                     Math.max(clean1.length(), clean2.length());
-            return 0.8 + 0.15 * ratio;
+            return 0.75 + 0.2 * ratio;
         }
 
-        // Jaro-Winkler 相似度
+        // 多种相似度算法
         double jwSimilarity = jaroWinklerSimilarity.apply(clean1, clean2);
-
-        // 字符集合相似度
         double charSimilarity = calculateCharSimilarity(clean1, clean2);
+        double keywordSimilarity = calculateKeywordSimilarity(clean1, clean2);
 
-        return Math.max(jwSimilarity, charSimilarity);
+        return Math.max(Math.max(jwSimilarity, charSimilarity), keywordSimilarity);
     }
 
     /**
-     * 计算字符相似度
+     * 字符相似度计算
      */
     private double calculateCharSimilarity(String text1, String text2) {
         Set<Character> chars1 = text1.chars()
@@ -705,18 +647,68 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
+     * 关键词相似度计算
+     */
+    private double calculateKeywordSimilarity(String text1, String text2) {
+        Set<String> keywords1 = extractKeywords(text1);
+        Set<String> keywords2 = extractKeywords(text2);
+
+        if (keywords1.isEmpty() && keywords2.isEmpty()) {
+            return 0.0;
+        }
+
+        if (keywords1.isEmpty() || keywords2.isEmpty()) {
+            return 0.0;
+        }
+
+        Set<String> intersection = new HashSet<>(keywords1);
+        intersection.retainAll(keywords2);
+
+        Set<String> union = new HashSet<>(keywords1);
+        union.addAll(keywords2);
+
+        return (double) intersection.size() / union.size() * 0.9;
+    }
+
+    /**
+     * 提取关键词
+     */
+    private Set<String> extractKeywords(String text) {
+        Set<String> keywords = new HashSet<>();
+
+        String[] productTypes = {"理财", "基金", "债券", "精选", "优选", "稳利", "创利", "灵活", "持盈", "添益"};
+        String[] institutions = {"工银", "交银", "兴银", "平安", "招商", "中信", "建信", "华夏"};
+
+        for (String keyword : productTypes) {
+            if (text.contains(keyword)) {
+                keywords.add(keyword);
+            }
+        }
+
+        for (String keyword : institutions) {
+            if (text.contains(keyword)) {
+                keywords.add(keyword);
+            }
+        }
+
+        return keywords;
+    }
+
+    /**
      * 构建结果DTO
      */
     private AssetScanImageDTO buildResultDTO(ProductItem product, AssetMatchResult matchResult) {
-        String originalName = product.getRelatedTexts().stream()
-                .map(OcrTextResult::getText)
-                .collect(Collectors.joining(" "));
+        String originalName = product.getRelatedTexts() != null && !product.getRelatedTexts().isEmpty() ?
+                product.getRelatedTexts().stream()
+                        .map(OcrTextResult::getText)
+                        .collect(Collectors.joining(" ")) :
+                product.getOriginalName();
 
-        BigDecimal originalAmount = product.getAmount();
+        BigDecimal originalAmount = product.getAmount() != null ? product.getAmount() : BigDecimal.ZERO;
 
         AssetScanImageDTO.AssetScanImageDTOBuilder builder = AssetScanImageDTO.builder()
                 .amount(originalAmount)
-                .originalAssetName(originalName)
+                .originalAssetName(StringUtils.isNotBlank(originalName) ? originalName : product.getCleanName())
                 .cleanedAssetName(product.getCleanName())
                 .confidence(product.getConfidence())
                 .acquireTime(LocalDateTime.now())
@@ -748,8 +740,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
         return assetNameService.list(wrapper);
     }
 
-    // ==================== 接口方法实现 ====================
-
+    // 接口方法实现保持不变...
     @Override
     public List<AssetScanImageDTO> matchAssetsFromTexts(List<String> extractedTexts, String username) {
         List<OcrTextResult> ocrTexts = extractedTexts.stream()
@@ -782,27 +773,23 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 列聚类内部类
+     * 布局检测结果内部类
      */
-    private static class ColumnCluster {
-        private double center;
-        private int count;
-        private final List<Double> positions;
+    private static class LayoutDetectionResult {
+        private final LayoutType layoutType;
+        private final double confidence;
 
-        public ColumnCluster(double firstPosition) {
-            this.center = firstPosition;
-            this.count = 1;
-            this.positions = new ArrayList<>();
-            this.positions.add(firstPosition);
+        public LayoutDetectionResult(LayoutType layoutType, double confidence) {
+            this.layoutType = layoutType;
+            this.confidence = confidence;
         }
 
-        public void add(double position) {
-            positions.add(position);
-            count++;
-            center = positions.stream().mapToDouble(Double::doubleValue).average().orElse(center);
+        public LayoutType getLayoutType() {
+            return layoutType;
         }
 
-        public double getCenter() { return center; }
-        public int getCount() { return count; }
+        public double getConfidence() {
+            return confidence;
+        }
     }
 }
