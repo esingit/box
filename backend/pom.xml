@@ -115,17 +115,25 @@
             <version>${mapstruct.version}</version>
         </dependency>
 
-        <!-- Apache Commons IO - 文件操作工具 -->
+        <!-- ========== OCR 相关依赖 ========== -->
+        <!-- Apache Commons IO - 文件操作工具 (PaddleOCR需要) -->
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.11.0</version>
         </dependency>
 
-        <!-- Apache Commons Lang3 - 字符串处理工具 -->
+        <!-- Apache Commons Lang3 - 字符串处理工具 (PaddleOCR需要) -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
+        </dependency>
+
+        <!-- Apache Commons Exec - 进程执行工具 (调用Python脚本) -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-exec</artifactId>
+            <version>1.3</version>
         </dependency>
 
         <!-- 测试依赖 -->

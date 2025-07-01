@@ -23,7 +23,7 @@ export interface QueryConditions {
 
 // 标准的资产记录类型
 export interface RawAssetRecord {
-    id: number | string
+    id?: number | string  // 改为可选
     assetNameId: string | number
     assetLocationId: string | number
     assetTypeId: string | number
@@ -110,4 +110,30 @@ export interface RecognizedAssetItem {
     assetTypeId?: number
     assetLocationId?: number
     [key: string]: any
+}
+
+// OCR识别返回的数据结构
+export interface AssetScanImageDTO {
+    // 基础字段
+    assetNameId?: number
+    assetName?: string
+    assetTypeId?: number
+    unitId?: number
+    assetLocationId?: number
+    amount?: number
+    acquireTime?: string
+    remark?: string
+
+    // OCR识别相关字段
+    originalAssetName?: string
+    cleanedAssetName?: string
+    matchedAssetName?: string
+    matchScore?: number
+    isMatched?: boolean
+
+    // 扩展字段
+    confidence?: number
+    matchedText?: string
+    boundingBox?: string
+    recognitionTime?: string
 }

@@ -4,7 +4,7 @@ import { ref, reactive, computed } from 'vue'
 import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
-import type {BatchAddResult, RawAssetRecord} from '@/types/asset'
+import type { BatchAddResult, RawAssetRecord } from '@/types/asset'
 import { formatAssetRecord } from '@/utils/commonMeta'
 import { formatTime } from '@/utils/formatters'
 import type { Pagination } from '@/types/common'
@@ -81,19 +81,17 @@ export const useAssetStore = defineStore('asset', () => {
         investmentAssetsChange: 0,
     })
 
-    // 🔥 加载状态管理 - 改进版本
+    // 🔥 加载状态管理 - 移除识别相关状态
     const loadingState = reactive({
         list: false,
         stats: false,
-        operation: false,
-        recognition: false
+        operation: false
     })
 
     // 添加独立的加载状态标识，便于模板中使用
     const loadingList = ref(false)
     const loadingStats = ref(false)
     const loadingOperation = ref(false)
-    const loadingRecognition = ref(false)
 
     // 🔥 请求管理
     const requestManager = new RequestManager()
@@ -106,8 +104,8 @@ export const useAssetStore = defineStore('asset', () => {
     let lastListRequestParams: string = ''
     let lastAllRequestParams: string = ''
 
-    // 🔥 统一的加载状态管理函数
-    function setLoadingState(type: 'list' | 'stats' | 'operation' | 'recognition', loading: boolean): void {
+    // 🔥 统一的加载状态管理函数 - 移除识别相关类型
+    function setLoadingState(type: 'list' | 'stats' | 'operation', loading: boolean): void {
         switch (type) {
             case 'list':
                 loadingList.value = loading
@@ -121,17 +119,13 @@ export const useAssetStore = defineStore('asset', () => {
                 loadingOperation.value = loading
                 loadingState.operation = loading
                 break
-            case 'recognition':
-                loadingRecognition.value = loading
-                loadingState.recognition = loading
-                break
         }
     }
 
-    // 🔥 计算属性
+    // 🔥 计算属性 - 移除识别相关状态
     const hasRecords = computed(() => list.value.length > 0)
     const recordCount = computed(() => pagination.total)
-    const isLoading = computed(() => loadingList.value || loadingStats.value || loadingOperation.value || loadingRecognition.value)
+    const isLoading = computed(() => loadingList.value || loadingStats.value || loadingOperation.value)
 
     function buildParams(includePageInfo = true): Record<string, any> {
         const baseParams: Record<string, any> = {
@@ -519,30 +513,6 @@ export const useAssetStore = defineStore('asset', () => {
         }
     }
 
-    // 🔥 OCR识别功能
-    async function recognizeAssetImage(formData: FormData): Promise<RawAssetRecord[] | null> {
-        setLoadingState('recognition', true)
-
-        try {
-            const response = await axiosInstance.post('/api/asset/recognition/image', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            })
-
-            return handleApiResponse<RawAssetRecord[]>(response, '图片识别')
-        } catch (error) {
-            if (!isAuthError(error)) {
-                handleError('图片识别', error)
-                throw error
-            }
-            return null
-        } finally {
-            setLoadingState('recognition', false)
-        }
-    }
-
-
     // 🔥 检查今日是否有记录
     async function checkTodayRecords(): Promise<boolean> {
         try {
@@ -557,7 +527,7 @@ export const useAssetStore = defineStore('asset', () => {
         }
     }
 
-    // assetStore.ts 中修复 smartBatchAddRecords 方法
+    // 🔥 智能批量添加记录
     async function smartBatchAddRecords(
         records: any[],
         forceOverwrite = false,
@@ -712,11 +682,10 @@ export const useAssetStore = defineStore('asset', () => {
         stats,
         loadingState,
 
-        // 👈 新增：独立的加载状态，便于模板使用
+        // 👈 独立的加载状态，便于模板使用
         loadingList,
         loadingStats,
         loadingOperation,
-        loadingRecognition,
 
         // 计算属性
         hasRecords,
@@ -735,7 +704,6 @@ export const useAssetStore = defineStore('asset', () => {
         updateRecord,
         handleDelete,
         copyLastRecords,
-        recognizeAssetImage,
         batchAddRecords,
         smartBatchAddRecords,
         checkTodayRecords,
