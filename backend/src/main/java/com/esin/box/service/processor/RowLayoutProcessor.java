@@ -42,7 +42,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
         log.info("有效文本数量: {}", layout.getValidTexts().size());
 
         try {
-            // 1. 识别产品名称文本（使用更宽松的条件）
+            // 1. 识别产品名称文本（修复识别逻辑）
             List<OcrTextResult> productNameTexts = identifyProductNames(layout.getValidTexts());
             log.info("识别到产品名称数量: {}", productNameTexts.size());
 
@@ -51,7 +51,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
                 return processWithTraditionalGrouping(layout);
             }
 
-            // 2. 基于产品名称创建垂直组
+            // 2. 基于产品名称创建垂直组（添加去重逻辑）
             List<VerticalGroup> verticalGroups = createGroupsAroundProducts(layout, productNameTexts);
             log.info("基于产品名称创建垂直组: {}", verticalGroups.size());
 
@@ -79,7 +79,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
     }
 
     /**
-     * 识别产品名称文本 - 使用更宽松的条件
+     * 识别产品名称文本 - 修复识别逻辑
      */
     private List<OcrTextResult> identifyProductNames(List<OcrTextResult> texts) {
         List<OcrTextResult> productNames = texts.stream()
@@ -108,28 +108,43 @@ public class RowLayoutProcessor implements LayoutProcessor {
     }
 
     /**
-     * 判断是否为产品名称文本 - 严格条件
+     * 判断是否为产品名称文本 - 严格条件（与AssetMatchServiceImpl保持一致）
      */
     private boolean isProductNameText(OcrTextResult text) {
         String content = text.getText().trim();
+        log.debug("检查产品名称 (严格): '{}'", content);
 
         // 长度检查
         if (content.length() < LayoutConfig.MIN_PRODUCT_NAME_LENGTH ||
                 content.length() > LayoutConfig.MAX_PRODUCT_NAME_LENGTH) {
+            log.debug("  - 长度不符合: {} (要求: {}-{})", content.length(),
+                    LayoutConfig.MIN_PRODUCT_NAME_LENGTH, LayoutConfig.MAX_PRODUCT_NAME_LENGTH);
             return false;
         }
 
         // 排除纯数字和金额格式
-        if (textAnalysisUtil.isAmountFormat(content) || content.matches("^[0-9,./\\s]+$")) {
+        if (textAnalysisUtil.isAmountFormat(content)) {
+            log.debug("  - 是金额格式");
+            return false;
+        }
+
+        if (content.matches("^[0-9,./\\s]+$")) {
+            log.debug("  - 是纯数字");
+            return false;
+        }
+
+        if (content.matches("^\\d{4}/\\d{2}/\\d{2}$")) {
+            log.debug("  - 是日期格式");
             return false;
         }
 
         // 排除常见的元数据文本
         if (isMetadataText(content)) {
+            log.debug("  - 是元数据文本");
             return false;
         }
 
-        // 产品名称特征检查 - 更宽松的条件
+        // 产品名称特征检查 - 与AssetMatchServiceImpl保持一致
         boolean hasProductKeywords = content.contains("理财") || content.contains("基金") ||
                 content.contains("债券") || content.contains("精选") ||
                 content.contains("恒盈") || content.contains("代销") ||
@@ -139,11 +154,21 @@ public class RowLayoutProcessor implements LayoutProcessor {
                 content.contains("创利") || content.contains("灵活");
 
         boolean hasStructuralChars = content.contains("|") || content.contains("·") ||
-                content.contains("（") || content.contains("）");
+                content.contains("（") || content.contains("）") ||
+                content.contains("号") || content.contains("款");
 
-        boolean hasReasonableLength = content.length() >= 15; // 降低长度要求
+        boolean hasReasonableLength = content.length() >= 12; // 调整长度要求
 
-        return hasProductKeywords || (hasStructuralChars && hasReasonableLength);
+        boolean result = hasProductKeywords || (hasStructuralChars && hasReasonableLength);
+
+        log.debug("  - 产品关键词: {}, 结构字符: {}, 合理长度: {}, 结果: {}",
+                hasProductKeywords, hasStructuralChars, hasReasonableLength, result);
+
+        if (result) {
+            log.debug("  - ✓ 严格条件识别为产品名称: '{}'", content);
+        }
+
+        return result;
     }
 
     /**
@@ -151,9 +176,11 @@ public class RowLayoutProcessor implements LayoutProcessor {
      */
     private boolean isProductNameTextLoose(OcrTextResult text) {
         String content = text.getText().trim();
+        log.debug("检查产品名称 (宽松): '{}'", content);
 
         // 最基本的检查
         if (content.length() < 8 || content.length() > 100) {
+            log.debug("  - 长度不符合: {}", content.length());
             return false;
         }
 
@@ -161,11 +188,13 @@ public class RowLayoutProcessor implements LayoutProcessor {
         if (textAnalysisUtil.isAmountFormat(content) ||
                 content.matches("^[0-9,./\\s]+$") ||
                 content.matches("^\\d{4}/\\d{2}/\\d{2}$")) {
+            log.debug("  - 是数字/日期/金额格式");
             return false;
         }
 
         // 排除明显的元数据
         if (isMetadataText(content)) {
+            log.debug("  - 是元数据");
             return false;
         }
 
@@ -181,53 +210,75 @@ public class RowLayoutProcessor implements LayoutProcessor {
                 content.contains("招商") || content.contains("中信");
 
         boolean hasStructure = content.contains("|") || content.contains("·") ||
-                content.contains("号") || content.contains("款");
+                content.contains("号") || content.contains("款") ||
+                content.contains("（") || content.contains("）");
 
         // 长文本且包含中文的，很可能是产品名称
         boolean isLongChineseText = content.length() >= 12 &&
                 content.matches(".*[\\u4e00-\\u9fa5].*") &&
                 !content.matches(".*[今日|每日|可赎|持仓|市值].*");
 
-        return hasProductIndicators || hasInstitutionNames || hasStructure || isLongChineseText;
+        boolean result = hasProductIndicators || hasInstitutionNames || hasStructure || isLongChineseText;
+
+        log.debug("  - 产品指标: {}, 机构名: {}, 结构: {}, 长中文: {}, 结果: {}",
+                hasProductIndicators, hasInstitutionNames, hasStructure, isLongChineseText, result);
+
+        if (result) {
+            log.debug("  - ✓ 宽松条件识别为产品名称: '{}'", content);
+        }
+
+        return result;
     }
 
     /**
-     * 基于产品名称创建垂直组
+     * 基于产品名称创建垂直组 - 添加去重逻辑
      */
     private List<VerticalGroup> createGroupsAroundProducts(PageLayout layout, List<OcrTextResult> productNames) {
         List<VerticalGroup> groups = new ArrayList<>();
+        Set<String> usedProductNames = new HashSet<>();
+        Set<OcrTextResult> usedAmounts = new HashSet<>();
 
         for (OcrTextResult productName : productNames) {
-            VerticalGroup group = createGroupAroundProduct(layout.getValidTexts(), productName);
+            String productText = productName.getText().trim();
+
+            // 跳过重复的产品名称
+            if (usedProductNames.contains(productText)) {
+                log.debug("跳过重复的产品名称: {}", productText);
+                continue;
+            }
+
+            VerticalGroup group = createGroupAroundProduct(layout.getValidTexts(), productName, usedAmounts);
             if (group.getTexts().size() >= LayoutConfig.MIN_VERTICAL_GROUP_SIZE) {
                 groups.add(group);
-                log.debug("创建产品组: '{}' (文本数: {})",
-                        productName.getText(), group.getTexts().size());
+                usedProductNames.add(productText);
+                log.debug("创建产品组: '{}' (文本数: {})", productText, group.getTexts().size());
             }
         }
 
         // 按垂直位置排序
         groups.sort(Comparator.comparingDouble(VerticalGroup::getTopY));
-
         return groups;
     }
 
     /**
-     * 围绕产品名称创建组
+     * 围绕产品名称创建组 - 添加去重逻辑
      */
-    private VerticalGroup createGroupAroundProduct(List<OcrTextResult> allTexts, OcrTextResult productText) {
+    private VerticalGroup createGroupAroundProduct(List<OcrTextResult> allTexts,
+                                                   OcrTextResult productText,
+                                                   Set<OcrTextResult> usedAmounts) {
         VerticalGroup group = new VerticalGroup();
         group.setCenterX(productText.getBbox().getCenterX());
         group.getTexts().add(productText);
 
         double productY = productText.getBbox().getCenterY();
 
-        // 在产品名称下方寻找相关文本
+        // 在产品名称下方寻找相关文本，排除已使用的金额
         List<OcrTextResult> candidatesBelow = findTextsBelow(allTexts, productText, LayoutConfig.PRODUCT_SEARCH_RANGE);
 
-        // 优先寻找金额文本
+        // 优先寻找金额文本，排除已使用的
         List<OcrTextResult> amountTexts = candidatesBelow.stream()
                 .filter(text -> textAnalysisUtil.isAmountFormat(text.getText().trim()))
+                .filter(text -> !usedAmounts.contains(text)) // 排除已使用的金额
                 .sorted(Comparator.comparingDouble(t -> t.getBbox().getCenterY()))
                 .collect(Collectors.toList());
 
@@ -235,28 +286,33 @@ public class RowLayoutProcessor implements LayoutProcessor {
             // 添加第一个（最近的）金额文本
             OcrTextResult primaryAmount = amountTexts.get(0);
             group.getTexts().add(primaryAmount);
+            usedAmounts.add(primaryAmount); // 标记为已使用
             log.debug("为产品 '{}' 找到金额: {}", productText.getText(), primaryAmount.getText());
 
             // 在金额文本附近寻找其他相关文本（但排除元数据）
             double amountY = primaryAmount.getBbox().getCenterY();
             List<OcrTextResult> nearbyTexts = candidatesBelow.stream()
                     .filter(text -> !text.equals(primaryAmount))
+                    .filter(text -> !usedAmounts.contains(text)) // 排除已使用的金额
                     .filter(text -> Math.abs(text.getBbox().getCenterY() - amountY) <= LayoutConfig.METADATA_DISTANCE_THRESHOLD)
                     .filter(text -> !isCommonMetadata(text.getText().trim()))
+                    .filter(text -> !textAnalysisUtil.isAmountFormat(text.getText().trim())) // 排除其他金额
                     .limit(3) // 限制数量
                     .collect(Collectors.toList());
 
             group.getTexts().addAll(nearbyTexts);
         } else {
-            log.debug("产品 '{}' 下方未找到金额文本", productText.getText());
+            log.debug("产品 '{}' 下方未找到未使用的金额文本", productText.getText());
             // 如果没有找到金额，尝试在更大范围内寻找
             List<OcrTextResult> allCandidates = findTextsBelow(allTexts, productText, 300.0);
             Optional<OcrTextResult> distantAmount = allCandidates.stream()
                     .filter(text -> textAnalysisUtil.isAmountFormat(text.getText().trim()))
+                    .filter(text -> !usedAmounts.contains(text)) // 排除已使用的金额
                     .findFirst();
 
             if (distantAmount.isPresent()) {
                 group.getTexts().add(distantAmount.get());
+                usedAmounts.add(distantAmount.get()); // 标记为已使用
                 log.debug("为产品 '{}' 找到远距离金额: {}", productText.getText(), distantAmount.get().getText());
             }
         }
@@ -450,7 +506,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
      */
     private boolean isCommonMetadata(String content) {
         Set<String> commonMetadata = Set.of(
-                "持仓市值", "今日可赎", "每日可赎", "可赎回日", "赎回类型"
+                "持仓市值", "今日可赎", "每日可赎", "可赎回日", "赎回类型", "预约赎回", "周期结束日"
         );
         return commonMetadata.contains(content.trim());
     }

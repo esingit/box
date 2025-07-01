@@ -231,7 +231,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 判断是否为产品名称文本 - 严格条件
+     * 判断是否为产品名称文本 - 严格条件 - 修复版本
      */
     private boolean isProductNameTextStrict(OcrTextResult text) {
         String content = text.getText().trim();
@@ -244,8 +244,8 @@ public class AssetMatchServiceImpl implements AssetMatchService {
             return false;
         }
 
-        // 排除纯数字和金额格式
-        if (textAnalysisUtil.isAmountFormat(content)) {
+        // 使用更精确的金额格式判断
+        if (isStrictAmountFormat(content)) {
             log.debug("  - 是金额格式");
             return false;
         }
@@ -294,7 +294,7 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 判断是否为产品名称文本 - 宽松条件
+     * 判断是否为产品名称文本 - 宽松条件 - 修复版本
      */
     private boolean isProductNameTextLoose(OcrTextResult text) {
         String content = text.getText().trim();
@@ -307,8 +307,8 @@ public class AssetMatchServiceImpl implements AssetMatchService {
             return false;
         }
 
-        // 排除纯数字、日期和金额格式
-        if (textAnalysisUtil.isAmountFormat(content)) {
+        // 使用更精确的金额格式判断
+        if (isStrictAmountFormat(content)) {
             log.debug("  - 是金额格式");
             return false;
         }
@@ -361,20 +361,56 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 判断是否为元数据文本 - AssetMatchServiceImpl版本
+     * 更精确的金额格式判断
      */
-    private boolean isMetadataTextInAssetMatch(String content) {
-        Set<String> metadataKeywords = Set.of(
-                "持仓市值", "可赎回日", "赎回类型", "今日可赎", "每日可赎",
-                "预约赎回", "周期结束日", "可赎回开始日", "产品持仓", "撤单",
-                "最短持有期内不可赎回，可赎回开始日起每日可赎"
-        );
+    private boolean isStrictAmountFormat(String content) {
+        if (StringUtils.isBlank(content)) {
+            return false;
+        }
 
-        return metadataKeywords.contains(content.trim());
+        String trimmed = content.trim();
+
+        // 严格的金额格式模式
+        // 1. 纯数字金额：123.45, 1,234.56, 123,456.78
+        if (trimmed.matches("^\\d{1,3}(,\\d{3})*(\\.\\d{2})?$")) {
+            return true;
+        }
+
+        // 2. 简单小数：12.34, 123.4, 1234.56
+        if (trimmed.matches("^\\d+\\.\\d{1,4}$")) {
+            return true;
+        }
+
+        // 3. 整数金额：123, 1234, 12345
+        if (trimmed.matches("^\\d{1,10}$")) {
+            return true;
+        }
+
+        // 4. 日期格式（明确排除）
+        if (trimmed.matches("^\\d{4}/\\d{2}/\\d{2}$")) {
+            return false;
+        }
+
+        // 5. 包含中文的不是金额
+        if (trimmed.matches(".*[\\u4e00-\\u9fa5].*")) {
+            return false;
+        }
+
+        // 6. 包含字母的不是金额
+        if (trimmed.matches(".*[a-zA-Z].*")) {
+            return false;
+        }
+
+        // 7. 包含特殊符号的（除了逗号和点）不是金额
+        if (trimmed.matches(".*[^0-9,.].*")) {
+            return false;
+        }
+
+        return false;
     }
 
     /**
-     * 寻找指定文本下方的金额 - AssetMatchServiceImpl版本
+     * 寻找指定文本下方的金额 - 使用严格金额判断
      */
     private List<OcrTextResult> findAmountsBelow(List<OcrTextResult> allTexts, OcrTextResult referenceText, double searchRange) {
         double refY = referenceText.getBbox().getCenterY();
@@ -385,12 +421,12 @@ public class AssetMatchServiceImpl implements AssetMatchService {
                     double textY = text.getBbox().getCenterY();
                     return textY > refY && textY <= refY + searchRange;
                 })
-                .filter(text -> textAnalysisUtil.isAmountFormat(text.getText().trim()))
+                .filter(text -> isStrictAmountFormat(text.getText().trim()))
                 .collect(Collectors.toList());
     }
 
     /**
-     * 检测传统的左右列布局
+     * 检测传统的左右列布局 - 使用严格金额判断
      */
     private boolean detectTraditionalColumnLayout(PageLayout layout) {
         log.debug("检测传统左右列布局");
@@ -398,10 +434,11 @@ public class AssetMatchServiceImpl implements AssetMatchService {
         // 只有在明确满足左右列特征时才判断为列布局
         // 1. 金额文本高度集中在页面右侧
         List<OcrTextResult> amountTexts = layout.getValidTexts().stream()
-                .filter(text -> textAnalysisUtil.isAmountFormat(text.getText().trim()))
+                .filter(text -> isStrictAmountFormat(text.getText().trim()))
                 .collect(Collectors.toList());
 
         if (amountTexts.size() < 3) {
+            log.debug("金额文本数量不足: {}", amountTexts.size());
             return false;
         }
 
@@ -423,6 +460,19 @@ public class AssetMatchServiceImpl implements AssetMatchService {
         log.debug("传统左右列布局检测结果: {}", isColumnLayout);
 
         return isColumnLayout;
+    }
+
+    /**
+     * 判断是否为元数据文本 - AssetMatchServiceImpl版本
+     */
+    private boolean isMetadataTextInAssetMatch(String content) {
+        Set<String> metadataKeywords = Set.of(
+                "持仓市值", "可赎回日", "赎回类型", "今日可赎", "每日可赎",
+                "预约赎回", "周期结束日", "可赎回开始日", "产品持仓", "撤单",
+                "最短持有期内不可赎回，可赎回开始日起每日可赎"
+        );
+
+        return metadataKeywords.contains(content.trim());
     }
 
     /**
