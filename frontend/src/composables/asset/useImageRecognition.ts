@@ -327,6 +327,27 @@ export function useImageRecognition(loadAssetNames: () => Promise<void>) {
         return isNaN(num) ? 0 : num
     }
 
+    /**
+     * 重置识别结果
+     */
+    const resetRecognizedItems = () => {
+        recognizedItems.value = []
+        progress.value = 0
+        currentStep.value = ''
+    }
+
+    /**
+     * 重置所有状态
+     */
+    const resetAll = () => {
+        imageFile.value = null
+        imagePreview.value = ''
+        recognizedItems.value = []
+        progress.value = 0
+        currentStep.value = ''
+        isProcessing.value = false
+    }
+
     return {
         imageFile,
         imagePreview,
@@ -340,6 +361,8 @@ export function useImageRecognition(loadAssetNames: () => Promise<void>) {
         handleImageUpload,
         recognizeImage,
         validateFile,
-        compressImage
+        compressImage,
+        resetRecognizedItems,  // 新增：重置识别结果
+        resetAll              // 新增：重置所有状态
     }
 }

@@ -1,16 +1,14 @@
 package com.esin.box.utils;
 
-import com.esin.box.dto.ocr.LayoutConfig;
 import com.esin.box.dto.ocr.OcrTextResult;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
-import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -19,63 +17,6 @@ import java.util.stream.Collectors;
  */
 @Component
 public class TextAnalysisUtil {
-
-    // 通用金额识别模式
-    private static final List<Pattern> AMOUNT_PATTERNS = Arrays.asList(
-            Pattern.compile("^[0-9]{1,3}(?:,[0-9]{3})*(?:\\.[0-9]{1,2})?$"),
-            Pattern.compile("^[0-9]+\\.[0-9]{1,2}$"),
-            Pattern.compile("^[0-9]{3,}$")
-    );
-
-    // 预编译的正则表达式
-    private static final Pattern LETTERS_PATTERN = Pattern.compile(".*[\\p{L}].*");
-    private static final Pattern DIGITS_PATTERN = Pattern.compile(".*[0-9].*");
-    private static final Pattern PUNCT_PATTERN = Pattern.compile(".*[\\p{Punct}].*");
-    private static final Pattern PURE_NUMERIC_PATTERN = Pattern.compile("^[0-9\\s\\p{Punct}]+$");
-    private static final Pattern CJK_PATTERN = Pattern.compile(".*[\\u4e00-\\u9fff].*");
-
-    /**
-     * 判断是否为有意义的内容
-     */
-    public boolean isMeaningfulContent(String text) {
-        if (text.length() < 2 || text.length() > 50) {
-            return false;
-        }
-
-        if (PURE_NUMERIC_PATTERN.matcher(text).matches()) {
-            return false;
-        }
-
-        boolean hasLettersOrChinese = LETTERS_PATTERN.matcher(text).matches() ||
-                CJK_PATTERN.matcher(text).matches();
-
-        boolean hasComplexity = hasTextComplexity(text);
-
-        return hasLettersOrChinese && hasComplexity;
-    }
-
-    /**
-     * 检查文本复杂度
-     */
-    private boolean hasTextComplexity(String text) {
-        int charTypes = 0;
-
-        if (LETTERS_PATTERN.matcher(text).matches()) charTypes++;
-        if (CJK_PATTERN.matcher(text).matches()) charTypes++;
-        if (DIGITS_PATTERN.matcher(text).matches()) charTypes++;
-        if (PUNCT_PATTERN.matcher(text).matches()) charTypes++;
-
-        return charTypes >= 2;
-    }
-
-    /**
-     * 验证金额有效性
-     */
-    private boolean isValidAmount(BigDecimal amount) {
-        return amount != null &&
-                amount.compareTo(LayoutConfig.MIN_AMOUNT) >= 0 &&
-                amount.compareTo(LayoutConfig.MAX_AMOUNT) < 0;
-    }
 
     /**
      * 清理产品名称
@@ -103,7 +44,7 @@ public class TextAnalysisUtil {
         List<Double> confidences = texts.stream()
                 .map(OcrTextResult::getConfidence)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                .toList();
 
         if (confidences.isEmpty()) {
             return null;
@@ -113,102 +54,6 @@ public class TextAnalysisUtil {
                 .mapToDouble(Double::doubleValue)
                 .average()
                 .orElse(0.0);
-    }
-
-    /**
-     * 判断是否为简单标签
-     */
-    public boolean isSimpleLabel(String text) {
-        if (text.length() <= 2) {
-            return true;
-        }
-
-        if (text.matches(".*[()（）\\[\\]【】].*")) {
-            return text.length() <= 8;
-        }
-
-        if (text.matches("(.)\\1{2,}")) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * 判断是否为有效文本
-     */
-    public boolean isValidText(OcrTextResult text) {
-        if (StringUtils.isBlank(text.getText()) || text.getBbox() == null) {
-            return false;
-        }
-
-        String cleanText = text.getText().trim();
-
-        boolean lengthOk = cleanText.length() >= LayoutConfig.MIN_TEXT_LENGTH &&
-                cleanText.length() <= LayoutConfig.MAX_TEXT_LENGTH;
-
-        boolean confidenceOk = text.getConfidence() == null ||
-                text.getConfidence() >= LayoutConfig.MIN_CONFIDENCE;
-
-        boolean notSimpleLabel = !isSimpleLabel(cleanText);
-
-        return lengthOk && confidenceOk && notSimpleLabel;
-    }
-
-    // 在TextAnalysisUtil类中添加或修改以下方法
-
-    /**
-     * 解析金额文本为BigDecimal，保留原始精度
-     */
-    public BigDecimal parseAmount(String text) {
-        if (StringUtils.isBlank(text)) {
-            return null;
-        }
-
-        try {
-            // 移除所有非数字、小数点、负号的字符
-            String cleanText = text.replaceAll("[^\\d.-]", "");
-
-            if (StringUtils.isBlank(cleanText)) {
-                return null;
-            }
-
-            // 使用BigDecimal保持原始精度
-            BigDecimal amount = new BigDecimal(cleanText);
-
-            // 检查是否为有效的正数金额
-            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                return null;
-            }
-
-            return amount;
-
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    /**
-     * 检查是否为金额格式
-     */
-    public boolean isAmountFormat(String text) {
-        if (StringUtils.isBlank(text)) {
-            return false;
-        }
-
-        // 移除千分位分隔符和其他非数字字符，保留数字、小数点、负号
-        String cleanText = text.replaceAll("[^\\d.-]", "");
-
-        if (StringUtils.isBlank(cleanText)) {
-            return false;
-        }
-
-        try {
-            BigDecimal amount = new BigDecimal(cleanText);
-            return amount.compareTo(BigDecimal.ZERO) > 0;
-        } catch (NumberFormatException e) {
-            return false;
-        }
     }
 
     /**
@@ -229,5 +74,62 @@ public class TextAnalysisUtil {
         df.setGroupingUsed(false); // 不使用千分位分隔符
 
         return df.format(amount);
+    }
+
+    /**
+     * 合并文本片段 - 修复版
+     */
+    public OcrTextResult mergeTextFragments(List<OcrTextResult> fragments) {
+        if (fragments.size() == 1) {
+            return fragments.get(0);
+        }
+
+        // 按垂直位置排序
+        fragments.sort(Comparator.comparingDouble(t -> getCenterY(t.getBbox())));
+
+        OcrTextResult merged = new OcrTextResult();
+
+        // 合并文本内容
+        String combinedText = fragments.stream()
+                .map(OcrTextResult::getText)
+                .collect(Collectors.joining(""));
+        merged.setText(combinedText);
+
+        // 计算平均置信度
+        double avgConfidence = fragments.stream()
+                .mapToDouble(OcrTextResult::getConfidence)
+                .average()
+                .orElse(0.0);
+        merged.setConfidence(avgConfidence);
+
+        // 计算合并后的边界框 - 修复版
+        OcrTextResult.BoundingBox mergedBbox = new OcrTextResult.BoundingBox();
+        double left = fragments.stream().mapToDouble(t -> t.getBbox().getLeft()).min().orElse(0);
+        double top = fragments.stream().mapToDouble(t -> t.getBbox().getTop()).min().orElse(0);
+        double right = fragments.stream().mapToDouble(t -> t.getBbox().getRight()).max().orElse(0);
+        double bottom = fragments.stream().mapToDouble(t -> t.getBbox().getBottom()).max().orElse(0);
+
+        mergedBbox.setLeft(left);
+        mergedBbox.setTop(top);
+        mergedBbox.setRight(right);
+        mergedBbox.setBottom(bottom);
+
+        // 重要：设置centerX和centerY
+        mergedBbox.setCenterX((left + right) / 2.0);
+        mergedBbox.setCenterY((top + bottom) / 2.0);
+
+        merged.setBbox(mergedBbox);
+
+        return merged;
+    }
+
+    /**
+     * 安全获取centerY，如果为null则计算
+     */
+    public double getCenterY(OcrTextResult.BoundingBox bbox) {
+        if (bbox.getCenterY() != null) {
+            return bbox.getCenterY();
+        }
+        return (bbox.getTop() + bbox.getBottom()) / 2.0;
     }
 }

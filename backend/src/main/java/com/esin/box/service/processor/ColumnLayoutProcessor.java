@@ -6,6 +6,7 @@ import com.esin.box.dto.ocr.ProductItem;
 import com.esin.box.utils.TextAnalysisUtil;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
@@ -26,13 +27,46 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
 
     private final TextAnalysisUtil textAnalysisUtil;
 
-    // 修复后的常量定义
-    private static final double SAME_ROW_TOLERANCE = 60.0;
-    private static final double NEARBY_ROW_TOLERANCE = 120.0;
-    private static final double PRODUCT_NAME_MERGE_DISTANCE = 50.0;
-    private static final int MIN_CONTENT_LENGTH = 2;
-    private static final double MIN_VALID_AMOUNT = 0.01;
-    private static final double MAX_VALID_AMOUNT = 100000000.0;
+    /**
+     * 配置常量类
+     */
+    public static class LayoutConfig {
+        // 距离和容差配置
+        public static final double SAME_ROW_TOLERANCE = 60.0;
+        public static final double NEARBY_ROW_TOLERANCE = 120.0;
+        public static final double PRODUCT_NAME_MERGE_DISTANCE = 50.0;
+        public static final double ROW_TOLERANCE = 30.0;
+
+        // 内容长度配置
+        public static final int MIN_CONTENT_LENGTH = 2;
+
+        // 金额范围配置
+        public static final double MIN_VALID_AMOUNT = 0.01;
+        public static final double MAX_VALID_AMOUNT = 100000000.0;
+
+        // 产品关键词常量
+        public static final String[] PRODUCT_KEYWORDS = {
+                "理财", "基金", "债券", "产品", "收益", "固定", "开放",
+                "净值", "天天", "添益", "核心", "优选", "持盈", "银理财", "个理"
+        };
+
+        // 机构名称常量
+        public static final String[] INSTITUTION_NAMES = {
+                "工银", "交银", "兴银", "平安", "招商", "中信", "建信", "华夏"
+        };
+
+        // 结构性字符常量
+        public static final String[] STRUCTURAL_CHARS = {"·", "|"};
+
+        // 无关文本常量
+        public static final Set<String> IRRELEVANT_TEXTS = Set.of(
+                "总金额", "总金额（元）", "合计", "小计", "收起", "展开",
+                "温馨提示", "（元）", "¥", "$", "名称", "金额", "理财",
+                "产品持仓", "撤单", "持仓市值", "持仓币值", "可赎回日",
+                "赎回类型", "赎回尖型", "今日可赎", "每日可赎", "预约赎回",
+                "周期结束日", "可赎回开始日", "最短持有期内不可赎回，可赎回开始日起每日可赎"
+        );
+    }
 
     @Override
     public List<ProductItem> processLayout(PageLayout layout) {
@@ -61,13 +95,16 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
                 return Collections.emptyList();
             }
 
-            // 3. 分析列结构
+            // 3. 分析页面布局（新增）
+            PageLayoutInfo layoutInfo = analyzePageLayout(processedTexts.getAmountTexts());
+            log.info("页面布局分析: 是否为双列={}, 中心X坐标={}",
+                    layoutInfo.isTwoColumn(), layoutInfo.getPageCenterX());
 
             // 4. 基于金额构建产品（修复版）
             List<ProductItem> products = buildProductsFromAmountsFixed(processedTexts);
 
-            // 5. 排序和验证
-            products = validateAndSortProducts(products);
+            // 5. 智能排序和验证（优化版）
+            products = optimizedSortProducts(products, layoutInfo);
 
             log.info("左右列处理完成，产品数量: {}", products.size());
             logProductDetails(products);
@@ -78,6 +115,151 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
             log.error("左右列布局处理异常", e);
             return Collections.emptyList();
         }
+    }
+
+    /**
+     * 分析页面布局信息
+     */
+    private PageLayoutInfo analyzePageLayout(List<OcrTextResult> amountTexts) {
+        PageLayoutInfo info = new PageLayoutInfo();
+
+        if (amountTexts.isEmpty()) {
+            return info;
+        }
+
+        // 计算所有金额的X坐标分布
+        List<Double> xPositions = amountTexts.stream()
+                .map(t -> t.getBbox().getCenterX() != null ? t.getBbox().getCenterX() :
+                        (t.getBbox().getLeft() + t.getBbox().getRight()) / 2.0)
+                .sorted()
+                .toList();
+
+        // 计算页面宽度
+        double minX = amountTexts.stream()
+                .mapToDouble(t -> t.getBbox().getLeft())
+                .min().orElse(0);
+        double maxX = amountTexts.stream()
+                .mapToDouble(t -> t.getBbox().getRight())
+                .max().orElse(1000);
+
+        double pageWidth = maxX - minX;
+        double pageCenterX = (minX + maxX) / 2.0;
+
+        info.setPageCenterX(pageCenterX);
+        info.setPageWidth(pageWidth);
+
+        // 判断是否为双列布局
+        // 如果金额分布在页面左右两侧，则认为是双列布局
+        long leftCount = xPositions.stream()
+                .filter(x -> x < pageCenterX - pageWidth * 0.1)
+                .count();
+        long rightCount = xPositions.stream()
+                .filter(x -> x > pageCenterX + pageWidth * 0.1)
+                .count();
+
+        info.setTwoColumn(leftCount > 0 && rightCount > 0);
+
+        log.debug("布局分析: 左侧金额数={}, 右侧金额数={}, 页面宽度={}",
+                leftCount, rightCount, pageWidth);
+
+        return info;
+    }
+
+    /**
+     * 优化的产品排序算法
+     */
+    private List<ProductItem> optimizedSortProducts(List<ProductItem> products, PageLayoutInfo layoutInfo) {
+        if (products.isEmpty()) {
+            return products;
+        }
+
+        // 过滤无效产品
+        List<ProductItem> validProducts = products.stream()
+                .filter(this::isValidProduct)
+                .collect(Collectors.toList());
+
+        if (!layoutInfo.isTwoColumn()) {
+            // 单列布局：直接按Y坐标排序
+            return validProducts.stream()
+                    .sorted(Comparator.comparingDouble(ProductItem::getPagePosition))
+                    .collect(Collectors.toList());
+        }
+
+        // 双列布局：先分组到行，然后每行内按X坐标排序
+        return sortByRowsAndColumns(validProducts);
+    }
+
+    /**
+     * 按行和列排序产品
+     */
+    private List<ProductItem> sortByRowsAndColumns(List<ProductItem> products) {
+        // 1. 将产品分组到行
+        List<ProductRow> rows = groupProductsIntoRows(products);
+
+        // 2. 对每行内的产品按X坐标排序（从左到右）
+        rows.forEach(row -> row.getProducts().sort(Comparator.comparingDouble(p -> {
+            OcrTextResult amountText = p.getAmountText();
+            if (amountText.getBbox().getCenterX() != null) {
+                return amountText.getBbox().getCenterX();
+            }
+            return (amountText.getBbox().getLeft() + amountText.getBbox().getRight()) / 2.0;
+        })));
+
+        // 3. 按行的Y坐标排序
+        rows.sort(Comparator.comparingDouble(ProductRow::getAverageY));
+
+        // 4. 展开为产品列表
+        List<ProductItem> sortedProducts = new ArrayList<>();
+        int index = 0;
+        for (ProductRow row : rows) {
+            for (ProductItem product : row.getProducts()) {
+                product.setRowIndex(index++);
+                sortedProducts.add(product);
+            }
+        }
+
+        log.info("行列排序完成: {} 行, {} 个产品", rows.size(), sortedProducts.size());
+
+        return sortedProducts;
+    }
+
+    /**
+     * 将产品分组到行
+     */
+    private List<ProductRow> groupProductsIntoRows(List<ProductItem> products) {
+        List<ProductRow> rows = new ArrayList<>();
+        Set<ProductItem> assigned = new HashSet<>();
+
+        // 按Y坐标排序
+        List<ProductItem> sortedByY = new ArrayList<>(products);
+        sortedByY.sort(Comparator.comparingDouble(ProductItem::getPagePosition));
+
+        for (ProductItem product : sortedByY) {
+            if (assigned.contains(product)) {
+                continue;
+            }
+
+            // 查找属于同一行的产品
+            ProductRow row = new ProductRow();
+            row.addProduct(product);
+            assigned.add(product);
+
+            double baseY = product.getPagePosition();
+
+            // 查找同行的其他产品
+            for (ProductItem other : sortedByY) {
+                if (!assigned.contains(other) &&
+                        Math.abs(other.getPagePosition() - baseY) <= LayoutConfig.ROW_TOLERANCE) {
+                    row.addProduct(other);
+                    assigned.add(other);
+                }
+            }
+
+            rows.add(row);
+            log.debug("创建行: Y={}, 产品数={}", row.getAverageY(), row.getProducts().size());
+        }
+
+        return rows;
     }
 
     /**
@@ -121,7 +303,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
 
                 // 如果找到了多个片段，合并它们
                 if (fragments.size() > 1) {
-                    OcrTextResult mergedText = mergeTextFragments(fragments);
+                    OcrTextResult mergedText = textAnalysisUtil.mergeTextFragments(fragments);
                     result.add(mergedText);
                     log.debug("合并产品名称: {} 个片段 -> '{}'", fragments.size(), mergedText.getText());
                 } else {
@@ -144,10 +326,28 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
             return false;
         }
 
-        // 产品名称常见片段特征
-        return text.matches(".*[理财|基金|债券|产品|收益|固定|开放|净值|天天|添益|核心|优选|持盈|银理财].*") ||
-                text.matches(".*[工银|交银|兴银|平安|招商|中信|建信|华夏].*") ||
-                text.matches(".*[·||].*");
+        // 检查产品关键词
+        for (String keyword : LayoutConfig.PRODUCT_KEYWORDS) {
+            if (text.contains(keyword)) {
+                return true;
+            }
+        }
+
+        // 检查机构名称
+        for (String institution : LayoutConfig.INSTITUTION_NAMES) {
+            if (text.contains(institution)) {
+                return true;
+            }
+        }
+
+        // 检查结构性字符
+        for (String structChar : LayoutConfig.STRUCTURAL_CHARS) {
+            if (text.contains(structChar)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -155,22 +355,12 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
      */
     private boolean isAdjacentProductFragment(OcrTextResult text1, OcrTextResult text2) {
         // 检查垂直距离
-        double verticalDistance = Math.abs(getCenterY(text2.getBbox()) - getCenterY(text1.getBbox()));
+        double verticalDistance = Math.abs(textAnalysisUtil.getCenterY(text2.getBbox()) - textAnalysisUtil.getCenterY(text1.getBbox()));
 
         // 检查水平重叠度
         double overlap = calculateHorizontalOverlap(text1.getBbox(), text2.getBbox());
 
-        return verticalDistance <= PRODUCT_NAME_MERGE_DISTANCE && overlap > 0.3;
-    }
-
-    /**
-     * 安全获取centerY，如果为null则计算
-     */
-    private double getCenterY(OcrTextResult.BoundingBox bbox) {
-        if (bbox.getCenterY() != null) {
-            return bbox.getCenterY();
-        }
-        return (bbox.getTop() + bbox.getBottom()) / 2.0;
+        return verticalDistance <= LayoutConfig.PRODUCT_NAME_MERGE_DISTANCE && overlap > 0.3;
     }
 
     /**
@@ -188,53 +378,6 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
         double minWidth = Math.min(bbox1.getRight() - bbox1.getLeft(), bbox2.getRight() - bbox2.getLeft());
 
         return overlapWidth / minWidth;
-    }
-
-    /**
-     * 合并文本片段 - 修复版
-     */
-    private OcrTextResult mergeTextFragments(List<OcrTextResult> fragments) {
-        if (fragments.size() == 1) {
-            return fragments.get(0);
-        }
-
-        // 按垂直位置排序
-        fragments.sort(Comparator.comparingDouble(t -> getCenterY(t.getBbox())));
-
-        OcrTextResult merged = new OcrTextResult();
-
-        // 合并文本内容
-        String combinedText = fragments.stream()
-                .map(OcrTextResult::getText)
-                .collect(Collectors.joining(""));
-        merged.setText(combinedText);
-
-        // 计算平均置信度
-        double avgConfidence = fragments.stream()
-                .mapToDouble(OcrTextResult::getConfidence)
-                .average()
-                .orElse(0.0);
-        merged.setConfidence(avgConfidence);
-
-        // 计算合并后的边界框 - 修复版
-        OcrTextResult.BoundingBox mergedBbox = new OcrTextResult.BoundingBox();
-        double left = fragments.stream().mapToDouble(t -> t.getBbox().getLeft()).min().orElse(0);
-        double top = fragments.stream().mapToDouble(t -> t.getBbox().getTop()).min().orElse(0);
-        double right = fragments.stream().mapToDouble(t -> t.getBbox().getRight()).max().orElse(0);
-        double bottom = fragments.stream().mapToDouble(t -> t.getBbox().getBottom()).max().orElse(0);
-
-        mergedBbox.setLeft(left);
-        mergedBbox.setTop(top);
-        mergedBbox.setRight(right);
-        mergedBbox.setBottom(bottom);
-
-        // 重要：设置centerX和centerY
-        mergedBbox.setCenterX((left + right) / 2.0);
-        mergedBbox.setCenterY((top + bottom) / 2.0);
-
-        merged.setBbox(mergedBbox);
-
-        return merged;
     }
 
     /**
@@ -268,7 +411,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
             }
 
             // 其余作为内容文本
-            if (content.length() >= MIN_CONTENT_LENGTH && isMeaningfulContent(content)) {
+            if (content.length() >= LayoutConfig.MIN_CONTENT_LENGTH && isMeaningfulContent(content)) {
                 result.getContentTexts().add(text);
                 log.debug("识别内容文本: '{}'", content);
             }
@@ -376,26 +519,18 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
      */
     private boolean isValidAmountRange(BigDecimal amount) {
         return amount != null &&
-                amount.compareTo(BigDecimal.valueOf(MIN_VALID_AMOUNT)) >= 0 &&
-                amount.compareTo(BigDecimal.valueOf(MAX_VALID_AMOUNT)) <= 0;
+                amount.compareTo(BigDecimal.valueOf(LayoutConfig.MIN_VALID_AMOUNT)) >= 0 &&
+                amount.compareTo(BigDecimal.valueOf(LayoutConfig.MAX_VALID_AMOUNT)) <= 0;
     }
 
     /**
-     * 严格的无关文本判断 - 增强版
+     * 严格的无关文本判断 - 使用常量
      */
     private boolean isIrrelevantTextStrict(String text) {
-        Set<String> irrelevantTexts = Set.of(
-                "总金额", "总金额（元）", "合计", "小计", "收起", "展开",
-                "温馨提示", "（元）", "¥", "$", "名称", "金额", "理财",
-                "产品持仓", "撤单", "持仓市值", "持仓币值", "可赎回日",
-                "赎回类型", "赎回尖型", "今日可赎", "每日可赎", "预约赎回",
-                "周期结束日", "可赎回开始日", "最短持有期内不可赎回，可赎回开始日起每日可赎"
-        );
-
         String trimmed = text.trim();
 
         // 完全匹配检查
-        if (irrelevantTexts.contains(trimmed)) {
+        if (LayoutConfig.IRRELEVANT_TEXTS.contains(trimmed)) {
             return true;
         }
 
@@ -430,7 +565,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
 
         // 按Y坐标排序金额
         List<OcrTextResult> sortedAmounts = texts.getAmountTexts().stream()
-                .sorted(Comparator.comparingDouble(t -> getCenterY(t.getBbox())))
+                .sorted(Comparator.comparingDouble(t -> textAnalysisUtil.getCenterY(t.getBbox())))
                 .toList();
 
         for (int i = 0; i < sortedAmounts.size(); i++) {
@@ -446,7 +581,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
             }
 
             log.debug("处理金额: '{}' (Y={}, 金额={})",
-                    amountText.getText(), getCenterY(amountText.getBbox()), amount);
+                    amountText.getText(), textAnalysisUtil.getCenterY(amountText.getBbox()), amount);
 
             // 为该金额找到相关的内容文本
             List<OcrTextResult> relatedTexts = findRelatedTextsFixed(amountText, texts.getContentTexts(), usedTexts);
@@ -478,7 +613,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
     private List<OcrTextResult> findRelatedTextsFixed(OcrTextResult amountText,
                                                       List<OcrTextResult> contentTexts,
                                                       Set<OcrTextResult> usedTexts) {
-        double amountY = getCenterY(amountText.getBbox()); // 使用安全的getCenterY方法
+        double amountY = textAnalysisUtil.getCenterY(amountText.getBbox()); // 使用安全的textAnalysisUtil.getCenterY方法
         List<OcrTextResult> candidates = new ArrayList<>();
 
         // 第一阶段：查找同行文本
@@ -487,10 +622,10 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
                 continue;
             }
 
-            double contentY = getCenterY(contentText.getBbox()); // 使用安全的getCenterY方法
+            double contentY = textAnalysisUtil.getCenterY(contentText.getBbox()); // 使用安全的textAnalysisUtil.getCenterY方法
             double distance = Math.abs(amountY - contentY);
 
-            if (distance <= SAME_ROW_TOLERANCE) {
+            if (distance <= LayoutConfig.SAME_ROW_TOLERANCE) {
                 candidates.add(contentText);
                 log.debug("找到同行文本: '{}' (距离={})", contentText.getText(), distance);
             }
@@ -503,10 +638,10 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
                     continue;
                 }
 
-                double contentY = getCenterY(contentText.getBbox()); // 使用安全的getCenterY方法
+                double contentY = textAnalysisUtil.getCenterY(contentText.getBbox()); // 使用安全的textAnalysisUtil.getCenterY方法
                 double distance = Math.abs(amountY - contentY);
 
-                if (distance <= NEARBY_ROW_TOLERANCE) {
+                if (distance <= LayoutConfig.NEARBY_ROW_TOLERANCE) {
                     candidates.add(contentText);
                     log.debug("找到邻近文本: '{}' (距离={})", contentText.getText(), distance);
                 }
@@ -514,7 +649,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
         }
 
         // 按距离排序，选择最相关的文本
-        candidates.sort(Comparator.comparingDouble(t -> Math.abs(getCenterY(t.getBbox()) - amountY)));
+        candidates.sort(Comparator.comparingDouble(t -> Math.abs(textAnalysisUtil.getCenterY(t.getBbox()) - amountY)));
 
         // 返回最相关的1-3个文本
         return candidates.stream().limit(3).collect(Collectors.toList());
@@ -537,7 +672,7 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
         product.setCleanName(defaultName);
         product.setRelatedTexts(Collections.emptyList());
 
-        product.setPagePosition(getCenterY(amountText.getBbox()));
+        product.setPagePosition(textAnalysisUtil.getCenterY(amountText.getBbox()));
         product.setRowIndex(index);
         product.setConfidence(amountText.getConfidence());
 
@@ -576,9 +711,9 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
         allTexts.add(amountText);
 
         double avgY = allTexts.stream()
-                .mapToDouble(t -> getCenterY(t.getBbox()))
+                .mapToDouble(t -> textAnalysisUtil.getCenterY(t.getBbox()))
                 .average()
-                .orElse(getCenterY(amountText.getBbox()));
+                .orElse(textAnalysisUtil.getCenterY(amountText.getBbox()));
 
         product.setPagePosition(avgY);
         product.setRowIndex(index);
@@ -627,20 +762,18 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
      * 判断是否为产品名称候选
      */
     private boolean isProductNameCandidate(String text) {
-        // 产品名称应该包含有意义的词汇
-        return text.matches(".*[理财|基金|债券|产品|收益|固定|开放|净值|天天|添益|核心|优选|持盈].*") ||
-                text.matches(".*[工银|交银|兴银|平安|招商|中信|建信|华夏].*") ||
-                text.length() >= 8; // 长度足够的文本也可能是产品名称
-    }
+        // 检查产品关键词
+        boolean hasProductKeywords = Arrays.stream(LayoutConfig.PRODUCT_KEYWORDS)
+                .anyMatch(text::contains);
 
-    /**
-     * 验证和排序产品
-     */
-    private List<ProductItem> validateAndSortProducts(List<ProductItem> products) {
-        return products.stream()
-                .filter(this::isValidProduct)
-                .sorted(Comparator.comparingDouble(ProductItem::getPagePosition))
-                .collect(Collectors.toList());
+        // 检查机构名称
+        boolean hasInstitutionNames = Arrays.stream(LayoutConfig.INSTITUTION_NAMES)
+                .anyMatch(text::contains);
+
+        // 长度足够的文本也可能是产品名称
+        boolean hasValidLength = text.length() >= 8;
+
+        return hasProductKeywords || hasInstitutionNames || hasValidLength;
     }
 
     /**
@@ -681,4 +814,38 @@ public class ColumnLayoutProcessor implements LayoutProcessor {
         private final List<OcrTextResult> irrelevantTexts = new ArrayList<>();
     }
 
+    /**
+     * 页面布局信息
+     */
+    @Setter
+    @Getter
+    private static class PageLayoutInfo {
+        private boolean twoColumn = false;
+        private double pageCenterX = 0.0;
+        private double pageWidth = 0.0;
+
+    }
+
+    /**
+     * 产品行信息
+     */
+    @Getter
+    private static class ProductRow {
+        private final List<ProductItem> products = new ArrayList<>();
+        private double averageY = 0.0;
+
+        public void addProduct(ProductItem product) {
+            products.add(product);
+            updateAverageY();
+        }
+
+        private void updateAverageY() {
+            if (!products.isEmpty()) {
+                averageY = products.stream()
+                        .mapToDouble(ProductItem::getPagePosition)
+                        .average()
+                        .orElse(0.0);
+            }
+        }
+    }
 }

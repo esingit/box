@@ -23,12 +23,12 @@
           <BaseButton
               v-if="imageFile"
               type="button"
-              @click="recognizeImage"
+              @click="handleRecognizeImage"
               :disabled="isProcessing"
               color="outline"
           >
             <component :is="isProcessing ? Loader2 : LucideScanText" class="w-5 h-5" :class="{'animate-spin': isProcessing}"/>
-            <span>{{ isProcessing ? '识别中...' : '开始识别' }}</span>
+            <span>{{ isProcessing ? '识别中...' : recognizedItems.length > 0 ? '重新识别' : '开始识别' }}</span>
           </BaseButton>
         </div>
 
@@ -153,6 +153,12 @@
           <LucideScanText class="w-12 h-12 mx-auto mb-4 opacity-50"/>
           <p>请上传图片并开始识别</p>
         </div>
+
+        <!-- 已上传但未识别状态 -->
+        <div v-show="!isProcessing && !hasData && imagePreview" class="empty-state">
+          <LucideScanText class="w-12 h-12 mx-auto mb-4 opacity-50"/>
+          <p>点击"开始识别"按钮进行识别</p>
+        </div>
       </div>
     </div>
 
@@ -222,7 +228,8 @@ const {
   isProcessing,
   recognizedItems,
   handleImageUpload,
-  recognizeImage
+  recognizeImage,
+  resetRecognizedItems
 } = useImageRecognition(loadAssetNames)
 
 const {
@@ -276,10 +283,21 @@ const handleBatchAdd = async () => {
   await performBatchAdd()
 }
 
+// 处理重新识别
+const handleRecognizeImage = async () => {
+  // 重置识别结果
+  if (recognizedItems.value.length > 0) {
+    resetRecognizedItems()
+  }
+  // 开始新的识别
+  await recognizeImage()
+}
+
 const handleClose = () => {
   emit('update:visible', false)
   emit('close')
   resetForm()
+  resetRecognizedItems()
   // 重置本地状态
   showImageViewer.value = false
 }

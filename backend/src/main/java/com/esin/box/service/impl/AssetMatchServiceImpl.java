@@ -88,8 +88,8 @@ public class AssetMatchServiceImpl implements AssetMatchService {
             products = validateAndFixProductsAdvanced(products, pageLayout);
             log.info("验证修复后产品项: {}", products.size());
 
-            // 6. 匹配资产（包含匹配度过滤）
-            List<AssetScanImageDTO> results = matchProductsAdvanced(products, userAssets);
+            // 6. 匹配资产（保持原始顺序）
+            List<AssetScanImageDTO> results = matchProductsAdvancedWithOrder(products, userAssets);
             log.info("匹配结果: {} (已过滤低于{}%匹配度的数据)",
                     results.size(), Math.round(minDisplayThreshold * 100));
 
@@ -548,13 +548,14 @@ public class AssetMatchServiceImpl implements AssetMatchService {
     }
 
     /**
-     * 高级的产品匹配 - 包含匹配度过滤
+     * 高级的产品匹配 - 保持原始顺序
      */
-    private List<AssetScanImageDTO> matchProductsAdvanced(List<ProductItem> products, List<AssetName> userAssets) {
+    private List<AssetScanImageDTO> matchProductsAdvancedWithOrder(List<ProductItem> products, List<AssetName> userAssets) {
         List<AssetScanImageDTO> results = new ArrayList<>();
+        int originalIndex = 0;
 
-        for (int i = 0; i < products.size(); i++) {
-            ProductItem product = products.get(i);
+        for (ProductItem product : products) {
+            originalIndex++; // 使用原始索引，即使某些产品被过滤
 
             AssetMatchResult bestMatch = findBestMatchAdvanced(product, userAssets);
 
@@ -567,26 +568,28 @@ public class AssetMatchServiceImpl implements AssetMatchService {
                     AssetScanImageDTO dto = buildResultDTO(product, bestMatch);
                     results.add(dto);
                     log.info("产品 {} 匹配: '{}' -> '{}' (分数: {}%, 金额: {})",
-                            i + 1, product.getCleanName(), bestMatch.getAssetName().getName(),
+                            originalIndex, product.getCleanName(), bestMatch.getAssetName().getName(),
                             Math.round(bestMatch.getScore() * 100), displayAmount);
                 } else {
                     log.info("产品 {} 匹配度过低，已过滤: '{}' -> '{}' (分数: {}%, 金额: {})",
-                            i + 1, product.getCleanName(), bestMatch.getAssetName().getName(),
+                            originalIndex, product.getCleanName(), bestMatch.getAssetName().getName(),
                             Math.round(bestMatch.getScore() * 100), displayAmount);
                 }
             } else {
                 log.warn("产品 {} 无匹配: '{}' (金额: {})",
-                        i + 1, product.getCleanName(), displayAmount);
+                        originalIndex, product.getCleanName(), displayAmount);
                 // 无匹配的产品也不添加到结果中
             }
         }
 
-        // 按匹配度降序排序
-        results.sort((a, b) -> Double.compare(b.getMatchScore(), a.getMatchScore()));
+        // 不再按匹配度排序，保持原始顺序
+        // 只限制最大返回数量
+        if (results.size() > maxResults) {
+            log.info("结果数量 {} 超过最大限制 {}，进行截断", results.size(), maxResults);
+            return results.subList(0, maxResults);
+        }
 
-        return results.stream()
-                .limit(maxResults)
-                .collect(Collectors.toList());
+        return results;
     }
 
     /**

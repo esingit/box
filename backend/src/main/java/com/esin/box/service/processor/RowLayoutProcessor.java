@@ -35,17 +35,32 @@ public class RowLayoutProcessor implements LayoutProcessor {
         public static final int MIN_PRODUCT_NAME_LENGTH = 6;
         public static final int MAX_PRODUCT_NAME_LENGTH = 100;
         public static final double PRODUCT_NAME_MERGE_DISTANCE = 50.0;
+
+        // 产品关键词常量
+        public static final String[] PRODUCT_KEYWORDS = {
+                "理财", "基金", "债券", "产品", "收益", "固定", "开放",
+                "净值", "天天", "添益", "核心", "优选", "持盈", "银理财", "个理"
+        };
+
+        // 机构名称常量
+        public static final String[] INSTITUTION_NAMES = {
+                "工银", "交银", "兴银", "平安", "招商", "中信", "建信", "华夏"
+        };
+
+        // 结构性字符常量
+        public static final String[] STRUCTURAL_CHARS = {"·", "|", "款", "号"};
+
+        // 元数据常量
+        public static final Set<String> METADATA_KEYWORDS = Set.of(
+                "产品持仓", "撤单", "持仓市值", "持仓币值", "可赎回日", "赎回类型", "赎回尖型",
+                "今日可赎", "每日可赎", "预约赎回", "周期结束日", "可赎回开始日",
+                "总金额", "总金额（元）", "名称", "金额", "理财", "收起", "展开",
+                "温馨提示", "（元）", "日期", "时间", "余额", "总计", "合计",
+                "最短持有期内不可赎回，可赎回开始日起每日可赎"
+        );
     }
 
-    /**
-     * 安全获取centerY，如果为null则计算
-     */
-    private double getCenterY(OcrTextResult.BoundingBox bbox) {
-        if (bbox.getCenterY() != null) {
-            return bbox.getCenterY();
-        }
-        return (bbox.getTop() + bbox.getBottom()) / 2.0;
-    }
+
 
     @Override
     public List<ProductItem> processLayout(PageLayout layout) {
@@ -113,7 +128,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
                 List<OcrTextResult> fragments = collectProductFragments(texts, i, mergedIndexes);
 
                 if (fragments.size() > 1) {
-                    OcrTextResult mergedText = mergeTextFragments(fragments);
+                    OcrTextResult mergedText = textAnalysisUtil.mergeTextFragments(fragments);
                     result.add(mergedText);
                     log.debug("合并产品名称: {} 个片段 -> '{}'", fragments.size(), mergedText.getText());
                 } else {
@@ -137,7 +152,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
         mergedIndexes.add(startIndex);
 
         // 向下寻找相邻的产品名称片段
-        double currentY = getCenterY(currentText.getBbox());
+        double currentY = textAnalysisUtil.getCenterY(currentText.getBbox());
         double currentLeft = currentText.getBbox().getLeft();
         double currentRight = currentText.getBbox().getRight();
 
@@ -147,7 +162,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
             }
 
             OcrTextResult nextText = texts.get(j);
-            double nextY = getCenterY(nextText.getBbox());
+            double nextY = textAnalysisUtil.getCenterY(nextText.getBbox());
 
             // 检查垂直距离
             if (Math.abs(nextY - currentY) > LayoutConfig.PRODUCT_NAME_MERGE_DISTANCE) {
@@ -187,58 +202,29 @@ public class RowLayoutProcessor implements LayoutProcessor {
             return false;
         }
 
-        // 产品名称常见特征
-        return text.matches(".*[理财|基金|债券|产品|收益|固定|开放|净值|天天|添益|核心|优选|持盈|银理财|个理].*") ||
-                text.matches(".*[工银|交银|兴银|平安|招商|中信|建信|华夏].*") ||
-                text.matches(".*[·|\\||款|号].*") ||
-                (text.length() >= 4 && text.matches(".*[\\u4e00-\\u9fa5].*"));
-    }
-
-    /**
-     * 合并文本片段 - 修复版
-     */
-    private OcrTextResult mergeTextFragments(List<OcrTextResult> fragments) {
-        if (fragments.size() == 1) {
-            return fragments.get(0);
+        // 检查产品关键词
+        for (String keyword : LayoutConfig.PRODUCT_KEYWORDS) {
+            if (text.contains(keyword)) {
+                return true;
+            }
         }
 
-        // 按垂直位置排序
-        fragments.sort(Comparator.comparingDouble(t -> getCenterY(t.getBbox())));
+        // 检查机构名称
+        for (String institution : LayoutConfig.INSTITUTION_NAMES) {
+            if (text.contains(institution)) {
+                return true;
+            }
+        }
 
-        OcrTextResult merged = new OcrTextResult();
+        // 检查结构性字符
+        for (String structChar : LayoutConfig.STRUCTURAL_CHARS) {
+            if (text.contains(structChar)) {
+                return true;
+            }
+        }
 
-        // 合并文本内容
-        String combinedText = fragments.stream()
-                .map(OcrTextResult::getText)
-                .collect(Collectors.joining(""));
-        merged.setText(combinedText);
-
-        // 计算平均置信度
-        double avgConfidence = fragments.stream()
-                .mapToDouble(OcrTextResult::getConfidence)
-                .average()
-                .orElse(0.0);
-        merged.setConfidence(avgConfidence);
-
-        // 计算合并后的边界框 - 修复版
-        OcrTextResult.BoundingBox mergedBbox = new OcrTextResult.BoundingBox();
-        double left = fragments.stream().mapToDouble(t -> t.getBbox().getLeft()).min().orElse(0);
-        double top = fragments.stream().mapToDouble(t -> t.getBbox().getTop()).min().orElse(0);
-        double right = fragments.stream().mapToDouble(t -> t.getBbox().getRight()).max().orElse(0);
-        double bottom = fragments.stream().mapToDouble(t -> t.getBbox().getBottom()).max().orElse(0);
-
-        mergedBbox.setLeft(left);
-        mergedBbox.setTop(top);
-        mergedBbox.setRight(right);
-        mergedBbox.setBottom(bottom);
-
-        // 重要：设置centerX和centerY
-        mergedBbox.setCenterX((left + right) / 2.0);
-        mergedBbox.setCenterY((top + bottom) / 2.0);
-
-        merged.setBbox(mergedBbox);
-
-        return merged;
+        // 包含中文且长度合理
+        return text.length() >= 4 && text.matches(".*[\\u4e00-\\u9fa5].*");
     }
 
     /**
@@ -299,21 +285,14 @@ public class RowLayoutProcessor implements LayoutProcessor {
         }
 
         // 产品名称特征检查
-        boolean hasProductKeywords = trimmed.contains("理财") || trimmed.contains("基金") ||
-                trimmed.contains("债券") || trimmed.contains("产品") ||
-                trimmed.contains("收益") || trimmed.contains("固定") ||
-                trimmed.contains("开放") || trimmed.contains("净值") ||
-                trimmed.contains("天天") || trimmed.contains("添益") ||
-                trimmed.contains("核心") || trimmed.contains("优选") ||
-                trimmed.contains("持盈");
+        boolean hasProductKeywords = Arrays.stream(LayoutConfig.PRODUCT_KEYWORDS)
+                .anyMatch(trimmed::contains);
 
-        boolean hasInstitutionNames = trimmed.contains("工银") || trimmed.contains("交银") ||
-                trimmed.contains("兴银") || trimmed.contains("平安") ||
-                trimmed.contains("招商") || trimmed.contains("中信") ||
-                trimmed.contains("建信") || trimmed.contains("华夏");
+        boolean hasInstitutionNames = Arrays.stream(LayoutConfig.INSTITUTION_NAMES)
+                .anyMatch(trimmed::contains);
 
-        boolean hasStructuralChars = trimmed.contains("·") || trimmed.contains("|") ||
-                trimmed.contains("号") || trimmed.contains("款");
+        boolean hasStructuralChars = Arrays.stream(LayoutConfig.STRUCTURAL_CHARS)
+                .anyMatch(trimmed::contains);
 
         return hasProductKeywords || hasInstitutionNames ||
                 (hasStructuralChars && trimmed.length() >= 8);
@@ -399,17 +378,10 @@ public class RowLayoutProcessor implements LayoutProcessor {
     }
 
     /**
-     * 严格的元数据判断 - 增加更多排除项
+     * 严格的元数据判断 - 使用常量
      */
     private boolean isStrictMetadata(String content) {
-        Set<String> strictMetadata = Set.of(
-                "产品持仓", "撤单", "持仓市值", "持仓币值", "可赎回日", "赎回类型", "赎回尖型",
-                "今日可赎", "每日可赎", "预约赎回", "周期结束日", "可赎回开始日",
-                "总金额", "总金额（元）", "名称", "金额", "理财", "收起", "展开",
-                "温馨提示", "（元）", "日期", "时间", "余额", "总计", "合计",
-                "最短持有期内不可赎回，可赎回开始日起每日可赎"
-        );
-        return strictMetadata.contains(content.trim());
+        return LayoutConfig.METADATA_KEYWORDS.contains(content.trim());
     }
 
     /**
@@ -472,7 +444,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
         // 识别所有有效金额
         List<OcrTextResult> amountTexts = allTexts.stream()
                 .filter(text -> isValidAmountTextStrict(text.getText()))
-                .sorted(Comparator.comparingDouble(t -> getCenterY(t.getBbox())))
+                .sorted(Comparator.comparingDouble(t -> textAnalysisUtil.getCenterY(t.getBbox())))
                 .toList();
 
         log.info("识别到有效金额数量: {}", amountTexts.size());
@@ -507,17 +479,17 @@ public class RowLayoutProcessor implements LayoutProcessor {
     private List<OcrTextResult> findRelatedAmountsFixed(List<OcrTextResult> allTexts,
                                                         OcrTextResult productName,
                                                         Set<OcrTextResult> usedAmounts) {
-        double productY = getCenterY(productName.getBbox());
+        double productY = textAnalysisUtil.getCenterY(productName.getBbox());
 
         return allTexts.stream()
                 .filter(text -> !text.equals(productName))
                 .filter(text -> !usedAmounts.contains(text))
                 .filter(text -> isValidAmountTextStrict(text.getText()))
                 .filter(text -> {
-                    double distance = Math.abs(getCenterY(text.getBbox()) - productY);
+                    double distance = Math.abs(textAnalysisUtil.getCenterY(text.getBbox()) - productY);
                     return distance <= LayoutConfig.AMOUNT_SEARCH_RANGE;
                 })
-                .sorted(Comparator.comparingDouble(t -> Math.abs(getCenterY(t.getBbox()) - productY)))
+                .sorted(Comparator.comparingDouble(t -> Math.abs(textAnalysisUtil.getCenterY(t.getBbox()) - productY)))
                 .collect(Collectors.toList());
     }
 
@@ -527,7 +499,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
     private List<OcrTextResult> findRelatedProductTexts(List<OcrTextResult> allTexts,
                                                         OcrTextResult amountText,
                                                         Set<OcrTextResult> usedTexts) {
-        double amountY = getCenterY(amountText.getBbox());
+        double amountY = textAnalysisUtil.getCenterY(amountText.getBbox());
 
         return allTexts.stream()
                 .filter(text -> !text.equals(amountText))
@@ -535,10 +507,10 @@ public class RowLayoutProcessor implements LayoutProcessor {
                 .filter(text -> !isValidAmountTextStrict(text.getText()))
                 .filter(text -> !isStrictMetadata(text.getText()))
                 .filter(text -> {
-                    double distance = Math.abs(getCenterY(text.getBbox()) - amountY);
+                    double distance = Math.abs(textAnalysisUtil.getCenterY(text.getBbox()) - amountY);
                     return distance <= LayoutConfig.VERTICAL_TOLERANCE;
                 })
-                .sorted(Comparator.comparingDouble(t -> Math.abs(getCenterY(t.getBbox()) - amountY)))
+                .sorted(Comparator.comparingDouble(t -> Math.abs(textAnalysisUtil.getCenterY(t.getBbox()) - amountY)))
                 .limit(3)
                 .collect(Collectors.toList());
     }
@@ -564,7 +536,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
 
         List<OcrTextResult> allTexts = Arrays.asList(productNameText, amountText);
         product.setConfidence(textAnalysisUtil.calculateAverageConfidence(allTexts));
-        product.setPagePosition(getCenterY(productNameText.getBbox()));
+        product.setPagePosition(textAnalysisUtil.getCenterY(productNameText.getBbox()));
         product.setRowIndex(index);
 
         return product;
@@ -603,7 +575,7 @@ public class RowLayoutProcessor implements LayoutProcessor {
         List<OcrTextResult> allTexts = new ArrayList<>(relatedTexts);
         allTexts.add(amountText);
         product.setConfidence(textAnalysisUtil.calculateAverageConfidence(allTexts));
-        product.setPagePosition(getCenterY(amountText.getBbox()));
+        product.setPagePosition(textAnalysisUtil.getCenterY(amountText.getBbox()));
         product.setRowIndex(index);
 
         return product;
@@ -619,9 +591,9 @@ public class RowLayoutProcessor implements LayoutProcessor {
         // 验证
         List<ProductItem> validated = validateProductsFixed(deduplicated);
 
-        // 排序
+        // 排序 - 按Y坐标排序，保持上下顺序
         validated.sort(Comparator.comparingDouble(p ->
-                p.getAmountText() != null ? getCenterY(p.getAmountText().getBbox()) : 0));
+                p.getAmountText() != null ? textAnalysisUtil.getCenterY(p.getAmountText().getBbox()) : 0));
 
         return validated;
     }
