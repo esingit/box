@@ -13,7 +13,7 @@
         </template>
         <template v-else>
           <BaseStatCard
-              title="本月运动"
+              title="30天内运动次数"
               :amount="`${stats.monthlyCount} 次`"
               :change="`本周 ${stats.weeklyCount} 次`"
               change-class="text-gray-400"
