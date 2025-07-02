@@ -160,10 +160,6 @@ export function useBatchSubmit(
 
             return false
         } catch (error: any) {
-            emitter.emit('notify', {
-                type: 'error',
-                message: `批量添加失败：${error.message || '未知错误'}`
-            })
             return false
         }
     }

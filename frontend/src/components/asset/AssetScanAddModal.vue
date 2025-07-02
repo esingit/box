@@ -38,11 +38,11 @@
               :src="imagePreview"
               alt="预览"
               class="preview-image"
-              @click="showImageViewer = true"
+              @click="openImageViewer"
           />
           <div class="preview-hint">
             <Search class="w-3 h-3"/>
-            点击查看大图对比
+            点击查看
           </div>
         </div>
       </div>
@@ -197,7 +197,8 @@
   <ImageViewer
       :visible="showImageViewer"
       :src="imagePreview"
-      @close="showImageViewer = false"
+      :auto-comparison="autoComparisonMode"
+      @close="handleImageViewerClose"
   />
 </template>
 
@@ -259,6 +260,7 @@ const {
 const assetNameRef = ref()
 const recognizedAssetsTableRef = ref()
 const showImageViewer = ref(false)
+const autoComparisonMode = ref(false)
 
 // 计算属性
 const hasData = computed(() => recognizedItems.value.length > 0)
@@ -305,13 +307,22 @@ const handleRecognizeImage = async () => {
   await recognizeImage()
 }
 
-// 打开对比模式
-const openComparisonMode = async () => {
+// 打开普通图片查看模式
+const openImageViewer = () => {
+  autoComparisonMode.value = false
   showImageViewer.value = true
-  // 等待下一个渲染周期，然后自动开启对比模式
-  await nextTick()
-  // 这里可以通过事件或者其他方式通知 ImageViewer 开启对比模式
-  // 由于 ImageViewer 组件会自动处理，这里只需要打开即可
+}
+
+// 打开对比模式
+const openComparisonMode = () => {
+  autoComparisonMode.value = true
+  showImageViewer.value = true
+}
+
+// 处理图片查看器关闭
+const handleImageViewerClose = () => {
+  showImageViewer.value = false
+  autoComparisonMode.value = false
 }
 
 const handleClose = () => {
@@ -321,6 +332,7 @@ const handleClose = () => {
   resetRecognizedItems()
   // 重置本地状态
   showImageViewer.value = false
+  autoComparisonMode.value = false
 }
 
 // 生命周期

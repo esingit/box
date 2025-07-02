@@ -601,7 +601,6 @@ export const useAssetStore = defineStore('asset', () => {
         } catch (error: any) {
             console.error('smartBatchAddRecords 错误详情:', error)
             if (!isAuthError(error)) {
-                handleError('批量添加记录', error)
                 throw error
             }
             return null

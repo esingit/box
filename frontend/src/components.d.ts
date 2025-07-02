@@ -36,7 +36,6 @@ declare module 'vue' {
     BaseTimeSelector: typeof import('./components/base/BaseTimeSelector.vue')['default']
     Dashboard: typeof import('./components/dashboard/Dashboard.vue')['default']
     DateEditor: typeof import('./components/base/editors/DateEditor.vue')['default']
-    EnhancedImageViewer: typeof import('./components/base/EnhancedImageViewer.vue')['default']
     FitnessForm: typeof import('./components/fitness/FitnessForm.vue')['default']
     FitnessList: typeof import('./components/fitness/FitnessList.vue')['default']
     FitnessSearch: typeof import('./components/fitness/FitnessSearch.vue')['default']
