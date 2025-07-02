@@ -7,7 +7,7 @@
       @update:visible="handleClose"
   >
     <!-- 主内容区域 -->
-    <div class="modal-body">
+    <div class="modal-body" :class="{ 'comparison-active': showImageViewer }">
       <!-- 上传区域 -->
       <div class="upload-section">
         <div class="flex items-center gap-4">
@@ -27,7 +27,7 @@
               :disabled="isProcessing"
               color="outline"
           >
-            <component :is="isProcessing ? Loader2 : LucideScanText" class="w-5 h-5" :class="{'animate-spin': isProcessing}"/>
+            <component :is="isProcessing ? Loader2 : ScanText" class="w-5 h-5" :class="{'animate-spin': isProcessing}"/>
             <span>{{ isProcessing ? '识别中...' : recognizedItems.length > 0 ? '重新识别' : '开始识别' }}</span>
           </BaseButton>
         </div>
@@ -41,10 +41,8 @@
               @click="showImageViewer = true"
           />
           <div class="preview-hint">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
-            </svg>
-            点击查看大图
+            <Search class="w-3 h-3"/>
+            点击查看大图对比
           </div>
         </div>
       </div>
@@ -111,7 +109,7 @@
                   title="名称管理"
                   color="outline"
                   @click="assetNameRef?.open()"
-                  :icon="LucideSettings"
+                  :icon="Settings"
                   variant="search"
                   class="w-52"
               />
@@ -120,12 +118,26 @@
 
           <!-- 识别结果 -->
           <div class="section-card">
-            <h4 class="section-title">
-              识别结果 ({{ recognizedItems.length }} 条)
-              <span v-if="validItemsCount < recognizedItems.length" class="text-amber-600">
-                - {{ validItemsCount }} 条有效
-              </span>
-            </h4>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="section-title mb-0">
+                识别结果 ({{ recognizedItems.length }} 条)
+                <span v-if="validItemsCount < recognizedItems.length" class="text-amber-600">
+                  - {{ validItemsCount }} 条有效
+                </span>
+              </h4>
+
+              <!-- 对比模式入口 -->
+              <div v-if="imagePreview" class="comparison-controls">
+                <BaseButton
+                    type="button"
+                    color="primary"
+                    title="图片对比"
+                    :icon="Image"
+                    @click="openComparisonMode"
+                />
+              </div>
+            </div>
+
             <div class="table-wrapper" :style="{ maxHeight: tableHeight }">
               <RecognizedAssetsTable
                   ref="recognizedAssetsTableRef"
@@ -150,13 +162,13 @@
 
         <!-- 空状态 -->
         <div v-show="!isProcessing && !hasData && !imagePreview" class="empty-state">
-          <LucideScanText class="w-12 h-12 mx-auto mb-4 opacity-50"/>
+          <ScanText class="w-12 h-12 mx-auto mb-4 opacity-50"/>
           <p>请上传图片并开始识别</p>
         </div>
 
         <!-- 已上传但未识别状态 -->
         <div v-show="!isProcessing && !hasData && imagePreview" class="empty-state">
-          <LucideScanText class="w-12 h-12 mx-auto mb-4 opacity-50"/>
+          <ScanText class="w-12 h-12 mx-auto mb-4 opacity-50"/>
           <p>点击"开始识别"按钮进行识别</p>
         </div>
       </div>
@@ -190,12 +202,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
-import { Loader2, LucideScanText, LucideSettings } from 'lucide-vue-next'
-import { useAssetScanModal } from '@/composables/asset/useAssetScanModal'
-import { useImageRecognition } from '@/composables/asset/useImageRecognition'
-import { useBatchSubmit } from '@/composables/asset/useBatchSubmit'
-import { useFormValidation } from '@/composables/asset/useFormValidation'
+import {computed, nextTick, onMounted, ref} from 'vue'
+import {Image, Loader2, ScanText, Search, Settings} from 'lucide-vue-next'
+import {useAssetScanModal} from '@/composables/asset/useAssetScanModal'
+import {useImageRecognition} from '@/composables/asset/useImageRecognition'
+import {useBatchSubmit} from '@/composables/asset/useBatchSubmit'
+import {useFormValidation} from '@/composables/asset/useFormValidation'
 
 // Props定义 - 解决警告问题
 const props = withDefaults(defineProps<{
@@ -293,6 +305,15 @@ const handleRecognizeImage = async () => {
   await recognizeImage()
 }
 
+// 打开对比模式
+const openComparisonMode = async () => {
+  showImageViewer.value = true
+  // 等待下一个渲染周期，然后自动开启对比模式
+  await nextTick()
+  // 这里可以通过事件或者其他方式通知 ImageViewer 开启对比模式
+  // 由于 ImageViewer 组件会自动处理，这里只需要打开即可
+}
+
 const handleClose = () => {
   emit('update:visible', false)
   emit('close')
@@ -315,6 +336,11 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  transition: filter 0.3s ease;
+}
+
+.modal-body.comparison-active {
+  filter: brightness(0.95);
 }
 
 .content-wrapper {
@@ -351,7 +377,7 @@ onMounted(async () => {
   position: absolute;
   top: 0;
   left: 0;
-  background: linear-gradient(to right, rgba(0,0,0,0.7), transparent);
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.7), transparent);
   color: white;
   font-size: 0.75rem;
   padding: 0.375rem 0.75rem;
@@ -362,7 +388,14 @@ onMounted(async () => {
   gap: 0.25rem;
 }
 
-/* 加载骨架屏 */
+/* 对比控制区域 */
+.comparison-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
 .loading-skeleton {
   animation: fadeIn 0.3s ease-in-out;
 }
@@ -394,7 +427,6 @@ onMounted(async () => {
   animation: pulse 1.5s ease-in-out infinite;
 }
 
-/* 数据内容 */
 .data-content {
   display: flex;
   flex-direction: column;
@@ -430,7 +462,6 @@ onMounted(async () => {
   border-radius: 3px;
 }
 
-/* 验证提示 */
 .validation-alert {
   @apply bg-amber-50 border border-amber-200 rounded-xl p-4;
   animation: slideDown 0.3s ease-out;
@@ -452,22 +483,23 @@ onMounted(async () => {
   @apply w-1.5 h-1.5 bg-amber-400 rounded-full;
 }
 
-/* 空状态 */
 .empty-state {
   @apply text-center py-12 text-gray-500;
   animation: fadeIn 0.3s ease-in-out;
 }
 
-/* 底部操作 */
 .footer-actions {
   @apply flex justify-end gap-3;
   animation: slideUp 0.3s ease-out;
 }
 
-/* 动画 */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideDown {
@@ -493,7 +525,28 @@ onMounted(async () => {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 768px) {
+  .comparison-controls {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .comparison-hint-text span {
+    display: none;
+  }
+
+  .comparison-mode-btn span {
+    display: none;
+  }
 }
 </style>
