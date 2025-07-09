@@ -1,4 +1,3 @@
-<!--src/components/base/BaseDateInput.vue-->
 <template>
   <div class="relative w-full" ref="container">
     <input
@@ -66,7 +65,7 @@
               v-if="showTime"
               :modelValue="timeStart"
               :maxTime="rangeStart && rangeEnd && rangeStart === rangeEnd ? timeEnd : undefined"
-              @update:modelValue="val => timeStart = val"
+              @update:modelValue="val => updateTime('start', val)"
           />
         </div>
         <div class="flex-1">
@@ -81,7 +80,7 @@
               v-if="showTime"
               :modelValue="timeEnd"
               :minTime="rangeStart && rangeEnd && rangeStart === rangeEnd ? timeStart : undefined"
-              @update:modelValue="val => timeEnd = val"
+              @update:modelValue="val => updateTime('end', val)"
           />
         </div>
       </div>
@@ -91,13 +90,13 @@
         <BaseCalendar
             v-if="showDate"
             :modelValue="singleDate"
-            @update:modelValue="val => singleDate = val"
+            @update:modelValue="val => updateSingleDate(val)"
             @confirm="handleConfirm"
         />
         <BaseTimeSelector
             v-if="showTime"
             :modelValue="singleTime"
-            @update:modelValue="val => singleTime = val"
+            @update:modelValue="val => updateSingleTime(val)"
         />
       </div>
 
@@ -251,21 +250,12 @@ function validateRequired() {
   return true
 }
 
-// 弹窗关闭时同步数据到外层，保证点击空白关闭弹窗时同步
-watch(open, (val, oldVal) => {
-  if (oldVal === true && val === false) {
-    // 弹窗从开变关，主动同步当前值给外层
-    const currentValue = displayValue.value
-    emit('update:modelValue', currentValue)
-
-    // 弹窗关闭后进行验证
-    setTimeout(() => {
-      if (props.required) {
-        validateRequired()
-      }
-    }, 100)
-  }
-})
+// 立即同步值到父组件
+function emitValue() {
+  nextTick(() => {
+    emit('update:modelValue', displayValue.value)
+  })
+}
 
 // 修复清空函数
 function clearAll() {
@@ -298,15 +288,50 @@ function applyQuick(opt: any) {
   if (hasValue.value) {
     showError.value = false
   }
+  // 立即同步值到父组件
+  emitValue()
 }
 
 function updateRange(which: 'start' | 'end', val: string) {
   if (which === 'start') rangeStart.value = val
   else rangeEnd.value = val
   quickOptions.value.forEach(o => (o.isActive = false))
+
   // 选择后清除错误状态
   if (hasValue.value) {
     showError.value = false
+  }
+
+  // 立即同步值到父组件
+  emitValue()
+}
+
+function updateTime(which: 'start' | 'end', val: any) {
+  if (which === 'start') timeStart.value = val
+  else timeEnd.value = val
+
+  // 如果有日期值，立即同步
+  if (hasValue.value) {
+    emitValue()
+  }
+}
+
+function updateSingleDate(val: string) {
+  singleDate.value = val
+  if (val && showError.value) {
+    showError.value = false
+  }
+  // 立即同步值到父组件
+  if (val) {
+    emitValue()
+  }
+}
+
+function updateSingleTime(val: any) {
+  singleTime.value = val
+  // 如果有日期值，立即同步
+  if (singleDate.value) {
+    emitValue()
   }
 }
 
@@ -358,7 +383,6 @@ function syncFromModel() {
       singleDate.value = null
       singleTime.value = { h: 0, m: 0, s: 0 }
     }
-    // 不要在这里清除错误状态，让验证函数来处理
     return
   }
 
@@ -411,20 +435,6 @@ function getFormat() {
   if (props.type === 'time') return 'HH:mm:ss'
   return 'YYYY-MM-DD HH:mm:ss'
 }
-
-// 监听单个日期选择，清除错误状态
-watch(singleDate, (newVal) => {
-  if (newVal && showError.value) {
-    showError.value = false
-  }
-})
-
-// 监听范围日期选择，清除错误状态
-watch([rangeStart, rangeEnd], ([newStart, newEnd]) => {
-  if (props.range && newStart && newEnd && showError.value) {
-    showError.value = false
-  }
-})
 
 // 快捷选项（只在区间模式下显示）
 const quickOptions = ref([
