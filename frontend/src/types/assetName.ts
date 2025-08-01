@@ -1,14 +1,15 @@
-// 🔥 类型定义
-export interface QueryParams {
+import { ID, BaseRecord, BaseQueryParams } from './base'
+
+// 资产名称查询参数
+export interface AssetNameQueryParams extends BaseQueryParams {
     name: string
     description: string
-    remark: string
+    remark?: string
 }
 
-export interface AssetNameRecord {
-    id: number | string
+// 资产名称记录
+export interface AssetNameRecord extends BaseRecord {
+    id: ID
     name: string
     description?: string
-    remark?: string
-    [key: string]: any
 }

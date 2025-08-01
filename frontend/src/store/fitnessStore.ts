@@ -7,53 +7,22 @@ import qs from 'qs'
 import { formatFitnessRecord } from '@/utils/commonMeta'
 import { formatTime } from '@/utils/formatters'
 import type { Pagination } from '@/types/common'
-import type { FormattedFitnessRecord, StatsData, RawFitnessRecord, QueryConditions } from '@/types/fitness'
+import type { FormattedFitnessRecord, FitnessStatsData, RawFitnessRecord, FitnessQueryConditions } from '@/types/fitness'
 
 
 // 🔥 常量定义
 const DEFAULT_DEBOUNCE_DELAY = 300
 const DEFAULT_PAGE_SIZE = 10
 
-// 🔥 请求管理器类
-class RequestManager {
-    private controllers = new Map<string, AbortController>()
-    private isDev = import.meta.env.DEV
-
-    abort(key: string, reason = '新请求开始'): void {
-        const controller = this.controllers.get(key)
-        if (controller) {
-            if (this.isDev) {
-                console.log(`🟡 [请求管理] ${reason}，取消 ${key} 请求`)
-            }
-            controller.abort(reason)
-            this.controllers.delete(key)
-        }
-    }
-
-    create(key: string): AbortController {
-        this.abort(key)
-        const controller = new AbortController()
-        this.controllers.set(key, controller)
-        return controller
-    }
-
-    cleanup(): void {
-        this.controllers.forEach((controller, key) => {
-            controller.abort('Store cleanup')
-        })
-        this.controllers.clear()
-        if (this.isDev) {
-            console.log('🟡 [请求管理] 已清理所有请求')
-        }
-    }
-}
+// 导入请求管理器
+import { RequestManager } from '@/types/request'
 
 export const useFitnessStore = defineStore('fitness', () => {
     // 🔥 状态定义
     const list = ref<FormattedFitnessRecord[]>([])
     const allList = ref<FormattedFitnessRecord[]>([])
 
-    const query = reactive<QueryConditions>({
+    const query = reactive<FitnessQueryConditions>({
         typeIdList: [],
         startDate: '',
         endDate: '',
@@ -67,7 +36,8 @@ export const useFitnessStore = defineStore('fitness', () => {
         records: []
     })
 
-    const stats = reactive<StatsData>({
+    const stats = reactive<FitnessStatsData>({
+        formattedDate: '-',
         monthlyCount: 0,
         weeklyCount: 0,
         lastWorkoutDays: 0,
@@ -127,7 +97,7 @@ export const useFitnessStore = defineStore('fitness', () => {
             typeIdList: query.typeIdList.length > 0 ? query.typeIdList : undefined,
             startDate: query.startDate ? `${query.startDate}T00:00:00` : undefined,
             endDate: query.endDate ? `${query.endDate}T23:59:59` : undefined,
-            remark: query.remark.trim() || undefined
+            remark: query.remark?.trim() || undefined
         }
 
         if (includePageInfo) {
@@ -377,7 +347,7 @@ export const useFitnessStore = defineStore('fitness', () => {
                 signal: controller.signal
             })
 
-            const data = handleApiResponse<StatsData>(response, '获取统计')
+            const data = handleApiResponse<FitnessStatsData>(response, '获取统计')
             if (!data) return // 需要重新登录
 
             Object.assign(stats, data)
@@ -477,7 +447,7 @@ export const useFitnessStore = defineStore('fitness', () => {
     }
 
     // 🔥 查询参数管理
-    function updateQuery(newQuery: Partial<QueryConditions>): void {
+    function updateQuery(newQuery: Partial<FitnessQueryConditions>): void {
         const hasChanged = Object.keys(newQuery).some(key => {
             return (query as any)[key] !== (newQuery as any)[key]
         })

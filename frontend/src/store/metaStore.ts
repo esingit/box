@@ -3,72 +3,15 @@ import { defineStore } from 'pinia'
 import { reactive, ref, computed } from 'vue'
 import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
-import {Option} from "@/types/common";
-
-// 🔥 类型定义
-export interface CommonMetaQueryDTO {
-    typeCode: string
-}
-
-export interface CommonMetaVO extends Required<Pick<CommonMetaQueryDTO, 'typeCode'>> {
-    id: number
-    typeCode: string
-    typeName: string
-    value: string | number
-    label: string
-    key1?: string
-    key2?: string
-    key3?: string
-    key4?: string
-    value1?: string
-    value2?: string
-    value3?: string
-    value4?: string
-}
-
-interface ApiResponse<T = any> {
-    success: boolean
-    message?: string
-    data?: T
-    code?: string
-}
+import { Option } from "@/types/common"
+import { CommonMetaQueryDTO, CommonMetaVO } from "@/types/meta"
+import { ApiResponse } from "@/types/api"
 
 // 🔥 常量定义
 const DEFAULT_DEBOUNCE_DELAY = 300
 
-// 🔥 请求管理器类
-class RequestManager {
-    private controllers = new Map<string, AbortController>()
-    private isDev = import.meta.env.DEV
-
-    abort(key: string, reason = '新请求开始'): void {
-        const controller = this.controllers.get(key)
-        if (controller) {
-            if (this.isDev) {
-                console.log(`🟡 [请求管理] ${reason}，取消 ${key} 请求`)
-            }
-            controller.abort(reason)
-            this.controllers.delete(key)
-        }
-    }
-
-    create(key: string): AbortController {
-        this.abort(key)
-        const controller = new AbortController()
-        this.controllers.set(key, controller)
-        return controller
-    }
-
-    cleanup(): void {
-        this.controllers.forEach((controller, key) => {
-            controller.abort('Store cleanup')
-        })
-        this.controllers.clear()
-        if (this.isDev) {
-            console.log('🟡 [请求管理] 已清理所有请求')
-        }
-    }
-}
+// 导入请求管理器
+import { RequestManager } from '@/types/request'
 
 export const useMetaStore = defineStore('meta', () => {
     // 缓存每类 typeCode 的元数据列表

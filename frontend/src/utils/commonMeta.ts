@@ -1,13 +1,14 @@
 import axiosInstance from '@/api/axios'
 import { useMetaStore } from '@/store/metaStore'
 import { AssetNameRecord } from '@/types/assetName'
+import { ID } from '@/types/base'
 
-const cache = new Map<string | number, { typeName: string; value1: string }>()
+const cache = new Map<ID, { typeName: string; value1: string }>()
 
 /**
  * 根据 ID 获取 CommonMeta 数据（带超时控制 + 缓存）
  */
-export async function getCommonMetaById(id: string | number): Promise<{ typeName: string; value1: string } | null> {
+export async function getCommonMetaById(id: ID): Promise<{ typeName: string; value1: string } | null> {
     if (!id) return null
     if (cache.has(id)) return cache.get(id)!
 
@@ -41,7 +42,7 @@ export function clearCommonMetaCache(): void {
 /**
  * 通用格式化工具
  */
-async function formatValue(id: string | number | undefined, fallback?: string): Promise<string> {
+async function formatValue(id: ID | undefined, fallback?: string): Promise<string> {
     if (!id) return fallback ?? '-'
     const data = await getCommonMetaById(id)
     return data?.value1 || fallback || '-'
@@ -51,7 +52,7 @@ async function formatValue(id: string | number | undefined, fallback?: string): 
  * 格式化健身记录中的类型与单位
  */
 export async function formatFitnessRecord<
-    T extends { assetTypeId: string | number; unitId: string | number; typeValue?: string; unitValue?: string }
+    T extends { assetTypeId: ID; unitId: ID; typeValue?: string; unitValue?: string }
 >(record: T): Promise<T> {
     if (!record || (record.typeValue && record.unitValue)) return record
 
@@ -72,9 +73,9 @@ export async function formatFitnessRecord<
  */
 export async function formatAssetRecord<
     T extends {
-        assetTypeId: string | number
-        unitId: string | number
-        assetLocationId: string | number
+        assetTypeId: ID
+        unitId: ID
+        assetLocationId: ID
         assetTypeValue?: string
         unitValue?: string
         assetLocationValue?: string

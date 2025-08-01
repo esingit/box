@@ -1,11 +1,11 @@
 import { computed, ComputedRef, Ref } from 'vue'
-import { FormattedFitnessRecord } from '@/types/fitness'
+import { FormattedFitnessRecord, FitnessQueryConditions } from '@/types/fitness'
 import { Option } from '@/types/common'
 
 type FitnessRecord = FormattedFitnessRecord
 
 interface UseFitnessDataOptions {
-    query: Ref<any>
+    query: Ref<FitnessQueryConditions>
     allLoadedRecords: Ref<FitnessRecord[]>
     fitnessTypeOptions: Option[]
     isComponentUnmounted: Ref<boolean>

@@ -64,9 +64,9 @@ import { joinRangeDates, splitRangeDates } from '@/utils/formatters'
 const props = defineProps<{
   query: {
     typeIdList: (string | number)[]
-    startDate: string
-    endDate: string
-    remark: string
+    startDate?: string
+    endDate?: string
+    remark?: string
   }
   fitnessTypeOptions: Array<{ label: string; value: string | number }>
   resultCount: number | null
@@ -91,7 +91,7 @@ watch(() => props.fitnessTypeOptions, (val) => {
 
 // 监听父组件传入的 startDate 和 endDate，合并成 rangeValue 字符串
 watch(() => [props.query.startDate, props.query.endDate], ([start, end]) => {
-  rangeValue.value = joinRangeDates(start, end)
+  rangeValue.value = joinRangeDates(start || '', end || '')
 }, { immediate: true })
 
 // 监听 rangeValue 变化，拆分成 startDate 和 endDate 赋给 query

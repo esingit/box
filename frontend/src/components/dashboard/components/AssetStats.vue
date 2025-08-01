@@ -82,7 +82,7 @@ import BaseEmptyState from '@/components/base/BaseEmptyState.vue'
 import {useAssetStore} from '@/store/assetStore'
 import {useMetaStore} from '@/store/metaStore'
 import {useChart, useDateRange} from '@/utils/common'
-import type {AssetRecord, QueryConditions} from '@/types/asset'
+import type {AssetRecord, AssetQueryConditions} from '@/types/asset'
 import type {Option} from '@/types/common'
 import {clearCommonMetaCache} from "@/utils/commonMeta"
 
@@ -326,7 +326,7 @@ async function loadData(): Promise<void> {
   await debouncedLoadData()
 }
 
-async function handleQueryUpdate(newQuery: Partial<QueryConditions>) {
+async function handleQueryUpdate(newQuery: Partial<AssetQueryConditions>) {
   assetStore.updateQuery(newQuery)
 
   if (newQuery.startDate !== undefined || newQuery.endDate !== undefined) {
@@ -345,7 +345,7 @@ async function handleQueryUpdate(newQuery: Partial<QueryConditions>) {
   }
 }
 
-async function handleSearch(searchQuery?: QueryConditions): Promise<void> {
+async function handleSearch(searchQuery?: AssetQueryConditions): Promise<void> {
   try {
     isSearching.value = true
 

@@ -1,6 +1,6 @@
 import { computed, ComputedRef } from 'vue'
 import type { EChartsCoreOption } from 'echarts/core'
-import type { ChartOptionsType } from '@/types/asset'
+import type { AssetChartOptions } from '@/types/asset'
 import { useAssetUtils } from './useAssetUtils'
 import { CHART_COLORS } from './useAssetConstants'
 
@@ -17,7 +17,7 @@ interface UseAssetChartOptions {
     dateRangeDisplay: ComputedRef<string>
     lastDateWithRecords: ComputedRef<string>
     statisticsData: ComputedRef<{ unitSymbol: string }>
-    chartOptions: ChartOptionsType
+    chartOptions: AssetChartOptions
 }
 
 export function useAssetChart(options: UseAssetChartOptions) {

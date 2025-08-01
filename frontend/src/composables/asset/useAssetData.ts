@@ -1,11 +1,11 @@
 import {computed, Ref} from 'vue'
 import {isIdInList} from '@/utils/common'
-import type {AssetRecord, QueryConditions} from '@/types/asset'
+import type {AssetRecord, AssetQueryConditions} from '@/types/asset'
 import type {Option} from '@/types/common'
 import {useAssetUtils} from './useAssetUtils'
 
 interface UseAssetDataOptions {
-    query: Ref<QueryConditions>
+    query: Ref<AssetQueryConditions>
     allLoadedRecords: Ref<AssetRecord[]>
     assetNameOptions: Option[]
     assetTypeOptions: Option[]
@@ -107,7 +107,7 @@ export function useAssetData(options: UseAssetDataOptions) {
         query.value.assetTypeIdList.length > 0 ||
         query.value.assetNameIdList.length > 0 ||
         query.value.assetLocationIdList.length > 0 ||
-        query.value.remark.trim() !== ''
+        (query.value.remark?.trim() || '') !== ''
     )
 
     const dateRangeDisplay = computed(() => {

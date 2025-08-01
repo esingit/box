@@ -8,8 +8,10 @@ interface UseFitnessStatsOptions {
     safeComputed: <T>(getter: () => T, defaultValue: T) => ComputedRef<T>
 }
 
+import { ID } from '@/types/base'
+
 interface UseFitnessStatsReturn {
-    isExerciseType: (typeId: string | number | undefined) => boolean
+    isExerciseType: (typeId: ID | undefined) => boolean
     exerciseDaysCount: ComputedRef<number>
     pushUpCount: ComputedRef<number>
     proteinCount: ComputedRef<number>
@@ -34,7 +36,7 @@ export function useFitnessStats(options: UseFitnessStatsOptions): UseFitnessStat
     })))
 
     // 使用名称判断是否为运动类型
-    function isExerciseType(typeId: string | number | undefined): boolean {
+    function isExerciseType(typeId: ID | undefined): boolean {
         if (!typeId) return false
 
         console.log(`🔍 检查类型ID ${typeId} 是否为运动类型`)

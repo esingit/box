@@ -5,53 +5,22 @@ import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
 import { formatAssetNameRecord } from '@/utils/commonMeta'
-import { AssetNameRecord, QueryParams } from '@/types/assetName'
+import { AssetNameRecord, AssetNameQueryParams } from '@/types/assetName'
 import {Pagination} from "@/types/common";
 
 // 🔥 常量定义
 const DEFAULT_DEBOUNCE_DELAY = 300
 const DEFAULT_PAGE_SIZE = 10
 
-// 🔥 请求管理器类
-class RequestManager {
-    private controllers = new Map<string, AbortController>()
-    private isDev = import.meta.env.DEV
-
-    abort(key: string, reason = '新请求开始'): void {
-        const controller = this.controllers.get(key)
-        if (controller) {
-            if (this.isDev) {
-                console.log(`🟡 [请求管理] ${reason}，取消 ${key} 请求`)
-            }
-            controller.abort(reason)
-            this.controllers.delete(key)
-        }
-    }
-
-    create(key: string): AbortController {
-        this.abort(key)
-        const controller = new AbortController()
-        this.controllers.set(key, controller)
-        return controller
-    }
-
-    cleanup(): void {
-        this.controllers.forEach((controller, key) => {
-            controller.abort('Store cleanup')
-        })
-        this.controllers.clear()
-        if (this.isDev) {
-            console.log('🟡 [请求管理] 已清理所有请求')
-        }
-    }
-}
+// 导入请求管理器
+import { RequestManager } from '@/types/request'
 
 export const useAssetNameStore = defineStore('assetName', () => {
     // 🔥 状态定义
     const list = ref<AssetNameRecord[]>([])
     const assetName = ref<AssetNameRecord[]>([])
 
-    const query = reactive<QueryParams>({
+    const query = reactive<AssetNameQueryParams>({
         name: '',
         description: '',
         remark: ''
@@ -119,7 +88,7 @@ export const useAssetNameStore = defineStore('assetName', () => {
             pageSize: pagination.pageSize,
             name: query.name.trim() || undefined,
             description: query.description.trim() || undefined,
-            remark: query.remark.trim() || undefined
+            remark: query.remark?.trim() || undefined
         }
 
         // 移除 undefined 值
@@ -431,7 +400,7 @@ export const useAssetNameStore = defineStore('assetName', () => {
     }
 
     // 🔥 查询参数管理
-    function updateQuery(newQuery: Partial<QueryParams>): void {
+    function updateQuery(newQuery: Partial<AssetNameQueryParams>): void {
         const hasChanged = Object.keys(newQuery).some(key => {
             return (query as any)[key] !== (newQuery as any)[key]
         })

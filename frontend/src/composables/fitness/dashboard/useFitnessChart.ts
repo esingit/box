@@ -1,6 +1,7 @@
 import {ComputedRef, reactive, Ref} from 'vue'
 import {FormattedFitnessRecord} from '@/types/fitness'
 import {Option} from '@/types/common'
+import {ID} from '@/types/base'
 
 const CHART_COLORS = [
     '#6B7F96', '#8D9C8D', '#B19C7D', '#A88080', '#8C7BA8', '#9E8C9E',

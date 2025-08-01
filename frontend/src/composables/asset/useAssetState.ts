@@ -1,6 +1,6 @@
 import { ref, Ref, reactive } from 'vue'
 import emitter from '@/utils/eventBus'
-import type { ChartOptionsType } from '@/types/asset'
+import type { AssetChartOptions } from '@/types/asset'
 import { CHART_OPTIONS_STORAGE_KEY } from './useAssetConstants'
 
 export interface AssetState {
@@ -15,7 +15,7 @@ export interface AssetState {
 
 export function useAssetState(): AssetState & {
     showNotification: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void
-    chartOptions: ChartOptionsType
+    chartOptions: AssetChartOptions
     saveChartOptions: () => void
 } {
     const isLoading = ref(false)
@@ -30,7 +30,7 @@ export function useAssetState(): AssetState & {
         emitter.emit('notify', { message, type })
     }
 
-    const getSavedChartOptions = (): Partial<ChartOptionsType> => {
+    const getSavedChartOptions = (): Partial<AssetChartOptions> => {
         try {
             const saved = localStorage.getItem(CHART_OPTIONS_STORAGE_KEY)
             return saved ? JSON.parse(saved) : {}
@@ -39,7 +39,7 @@ export function useAssetState(): AssetState & {
         }
     }
 
-    const chartOptions = reactive<ChartOptionsType>({
+    const chartOptions = reactive<AssetChartOptions>({
         showTotalTrend: true,
         showNameDimension: true,
         showTypeDimension: true,

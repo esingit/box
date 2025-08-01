@@ -1,6 +1,8 @@
-// 统计数据
-export interface StatsData {
-    formattedDate: string
+import { ID, BaseQueryParams, BaseRecord, KeyValue } from './base'
+import { BaseStatsData, BaseChartOptions } from './common'
+
+// 资产统计数据
+export interface AssetStatsData extends BaseStatsData {
     totalAssets: number
     assetsChange: number
     totalLiabilities: number
@@ -11,37 +13,32 @@ export interface StatsData {
     investmentAssetsChange: number
 }
 
-// 查询条件
-export interface QueryConditions {
+// 资产查询条件
+export interface AssetQueryConditions extends BaseQueryParams {
     assetNameIdList: number[]
     assetLocationIdList: number[]
     assetTypeIdList: number[]
-    startDate: string
-    endDate: string
-    remark: string
+    remark?: string
 }
 
 // 标准的资产记录类型
-export interface RawAssetRecord {
-    id?: number | string  // 改为可选
-    assetNameId: string | number
-    assetLocationId: string | number
-    assetTypeId: string | number
-    unitId: string | number
+export interface RawAssetRecord extends BaseRecord {
+    assetNameId: ID
+    assetLocationId: ID
+    assetTypeId: ID
+    unitId: ID
     amount?: number
     acquireTime: string
-    remark?: string
-    [key: string]: any
 }
 
-// 类型定义
-export interface AssetRecord {
-    id: string
-    assetNameId: string | number
-    assetTypeId: string | number
+// 格式化后的资产记录类型
+export interface AssetRecord extends BaseRecord {
+    id: ID
+    assetNameId: ID
+    assetTypeId: ID
     amount: string
-    unitId: string
-    assetLocationId: string | number
+    unitId: ID
+    assetLocationId: ID
     acquireTime: string
     assetName?: string | null
     assetTypeName?: string | null
@@ -50,10 +47,8 @@ export interface AssetRecord {
     unitValue?: string
     assetLocationName?: string | null
     assetLocationValue?: string
-    remark?: string
     assetNameValue?: string
     formattedAmount?: string
-    [key: string]: any
 }
 
 export interface BatchAddResult {
@@ -93,36 +88,33 @@ export interface BatchAddResult {
     message: string
 }
 
-// 图表配置
-export interface ChartOptionsType {
-    showTotalTrend: boolean
+// 资产图表配置
+export interface AssetChartOptions extends BaseChartOptions {
     showNameDimension: boolean
     showTypeDimension: boolean
     showLocationDimension: boolean
 }
 
 // 图片识别返回的数据格式
-export interface RecognizedAssetItem {
+export interface RecognizedAssetItem extends KeyValue {
     assetName: string
-    assetNameId: string | number | null
+    assetNameId: ID | null
     amount: number | null
     unit?: string
-    assetTypeId?: number
-    assetLocationId?: number
-    [key: string]: any
+    assetTypeId?: ID
+    assetLocationId?: ID
 }
 
 // OCR识别返回的数据结构
-export interface AssetScanImageDTO {
+export interface AssetScanImageDTO extends BaseRecord {
     // 基础字段
-    assetNameId?: number
+    assetNameId?: ID
     assetName?: string
-    assetTypeId?: number
-    unitId?: number
-    assetLocationId?: number
+    assetTypeId?: ID
+    unitId?: ID
+    assetLocationId?: ID
     amount?: number
     acquireTime?: string
-    remark?: string
 
     // OCR识别相关字段
     originalAssetName?: string

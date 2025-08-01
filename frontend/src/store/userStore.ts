@@ -4,33 +4,8 @@ import type { Router } from 'vue-router'
 import { tokenService } from '@/api/tokenService'
 import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
-
-// 🔥 类型定义
-interface User {
-    username: string
-    email: string
-    lastLoginTime: string
-    roles?: string[]
-}
-
-interface ApiResponse<T = any> {
-    success: boolean
-    message: string
-    data?: T
-    code?: string
-    needCaptcha?: boolean
-}
-
-interface LoginResponse {
-    success: boolean
-    message: string
-    needCaptcha?: boolean
-}
-
-interface TokenPair {
-    accessToken: string
-    refreshToken: string
-}
+import type { User, LoginResponse, TokenPair } from '@/types/user'
+import type { ApiResponse } from '@/types/api'
 
 // 🔥 常量定义
 const isDev = import.meta.env.DEV

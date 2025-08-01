@@ -4,56 +4,24 @@ import { ref, reactive, computed } from 'vue'
 import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
-import type { BatchAddResult, RawAssetRecord } from '@/types/asset'
+import type { BatchAddResult, RawAssetRecord, AssetRecord, AssetQueryConditions, AssetStatsData } from '@/types/asset'
 import { formatAssetRecord } from '@/utils/commonMeta'
 import { formatTime } from '@/utils/formatters'
 import type { Pagination } from '@/types/common'
-import type { AssetRecord, QueryConditions, StatsData } from '@/types/asset'
 
 // 🔥 常量定义
 const DEFAULT_DEBOUNCE_DELAY = 300
 const DEFAULT_PAGE_SIZE = 10
 
-// 🔥 请求管理器类
-class RequestManager {
-    private controllers = new Map<string, AbortController>()
-    private isDev = import.meta.env.DEV
-
-    abort(key: string, reason = '新请求开始'): void {
-        const controller = this.controllers.get(key)
-        if (controller) {
-            if (this.isDev) {
-                console.log(`🟡 [请求管理] ${reason}，取消 ${key} 请求`)
-            }
-            controller.abort(reason)
-            this.controllers.delete(key)
-        }
-    }
-
-    create(key: string): AbortController {
-        this.abort(key)
-        const controller = new AbortController()
-        this.controllers.set(key, controller)
-        return controller
-    }
-
-    cleanup(): void {
-        this.controllers.forEach((controller, key) => {
-            controller.abort('Store cleanup')
-        })
-        this.controllers.clear()
-        if (this.isDev) {
-            console.log('🟡 [请求管理] 已清理所有请求')
-        }
-    }
-}
+// 导入请求管理器
+import { RequestManager } from '@/types/request'
 
 export const useAssetStore = defineStore('asset', () => {
     // 🔥 状态定义
     const list = ref<AssetRecord[]>([])
     const allList = ref<AssetRecord[]>([])
 
-    const query = reactive<QueryConditions>({
+    const query = reactive<AssetQueryConditions>({
         assetNameIdList: [],
         assetLocationIdList: [],
         assetTypeIdList: [],
@@ -69,7 +37,7 @@ export const useAssetStore = defineStore('asset', () => {
         records: []
     })
 
-    const stats = reactive<StatsData>({
+    const stats = reactive<AssetStatsData>({
         formattedDate: '-',
         totalAssets: 0,
         assetsChange: 0,
@@ -134,7 +102,7 @@ export const useAssetStore = defineStore('asset', () => {
             assetTypeIdList: query.assetTypeIdList.length > 0 ? query.assetTypeIdList : undefined,
             startDate: query.startDate ? `${query.startDate}T00:00:00` : undefined,
             endDate: query.endDate ? `${query.endDate}T23:59:59` : undefined,
-            remark: query.remark.trim() || undefined
+            remark: query.remark?.trim() || undefined
         }
 
         if (includePageInfo) {
@@ -386,7 +354,7 @@ export const useAssetStore = defineStore('asset', () => {
                 signal: controller.signal
             })
 
-            const data = handleApiResponse<StatsData>(response, '获取统计')
+            const data = handleApiResponse<AssetStatsData>(response, '获取统计')
             if (!data) return // 需要重新登录
 
             Object.assign(stats, data)
@@ -616,7 +584,7 @@ export const useAssetStore = defineStore('asset', () => {
     }
 
     // 🔥 查询参数管理
-    function updateQuery(newQuery: Partial<QueryConditions>): void {
+    function updateQuery(newQuery: Partial<AssetQueryConditions>): void {
         const hasChanged = Object.keys(newQuery).some(key => {
             return (query as any)[key] !== (newQuery as any)[key]
         })

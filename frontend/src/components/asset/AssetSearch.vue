@@ -92,9 +92,9 @@ const props = defineProps<{
     assetNameIdList: (string | number)[]
     assetTypeIdList: (string | number)[]
     assetLocationIdList: (string | number)[]
-    startDate: string
-    endDate: string
-    remark: string
+    startDate?: string
+    endDate?: string
+    remark?: string
   }
   assetNameOptions: Array<{ label: string; value: string | number }>
   assetTypeOptions: Array<{ label: string; value: string | number }>
@@ -144,7 +144,7 @@ function splitRangeDates(rangeStr: string) {
 watch(
     () => [props.query.startDate, props.query.endDate],
     ([start, end]) => {
-      rangeValue.value = joinRangeDates(start, end)
+      rangeValue.value = joinRangeDates(start || '', end || '')
     },
     {immediate: true}
 )

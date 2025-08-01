@@ -8,28 +8,7 @@ import {
 } from '@/utils/ocrUtils'
 import axiosInstance from '@/api/axios'
 import type { AxiosProgressEvent } from 'axios'
-
-interface RecognitionOptions {
-    timeout?: number
-    retryCount?: number
-    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
-    onRetry?: (attempt: number, maxAttempts: number) => void
-}
-
-interface RecognitionResult {
-    ocrResults: AssetScanImageDTO[]
-    assetRecords: RawAssetRecord[]
-    recognizedItems: any[]
-    warnings: string[]
-}
-
-interface RecognitionState {
-    isRecognizing: boolean
-    progress: number
-    currentStep: string
-    lastResult: RecognitionResult | null
-    lastError: string | null
-}
+import type { RecognitionOptions, RecognitionResult, RecognitionState } from '@/types/recognition'
 
 const DEFAULT_OPTIONS: Required<RecognitionOptions> = {
     timeout: 60000,
