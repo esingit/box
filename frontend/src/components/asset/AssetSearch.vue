@@ -128,14 +128,28 @@ const localQuery = reactive({
 // 同步 props.query 到 localQuery
 watch(
   () => props.query,
-  (q) => {
+  (q, oldQ) => {
     if (!q) return
-    localQuery.assetNameIdList = Array.isArray(q.assetNameIdList) ? [...q.assetNameIdList] : []
-    localQuery.assetTypeIdList = Array.isArray(q.assetTypeIdList) ? [...q.assetTypeIdList] : []
-    localQuery.assetLocationIdList = Array.isArray(q.assetLocationIdList) ? [...q.assetLocationIdList] : []
-    localQuery.startDate = q.startDate || ''
-    localQuery.endDate = q.endDate || ''
-    localQuery.remark = q.remark || ''
+    
+    // 只有在初始化或显式更改时才更新本地状态
+    if (!oldQ || q.assetNameIdList !== oldQ.assetNameIdList) {
+      localQuery.assetNameIdList = Array.isArray(q.assetNameIdList) ? [...q.assetNameIdList] : []
+    }
+    if (!oldQ || q.assetTypeIdList !== oldQ.assetTypeIdList) {
+      localQuery.assetTypeIdList = Array.isArray(q.assetTypeIdList) ? [...q.assetTypeIdList] : []
+    }
+    if (!oldQ || q.assetLocationIdList !== oldQ.assetLocationIdList) {
+      localQuery.assetLocationIdList = Array.isArray(q.assetLocationIdList) ? [...q.assetLocationIdList] : []
+    }
+    if (!oldQ || q.startDate !== oldQ.startDate) {
+      localQuery.startDate = q.startDate || ''
+    }
+    if (!oldQ || q.endDate !== oldQ.endDate) {
+      localQuery.endDate = q.endDate || ''
+    }
+    if (!oldQ || q.remark !== oldQ.remark) {
+      localQuery.remark = q.remark || ''
+    }
   },
   { immediate: true, deep: true }
 )

@@ -116,13 +116,14 @@ import { useMetaStore } from '@/store/metaStore'
 import emitter from '@/utils/eventBus'
 import { formatAmount, getChangeClass, getChangePrefix, formatDate } from '@/utils/formatters'
 
+import BaseButton from '@/components/base/BaseButton.vue'
 import BaseStatCard from '@/components/base/BaseStatCard.vue'
 import AssetList from '@/components/asset/AssetList.vue'
 import AssetForm from '@/components/asset/AssetForm.vue'
 import AssetSearch from '@/components/asset/AssetSearch.vue'
 import AssetScanAddModal from '@/components/asset/AssetScanAddModal.vue'
-import {clearCommonMetaCache} from "@/utils/commonMeta";
-import {RawAssetRecord} from "@/types/asset";
+import {clearCommonMetaCache} from "@/utils/commonMeta"
+import {RawAssetRecord} from "@/types/asset"
 
 const assetStore = useAssetStore()
 const assetNameStore = useAssetNameStore()
@@ -132,6 +133,9 @@ const { list, stats, query, pagination } = storeToRefs(assetStore)
 // route sync helpers
 const route = useRoute()
 const router = useRouter()
+
+// 防止路由更新触发重复查询的标志
+const isHandlingRouteUpdate = ref(false)
 
 function toArrayParam(val: any): number[] {
   if (!val) return []
@@ -188,7 +192,6 @@ const assetLocationOptions = computed(() =>
     (metaStore.typeMap?.ASSET_LOCATION || []).map(i => ({ label: i.value1 || '', value: i.id }))
 )
 const { assetNameOptions } = storeToRefs(assetNameStore)
-
 
 function getDefaultTypeId() {
   const list = metaStore.typeMap?.ASSET_TYPE || []
@@ -284,27 +287,51 @@ async function refreshData(force = true) {
 }
 
 function resetQuery() {
+  // 先重置 store 中的查询条件
   assetStore.resetQuery()
-  refreshData(true) // 🔥 重置搜索时强制刷新
+  
+  // 设置标志，阻止 watch 响应这次路由更新
+  isHandlingRouteUpdate.value = true
+  
+  // 清空路由 query（不会触发重复查询）
+  router.replace({ query: {} }).finally(() => {
+    // 确保标志被重置
+    setTimeout(() => {
+      isHandlingRouteUpdate.value = false
+    }, 0)
+  })
+  
+  // 刷新数据
+  refreshData(true)
 }
 
 async function handleQuery(newQuery: Partial<typeof query.value>) {
+  // 先更新 store 中的查询条件
   assetStore.updateQuery(newQuery)
   assetStore.setPageNo(1)
+  
+  // 加载新数据
+  await refreshData(true)
 
-  // 同步到路由 query（不跳转历史，只替换当前 URL）
+  // 设置标志，阻止 watch 响应这次路由更新
+  isHandlingRouteUpdate.value = true
+  
   try {
+    // 同步到路由 query
     await router.replace({ query: buildRouteQueryFromStore() })
   } catch (e) {
     // ignore router replace errors
+  } finally {
+    // 确保标志被重置
+    setTimeout(() => {
+      isHandlingRouteUpdate.value = false
+    }, 0)
   }
-
-  await refreshData(true) // 🔥 搜索时强制刷新
 }
 
 function handlePageChange(page: number) {
   assetStore.setPageNo(page)
-  refreshData(true) // 🔥 翻页时强制刷新确保数据准确性
+  refreshData(true)
 }
 
 function handleAdd() {
@@ -477,13 +504,19 @@ onMounted(async () => {
   const parsed = parseRouteQuery(route.query)
   assetStore.updateQuery(parsed)
   assetStore.setPageNo(1)
-  await refreshData(true) // 🔥 初始加载时强制刷新
+  await refreshData(true)
 })
 
-// 监听路由 query 的变化，并在与 store 不同时同步并刷新
+// 监听路由 query 的变化，但仅响应非程序触发的变化（如浏览器前进/后退）
 watch(
   () => route.query,
   (q) => {
+    // 如果是程序触发的路由更新，跳过处理
+    if (isHandlingRouteUpdate.value) {
+      return
+    }
+
+    // 否则（例如浏览器前进/后退）同步路由 query 到 store 并刷新数据
     const parsed = parseRouteQuery(q)
     const current = {
       assetNameIdList: query.value.assetNameIdList || [],
@@ -497,7 +530,6 @@ watch(
     if (JSON.stringify(current) !== JSON.stringify(parsed)) {
       assetStore.updateQuery(parsed)
       assetStore.setPageNo(1)
-      // 不传 force 时，loadList 会根据参数判断是否需要请求，使用 refreshData(true) 强制刷新
       refreshData(true)
     }
   },
