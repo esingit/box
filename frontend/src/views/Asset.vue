@@ -106,6 +106,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { LucideCopy, LucidePlus, LucideRefreshCw, LucideScanText } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { format } from 'date-fns'
@@ -127,6 +128,43 @@ const assetStore = useAssetStore()
 const assetNameStore = useAssetNameStore()
 const metaStore = useMetaStore()
 const { list, stats, query, pagination } = storeToRefs(assetStore)
+
+// route sync helpers
+const route = useRoute()
+const router = useRouter()
+
+function toArrayParam(val: any): number[] {
+  if (!val) return []
+  const arr = Array.isArray(val) ? val : String(val).split(',')
+  return arr
+    .map((v: any) => {
+      const n = Number(String(v).trim())
+      return Number.isNaN(n) ? null : n
+    })
+    .filter((n: number | null): n is number => n !== null)
+}
+
+function parseRouteQuery(q: any): Partial<typeof query.value> {
+  return {
+    assetNameIdList: toArrayParam(q.assetNameIdList),
+    assetTypeIdList: toArrayParam(q.assetTypeIdList),
+    assetLocationIdList: toArrayParam(q.assetLocationIdList),
+    startDate: q.startDate || '',
+    endDate: q.endDate || '',
+    remark: q.remark || ''
+  }
+}
+
+function buildRouteQueryFromStore(): Record<string, any> {
+  const out: Record<string, any> = {}
+  if (query.value.assetNameIdList?.length) out.assetNameIdList = query.value.assetNameIdList
+  if (query.value.assetTypeIdList?.length) out.assetTypeIdList = query.value.assetTypeIdList
+  if (query.value.assetLocationIdList?.length) out.assetLocationIdList = query.value.assetLocationIdList
+  if (query.value.startDate) out.startDate = query.value.startDate
+  if (query.value.endDate) out.endDate = query.value.endDate
+  if (query.value.remark) out.remark = query.value.remark
+  return out
+}
 
 const loading = ref(false)
 const showAddModal = ref(false)
@@ -253,6 +291,14 @@ function resetQuery() {
 async function handleQuery(newQuery: Partial<typeof query.value>) {
   assetStore.updateQuery(newQuery)
   assetStore.setPageNo(1)
+
+  // 同步到路由 query（不跳转历史，只替换当前 URL）
+  try {
+    await router.replace({ query: buildRouteQueryFromStore() })
+  } catch (e) {
+    // ignore router replace errors
+  }
+
   await refreshData(true) // 🔥 搜索时强制刷新
 }
 
@@ -421,12 +467,42 @@ function onCopyClick() {
 }
 
 onMounted(async () => {
+  // 初始化元数据与选项
   await Promise.all([
     metaStore.initAll(),
-    assetNameStore.fetchAssetName(),
-    refreshData(true) // 🔥 初始加载时强制刷新
+    assetNameStore.fetchAssetName()
   ])
+
+  // 从路由 query 初始化查询条件（如果存在）
+  const parsed = parseRouteQuery(route.query)
+  assetStore.updateQuery(parsed)
+  assetStore.setPageNo(1)
+  await refreshData(true) // 🔥 初始加载时强制刷新
 })
+
+// 监听路由 query 的变化，并在与 store 不同时同步并刷新
+watch(
+  () => route.query,
+  (q) => {
+    const parsed = parseRouteQuery(q)
+    const current = {
+      assetNameIdList: query.value.assetNameIdList || [],
+      assetTypeIdList: query.value.assetTypeIdList || [],
+      assetLocationIdList: query.value.assetLocationIdList || [],
+      startDate: query.value.startDate || '',
+      endDate: query.value.endDate || '',
+      remark: query.value.remark || ''
+    }
+
+    if (JSON.stringify(current) !== JSON.stringify(parsed)) {
+      assetStore.updateQuery(parsed)
+      assetStore.setPageNo(1)
+      // 不传 force 时，loadList 会根据参数判断是否需要请求，使用 refreshData(true) 强制刷新
+      refreshData(true)
+    }
+  },
+  { deep: true }
+)
 
 onBeforeUnmount(() => {
   clearCommonMetaCache()

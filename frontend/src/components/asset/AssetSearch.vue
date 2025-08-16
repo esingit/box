@@ -5,39 +5,39 @@
     <div class="flex items-center gap-3 w-full">
       <!-- 资产类型 - 固定 200px -->
       <div class="w-[200px] flex-shrink-0">
-        <BaseSelect
-            title="资产类型"
-            v-model="query.assetTypeIdList"
-            :options="assetTypeOptions"
-            placeholder="全部资产类型"
-            multiple
-            clearable
-            searchable
-            class="w-full"
-        />
+    <BaseSelect
+      title="资产类型"
+      v-model="localQuery.assetTypeIdList"
+      :options="assetTypeOptions"
+      placeholder="全部资产类型"
+      multiple
+      clearable
+      searchable
+      class="w-full"
+    />
       </div>
 
       <!-- 资产位置 -->
-      <BaseSelect
-          title="资产位置"
-          v-model="query.assetLocationIdList"
-          :options="assetLocationOptions"
-          placeholder="全部资产位置"
-          multiple
-          clearable
-          searchable
-          class="w-full"
-      />
+    <BaseSelect
+      title="资产位置"
+      v-model="localQuery.assetLocationIdList"
+      :options="assetLocationOptions"
+      placeholder="全部资产位置"
+      multiple
+      clearable
+      searchable
+      class="w-full"
+    />
 
       <div class="w-[280px] flex-shrink-0">
-        <BaseDateInput
-            v-model="rangeValue"
-            type="date"
-            range
-            clearable
-            class="w-full"
-            placeholder="请选择日期范围"
-        />
+    <BaseDateInput
+      v-model="rangeValue"
+      type="date"
+      range
+      clearable
+      class="w-full"
+      placeholder="请选择日期范围"
+    />
       </div>
 
       <!-- 按钮组 -->
@@ -52,31 +52,31 @@
     <!-- 更多条件 -->
     <div v-if="showMore" class="flex flex-col md:flex-row md:items-center md:gap-3 gap-2">
       <div class="w-[700px] flex-shrink-0">
-        <BaseSelect
-            title="资产名称"
-            v-model="query.assetNameIdList"
-            :options="localAssetNameOptions"
-            placeholder="全部资产名称"
-            multiple
-            clearable
-            searchable
-            class="w-full"
-        />
+    <BaseSelect
+      title="资产名称"
+      v-model="localQuery.assetNameIdList"
+      :options="localAssetNameOptions"
+      placeholder="全部资产名称"
+      multiple
+      clearable
+      searchable
+      class="w-full"
+    />
       </div>
       <!-- 备注关键词 -->
-      <BaseInput
-          type="text"
-          v-model="query.remark"
-          placeholder="备注关键词"
-          clearable
-          class="w-full"
-      />
+    <BaseInput
+      type="text"
+      v-model="localQuery.remark"
+      placeholder="备注关键词"
+      clearable
+      class="w-full"
+    />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {ref, watch, reactive, toRefs} from 'vue'
+import {ref, watch} from 'vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseDateInput from '@/components/base/BaseDateInput.vue'
@@ -102,7 +102,7 @@ const props = defineProps<{
   resultCount: number | null
 }>()
 
-const emit = defineEmits(['search', 'reset', 'update:query'])
+const emit = defineEmits(['search', 'reset'])
 
 // 本地响应式变量，解决首次为空的问题
 const localAssetNameOptions = ref<Array<{ label: string; value: string | number }>>([])
@@ -115,54 +115,38 @@ watch(
     {immediate: true}
 )
 
+// 本地查询对象，避免直接修改 props
+const localQuery = reactive({
+  assetNameIdList: [] as (string | number)[],
+  assetTypeIdList: [] as (string | number)[],
+  assetLocationIdList: [] as (string | number)[],
+  startDate: '' as string,
+  endDate: '' as string,
+  remark: '' as string
+})
+
+// 同步 props.query 到 localQuery
+watch(
+  () => props.query,
+  (q) => {
+    if (!q) return
+    localQuery.assetNameIdList = Array.isArray(q.assetNameIdList) ? [...q.assetNameIdList] : []
+    localQuery.assetTypeIdList = Array.isArray(q.assetTypeIdList) ? [...q.assetTypeIdList] : []
+    localQuery.assetLocationIdList = Array.isArray(q.assetLocationIdList) ? [...q.assetLocationIdList] : []
+    localQuery.startDate = q.startDate || ''
+    localQuery.endDate = q.endDate || ''
+    localQuery.remark = q.remark || ''
+  },
+  { immediate: true, deep: true }
+)
+
 const showMore = ref(true)
 const toggleMore = () => {
   showMore.value = !showMore.value
 }
 
-// 使用 localQuery 避免直接修改 props
-const localQuery = reactive({
-  assetNameIdList: [...(props.query?.assetNameIdList || [])],
-  assetTypeIdList: [...(props.query?.assetTypeIdList || [])],
-  assetLocationIdList: [...(props.query?.assetLocationIdList || [])],
-  startDate: props.query?.startDate || '',
-  endDate: props.query?.endDate || '',
-  remark: props.query?.remark || ''
-})
-
 // 日期范围字符串，格式形如 '2023-01-01 ~ 2023-01-31'
-const rangeValue = ref(joinRangeDates(localQuery.startDate || '', localQuery.endDate || ''))
-
-// 当父组件传入的 props.query 改变时，更新 localQuery
-watch(
-  () => props.query,
-  (q) => {
-    localQuery.assetNameIdList = [...(q?.assetNameIdList || [])]
-    localQuery.assetTypeIdList = [...(q?.assetTypeIdList || [])]
-    localQuery.assetLocationIdList = [...(q?.assetLocationIdList || [])]
-    localQuery.startDate = q?.startDate || ''
-    localQuery.endDate = q?.endDate || ''
-    localQuery.remark = q?.remark || ''
-    rangeValue.value = joinRangeDates(localQuery.startDate, localQuery.endDate)
-  },
-  { immediate: true, deep: true }
-)
-
-// 当 localQuery 变化时，主动向父组件 emit update:query
-watch(
-  () => ({
-    assetNameIdList: localQuery.assetNameIdList,
-    assetTypeIdList: localQuery.assetTypeIdList,
-    assetLocationIdList: localQuery.assetLocationIdList,
-    startDate: localQuery.startDate,
-    endDate: localQuery.endDate,
-    remark: localQuery.remark
-  }),
-  (newQ) => {
-    emit('update:query', { ...newQ })
-  },
-  { deep: true }
-)
+const rangeValue = ref('')
 
 // 工具函数：把start和end拼成range字符串
 function joinRangeDates(start: string, end: string) {
@@ -181,7 +165,16 @@ function splitRangeDates(rangeStr: string) {
   }
 }
 
-// 监听 rangeValue，拆分回 startDate 和 endDate，赋值给 localQuery
+// 监听 props.query.startDate 和 endDate，同步给 rangeValue 显示
+watch(
+    () => [props.query.startDate, props.query.endDate],
+    ([start, end]) => {
+      rangeValue.value = joinRangeDates(start || '', end || '')
+    },
+    {immediate: true}
+)
+
+// 监听 rangeValue，拆分回 startDate 和 endDate，赋值给 props.query
 watch(rangeValue, (val) => {
   const {start, end} = splitRangeDates(val)
   localQuery.startDate = start
@@ -189,11 +182,29 @@ watch(rangeValue, (val) => {
 })
 
 function onSearch() {
-  emit('search', { ...localQuery })
+  // 规范化输出类型：将 id 列转换为 number[]，字符串 trim
+  const normalizeIds = (arr: (string | number)[]) =>
+    (Array.isArray(arr) ? arr : [])
+      .map(v => {
+        const n = Number(String(v).trim())
+        return Number.isNaN(n) ? null : n
+      })
+      .filter((v): v is number => v !== null)
+
+  const payload = {
+    assetNameIdList: normalizeIds(localQuery.assetNameIdList),
+    assetTypeIdList: normalizeIds(localQuery.assetTypeIdList),
+    assetLocationIdList: normalizeIds(localQuery.assetLocationIdList),
+    startDate: (localQuery.startDate || '').trim(),
+    endDate: (localQuery.endDate || '').trim(),
+    remark: (localQuery.remark || '').trim()
+  }
+
+  emit('search', payload)
 }
 
 function onReset() {
-  // 重置 localQuery
+  // 清空本地并通知父组件
   localQuery.assetNameIdList = []
   localQuery.assetTypeIdList = []
   localQuery.assetLocationIdList = []
