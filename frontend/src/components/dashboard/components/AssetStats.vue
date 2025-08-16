@@ -107,6 +107,7 @@ const assetStore = useAssetStore()
 const metaStore = useMetaStore()
 
 const {query} = storeToRefs(assetStore)
+const { allList } = storeToRefs(assetStore)
 const {getDefaultRange, parseDateRange} = useDateRange()
 const {chartRef, initChart, destroyChart, resizeChart} = useChart()
 
@@ -219,9 +220,9 @@ const shouldShowChart = computed(() =>
 const shouldShowOptions = computed(() => hasData.value || hasInitialData.value)
 const shouldShowStats = computed(() => hasData.value || hasInitialData.value)
 
-// 获取资产记录
+// 获取资产记录（从 storeToRefs 获取的 ref）
 const assetRecords = computed<AssetRecord[]>(() =>
-    Array.isArray(assetStore.allList) ? assetStore.allList : []
+    Array.isArray(allList.value) ? allList.value : []
 )
 
 // 图表操作函数
@@ -291,7 +292,8 @@ const debouncedLoadData = debounce(async () => {
   errorMessage.value = ''
 
   try {
-    await assetStore.loadAllRecords()
+    // 强制刷新，避免因参数缓存导致点击查询无响应
+    await assetStore.loadAllRecords(true)
     allLoadedRecords.value = [...assetRecords.value]
   } catch (error: any) {
     console.error('Failed to load asset data:', error)
@@ -349,11 +351,28 @@ async function handleSearch(searchQuery?: AssetQueryConditions): Promise<void> {
   try {
     isSearching.value = true
 
-    if (searchQuery) {
-      const needReload = searchQuery.startDate !== query.value.startDate ||
-          searchQuery.endDate !== query.value.endDate
+    // 使用 Partial，避免类型要求完整字段
+    let q: Partial<AssetQueryConditions> | undefined = searchQuery ? { ...searchQuery } : undefined
 
-      assetStore.updateQuery(searchQuery)
+    // 如果没有日期范围，自动填充默认范围
+    if (!q || !q.startDate || !q.endDate) {
+      const defaultRange = getDefaultRange()
+      const parsed = parseDateRange(defaultRange)
+      q = {
+        assetNameIdList: q?.assetNameIdList || [],
+        assetTypeIdList: q?.assetTypeIdList || [],
+        assetLocationIdList: q?.assetLocationIdList || [],
+        remark: q?.remark || '',
+        startDate: parsed.startDate,
+        endDate: parsed.endDate
+      }
+    }
+
+    if (q) {
+      const needReload = q.startDate !== query.value.startDate ||
+          q.endDate !== query.value.endDate
+
+      assetStore.updateQuery(q)
 
       if (needReload) {
         await loadData()

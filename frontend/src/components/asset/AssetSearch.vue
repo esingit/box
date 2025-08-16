@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, watch} from 'vue'
+import {ref, watch, reactive, toRefs} from 'vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseDateInput from '@/components/base/BaseDateInput.vue'
@@ -102,7 +102,7 @@ const props = defineProps<{
   resultCount: number | null
 }>()
 
-const emit = defineEmits(['search', 'reset'])
+const emit = defineEmits(['search', 'reset', 'update:query'])
 
 // 本地响应式变量，解决首次为空的问题
 const localAssetNameOptions = ref<Array<{ label: string; value: string | number }>>([])
@@ -120,8 +120,49 @@ const toggleMore = () => {
   showMore.value = !showMore.value
 }
 
+// 使用 localQuery 避免直接修改 props
+const localQuery = reactive({
+  assetNameIdList: [...(props.query?.assetNameIdList || [])],
+  assetTypeIdList: [...(props.query?.assetTypeIdList || [])],
+  assetLocationIdList: [...(props.query?.assetLocationIdList || [])],
+  startDate: props.query?.startDate || '',
+  endDate: props.query?.endDate || '',
+  remark: props.query?.remark || ''
+})
+
 // 日期范围字符串，格式形如 '2023-01-01 ~ 2023-01-31'
-const rangeValue = ref('')
+const rangeValue = ref(joinRangeDates(localQuery.startDate || '', localQuery.endDate || ''))
+
+// 当父组件传入的 props.query 改变时，更新 localQuery
+watch(
+  () => props.query,
+  (q) => {
+    localQuery.assetNameIdList = [...(q?.assetNameIdList || [])]
+    localQuery.assetTypeIdList = [...(q?.assetTypeIdList || [])]
+    localQuery.assetLocationIdList = [...(q?.assetLocationIdList || [])]
+    localQuery.startDate = q?.startDate || ''
+    localQuery.endDate = q?.endDate || ''
+    localQuery.remark = q?.remark || ''
+    rangeValue.value = joinRangeDates(localQuery.startDate, localQuery.endDate)
+  },
+  { immediate: true, deep: true }
+)
+
+// 当 localQuery 变化时，主动向父组件 emit update:query
+watch(
+  () => ({
+    assetNameIdList: localQuery.assetNameIdList,
+    assetTypeIdList: localQuery.assetTypeIdList,
+    assetLocationIdList: localQuery.assetLocationIdList,
+    startDate: localQuery.startDate,
+    endDate: localQuery.endDate,
+    remark: localQuery.remark
+  }),
+  (newQ) => {
+    emit('update:query', { ...newQ })
+  },
+  { deep: true }
+)
 
 // 工具函数：把start和end拼成range字符串
 function joinRangeDates(start: string, end: string) {
@@ -140,27 +181,26 @@ function splitRangeDates(rangeStr: string) {
   }
 }
 
-// 监听 props.query.startDate 和 endDate，同步给 rangeValue 显示
-watch(
-    () => [props.query.startDate, props.query.endDate],
-    ([start, end]) => {
-      rangeValue.value = joinRangeDates(start || '', end || '')
-    },
-    {immediate: true}
-)
-
-// 监听 rangeValue，拆分回 startDate 和 endDate，赋值给 props.query
+// 监听 rangeValue，拆分回 startDate 和 endDate，赋值给 localQuery
 watch(rangeValue, (val) => {
   const {start, end} = splitRangeDates(val)
-  props.query.startDate = start
-  props.query.endDate = end
+  localQuery.startDate = start
+  localQuery.endDate = end
 })
 
 function onSearch() {
-  emit('search', {...props.query})
+  emit('search', { ...localQuery })
 }
 
 function onReset() {
+  // 重置 localQuery
+  localQuery.assetNameIdList = []
+  localQuery.assetTypeIdList = []
+  localQuery.assetLocationIdList = []
+  localQuery.startDate = ''
+  localQuery.endDate = ''
+  localQuery.remark = ''
+  rangeValue.value = ''
   emit('reset')
 }
 </script>
