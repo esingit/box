@@ -61,6 +61,8 @@ public class AssetNameController {
     )
     public Result<AssetName> add(@Validated @RequestBody AssetName assetName) {
         try {
+            // 设置创建用户
+            assetName.setCreateUser(UserContextHolder.getCurrentUsername());
             return Result.success(assetNameService.addAssetName(assetName));
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
@@ -78,6 +80,13 @@ public class AssetNameController {
     )
     public Result<AssetName> update(@Validated @RequestBody AssetName assetName) {
         try {
+            // 校验权限：只能更新自己的资产名称
+            AssetName dbAssetName = assetNameService.getById(assetName.getId());
+            String currentUser = UserContextHolder.getCurrentUsername();
+            if (dbAssetName == null || !currentUser.equals(dbAssetName.getCreateUser())) {
+                return Result.error("无权操作他人资产名称");
+            }
+            assetName.setCreateUser(currentUser); // 保证更新时用户不被篡改
             return Result.success(assetNameService.updateAssetName(assetName));
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
@@ -95,6 +104,12 @@ public class AssetNameController {
     )
     public Result<Void> delete(
             @Parameter(description = "资产名称ID") @PathVariable Long id) {
+        // 校验权限：只能删除自己的资产名称
+        AssetName dbAssetName = assetNameService.getById(id);
+        String currentUser = UserContextHolder.getCurrentUsername();
+        if (dbAssetName == null || !currentUser.equals(dbAssetName.getCreateUser())) {
+            return Result.error("无权删除他人资产名称");
+        }
         assetNameService.removeById(id);
         return Result.success();
     }
@@ -117,7 +132,7 @@ public class AssetNameController {
     @GetMapping("/list")
     @Operation(
             summary = "高级查询资产名称",
-            description = "支持分页、按名称和描述模糊搜索、时间范围筛选等",
+            description = "支持分页、按名称和描述模糊搜索、时间范围筛选等，仅返回当前用户的记录",
             responses = {
                     @ApiResponse(responseCode = "200", description = "查询成功"),
                     @ApiResponse(responseCode = "400", description = "查询失败")
@@ -134,8 +149,20 @@ public class AssetNameController {
             @RequestParam(required = false) String endTime) {
         try {
             Page<AssetName> pageObj = new Page<>(page, pageSize);
+            // 添加当前用户过滤
+            String currentUser = UserContextHolder.getCurrentUsername();
             IPage<AssetName> list = assetNameService.listRecords(pageObj, name, description, startTime, endTime);
-            return Result.success(list);
+            
+            // 构建查询条件
+            LambdaQueryWrapper<AssetName> wrapper = Wrappers.lambdaQuery(AssetName.class)
+                    .eq(AssetName::getCreateUser, currentUser)  // 只查询当前用户的记录
+                    .eq(AssetName::getDeleted, 0)  // 未删除的记录
+                    .like(name != null && !name.isEmpty(), AssetName::getName, name)
+                    .like(description != null && !description.isEmpty(), AssetName::getDescription, description)
+                    .orderByDesc(AssetName::getCreateTime);
+                    
+            IPage<AssetName> result = assetNameService.page(pageObj, wrapper);
+            return Result.success(result);
         } catch (Exception e) {
             return Result.error("查询失败：" + e.getMessage());
         }
