@@ -19,11 +19,11 @@
               change-class="text-gray-400"
           />
           <BaseStatCard
-              title="上次运动"
-              :amount="`${stats.lastWorkoutDays} 天前`"
-              :highlight-class="isWorkoutOverdue ? 'msg-error' : 'text-gray-800 '"
-              :change="`下次 ${formatDate(stats.nextWorkoutDay)}`"
-              :change-class="isNextWorkoutOverdue ? 'msg-error' : 'text-gray-400'"
+                title="上次运动"
+                :amount="stats.lastWorkoutDays != null ? `${stats.lastWorkoutDays} 天前` : '未记录'"
+                :highlight-class="isWorkoutOverdue ? 'msg-error' : 'text-gray-800 '"
+                :change="`下次 ${formatDate(stats.nextWorkoutDay)}`"
+                :change-class="isNextWorkoutOverdue ? 'msg-error' : 'text-gray-400'"
           />
           <BaseStatCard
               title="今日蛋白"
