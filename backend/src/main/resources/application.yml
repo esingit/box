@@ -83,6 +83,7 @@ app:
     # 文件大小限制（字节）
     max-size: 10485760  # 10MB
   ocr:
+    enabled: true
     paddle:
       # Python解释器路径
       python-path: /Users/ESin/Scripts/paddle_env_py310/bin/python

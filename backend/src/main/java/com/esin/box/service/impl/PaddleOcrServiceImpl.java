@@ -1,6 +1,5 @@
 package com.esin.box.service.impl;
 
-import com.esin.box.config.PaddleOcrConfig;
 import com.esin.box.dto.ocr.OcrRequestDTO;
 import com.esin.box.dto.ocr.OcrResponseDTO;
 import com.esin.box.service.OcrService;
@@ -27,86 +26,38 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PaddleOcrServiceImpl implements OcrService {
 
-    private final PaddleOcrConfig config;
     private final PaddleOcrProcessor processor;
 
     @Override
     public OcrResponseDTO recognizeImage(OcrRequestDTO request) {
-        // 委托给带用户信息的方法
-        return recognizeImage(request.getImageFile(), request.getLanguage(), null);
+        return OcrResponseDTO.builder()
+                .success(false)
+                .error("OCR功能已被禁用")
+                .build();
     }
 
     @Override
     public OcrResponseDTO recognizeImage(MultipartFile multipartFile, String language) {
-        return recognizeImage(multipartFile, language, null);
+        return OcrResponseDTO.builder()
+                .success(false)
+                .error("OCR功能已被禁用")
+                .build();
     }
 
     @Override
     public OcrResponseDTO recognizeImage(File imageFile, String language) {
-        log.info("开始识别图像文件: {}", imageFile.getAbsolutePath());
-
-        try {
-            // 使用提供的语言或配置的默认语言
-            String lang = StringUtils.isNotBlank(language) ? language : config.getLanguage();
-
-            // 调用PaddleOCR处理器
-            OcrResponseDTO result = processor.processImage(imageFile, lang);
-
-            log.info("图像识别完成: 成功={}, 文本数量={}",
-                    result.getSuccess(),
-                    result.getMetadata() != null ? result.getMetadata().getTotalTexts() : 0);
-
-            return result;
-
-        } catch (Exception e) {
-            log.error("图像识别失败: {}", e.getMessage(), e);
-            return OcrResponseDTO.builder()
-                    .success(false)
-                    .error("OCR识别失败: " + e.getMessage())
-                    .build();
-        }
+        return OcrResponseDTO.builder()
+                .success(false)
+                .error("OCR功能已被禁用")
+                .build();
     }
 
     @Override
     public OcrResponseDTO recognizeImage(MultipartFile multipartFile, String language, String username) {
-        if (multipartFile.isEmpty()) {
-            return OcrResponseDTO.builder()
-                    .success(false)
-                    .error("上传的文件为空")
-                    .build();
-        }
-
-        File tempFile = null;
-        try {
-            // 创建临时文件
-            tempFile = createTempFile(multipartFile, username);
-
-            log.info("开始OCR识别: 文件={}, 用户={}, 语言={}",
-                    multipartFile.getOriginalFilename(), username, language);
-
-            // 识别图像
-            OcrResponseDTO result = recognizeImage(tempFile, language);
-
-            // 记录识别结果
-            if (result.getSuccess()) {
-                int textCount = result.getMetadata() != null ? result.getMetadata().getTotalTexts() : 0;
-                log.info("OCR识别成功: 用户={}, 文本数量={}", username, textCount);
-            } else {
-                log.warn("OCR识别失败: 用户={}, 错误={}", username, result.getError());
-            }
-
-            return result;
-
-        } catch (IOException e) {
-            log.error("创建临时文件失败: 用户={}, 错误={}", username, e.getMessage(), e);
-            return OcrResponseDTO.builder()
-                    .success(false)
-                    .error("文件处理失败: " + e.getMessage())
-                    .build();
-        } finally {
-            // 清理临时文件
-            cleanupTempFile(tempFile, username);
-        }
+        return OcrResponseDTO.builder()
+                .success(false)
+                .error("OCR功能已被禁用")
+                .build();
     }
 
     /**
@@ -119,10 +70,7 @@ public class PaddleOcrServiceImpl implements OcrService {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
 
-        String tempDir = config.getOutputTempDir();
-        if (StringUtils.isBlank(tempDir)) {
-            tempDir = System.getProperty("java.io.tmpdir");
-        }
+        String tempDir = System.getProperty("java.io.tmpdir");
 
         // 包含用户信息的临时文件名
         String fileName = String.format("paddle_ocr_%s_%s%s",
@@ -150,7 +98,7 @@ public class PaddleOcrServiceImpl implements OcrService {
      * 清理临时文件
      */
     private void cleanupTempFile(File tempFile, String username) {
-        if (tempFile != null && tempFile.exists() && !config.isKeepTempFiles()) {
+        if (tempFile != null && tempFile.exists()) {
             try {
                 FileUtils.forceDelete(tempFile);
                 log.debug("删除临时文件: {}, 用户: {}", tempFile.getAbsolutePath(), username);
@@ -160,4 +108,3 @@ public class PaddleOcrServiceImpl implements OcrService {
         }
     }
 }
-

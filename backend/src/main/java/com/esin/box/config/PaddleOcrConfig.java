@@ -2,7 +2,9 @@ package com.esin.box.config;
 
 import jakarta.annotation.PostConstruct;
 import lombok.Data;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.File;
@@ -14,7 +16,9 @@ import java.nio.file.Paths;
  */
 @Data
 @Configuration
+@EnableConfigurationProperties
 @ConfigurationProperties(prefix = "app.ocr.paddle")
+@ConditionalOnProperty(prefix = "app.ocr", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class PaddleOcrConfig {
 
     /**
