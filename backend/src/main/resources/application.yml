@@ -54,9 +54,6 @@ logging:
     com.esin.box.mapper: DEBUG
     org.springframework.data.redis: INFO
     org.springframework.security: DEBUG
-    # PaddleOCR相关日志
-    com.esin.box.service.ocr: DEBUG
-
 # 跨域配置
 cors:
   allowed-origins: "*"
@@ -64,45 +61,3 @@ cors:
   allowed-headers: "*"
   allow-credentials: true
   max-age: 3600
-
-# 应用配置
-app:
-  upload:
-    # 临时文件目录（用于OCR识别）
-    temp-dir: ${java.io.tmpdir}/box/asset-images
-    # 文件上传保存路径
-    path: ${user.home}/box/uploads
-    # 允许的文件类型
-    allowed-types:
-      - image/jpeg
-      - image/jpg
-      - image/png
-      - image/gif
-      - image/bmp
-      - image/webp
-    # 文件大小限制（字节）
-    max-size: 10485760  # 10MB
-  ocr:
-    enabled: false
-    paddle:
-      # Python解释器路径
-      python-path: /Users/ESin/Scripts/paddle_env_py310/bin/python
-      # PaddleOCR Python脚本路径 - 请确认这个路径是否正确
-      script-path: /Users/ESin/Scripts/paddle_ocr_processor.py
-      # 支持的语言
-      language: ch
-      # OCR识别超时时间（秒）
-      timeout: 60
-      # 是否保留识别后的临时文件（调试用）
-      keep-temp-files: true  # 改为true来调试
-      # 最大并发处理数
-      max-concurrent: 3
-      # 输出文件临时目录
-      output-temp-dir: ${java.io.tmpdir}/box/paddle-ocr-output
-  business:
-    ocr:
-      asset-match:
-        confirm-threshold: 0.65  # 确认匹配的阈值（65%）
-        min-threshold: 0.25      # 最低匹配阈值（25%）
-        min-display-threshold: 0.60  # 最低显示阈值（60%）
-        max-results: 30          # 最大返回结果数

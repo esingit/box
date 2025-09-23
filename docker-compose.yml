@@ -23,7 +23,6 @@ services:
     volumes:
       # 挂载上传目录，便于调试和持久化
       - ./backend/uploads:/app/uploads
-      - ./backend/paddle-ocr-output:/app/paddle-ocr-output
     depends_on:
       - mysql
       - redis
