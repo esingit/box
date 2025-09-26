@@ -4,7 +4,7 @@ import { ref, reactive, computed } from 'vue'
 import axiosInstance from '@/api/axios'
 import emitter from '@/utils/eventBus'
 import qs from 'qs'
-import type { BatchAddResult, RawAssetRecord, AssetRecord, AssetQueryConditions, AssetStatsData } from '@/types/asset'
+import type { RawAssetRecord, AssetRecord, AssetQueryConditions, AssetStatsData } from '@/types/asset'
 import { formatAssetRecord } from '@/utils/commonMeta'
 import { formatTime } from '@/utils/formatters'
 import type { Pagination } from '@/types/common'
@@ -495,93 +495,7 @@ export const useAssetStore = defineStore('asset', () => {
         }
     }
 
-    // 🔥 智能批量添加记录
-    async function smartBatchAddRecords(
-        records: any[],
-        forceOverwrite = false,
-        copyLast = false
-    ): Promise<BatchAddResult | null> {
-        setLoadingState('operation', true)
 
-        try {
-            // 🔥 添加参数验证
-            if (!records) {
-                throw new Error('records 参数不能为空')
-            }
-
-            if (!Array.isArray(records)) {
-                console.error('records 参数类型错误:', typeof records, records)
-                throw new Error('records 必须是数组类型')
-            }
-
-            if (records.length === 0) {
-                throw new Error('records 数组不能为空')
-            }
-
-            console.log('收到的 records 参数:', records)
-            console.log('records 类型:', typeof records, 'isArray:', Array.isArray(records))
-
-            // 🔥 确保ID字段保持为字符串
-            const formattedRecords = records.map((item, index) => {
-                if (!item || typeof item !== 'object') {
-                    console.error(`记录 ${index} 格式错误:`, item)
-                    throw new Error(`第 ${index + 1} 条记录格式错误`)
-                }
-
-                const formatted = formatTime(item)
-
-                // 确保关键ID字段为字符串
-                return {
-                    ...formatted,
-                    assetNameId: String(formatted.assetNameId || item.assetNameId),
-                    assetTypeId: String(formatted.assetTypeId || item.assetTypeId),
-                    assetLocationId: String(formatted.assetLocationId || item.assetLocationId),
-                    unitId: String(formatted.unitId || item.unitId)
-                }
-            })
-
-            console.log('格式化后的数据:', formattedRecords)
-
-            const response = await axiosInstance.post('/api/asset-record/batch-add', {
-                records: formattedRecords,
-                forceOverwrite,
-                copyLast
-            })
-
-            const result = handleApiResponse<BatchAddResult>(response, '批量添加记录')
-
-            if (result !== null) {
-                console.log('后端返回结果:', result)
-
-                emitter.emit('notify', {
-                    message: result.message,
-                    type: 'success'
-                })
-
-                await Promise.all([
-                    loadList(true),
-                    loadStats()
-                ])
-
-                return result
-            }
-            return null
-        } catch (error: any) {
-            console.error('smartBatchAddRecords 错误详情:', error)
-            if (!isAuthError(error)) {
-                throw error
-            }
-            return null
-        } finally {
-            setLoadingState('operation', false)
-        }
-    }
-
-    // 保留原方法以保持兼容性
-    async function batchAddRecords(records: any[], forceOverwrite = false): Promise<boolean> {
-        const result = await smartBatchAddRecords(records, forceOverwrite, false)
-        return result !== null
-    }
 
     // 🔥 查询参数管理
     function updateQuery(newQuery: Partial<AssetQueryConditions>): void {
@@ -671,8 +585,6 @@ export const useAssetStore = defineStore('asset', () => {
         updateRecord,
         handleDelete,
         copyLastRecords,
-        batchAddRecords,
-        smartBatchAddRecords,
         checkTodayRecords,
 
         // 查询管理

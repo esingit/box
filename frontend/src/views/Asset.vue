@@ -47,7 +47,6 @@
       <div class="flex justify-start gap-2">
         <BaseButton title="添加资产" @click="handleAdd" color="primary" :icon="LucidePlus"/>
         <BaseButton title="复制上回记录" @click="onCopyClick" color="outline" :icon="LucideCopy"/>
-        <BaseButton title="扫图批量添加" @click="showAssetScanAddModal" color="outline" :icon="LucideScanText"/>
       </div>
       <AssetSearch
           :query="query"
@@ -92,22 +91,14 @@
         @submit="saveEdit"
         @close="cancelEdit"
     />
-    <AssetScanAddModal
-        v-if="showAssetScanAddFlag"
-        :visible="showAssetScanAddFlag"
-        :form="form"
-        title="扫图批量添加"
-        confirm-text="确定"
-        @submit="handleAssetScanAddRecord"
-        @close="closeAssetScanAddModal"
-    />
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LucideCopy, LucidePlus, LucideRefreshCw, LucideScanText } from 'lucide-vue-next'
+import { LucideCopy, LucidePlus, LucideRefreshCw } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { format } from 'date-fns'
 import { useAssetStore } from '@/store/assetStore'
@@ -121,9 +112,7 @@ import BaseStatCard from '@/components/base/BaseStatCard.vue'
 import AssetList from '@/components/asset/AssetList.vue'
 import AssetForm from '@/components/asset/AssetForm.vue'
 import AssetSearch from '@/components/asset/AssetSearch.vue'
-import AssetScanAddModal from '@/components/asset/AssetScanAddModal.vue'
 import {clearCommonMetaCache} from "@/utils/commonMeta"
-import {RawAssetRecord} from "@/types/asset"
 
 const assetStore = useAssetStore()
 const assetNameStore = useAssetNameStore()
@@ -172,7 +161,6 @@ function buildRouteQueryFromStore(): Record<string, any> {
 
 const loading = ref(false)
 const showAddModal = ref(false)
-const showAssetScanAddFlag = ref(false)
 const editingIdx = ref<number | null>(null)
 const resultCount = ref<number | null>(null)
 
@@ -337,44 +325,6 @@ function handlePageChange(page: number) {
 function handleAdd() {
   initEmptyForm()
   showAddModal.value = true
-}
-
-function showAssetScanAddModal() {
-  initEmptyForm()
-  showAssetScanAddFlag.value = true
-}
-
-function closeAssetScanAddModal() {
-  showAssetScanAddFlag.value = false
-}
-
-// 🔥 修复 handleAssetScanAddRecord 方法
-function handleAssetScanAddRecord(records: RawAssetRecord[]) {
-  console.log('=== handleAssetScanAddRecord ===')
-  console.log('接收到的 records:', records)
-  console.log('records 类型:', typeof records, Array.isArray(records))
-
-  // 🔥 确保 records 是数组
-  if (!Array.isArray(records)) {
-    console.error('handleAssetScanAddRecord 接收到错误的数据格式:', records)
-    emitter.emit('notify', {
-      type: 'error',
-      message: '数据格式错误，请重试'
-    })
-    return
-  }
-
-  console.log(`准备添加 ${records.length} 条扫描记录`)
-
-  // 🔥 这里应该只是刷新列表，不要再次调用批量添加
-  // 因为批量添加已经在 AssetScanAddModal 中完成了
-  assetStore.loadList(true)
-  assetStore.loadStats()
-
-  emitter.emit('notify', {
-    type: 'success',
-    message: `扫描添加完成，共 ${records.length} 条记录`
-  })
 }
 
 function closeAddModal() {
